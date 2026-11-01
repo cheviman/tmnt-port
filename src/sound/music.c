@@ -3,7 +3,7 @@
  *    Description: the music: the random bytes, the tracks' tick, their commands and notes, the note hooks
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -11,26 +11,30 @@
  */
 #include "sound.h"
 
+/* Reads the next of the random bytes and moves the place on; the FM effects that call it take the place,
+   not the byte. */
 uint16_t next_random_byte(void)
 {
-	uint16_t hl = 0;
+	uint16_t random_place = 0;
 
 	z80_block(53);
-	hl = random_read;
-	hl = (hl & ~0xFFu) | (uint8_t)(hl + 1u);
-	random_read = hl;
-	return hl;
+	random_place = random_read;
+	random_place = (random_place & ~0xFFu) | (uint8_t)(random_place + 1u);
+	random_read = random_place;
+	return random_place;
 }
 
-uint32_t music_track_start(uint16_t ix)
+/* A music channel's first pass: keyed off (but the music's channels 6 and 7 while an FM effect has
+   them), its record cleared, its track from the song's header. */
+uint32_t music_track_start(uint16_t channel)
 {
 	uint32_t zero = 0, carry = 0;
-	uint8_t a = 0, b = 0, chip_channel = 0, e = 0;
-	uint16_t hl = 0;
-	uint16_t saved_ix = 0;
+	uint8_t chip_channel = 0, count = 0, entry_offset = 0, sound = 0;
+	uint16_t handler = 0, place = 0, song_entry = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(36);
-	chip_channel = CHANNEL(ix)->chip_channel;
+	chip_channel = CHANNEL(channel)->chip_channel;
 	if (chip_channel < 8u)
 	{
 		z80_block(17);
@@ -38,161 +42,165 @@ uint32_t music_track_start(uint16_t ix)
 		if (chip_channel < 6u)
 		{
 			z80_block(17);
-			fm_key_off(ix);
+			fm_key_off(channel);
 			z80_block(17);
-			carry = fm_fast_release(ix);
+			carry = fm_fast_release(channel);
 		}
 		else
 		{
 			z80_block(23);
-			a = unk_8341;
+			sound = CHANNEL(FM_EFFECT_6)->sound;
 			if (zero == 0u)
 			{
 				z80_block(13);
-				a = unk_8381;
+				sound = CHANNEL(FM_EFFECT_7)->sound;
 			}
 			z80_block(14);
-			if (a == 0u)
+			if (sound == 0u)
 			{
 				z80_block(17);
-				fm_key_off(ix);
+				fm_key_off(channel);
 				z80_block(17);
-				carry = fm_fast_release(ix);
+				carry = fm_fast_release(channel);
 			}
 		}
 	}
 	z80_block(53);
-	saved_ix = ix;
-	b = 0x2Eu;
-	hl = saved_ix + 0x12u;
+	saved_channel = channel;
+	count = 0x2Eu;
+	place = saved_channel + 0x12u;
 	for (;;)
 	{
 		z80_block(24);
-		z80_write8(hl, 0u);
-		hl++;
-		b--;
-		if (b == 0u)
+		z80_write8(place, 0u);
+		place++;
+		count--;
+		if (count == 0u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(139);
-	e = CHANNEL(ix)->chip_channel;
-	e = ((uint32_t)e << 1) | (e >> 7);
-	hl = song_header;
-	carry = (uint16_t)(hl + e) < hl;
-	hl += e;
-	AS8(CHANNEL(ix)->unk_10) = z80_read8(hl);
-	AT8(CHANNEL(ix)->unk_10, 1) = z80_read8((uint16_t)(hl + 1u));
-	hl = 0x8CDu;
-	set_channel_handler(hl, ix);
+	entry_offset = CHANNEL(channel)->chip_channel;
+	entry_offset = ((uint32_t)entry_offset << 1) | (entry_offset >> 7);
+	song_entry = song_header;
+	carry = (uint16_t)(song_entry + entry_offset) < song_entry;
+	song_entry += entry_offset;
+	AS8(CHANNEL(channel)->track) = z80_read8(song_entry);
+	AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(song_entry + 1u));
+	handler = 0x8CDu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t music_track_first_tick(uint16_t ix)
+/* Reads the track's first commands; from the next pass on the tempo runs the channel. */
+uint32_t music_track_first_tick(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(27);
-	hl = 0x8D6u;
-	set_channel_handler(hl, ix);
+	handler = 0x8D6u;
+	set_channel_handler(handler, channel);
 	z80_block(10);
-	return read_track(ix);
+	return read_track(channel);
 }
 
-uint32_t music_track_tick(uint16_t ix)
+/* A music channel's pass: the tempo, and at a note's end the track's next commands; else the note's
+   key-off, its attenuation again when the music's changes, the portamento and the LFO sensitivity's
+   ramp, or a PCM note's decay. */
+uint32_t music_track_tick(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0, b = 0, bc_2 = 0, c = 0, d = 0, e = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0;
+	uint8_t attenuation = 0, count = 0, distance_high = 0, distance_low = 0, fraction = 0, key_off_ticks = 0, last_tempo = 0, lfo_ramp = 0, lfo_sensitivity = 0, pcm_level = 0, portamento_fraction = 0, portamento_fraction_2 = 0, sensitivity_bits = 0, sound = 0, volume = 0;
+	uint16_t distance = 0, fm_write = 0, ignored16 = 0, pitch = 0;
+	uint8_t t1 = 0, tempo_count = 0, t2 = 0, ticks_left = 0, ramp_wait = 0, ticks_left_2 = 0, t3 = 0, t4 = 0, portamento = 0, ramp_wait_2 = 0;
 	uint32_t jump_target = 0;
 
 	z80_block(36);
-	if (CHANNEL(ix)->chip_channel == 1u)
+	if (CHANNEL(channel)->chip_channel == 1u)
 	{
 		z80_cycles(7);
 		accelerando_tick();
 	}
 	z80_block(44);
 	t1 = tempo_increase + tempo;
-	a = t1;
+	last_tempo = t1;
 	if (t1 == 0u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(67);
-	CHANNEL(ix)->unk_14 = a;
-	t2 = CHANNEL(ix)->unk_12;
-	t3 = a;
-	CHANNEL(ix)->unk_12 = t3 + t2;
-	if ((uint8_t)(t3 + t2) < t3)
+	CHANNEL(channel)->last_tempo = last_tempo;
+	tempo_count = CHANNEL(channel)->tempo_count;
+	t2 = last_tempo;
+	CHANNEL(channel)->tempo_count = t2 + tempo_count;
+	if ((uint8_t)(t2 + tempo_count) < t2)
 	{
 		z80_block(33);
-		t4 = CHANNEL(ix)->unk_13;
-		CHANNEL(ix)->unk_13 = t4 - 1u;
-		if (t4 == 1u)
-			return read_track(ix);
+		ticks_left = CHANNEL(channel)->ticks_left;
+		CHANNEL(channel)->ticks_left = ticks_left - 1u;
+		if (ticks_left == 1u)
+			return read_track(channel);
 	}
 	z80_block(30);
-	if (((CHANNEL(ix)->chip_channel >> 3) & 1u) != 0u)
+	if (((CHANNEL(channel)->chip_channel >> 3) & 1u) != 0u)
 	{
 		z80_block(43);
-		a = unk_8281;
-		if (CHANNEL(ix)->chip_channel & 1u)
+		sound = CHANNEL(PCM_EFFECT_A)->sound;
+		if (CHANNEL(channel)->chip_channel & 1u)
 		{
 			z80_block(13);
-			a = unk_82C1;
+			sound = CHANNEL(PCM_EFFECT_B)->sound;
 		}
 		z80_block(9);
 		carry = 0u;
-		if (a != 0u)
+		if (sound != 0u)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(28);
-		t5 = CHANNEL(ix)->unk_21;
-		CHANNEL(ix)->unk_21 = t5 - 1u;
-		if (t5 != 1u)
+		ramp_wait = CHANNEL(channel)->ramp_wait;
+		CHANNEL(channel)->ramp_wait = ramp_wait - 1u;
+		if (ramp_wait != 1u)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(69);
-		CHANNEL(ix)->unk_21 = 3u;
-		a = CHANNEL(ix)->unk_1D;
-		t6 = CHANNEL(ix)->unk_13;
-		carry = a < t6;
-		if (a < t6)
+		CHANNEL(channel)->ramp_wait = 3u;
+		key_off_ticks = CHANNEL(channel)->key_off_ticks;
+		ticks_left_2 = CHANNEL(channel)->ticks_left;
+		carry = key_off_ticks < ticks_left_2;
+		if (key_off_ticks < ticks_left_2)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(31);
-		a = CHANNEL(ix)->unk_3C;
-		carry = a < 2u;
-		if (a < 2u)
+		pcm_level = CHANNEL(channel)->pcm_level;
+		carry = pcm_level < 2u;
+		if (pcm_level < 2u)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(37);
-		a--;
-		CHANNEL(ix)->unk_3C = a;
-		bc_2 = a;
-		return set_pcm_volume(bc_2, ix);
+		pcm_level--;
+		CHANNEL(channel)->pcm_level = pcm_level;
+		volume = pcm_level;
+		return set_pcm_volume(volume, channel);
 	}
 	z80_block(17);
-	carry = check_fm_effect_override(ix);
+	carry = check_fm_effect_override(channel);
 	z80_block(25);
-	if ((CHANNEL(ix)->unk_3F & 1u) != 0u)
+	if ((CHANNEL(channel)->flags & 1u) != 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(30);
-	if ((CHANNEL(ix)->unk_18 & 1u) != 0u)
+	if ((CHANNEL(channel)->mode & 1u) != 0u)
 	{
 		z80_block(42);
-		jump_target = (CHANNEL(ix)->unk_28 | ((uint32_t)CHANNEL(ix)->unk_29 << 8u));
+		jump_target = CHANNEL(channel)->note_hook;
 		switch (jump_target)
 		{
 		case 0x0009F5u:
@@ -204,139 +212,140 @@ uint32_t music_track_tick(uint16_t ix)
 		return carry;
 	}
 	z80_block(27);
-	if (unk_83CC != 0u)
+	if (music_attenuation_changed != 0u)
 	{
 		z80_block(141);
-		t7 = music_volume + (fade_step + music_attenuation) + CHANNEL(ix)->unk_1A + CHANNEL(ix)->unk_33 + CHANNEL(ix)->unk_39 + CHANNEL(ix)->unk_1F;
-		a = t7;
-		if ((int8_t)t7 < 0)
+		t3 = music_volume + (fade_step + music_attenuation) + CHANNEL(channel)->volume_offset + CHANNEL(channel)->loop_volume_offset + CHANNEL(channel)->attenuation + CHANNEL(channel)->volume;
+		attenuation = t3;
+		if ((int8_t)t3 < 0)
 		{
 			z80_block(7);
-			a = 0x7Fu;
+			attenuation = 0x7Fu;
 		}
 		z80_block(17);
-		carry = set_fm_volume(ix, a);
+		carry = set_fm_volume(channel, attenuation);
 	}
 	z80_block(48);
-	if (CHANNEL(ix)->unk_13 == CHANNEL(ix)->unk_1D)
+	if (CHANNEL(channel)->ticks_left == CHANNEL(channel)->key_off_ticks)
 	{
 		z80_cycles(7);
-		fm_key_off(ix);
+		fm_key_off(channel);
 	}
 	z80_block(33);
-	if (CHANNEL(ix)->unk_17 != 0u)
+	if (CHANNEL(channel)->portamento != 0u)
 	{
 		z80_block(147);
-		c = CHANNEL(ix)->unk_23;
-		carry = c > 0u;
-		hl = CHANNEL(ix)->unk_26 - CHANNEL(ix)->unk_24 - carry;
-		c = 0u - c;
-		d = (uint8_t)(hl >> 8);
-		e = (uint8_t)hl;
-		a = 0u;
-		hl = 0u;
-		b = 8u;
+		fraction = CHANNEL(channel)->portamento_fraction;
+		carry = fraction > 0u;
+		distance = CHANNEL(channel)->target_pitch - CHANNEL(channel)->portamento_pitch - carry;
+		fraction = 0u - fraction;
+		distance_high = (uint8_t)(distance >> 8);
+		distance_low = (uint8_t)distance;
+		portamento_fraction = 0u;
+		pitch = 0u;
+		count = 8u;
 		for (;;)
 		{
 			z80_block(57);
-			carry = d & 1u;
-			d = (int8_t)d >> 1;
-			t8 = (e >> 1) | (carry << 7);
-			carry = e & 1u;
-			e = t8;
-			c = (c >> 1) | (carry << 7);
-			t9 = CHANNEL(ix)->unk_17;
-			CHANNEL(ix)->unk_17 = ((uint32_t)t9 << 1) | (t9 >> 7);
-			if (t9 >> 7)
+			carry = distance_high & 1u;
+			distance_high = (int8_t)distance_high >> 1;
+			t4 = (distance_low >> 1) | (carry << 7);
+			carry = distance_low & 1u;
+			distance_low = t4;
+			fraction = (fraction >> 1) | (carry << 7);
+			portamento = CHANNEL(channel)->portamento;
+			CHANNEL(channel)->portamento = ((uint32_t)portamento << 1) | (portamento >> 7);
+			if (portamento >> 7)
 			{
 				z80_block(19);
-				carry = (uint8_t)(a + c) < a;
-				a += c;
-				hl = hl + (((uint32_t)d << 8) | e) + carry;
+				carry = (uint8_t)(portamento_fraction + fraction) < portamento_fraction;
+				portamento_fraction += fraction;
+				pitch = pitch + (((uint32_t)distance_high << 8) | distance_low) + carry;
 			}
 			z80_block(8);
-			b--;
-			if (b == 0u)
+			count--;
+			if (count == 0u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(150);
-		c = CHANNEL(ix)->unk_23;
-		carry = (uint8_t)(a + c) < a;
-		a += c;
-		hl = hl + CHANNEL(ix)->unk_24 + carry;
-		CHANNEL(ix)->unk_23 = a;
-		CHANNEL(ix)->unk_24 = hl;
-		if ((uint8_t)(a - 0x80u) < a)
+		portamento_fraction_2 = CHANNEL(channel)->portamento_fraction;
+		carry = (uint8_t)(portamento_fraction + portamento_fraction_2) < portamento_fraction;
+		portamento_fraction += portamento_fraction_2;
+		pitch = pitch + CHANNEL(channel)->portamento_pitch + carry;
+		CHANNEL(channel)->portamento_fraction = portamento_fraction;
+		CHANNEL(channel)->portamento_pitch = pitch;
+		if ((uint8_t)(portamento_fraction - 0x80u) < portamento_fraction)
 		{
 			z80_block(6);
-			hl++;
+			pitch++;
 		}
 		z80_block(17);
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 	}
 	z80_block(28);
-	a = CHANNEL(ix)->unk_16;
+	lfo_ramp = CHANNEL(channel)->lfo_ramp;
 	carry = 0u;
-	if (a == 0u)
+	if (lfo_ramp == 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(28);
-	t10 = CHANNEL(ix)->unk_21;
-	CHANNEL(ix)->unk_21 = t10 - 1u;
-	if (t10 != 1u)
+	ramp_wait_2 = CHANNEL(channel)->ramp_wait;
+	CHANNEL(channel)->ramp_wait = ramp_wait_2 - 1u;
+	if (ramp_wait_2 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(62);
-	CHANNEL(ix)->unk_21 = a;
-	a = CHANNEL(ix)->unk_22 + 0x11u;
-	if (a >= 0x88u)
+	CHANNEL(channel)->ramp_wait = lfo_ramp;
+	lfo_sensitivity = CHANNEL(channel)->lfo_sensitivity + 0x11u;
+	if (lfo_sensitivity >= 0x88u)
 	{
 		z80_block(7);
-		a = 0x77u;
+		lfo_sensitivity = 0x77u;
 	}
 	z80_block(85);
-	CHANNEL(ix)->unk_22 = a;
-	c = a & 0x70u;
-	a = CHANNEL(ix)->unk_22;
-	bc = 0x3800u | (((a >> 1) | ((uint32_t)a << 7)) & 3u) | c;
-	write_fm_channel_register(ix, &bc, &carry);
+	CHANNEL(channel)->lfo_sensitivity = lfo_sensitivity;
+	sensitivity_bits = lfo_sensitivity & 0x70u;
+	lfo_sensitivity = CHANNEL(channel)->lfo_sensitivity;
+	fm_write = 0x3800u | (((lfo_sensitivity >> 1) | ((uint32_t)lfo_sensitivity << 7)) & 3u) | sensitivity_bits;
+	write_fm_channel_register(channel, &fm_write, &carry);
 	return carry;
 }
 
-void clear_note_hook(uint16_t ix)
+/* Puts the note hook that does nothing back on the channel. */
+void clear_note_hook(uint16_t channel)
 {
 	z80_block(48);
-	CHANNEL(ix)->unk_28 = 0xF5u;
-	CHANNEL(ix)->unk_29 = 9u;
+	AS8(CHANNEL(channel)->note_hook) = 0xF5u;
+	AT8(CHANNEL(channel)->note_hook, 1) = 9u;
 	note_hook_none();
 }
 
+/* The note hook that does nothing. */
 void note_hook_none(void)
 {
 	z80_block(10);
 }
 
+/* The music speeds up: the tempo one faster every so many passes, as the accelerando command set it. */
 void accelerando_tick(void)
 {
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t rate = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(25);
 	t1 = (uint8_t)accelerando & 0xFu;
-	a = t1;
+	rate = t1;
 	if (t1 == 0u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(26);
-	hl = 0x83D8u;
 	t2 = (uint8_t)(accelerando >> 8u);
 	AT8(accelerando, 1) = t2 - 1u;
 	if (t2 != 1u)
@@ -345,23 +354,25 @@ void accelerando_tick(void)
 		return;
 	}
 	z80_block(70);
-	AT8(accelerando, 1) = ((((uint32_t)a << 1) << 1) << 1) << 1;
+	AT8(accelerando, 1) = ((((uint32_t)rate << 1) << 1) << 1) << 1;
 	tempo_increase++;
 }
 
-uint32_t check_fm_effect_override(uint16_t ix)
+/* On the music's FM channels 6 and 7: while an FM effect plays there, the music keeps its note keyed off
+   and its instrument to load again. */
+uint32_t check_fm_effect_override(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0;
+	uint8_t sound = 0;
+	uint16_t fm_write = 0;
 	uint8_t chip_channel = 0;
 
 	z80_block(49);
-	a = unk_8341;
-	if (6u != CHANNEL(ix)->chip_channel)
+	sound = CHANNEL(FM_EFFECT_6)->sound;
+	if (6u != CHANNEL(channel)->chip_channel)
 	{
 		z80_block(31);
-		chip_channel = CHANNEL(ix)->chip_channel;
+		chip_channel = CHANNEL(channel)->chip_channel;
 		carry = chip_channel > 7u;
 		if (7u != chip_channel)
 		{
@@ -369,853 +380,862 @@ uint32_t check_fm_effect_override(uint16_t ix)
 			return carry;
 		}
 		z80_block(13);
-		a = unk_8381;
+		sound = CHANNEL(FM_EFFECT_7)->sound;
 	}
 	z80_block(9);
 	carry = 0u;
-	if (a == 0u)
+	if (sound == 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(25);
-	if ((CHANNEL(ix)->unk_3F & 1u) != 0u)
+	if ((CHANNEL(channel)->flags & 1u) != 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(66);
-	CHANNEL(ix)->unk_3F |= 1u;
-	CHANNEL(ix)->unk_3F |= 0x80u;
-	bc = 0x3800u;
-	write_fm_channel_register(ix, &bc, &carry);
+	CHANNEL(channel)->flags |= 1u;
+	CHANNEL(channel)->flags |= 0x80u;
+	fm_write = 0x3800u;
+	write_fm_channel_register(channel, &fm_write, &carry);
 	return carry;
 }
 
-uint32_t read_track(uint16_t ix)
+/* Reads the track's commands up to the next note and plays it: a note, a rest, or the end of the track. */
+uint32_t read_track(uint16_t channel)
 {
 	bool play_note = false;
 	uint32_t zero = 0, carry = 0;
-	uint8_t a = 0, b = 0, bc_2 = 0, c = 0, chip_channel = 0, de_2 = 0;
-	uint16_t bc = 0, de = 0, hl = 0, ignored16 = 0;
-	uint16_t saved_de = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t14 = 0, t15 = 0;
-	uint16_t t13 = 0;
+	uint8_t attenuation = 0, bank = 0, bank_2 = 0, byte = 0, chip_channel = 0, command = 0, count = 0, fm_extra = 0, instrument = 0, key_off_ticks = 0, length_code = 0, length_codes = 0, level = 0, note_index = 0, octave = 0, pcm_level = 0, sound = 0, total_attenuation = 0, transpose = 0, value = 0, volume = 0, volume_offset = 0;
+	uint16_t command_entry = 0, fm_write = 0, gate = 0, gated_length = 0, ignored16 = 0, pcm_sound = 0, pitch = 0, pitch_2 = 0, place = 0, start = 0, track = 0;
+	uint16_t saved_place = 0;
+	uint8_t t1 = 0, t2 = 0, transposed_loop_count = 0, t3 = 0, loop_exit_count = 0, t4 = 0, loop_count = 0, loop_2_count = 0, repeat_count = 0, t5 = 0, t6 = 0, t7 = 0, t9 = 0, t10 = 0;
+	uint16_t t8 = 0;
 	uint32_t jump_target = 0;
 
 	z80_block(40);
-	CHANNEL(ix)->unk_3F &= ~1u;
-	carry = check_fm_effect_override(ix);
+	CHANNEL(channel)->flags &= ~1u;
+	carry = check_fm_effect_override(channel);
 	for (;;)
 	{
 		z80_block(70);
-		hl = CHANNEL(ix)->unk_10;
-		a = z80_read8(hl);
-		b = a;
-		t1 = a & ~0xFu;
-		a = t1;
-		de = (uint32_t)a << 8;
+		track = CHANNEL(channel)->track;
+		byte = z80_read8(track);
+		command = byte;
+		t1 = byte & ~0xFu;
+		value = t1;
+		place = (uint32_t)value << 8;
 		if (t1 == 0u)
 		{
 			z80_block(45);
-			de = hl;
-			a = b & 0xFu;
-			if (((CHANNEL(ix)->chip_channel >> 3) & 1u) == 0u)
+			place = track;
+			octave = command & 0xFu;
+			if (((CHANNEL(channel)->chip_channel >> 3) & 1u) == 0u)
 			{
 				z80_block(40);
-				a = (((uint32_t)a << 1) << 1) << 1;
-				a += (uint32_t)a << 1;
+				octave = (((uint32_t)octave << 1) << 1) << 1;
+				octave += (uint32_t)octave << 1;
 			}
 			z80_block(29);
-			CHANNEL(ix)->unk_1E = a;
+			CHANNEL(channel)->octave = octave;
 			z80_block(6);
-			de++;
+			place++;
 			z80_block(48);
-			CHANNEL(ix)->unk_10 = de;
+			CHANNEL(channel)->track = place;
 			continue;
 		}
 		z80_block(17);
-		if (a >= 0xE0u)
+		if (value >= 0xE0u)
 		{
 			z80_block(31);
-			de = hl + 1u;
-			t2 = a;
-			a = b;
+			place = track + 1u;
+			t2 = value;
+			value = command;
 			if (t2 == 0xF0u)
 			{
 				z80_block(25);
-				a = (a & 0xFu) << 1;
-				hl = track_commands_f0_ADDRESS;
+				value = (value & 0xFu) << 1;
+				command_entry = track_commands_f0_ADDRESS;
 			}
 			else
 			{
 				z80_block(35);
-				a = (a & 0xFu) << 1;
-				hl = track_commands_e0_ADDRESS;
+				value = (value & 0xFu) << 1;
+				command_entry = track_commands_e0_ADDRESS;
 			}
 			z80_block(50);
-			hl += a;
-			jump_target = SOUND_ROM16(hl);
+			command_entry += value;
+			jump_target = TRACK_COMMAND_HANDLER(command_entry)[0];
 			switch (jump_target)
 			{
 			case 0x000D8Du:
 				z80_block(36);
-				CHANNEL(ix)->unk_18 = z80_read8(de);
+				CHANNEL(channel)->mode = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000D94u:
 				z80_block(30);
-				tempo = z80_read8(de);
+				tempo = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000D9Bu:
 				z80_block(56);
-				a = z80_read8(de);
-				CHANNEL(ix)->unk_38 = a;
-				if (((CHANNEL(ix)->chip_channel >> 3) & 1u) != 0u)
+				instrument = z80_read8(place);
+				CHANNEL(channel)->instrument = instrument;
+				if (((CHANNEL(channel)->chip_channel >> 3) & 1u) != 0u)
 				{
 					z80_block(6);
-					de++;
+					place++;
 					z80_block(48);
-					CHANNEL(ix)->unk_10 = de;
+					CHANNEL(channel)->track = place;
 					continue;
 				}
 				z80_block(30);
-				if (CHANNEL(ix)->unk_3F >> 7 == 0u)
+				if (CHANNEL(channel)->flags >> 7 == 0u)
 				{
 					z80_cycles(7);
-					carry = load_instrument(ix, a);
+					carry = load_instrument(channel, instrument);
 				}
 				z80_block(10);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000DC0u:
 				z80_block(44);
-				a = z80_read8(de);
-				b = 0u;
-				if (((CHANNEL(ix)->chip_channel >> 3) & 1u) == 0u)
+				value = z80_read8(place);
+				fm_extra = 0u;
+				if (((CHANNEL(channel)->chip_channel >> 3) & 1u) == 0u)
 				{
 					z80_block(7);
-					b = 0xAu;
+					fm_extra = 0xAu;
 				}
 				z80_block(52);
-				CHANNEL(ix)->unk_1F = a + b;
-				CHANNEL(ix)->unk_39 = 0u;
+				CHANNEL(channel)->volume = value + fm_extra;
+				CHANNEL(channel)->attenuation = 0u;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000DD7u:
 				z80_block(36);
-				CHANNEL(ix)->unk_20 = z80_read8(de);
+				CHANNEL(channel)->gate = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000DDEu:
 				break;
 			case 0x000E25u:
 				z80_block(36);
-				CHANNEL(ix)->unk_15 = z80_read8(de);
+				CHANNEL(channel)->detune = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E2Cu:
 				z80_block(36);
-				CHANNEL(ix)->unk_17 = z80_read8(de);
+				CHANNEL(channel)->portamento = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E33u:
 				z80_block(17);
-				a = read_transpose(de);
+				value = read_transpose(place);
 				z80_block(23);
-				music_transpose = a;
+				music_transpose = value;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E59u:
 				z80_block(17);
-				a = read_transpose(de);
+				transpose = read_transpose(place);
 				z80_block(29);
-				CHANNEL(ix)->unk_19 = a;
+				CHANNEL(channel)->transpose = transpose;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E62u:
 				z80_block(17);
-				a = read_volume_offset(de);
+				value = read_volume_offset(place);
 				z80_block(23);
-				music_volume = a;
+				music_volume = value;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E74u:
 				z80_block(17);
-				a = read_volume_offset(de);
+				volume_offset = read_volume_offset(place);
 				z80_block(29);
-				CHANNEL(ix)->unk_1A = a;
+				CHANNEL(channel)->volume_offset = volume_offset;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000E7Du:
 				z80_block(33);
-				t3 = CHANNEL(ix)->unk_31;
-				CHANNEL(ix)->unk_31 = t3 - 1u;
-				if (t3 == 1u)
+				transposed_loop_count = CHANNEL(channel)->transposed_loop_count;
+				CHANNEL(channel)->transposed_loop_count = transposed_loop_count - 1u;
+				if (transposed_loop_count == 1u)
 				{
 					z80_block(60);
-					CHANNEL(ix)->unk_32 = 0u;
-					CHANNEL(ix)->unk_33 = 0u;
-					de += 2u;
+					CHANNEL(channel)->loop_transpose = 0u;
+					CHANNEL(channel)->loop_volume_offset = 0u;
+					place += 2u;
 					z80_block(12);
-					de += 2u;
+					place += 2u;
 					z80_block(6);
-					de++;
+					place++;
 					z80_block(48);
-					CHANNEL(ix)->unk_10 = de;
+					CHANNEL(channel)->track = place;
 					continue;
 				}
 				z80_block(33);
-				t4 = CHANNEL(ix)->unk_31 + 1u;
-				CHANNEL(ix)->unk_31 = t4;
-				if (t4 == 0u)
+				t3 = CHANNEL(channel)->transposed_loop_count + 1u;
+				CHANNEL(channel)->transposed_loop_count = t3;
+				if (t3 == 0u)
 				{
 					z80_block(64);
-					CHANNEL(ix)->unk_31 = z80_read8(de);
-					CHANNEL(ix)->unk_32 = 0u;
-					CHANNEL(ix)->unk_33 = 0u;
+					CHANNEL(channel)->transposed_loop_count = z80_read8(place);
+					CHANNEL(channel)->loop_transpose = 0u;
+					CHANNEL(channel)->loop_volume_offset = 0u;
 				}
 				z80_block(46);
-				CHANNEL(ix)->unk_31--;
-				de++;
-				a = read_transpose(de);
+				CHANNEL(channel)->transposed_loop_count--;
+				place++;
+				value = read_transpose(place);
 				z80_block(61);
-				CHANNEL(ix)->unk_32 += a;
-				de++;
-				a = read_volume_offset(de);
+				CHANNEL(channel)->loop_transpose += value;
+				place++;
+				value = read_volume_offset(place);
 				z80_block(54);
-				CHANNEL(ix)->unk_33 += a;
-				de++;
+				CHANNEL(channel)->loop_volume_offset += value;
+				place++;
 				z80_block(68);
-				AS8(CHANNEL(ix)->unk_10) = z80_read8(de);
-				AT8(CHANNEL(ix)->unk_10, 1) = z80_read8((uint16_t)(de + 1u));
+				AS8(CHANNEL(channel)->track) = z80_read8(place);
+				AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(place + 1u));
 				continue;
 			case 0x000EBDu:
 				z80_block(35);
-				bc = 0x1800u | z80_read8(de);
-				carry = write_fm_register(bc);
+				fm_write = 0x1800u | z80_read8(place);
+				carry = write_fm_register(fm_write);
 				z80_block(48);
-				de++;
-				bc = 0x1900u | z80_read8(de) | 0x80u;
-				carry = write_fm_register(bc);
+				place++;
+				fm_write = 0x1900u | z80_read8(place) | 0x80u;
+				carry = write_fm_register(fm_write);
 				z80_block(31);
-				bc = 0x1900u;
-				carry = write_fm_register(bc);
+				fm_write = 0x1900u;
+				carry = write_fm_register(fm_write);
 				z80_block(31);
-				bc = 0x1B02u;
-				carry = write_fm_register(bc);
+				fm_write = 0x1B02u;
+				carry = write_fm_register(fm_write);
 				z80_block(10);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000EDFu:
 				z80_block(36);
-				CHANNEL(ix)->unk_16 = z80_read8(de);
+				CHANNEL(channel)->lfo_ramp = z80_read8(place);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000EE6u:
 				z80_block(10);
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000EE9u:
 				z80_block(68);
-				AS8(CHANNEL(ix)->unk_10) = z80_read8(de);
-				AT8(CHANNEL(ix)->unk_10, 1) = z80_read8((uint16_t)(de + 1u));
+				AS8(CHANNEL(channel)->track) = z80_read8(place);
+				AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(place + 1u));
 				continue;
 			case 0x000EF5u:
 				z80_block(33);
-				t5 = CHANNEL(ix)->unk_30;
-				CHANNEL(ix)->unk_30 = t5 - 1u;
-				if (t5 == 1u)
+				loop_exit_count = CHANNEL(channel)->loop_exit_count;
+				CHANNEL(channel)->loop_exit_count = loop_exit_count - 1u;
+				if (loop_exit_count == 1u)
 				{
 					z80_block(16);
-					de++;
+					place++;
 					z80_block(68);
-					AS8(CHANNEL(ix)->unk_10) = z80_read8(de);
-					AT8(CHANNEL(ix)->unk_10, 1) = z80_read8((uint16_t)(de + 1u));
+					AS8(CHANNEL(channel)->track) = z80_read8(place);
+					AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(place + 1u));
 					continue;
 				}
 				z80_block(33);
-				t6 = CHANNEL(ix)->unk_30 + 1u;
-				CHANNEL(ix)->unk_30 = t6;
-				if (t6 == 0u)
+				t4 = CHANNEL(channel)->loop_exit_count + 1u;
+				CHANNEL(channel)->loop_exit_count = t4;
+				if (t4 == 0u)
 				{
 					z80_block(26);
-					CHANNEL(ix)->unk_30 = z80_read8(de);
+					CHANNEL(channel)->loop_exit_count = z80_read8(place);
 				}
 				z80_block(33);
-				CHANNEL(ix)->unk_30--;
+				CHANNEL(channel)->loop_exit_count--;
 				z80_block(12);
-				de += 2u;
+				place += 2u;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F0Fu:
 				z80_block(80);
-				CHANNEL(ix)->unk_1B = z80_read8(de);
-				de++;
-				AS16(CHANNEL(ix)->unk_2C) = de;
+				CHANNEL(channel)->loop_count = z80_read8(place);
+				place++;
+				CHANNEL(channel)->loop_start = place;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F1Du:
 				z80_block(33);
-				t7 = CHANNEL(ix)->unk_1B;
-				CHANNEL(ix)->unk_1B = t7 - 1u;
-				if (t7 == 1u)
+				loop_count = CHANNEL(channel)->loop_count;
+				CHANNEL(channel)->loop_count = loop_count - 1u;
+				if (loop_count == 1u)
 				{
 					z80_block(48);
-					CHANNEL(ix)->unk_10 = de;
+					CHANNEL(channel)->track = place;
 					continue;
 				}
 				z80_block(48);
-				de = (CHANNEL(ix)->unk_2C | ((uint32_t)CHANNEL(ix)->unk_2D << 8u));
+				place = CHANNEL(channel)->loop_start;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F2Cu:
 				z80_block(80);
-				CHANNEL(ix)->unk_1C = z80_read8(de);
-				de++;
-				AS16(CHANNEL(ix)->unk_2E) = de;
+				CHANNEL(channel)->loop_2_count = z80_read8(place);
+				place++;
+				CHANNEL(channel)->loop_2_start = place;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F3Au:
 				z80_block(33);
-				t8 = CHANNEL(ix)->unk_1C;
-				CHANNEL(ix)->unk_1C = t8 - 1u;
-				if (t8 == 1u)
+				loop_2_count = CHANNEL(channel)->loop_2_count;
+				CHANNEL(channel)->loop_2_count = loop_2_count - 1u;
+				if (loop_2_count == 1u)
 				{
 					z80_block(48);
-					CHANNEL(ix)->unk_10 = de;
+					CHANNEL(channel)->track = place;
 					continue;
 				}
 				z80_block(48);
-				de = AS16(CHANNEL(ix)->unk_2E);
+				place = CHANNEL(channel)->loop_2_start;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F49u:
 				z80_block(49);
-				CHANNEL(ix)->unk_35 = z80_read8(de);
-				de++;
-				de = read_track_address(de, ix);
+				CHANNEL(channel)->repeat_count = z80_read8(place);
+				place++;
+				place = read_track_address(place, channel);
 				z80_block(48);
-				CHANNEL(ix)->unk_2A = de;
+				CHANNEL(channel)->repeat_return = place;
 				continue;
 			case 0x000F65u:
 				z80_block(71);
-				t9 = CHANNEL(ix)->unk_35;
-				CHANNEL(ix)->unk_35 = t9 - 1u;
-				de = CHANNEL(ix)->unk_2A;
-				if (t9 == 1u)
+				repeat_count = CHANNEL(channel)->repeat_count;
+				CHANNEL(channel)->repeat_count = repeat_count - 1u;
+				place = CHANNEL(channel)->repeat_return;
+				if (repeat_count == 1u)
 				{
 					z80_block(48);
-					CHANNEL(ix)->unk_10 = de;
+					CHANNEL(channel)->track = place;
 					continue;
 				}
 				z80_block(74);
-				de--;
-				AT8(CHANNEL(ix)->unk_10, 1) = z80_read8(de);
-				AS8(CHANNEL(ix)->unk_10) = z80_read8((uint16_t)(de - 1u));
+				place--;
+				AT8(CHANNEL(channel)->track, 1) = z80_read8(place);
+				AS8(CHANNEL(channel)->track) = z80_read8((uint16_t)(place - 1u));
 				continue;
 			case 0x000F7Eu:
 				z80_block(17);
-				de = read_track_address(de, ix);
+				place = read_track_address(place, channel);
 				z80_block(48);
-				AS16(CHANNEL(ix)->unk_36) = de;
+				CHANNEL(channel)->call_return = place;
 				continue;
 			case 0x000F8Au:
 				z80_block(48);
-				de = AS16(CHANNEL(ix)->unk_36);
+				place = CHANNEL(channel)->call_return;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000F93u:
 				z80_block(17);
-				de = read_track_address(de, ix);
+				place = read_track_address(place, channel);
 				z80_block(48);
-				CHANNEL(ix)->unk_3A = de;
+				CHANNEL(channel)->call_2_return = place;
 				continue;
 			case 0x000F9Fu:
 				z80_block(48);
-				de = CHANNEL(ix)->unk_3A;
+				place = CHANNEL(channel)->call_2_return;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000FA8u:
 				z80_block(99);
-				a = z80_read8(de);
-				AS8(accelerando) = a;
-				AT8(accelerando, 1) = ((((a & 0xFu) << 1) << 1) << 1) << 1;
+				value = z80_read8(place);
+				AS8(accelerando) = value;
+				AT8(accelerando, 1) = ((((value & 0xFu) << 1) << 1) << 1) << 1;
 				tempo_increase = 0u;
 				z80_block(6);
-				de++;
+				place++;
 				z80_block(48);
-				CHANNEL(ix)->unk_10 = de;
+				CHANNEL(channel)->track = place;
 				continue;
 			case 0x000FC0u:
 				z80_block(36);
-				chip_channel = CHANNEL(ix)->chip_channel;
+				chip_channel = CHANNEL(channel)->chip_channel;
 				zero = (uint8_t)(chip_channel - 8u) == 0u;
 				if (chip_channel >= 8u)
 				{
 					z80_block(23);
-					a = unk_82C1;
+					value = CHANNEL(PCM_EFFECT_B)->sound;
 					if (zero)
 					{
 						z80_block(13);
-						a = music_pcm_hold;
+						value = music_pcm_hold;
 					}
 					z80_block(14);
 					carry = 0u;
-					if (a != 0u)
+					if (value != 0u)
 					{
-						free_channel(ix);
+						free_channel(channel);
 						return carry;
 					}
 					z80_block(10);
-					return stop_pcm_channel(ix);
+					return stop_pcm_channel(channel);
 				}
 				z80_block(27);
-				bc = 0x3800u;
-				write_fm_channel_register(ix, &bc, &carry);
+				fm_write = 0x3800u;
+				write_fm_channel_register(channel, &fm_write, &carry);
 				z80_block(36);
-				chip_channel = CHANNEL(ix)->chip_channel;
+				chip_channel = CHANNEL(channel)->chip_channel;
 				zero = (uint8_t)(chip_channel - 6u) == 0u;
 				if (chip_channel < 6u)
-					return stop_channel(ix);
+					return stop_channel(channel);
 				z80_block(23);
-				a = unk_8341;
+				sound = CHANNEL(FM_EFFECT_6)->sound;
 				if (zero == 0u)
 				{
 					z80_block(13);
-					a = unk_8381;
+					sound = CHANNEL(FM_EFFECT_7)->sound;
 				}
 				z80_block(14);
 				carry = 0u;
-				if (a != 0u)
+				if (sound != 0u)
 				{
-					free_channel(ix);
+					free_channel(channel);
 					return carry;
 				}
 				z80_block(10);
-				return stop_channel(ix);
+				return stop_channel(channel);
 			default:
 				sound_invalid_jump(jump_target);
 			}
 			break;
 		}
 		z80_block(17);
-		if (a == 0x70u)
+		if (value == 0x70u)
 		{
 			z80_block(44);
-			de = hl;
-			CHANNEL(ix)->unk_39 = b & 0xFu;
+			place = track;
+			CHANNEL(channel)->attenuation = command & 0xFu;
 			z80_block(6);
-			de++;
+			place++;
 			z80_block(48);
-			CHANNEL(ix)->unk_10 = de;
+			CHANNEL(channel)->track = place;
 			continue;
 		}
 		z80_block(25);
-		t10 = b & 0xFu;
-		de |= t10;
-		if (t10 == 0u)
+		t5 = command & 0xFu;
+		place |= t5;
+		if (t5 == 0u)
 		{
 			z80_block(30);
-			if ((CHANNEL(ix)->unk_3F & 1u) == 0u)
+			if ((CHANNEL(channel)->flags & 1u) == 0u)
 			{
 				z80_block(17);
-				fm_key_off(ix);
+				fm_key_off(channel);
 			}
 			z80_block(48);
-			CHANNEL(ix)->unk_28 = 0xF5u;
-			CHANNEL(ix)->unk_29 = 9u;
-			return next_note_length(de, hl, ix);
+			AS8(CHANNEL(channel)->note_hook) = 0xF5u;
+			AT8(CHANNEL(channel)->note_hook, 1) = 9u;
+			return next_note_length(place, track, channel);
 		}
 		z80_block(17);
-		carry = next_note_length(de, hl, ix);
+		carry = next_note_length(place, track, channel);
 		play_note = true;
 		break;
 	}
 	if (!play_note)
 	{
 		z80_block(61);
-		saved_de = de;
-		CHANNEL(ix)->unk_13 = 0u;
-		a = z80_read8(de) & ~0xFu;
-		add_note_length_high(ix, a);
+		saved_place = place;
+		CHANNEL(channel)->ticks_left = 0u;
+		length_codes = z80_read8(place) & ~0xFu;
+		add_note_length_high(channel, length_codes);
 		for (;;)
 		{
 			z80_block(30);
-			de++;
-			t11 = z80_read8(de) & ~0xFu;
-			a = t11;
-			if (t11 == 0u)
+			place++;
+			t6 = z80_read8(place) & ~0xFu;
+			length_codes = t6;
+			if (t6 == 0u)
 				break;
 			z80_block(17);
-			add_note_length_high(ix, a);
+			add_note_length_high(channel, length_codes);
 			z80_block(24);
-			t12 = z80_read8(de) & 0xFu;
-			a = t12;
-			if (t12 == 0u)
+			t7 = z80_read8(place) & 0xFu;
+			length_code = t7;
+			if (t7 == 0u)
 				break;
 			z80_block(17);
-			add_note_length(ix, a);
+			add_note_length(channel, length_code);
 			z80_block(10);
 		}
 		z80_block(82);
-		de++;
-		CHANNEL(ix)->unk_10 = de;
+		place++;
+		CHANNEL(channel)->track = place;
 		carry = 0u;
-		de = z80_read8(saved_de) & 0xFu;
+		place = z80_read8(saved_place) & 0xFu;
 	}
 	z80_block(30);
-	if (((CHANNEL(ix)->chip_channel >> 3) & 1u) != 0u)
+	if (((CHANNEL(channel)->chip_channel >> 3) & 1u) != 0u)
 	{
 		z80_block(43);
-		a = unk_8281;
-		if (CHANNEL(ix)->chip_channel & 1u)
+		sound = CHANNEL(PCM_EFFECT_A)->sound;
+		if (CHANNEL(channel)->chip_channel & 1u)
 		{
 			z80_block(13);
-			a = unk_82C1;
+			sound = CHANNEL(PCM_EFFECT_B)->sound;
 		}
 		z80_block(9);
 		carry = 0u;
-		if (a != 0u)
+		if (sound != 0u)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(59);
-		c = (uint8_t)de;
-		hl = 0u;
-		de = CHANNEL(ix)->unk_20;
-		b = CHANNEL(ix)->unk_13;
+		note_index = (uint8_t)place;
+		gated_length = 0u;
+		gate = CHANNEL(channel)->gate;
+		count = CHANNEL(channel)->ticks_left;
 		for (;;)
 		{
 			z80_block(19);
-			hl += de;
-			b--;
-			if (b == 0u)
+			gated_length += gate;
+			count--;
+			if (count == 0u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(11);
-		de = c;
-		a = 0xFFu;
+		place = note_index;
+		key_off_ticks = 0xFFu;
 		do
 		{
 			z80_block(43);
-			a = (a + 1u) ^ (de >> 8);
-			t13 = hl;
-			hl = t13 - 0xFFu;
-		} while (t13 >= 0xFFu);
+			key_off_ticks = (key_off_ticks + 1u) ^ (place >> 8);
+			t8 = gated_length;
+			gated_length = t8 - 0xFFu;
+		} while (t8 >= 0xFFu);
 		z80_block(75);
-		CHANNEL(ix)->unk_1D = a;
-		CHANNEL(ix)->unk_21 = 3u;
-		if ((CHANNEL(ix)->unk_18 & 1u) != 0u)
+		CHANNEL(channel)->key_off_ticks = key_off_ticks;
+		CHANNEL(channel)->ramp_wait = 3u;
+		if ((CHANNEL(channel)->mode & 1u) != 0u)
 		{
 			z80_block(41);
-			a = ((uint32_t)de << 1) | (de >> 7);
-			de = (uint8_t)((((uint32_t)a << 1) | (a >> 7)) + de + de);
-			hl = pcm_drums_ADDRESS - 0x6u;
+			value = ((uint32_t)place << 1) | (place >> 7);
+			place = (uint8_t)((((uint32_t)value << 1) | (value >> 7)) + place + place);
+			pcm_sound = pcm_drums_ADDRESS - 0x6u;
 		}
 		else
 		{
 			z80_block(66);
-			de = (uint8_t)(((uint32_t)CHANNEL(ix)->unk_38 << 1) << 1);
-			hl = pcm_instruments_ADDRESS;
+			place = (uint8_t)(((uint32_t)CHANNEL(channel)->instrument << 1) << 1);
+			pcm_sound = pcm_instruments_ADDRESS;
 		}
 		z80_block(67);
-		hl += de;
-		de = SOUND_ROM8(hl);
-		hl++;
-		de |= (uint32_t)SOUND_ROM8(hl) << 8;
-		hl++;
-		c = SOUND_ROM8(hl);
-		hl++;
-		bc_2 = c;
-		set_pcm_start(bc_2, de, ix);
+		pcm_sound += place;
+		start = (uint8_t)PCM_DRUM(pcm_sound)->start;
+		pcm_sound++;
+		start |= (uint32_t)(uint8_t)(PCM_DRUM(pcm_sound - 0x1u)->start >> 8u) << 8;
+		pcm_sound++;
+		bank = PCM_DRUM(pcm_sound - 0x2u)->bank;
+		pcm_sound++;
+		bank_2 = bank;
+		set_pcm_start(bank_2, start, channel);
 		z80_block(122);
-		de_2 = (uint8_t)(fade_attenuation + music_attenuation + CHANNEL(ix)->unk_1F + CHANNEL(ix)->unk_39 + CHANNEL(ix)->unk_33);
-		a = SOUND_ROM8(hl);
-		hl++;
-		t14 = a;
-		a = t14 - de_2;
-		if (t14 < de_2)
+		total_attenuation = (uint8_t)(fade_attenuation + music_attenuation + CHANNEL(channel)->volume + CHANNEL(channel)->attenuation + CHANNEL(channel)->loop_volume_offset);
+		level = PCM_DRUM(pcm_sound - 0x3u)->level;
+		pcm_sound++;
+		t9 = level;
+		pcm_level = t9 - total_attenuation;
+		if (t9 < total_attenuation)
 		{
 			z80_block(4);
-			a = 0u;
+			pcm_level = 0u;
 		}
 		z80_block(40);
-		CHANNEL(ix)->unk_3C = a;
-		bc_2 = a;
-		carry = set_pcm_volume(bc_2, ix);
+		CHANNEL(channel)->pcm_level = pcm_level;
+		volume = pcm_level;
+		carry = set_pcm_volume(volume, channel);
 		z80_block(30);
-		if (CHANNEL(ix)->unk_18 & 1u)
+		if (CHANNEL(channel)->mode & 1u)
 		{
 			z80_block(37);
-			de = SOUND_ROM16(hl);
-			set_pcm_pitch(de, ix);
+			pitch_2 = PCM_DRUM(pcm_sound - 0x4u)->pitch;
+			set_pcm_pitch(pitch_2, channel);
 			z80_block(10);
-			start_pcm(ix);
+			start_pcm(channel);
 			return carry;
 		}
 		z80_block(81);
-		a = z80_read8((uint16_t)(CHANNEL(ix)->unk_10 - 1u)) & 0xFu;
-		b = CHANNEL(ix)->unk_1E + 1u;
+		value = z80_read8((uint16_t)(CHANNEL(channel)->track - 1u)) & 0xFu;
+		count = CHANNEL(channel)->octave + 1u;
 		for (;;)
 		{
 			z80_block(15);
-			a += 0xCu;
-			b--;
-			if (b == 0u)
+			value += 0xCu;
+			count--;
+			if (count == 0u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(63);
-		de = a;
-		carry = (uint16_t)(pcm_note_pitches_ADDRESS - 0xCu + de) < pcm_note_pitches_ADDRESS - 0xCu;
-		de = SOUND_ROM8(pcm_note_pitches_ADDRESS - 0xCu + de) | 0xF00u;
-		set_pcm_pitch(de, ix);
+		place = value;
+		carry = (uint16_t)(pcm_note_pitches_ADDRESS - 0xCu + place) < pcm_note_pitches_ADDRESS - 0xCu;
+		pitch_2 = TABLE8(pcm_note_pitches, (uint16_t)(place - 0xCu)) | 0xF00u;
+		set_pcm_pitch(pitch_2, channel);
 		z80_block(10);
-		start_pcm(ix);
+		start_pcm(channel);
 		return carry;
 	}
 	z80_block(25);
-	if ((CHANNEL(ix)->unk_3F & 1u) != 0u)
+	if ((CHANNEL(channel)->flags & 1u) != 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(30);
-	if (CHANNEL(ix)->unk_3F >> 7)
+	if (CHANNEL(channel)->flags >> 7)
 	{
 		z80_block(36);
-		a = CHANNEL(ix)->unk_38;
-		carry = load_instrument(ix, a);
+		instrument = CHANNEL(channel)->instrument;
+		carry = load_instrument(channel, instrument);
 		z80_block(23);
-		CHANNEL(ix)->unk_3F &= 0x7Fu;
+		CHANNEL(channel)->flags &= 0x7Fu;
 	}
 	z80_block(30);
-	if ((CHANNEL(ix)->unk_18 & 1u) != 0u)
+	if ((CHANNEL(channel)->mode & 1u) != 0u)
 	{
 		z80_block(10);
-		clear_note_hook(ix);
+		clear_note_hook(channel);
 		return carry;
 	}
 	z80_block(17);
-	carry = fm_fast_release(ix);
+	carry = fm_fast_release(channel);
 	z80_block(243);
-	hl = fm_note_pitches_ADDRESS - 0x2u + (uint8_t)(music_transpose + ((((uint32_t)de << 1) | ((uint8_t)de >> 7)) + CHANNEL(ix)->unk_1E + CHANNEL(ix)->unk_19) + CHANNEL(ix)->unk_32);
-	hl = SOUND_ROM16(hl) + CHANNEL(ix)->unk_15;
-	CHANNEL(ix)->unk_26 = hl;
-	if (CHANNEL(ix)->unk_17 == 0u)
+	note_index = music_transpose + ((((uint32_t)place << 1) | ((uint8_t)place >> 7)) + CHANNEL(channel)->octave + CHANNEL(channel)->transpose) + CHANNEL(channel)->loop_transpose;
+	pitch = TABLE16(fm_note_pitches, (uint16_t)(note_index - 2u)) + CHANNEL(channel)->detune;
+	CHANNEL(channel)->target_pitch = pitch;
+	if (CHANNEL(channel)->portamento == 0u)
 	{
 		z80_block(55);
-		CHANNEL(ix)->unk_24 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		CHANNEL(channel)->portamento_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 	}
 	z80_block(27);
-	bc = 0x3800u;
-	write_fm_channel_register(ix, &bc, &carry);
+	fm_write = 0x3800u;
+	write_fm_channel_register(channel, &fm_write, &carry);
 	z80_block(94);
-	CHANNEL(ix)->unk_21 = CHANNEL(ix)->unk_16;
-	CHANNEL(ix)->unk_22 = 0u;
-	a = CHANNEL(ix)->unk_20;
-	if (a != 0u)
+	CHANNEL(channel)->ramp_wait = CHANNEL(channel)->lfo_ramp;
+	CHANNEL(channel)->lfo_sensitivity = 0u;
+	key_off_ticks = CHANNEL(channel)->gate;
+	if (key_off_ticks != 0u)
 	{
 		z80_block(40);
-		hl = 0u;
-		de = CHANNEL(ix)->unk_13;
-		b = 8u;
+		gated_length = 0u;
+		place = CHANNEL(channel)->ticks_left;
+		count = 8u;
 		for (;;)
 		{
 			z80_block(18);
-			carry = a & 1u;
-			a = (a >> 1) | ((uint32_t)a << 7);
+			carry = key_off_ticks & 1u;
+			key_off_ticks = (key_off_ticks >> 1) | ((uint32_t)key_off_ticks << 7);
 			if (carry)
 			{
 				z80_block(11);
-				hl += de;
+				gated_length += place;
 			}
 			z80_block(24);
-			carry = (uint8_t)de >> 7;
-			de = IN_PAGE(de, (uint8_t)((uint32_t)de << 1));
-			de = (de & 0xFFu) | ((uint32_t)(uint8_t)(((uint32_t)(de >> 8) << 1) | carry) << 8);
-			b--;
-			if (b == 0u)
+			carry = (uint8_t)place >> 7;
+			place = IN_PAGE(place, (uint8_t)((uint32_t)place << 1));
+			place = (place & 0xFFu) | ((uint32_t)(uint8_t)(((uint32_t)(place >> 8) << 1) | carry) << 8);
+			count--;
+			if (count == 0u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(8);
-		a = (hl >> 8) + 1u;
+		key_off_ticks = (gated_length >> 8) + 1u;
 	}
 	z80_block(160);
-	CHANNEL(ix)->unk_1D = a;
-	t15 = music_volume + (fade_step + music_attenuation) + CHANNEL(ix)->unk_1A + CHANNEL(ix)->unk_33 + CHANNEL(ix)->unk_39 + CHANNEL(ix)->unk_1F;
-	a = t15;
-	if ((int8_t)t15 < 0)
+	CHANNEL(channel)->key_off_ticks = key_off_ticks;
+	t10 = music_volume + (fade_step + music_attenuation) + CHANNEL(channel)->volume_offset + CHANNEL(channel)->loop_volume_offset + CHANNEL(channel)->attenuation + CHANNEL(channel)->volume;
+	attenuation = t10;
+	if ((int8_t)t10 < 0)
 	{
 		z80_block(7);
-		a = 0x7Fu;
+		attenuation = 0x7Fu;
 	}
 	z80_block(17);
-	carry = set_fm_volume(ix, a);
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	fm_restore_release(ix);
+	fm_restore_release(channel);
 	z80_block(10);
-	return fm_key_on(ix);
+	return fm_key_on(channel);
 }
 
-uint32_t next_note_length(uint16_t de, uint16_t hl, uint16_t ix)
+/* Moves the track past the note and sets its length in ticks. */
+uint32_t next_note_length(uint16_t note, uint16_t note_place, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t bc = 0;
+	uint16_t length_code = 0;
 
 	z80_block(148);
-	hl++;
-	CHANNEL(ix)->unk_10 = hl;
-	bc = ((((de >> 8) >> 1) >> 1) >> 1) >> 1;
-	carry = (uint16_t)(note_lengths_ADDRESS - 0x1u + bc) < note_lengths_ADDRESS - 0x1u;
-	CHANNEL(ix)->unk_13 = SOUND_ROM8(note_lengths_ADDRESS - 0x1u + bc);
+	note_place++;
+	CHANNEL(channel)->track = note_place;
+	length_code = ((((note >> 8) >> 1) >> 1) >> 1) >> 1;
+	carry = (uint16_t)(note_lengths_ADDRESS - 0x1u + length_code) < note_lengths_ADDRESS - 0x1u;
+	CHANNEL(channel)->ticks_left = note_lengths[(uint16_t)(length_code - 1u)];
 	return carry;
 }
 
-uint32_t load_instrument(uint16_t ix, uint8_t a)
+/* Loads the FM instrument the track asks for. */
+uint32_t load_instrument(uint16_t channel, uint8_t instrument)
 {
-	uint16_t hl = 0, voice = 0;
+	uint16_t offset = 0, voice = 0;
 
 	z80_block(74);
-	hl = fm_voice_pointers_ADDRESS + (uint8_t)((uint32_t)a << 1);
-	voice = SOUND_ROM16(hl);
-	return load_fm_voice(voice, ix);
+	offset = (uint8_t)((uint32_t)instrument << 1);
+	voice = fm_voice_pointers[offset / 2u];
+	return load_fm_voice(voice, channel);
 }
 
-void add_note_length_high(uint16_t ix, uint8_t a)
+/* Adds the length its high nibble gives to the note's ticks. */
+void add_note_length_high(uint16_t channel, uint8_t length_codes)
 {
 	z80_block(32);
-	a = (((a >> 1) >> 1) >> 1) >> 1;
-	add_note_length(ix, a);
+	length_codes = (((length_codes >> 1) >> 1) >> 1) >> 1;
+	add_note_length(channel, length_codes);
 }
 
-void add_note_length(uint16_t ix, uint8_t a)
+/* Adds a length to the note's ticks. */
+void add_note_length(uint16_t channel, uint8_t length_code)
 {
 	z80_block(87);
-	CHANNEL(ix)->unk_13 += note_lengths[(uint16_t)(a - 1u)];
+	CHANNEL(channel)->ticks_left += note_lengths[(uint16_t)(length_code - 1u)];
 }
 
-uint8_t read_transpose(uint16_t de)
+/* Reads a transposition argument: semitones and octaves, down with its high bit. */
+uint8_t read_transpose(uint16_t argument)
 {
-	uint8_t a = 0, b = 0, c = 0;
+	uint8_t bits = 0, count = 0, transposition = 0;
 	uint8_t t1 = 0;
 
 	z80_block(60);
-	a = z80_read8(de) & 0xFu;
-	c = ((uint32_t)a << 1) | (a >> 7);
-	a = z80_read8(de) & 0x70u;
-	a = (a >> 1) | ((uint32_t)a << 7);
-	a = (a >> 1) | ((uint32_t)a << 7);
-	a = (a >> 1) | ((uint32_t)a << 7);
-	b = (a >> 1) | ((uint32_t)a << 7);
-	a = 0u;
+	bits = z80_read8(argument) & 0xFu;
+	transposition = ((uint32_t)bits << 1) | (bits >> 7);
+	bits = z80_read8(argument) & 0x70u;
+	bits = (bits >> 1) | ((uint32_t)bits << 7);
+	bits = (bits >> 1) | ((uint32_t)bits << 7);
+	bits = (bits >> 1) | ((uint32_t)bits << 7);
+	count = (bits >> 1) | ((uint32_t)bits << 7);
+	bits = 0u;
 	for (;;)
 	{
 		z80_block(15);
-		a += 0xCu;
-		b--;
-		if (b == 0u)
+		bits += 0xCu;
+		count--;
+		if (count == 0u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(36);
-	t1 = z80_read8(de);
-	a = (((uint32_t)a << 1) | (a >> 7)) + c;
+	t1 = z80_read8(argument);
+	bits = (((uint32_t)bits << 1) | (bits >> 7)) + transposition;
 	if (t1 >> 7 == 0u)
 	{
 		z80_cycles(6);
-		return a;
+		return bits;
 	}
 	z80_block(18);
-	a = 0u - a;
-	return a;
+	bits = 0u - bits;
+	return bits;
 }
 
-uint8_t read_volume_offset(uint16_t de)
+/* Reads an attenuation offset argument: negative with its high bit. */
+uint8_t read_volume_offset(uint16_t argument)
 {
-	uint8_t a = 0;
+	uint8_t offset = 0;
 
 	z80_block(20);
-	a = z80_read8(de);
-	if (a >> 7 == 0u)
+	offset = z80_read8(argument);
+	if (offset >> 7 == 0u)
 	{
 		z80_cycles(6);
-		return a;
+		return offset;
 	}
 	z80_block(25);
-	a = 0u - (a & 0x7Fu);
-	return a;
+	offset = 0u - (offset & 0x7Fu);
+	return offset;
 }
 
-uint16_t read_track_address(uint16_t de, uint16_t ix)
+/* Reads the address the track goes on at, and moves past it. */
+uint16_t read_track_address(uint16_t argument, uint16_t channel)
 {
 	z80_block(74);
-	AS8(CHANNEL(ix)->unk_10) = z80_read8(de);
-	de++;
-	AT8(CHANNEL(ix)->unk_10, 1) = z80_read8(de);
-	de++;
-	return de;
+	AS8(CHANNEL(channel)->track) = z80_read8(argument);
+	argument++;
+	AT8(CHANNEL(channel)->track, 1) = z80_read8(argument);
+	argument++;
+	return argument;
 }
 
-void unused_note_hook(uint16_t ix)
+/* A note hook no track sets: it puts the one that does nothing back. */
+void unused_note_hook(uint16_t channel)
 {
 	z80_block(10);
-	clear_note_hook(ix);
+	clear_note_hook(channel);
 }

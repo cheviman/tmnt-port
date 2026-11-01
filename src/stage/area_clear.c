@@ -3,7 +3,7 @@
  *    Description: the checks for the end of each area: the scroll locked, every player ready and no enemy left, then the area cleared
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -11,46 +11,50 @@
  */
 #include "game.h"
 
-uint32_t check_area_cleared(uint32_t d7)
+/* the stage's check for the end of the area, from its last scroll segment on */
+void check_area_cleared(void)
 {
 	switch (stage)
 	{
 	case 0:
-		return check_cleared_building(d7);
+		check_cleared_building();
+		return;
 	case 1:
 		check_cleared_apartment();
-		return d7;
+		return;
 	case 2:
 		check_cleared_street();
-		return d7;
+		return;
 	case 3:
 		check_cleared_sewer();
-		return d7;
+		return;
 	case 4:
 		check_cleared_car_street();
-		return d7;
+		return;
 	case 5:
 		check_cleared_highway();
-		return d7;
+		return;
 	case 6:
 		check_cleared_skateboard();
-		return d7;
+		return;
 	case 7:
 		check_cleared_building_site();
-		return d7;
+		return;
 	case 8:
 		check_cleared_technodrome();
-		return d7;
+		return;
 	case 9:
 		check_cleared_final();
-		return d7;
+		return;
 	}
 }
 
-uint32_t check_cleared_building(uint32_t d7)
+/* area 0: the scroll held; every player ready and no enemy left, 96 frames with sounds, then the area
+   beaten */
+void check_cleared_building(void)
 {
 	uint32_t zero = 0;
-	uint32_t d7_2 = 0;
+	uint8_t sound = 0;
 	uint8_t t1 = 0;
 
 	if (last_segment == 0u)
@@ -58,32 +62,32 @@ uint32_t check_cleared_building(uint32_t d7)
 		scroll_held = 0xFFFFFFFFu;
 		last_segment = 0xFFu;
 		building_clear_wait = 0u;
-		return d7;
+		return;
 	}
 	if (building_clear_wait == 0u)
 	{
 		zero = players_ready();
 		if (zero || enemies_on_screen != 0u)
-			return d7;
+			return;
 		building_clear_wait = 0x60u;
-		return d7;
+		return;
 	}
 	t1 = building_clear_wait;
 	building_clear_wait = t1 - 1u;
 	if (t1 != 1u)
 	{
 		if (building_clear_wait != 0x40u)
-			return d7;
-		d7_2 = (d7 & ~0xFFu) | 0xBAu;
-		queue_sound((uint8_t)d7_2, 0u);
-		d7_2 = (d7_2 & ~0xFFu) | 0xFEu;
-		queue_sound((uint8_t)d7_2, 0u);
-		return d7_2;
+			return;
+		sound = 0xBAu;
+		queue_sound(sound);
+		sound = 0xFEu;
+		queue_sound(sound);
+		return;
 	}
 	area_beaten = 0xFFu;
-	return d7;
 }
 
+/* area 1: the scroll held; beaten with every player ready, no enemy left and the drill's arrival over */
 void check_cleared_apartment(void)
 {
 	uint32_t zero = 0;
@@ -95,6 +99,7 @@ void check_cleared_apartment(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 2: the scroll held; beaten with every player ready and no enemy left */
 void check_cleared_street(void)
 {
 	uint32_t zero = 0;
@@ -106,10 +111,12 @@ void check_cleared_street(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 3: the scroll held one way; every 256 frames the enemies beyond row 0x88 taken off; beaten when
+   all are gone */
 void check_cleared_sewer(void)
 {
 	uint32_t zero = 0;
-	uint8_t d0 = 0;
+	uint8_t limit_y = 0;
 	uint32_t object = 0;
 
 	if ((uint8_t)frame_count != 0u)
@@ -122,10 +129,10 @@ void check_cleared_sewer(void)
 		return;
 	}
 	object = OBJECT_ADDRESS(12);
-	d0 = 0x88u;
+	limit_y = 0x88u;
 	do
 	{
-		if ((OBJECT(object)->flags & 1u) != 0u && (OBJECT(object)->flags & 0x80u) != 0u && (int8_t)OBJECT(object)->throw < 0 && (int8_t)(uint8_t)(OBJECT(object)->y >> 24u) >= 0 && d0 < (uint8_t)(OBJECT(object)->y >> 8u))
+		if ((OBJECT(object)->flags & 1u) != 0u && (OBJECT(object)->flags & 0x80u) != 0u && (int8_t)OBJECT(object)->throw < 0 && (int8_t)(uint8_t)(OBJECT(object)->y >> 24u) >= 0 && limit_y < (uint8_t)(OBJECT(object)->y >> 8u))
 		{
 			OBJECT(object)->flags = 0u;
 			enemies_on_screen--;
@@ -139,6 +146,7 @@ void check_cleared_sewer(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 4: the scroll held; beaten with every player ready and no enemy left */
 void check_cleared_car_street(void)
 {
 	uint32_t zero = 0;
@@ -150,6 +158,7 @@ void check_cleared_car_street(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 5: the scroll held one way; beaten with every player ready and no enemy left */
 void check_cleared_highway(void)
 {
 	uint32_t zero = 0;
@@ -161,6 +170,7 @@ void check_cleared_highway(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 6: the scroll goes on by itself; beaten with every player ready and no enemy left */
 void check_cleared_skateboard(void)
 {
 	uint32_t zero = 0;
@@ -172,6 +182,7 @@ void check_cleared_skateboard(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 7: the scroll held; beaten with every player ready and no enemy left */
 void check_cleared_building_site(void)
 {
 	uint32_t zero = 0;
@@ -183,6 +194,7 @@ void check_cleared_building_site(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 8: the scroll held; beaten with every player ready and no enemy left */
 void check_cleared_technodrome(void)
 {
 	uint32_t zero = 0;
@@ -194,6 +206,7 @@ void check_cleared_technodrome(void)
 		area_beaten = 0xFFu;
 }
 
+/* area 9: beaten with every player ready and no enemy left */
 void check_cleared_final(void)
 {
 	uint32_t zero = 0;
@@ -204,19 +217,20 @@ void check_cleared_final(void)
 		area_beaten = 0xFFu;
 }
 
+/* whether every player in play has a turtle that is not being hit */
 uint32_t players_ready(void)
 {
 	uint32_t zero = 0, carry = 0;
-	uint8_t d0 = 0;
+	uint8_t players = 0;
 	uint32_t object = 0;
 	uint8_t flags = 0, routine = 0;
 
 	object = OBJECT_ADDRESS(0);
-	d0 = players_in_play;
+	players = players_in_play;
 	do
 	{
-		carry = d0 & 1u;
-		d0 = d0 >> 1;
+		carry = players & 1u;
+		players = players >> 1;
 		if (carry)
 		{
 			flags = OBJECT(object)->flags;

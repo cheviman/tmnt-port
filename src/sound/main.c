@@ -3,7 +3,7 @@
  *    Description: the program's frame: sound_main, the main loop, the channels' handlers and their stop
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -11,21 +11,23 @@
  */
 #include "sound.h"
 
+/* The program's start: clears the RAM, sets up the K007232 and the YM2151 (no LFO), the random numbers
+   and each channel's chip channel, and starts the frame's timer. */
 void sound_main(void)
 {
 	uint32_t carry = 0;
-	uint8_t b = 0;
-	uint16_t bc = 0, hl = 0;
+	uint8_t cleared = 0;
+	uint16_t fm_write = 0, place = 0;
 
 	z80_block(17);
-	b = 0u;
-	hl = CHANNEL_ADDRESS(0);
+	cleared = 0u;
+	place = RAM_START;
 	do
 	{
 		z80_block(34);
-		z80_write8(hl, b);
-		hl++;
-	} while (hl >> 8 != 0x88u);
+		z80_write8(place, cleared);
+		place++;
+	} while (place >> 8 != 0x88u);
 	z80_block(104);
 	z80_write8(pcm_loop_flags, 0u);
 	pcm_loops = 0u;
@@ -34,40 +36,42 @@ void sound_main(void)
 	music_pcm_hold = 0u;
 	reset_sound();
 	z80_block(27);
-	bc = 0x1900u;
-	carry = write_fm_register(bc);
+	fm_write = 0x1900u;
+	carry = write_fm_register(fm_write);
 	z80_block(27);
-	bc = 0x1980u;
-	carry = write_fm_register(bc);
+	fm_write = 0x1980u;
+	carry = write_fm_register(fm_write);
 	z80_block(411);
 	random_seed = 0x305u;
 	random_source = 0u;
 	random_write = random_pool_ADDRESS;
 	random_read = random_pool_ADDRESS;
-	unk_8000 = 0u;
-	unk_8040 = 1u;
-	unk_8080 = 2u;
-	unk_80C0 = 3u;
-	unk_8100 = 4u;
-	unk_8140 = 5u;
-	unk_8180 = 6u;
-	unk_81C0 = 7u;
-	unk_8200 = 8u;
-	unk_8240 = 9u;
-	unk_8280 = 0xAu;
-	unk_82C0 = 0xBu;
-	unk_8300 = 0xCu;
-	unk_8340 = 6u;
-	unk_8380 = 7u;
+	CHANNEL(RAM_START)->chip_channel = 0u;
+	CHANNEL(MUSIC_FM_1)->chip_channel = 1u;
+	CHANNEL(MUSIC_FM_2)->chip_channel = 2u;
+	CHANNEL(MUSIC_FM_3)->chip_channel = 3u;
+	CHANNEL(MUSIC_FM_4)->chip_channel = 4u;
+	CHANNEL(MUSIC_FM_5)->chip_channel = 5u;
+	CHANNEL(MUSIC_FM_6)->chip_channel = 6u;
+	CHANNEL(MUSIC_FM_7)->chip_channel = 7u;
+	CHANNEL(MUSIC_PCM_A)->chip_channel = 8u;
+	CHANNEL(MUSIC_PCM_B)->chip_channel = 9u;
+	CHANNEL(PCM_EFFECT_A)->chip_channel = 0xAu;
+	CHANNEL(PCM_EFFECT_B)->chip_channel = 0xBu;
+	CHANNEL(SPEECH)->chip_channel = 0xCu;
+	CHANNEL(FM_EFFECT_6)->chip_channel = 6u;
+	CHANNEL(FM_EFFECT_7)->chip_channel = 7u;
 	restart_frame_timer();
 }
 
+/* A pass of the main loop: random bytes while it waits for the YM2151's timer, then a step of the
+   music's fade-out, every channel's handler and the title music's timer. */
 void sound_main_loop(void)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t de = 0, hl = 0, ix = 0;
-	uint16_t saved_hl = 0;
+	uint8_t random_byte = 0;
+	uint16_t channel = 0, old_seed = 0, pool_place = 0, seed = 0;
+	uint16_t saved_seed = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(8);
@@ -77,18 +81,18 @@ void sound_main_loop(void)
 	for (;;)
 	{
 		z80_block(200);
-		hl = random_seed;
-		saved_hl = hl;
-		de = saved_hl;
-		hl = hl * 2u + de;
-		a = de + (hl >> 8);
-		random_seed = (hl & 0xFFu) | ((uint32_t)a << 8);
-		hl = random_source;
-		a += z80_read8(hl);
-		random_source = IN_PAGE(hl, (uint8_t)(hl + 1u));
-		hl = random_write;
-		z80_write8(hl, a);
-		random_write = IN_PAGE(hl, (uint8_t)(hl + 1u));
+		seed = random_seed;
+		saved_seed = seed;
+		old_seed = saved_seed;
+		seed = seed * 2u + old_seed;
+		random_byte = old_seed + (seed >> 8);
+		random_seed = (seed & 0xFFu) | ((uint32_t)random_byte << 8);
+		pool_place = random_source;
+		random_byte += z80_read8(pool_place);
+		random_source = IN_PAGE(pool_place, (uint8_t)(pool_place + 1u));
+		pool_place = random_write;
+		z80_write8(pool_place, random_byte);
+		random_write = IN_PAGE(pool_place, (uint8_t)(pool_place + 1u));
 		t1 = z80_read8(fm_data);
 		if ((t1 & 2u) != 0u)
 			break;
@@ -97,7 +101,6 @@ void sound_main_loop(void)
 	z80_block(17);
 	restart_frame_timer();
 	z80_block(31);
-	hl = fade_timer_ADDRESS;
 	carry = 0u;
 	if (fade_timer != 0u)
 	{
@@ -108,8 +111,7 @@ void sound_main_loop(void)
 		{
 			z80_block(71);
 			fade_timer = 0x16u;
-			unk_83CC = 1u;
-			hl++;
+			music_attenuation_changed = 1u;
 			fade_step++;
 			if ((fade_step & 3u) == 0u)
 			{
@@ -129,10 +131,10 @@ void sound_main_loop(void)
 				z80_block(17);
 				free_music_pcm_b();
 				z80_block(27);
-				if (unk_8281 == 0u)
+				if (CHANNEL(PCM_EFFECT_A)->sound == 0u)
 				{
 					z80_block(27);
-					if (unk_82C1 == 0u)
+					if (CHANNEL(PCM_EFFECT_B)->sound == 0u)
 					{
 						z80_block(17);
 						stop_music_pcm_b();
@@ -144,7 +146,7 @@ void sound_main_loop(void)
 				free_music_fm_6_7();
 				z80_block(27);
 				carry = 0u;
-				if (unk_8458 == 0u)
+				if (fm_effect_34_on == 0u)
 				{
 					z80_block(17);
 					stop_music_fm_6_7();
@@ -155,52 +157,52 @@ void sound_main_loop(void)
 		}
 	}
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(0);
-	carry = run_channel_handler(ix, carry);
+	channel = FM_EFFECT_0;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(1);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_1;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(2);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_2;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(3);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_3;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(4);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_4;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(5);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_5;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(6);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_6;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(7);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_FM_7;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(8);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_PCM_A;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(9);
-	carry = run_channel_handler(ix, carry);
+	channel = MUSIC_PCM_B;
+	carry = run_channel_handler(channel, carry);
 	z80_block(48);
 	carry = 0u;
-	unk_83CC = 0u;
-	ix = CHANNEL_ADDRESS(11);
-	carry = run_channel_handler(ix, carry);
+	music_attenuation_changed = 0u;
+	channel = PCM_EFFECT_B;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(10);
-	carry = run_channel_handler(ix, carry);
+	channel = PCM_EFFECT_A;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(12);
-	carry = run_channel_handler(ix, carry);
+	channel = SPEECH;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(13);
-	carry = run_channel_handler(ix, carry);
+	channel = FM_EFFECT_6;
+	carry = run_channel_handler(channel, carry);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(14);
-	carry = run_channel_handler(ix, carry);
+	channel = FM_EFFECT_7;
+	carry = run_channel_handler(channel, carry);
 	z80_block(27);
 	if (title_music_on != 0u)
 	{
@@ -210,511 +212,517 @@ void sound_main_loop(void)
 	z80_block(10);
 }
 
-uint32_t run_channel_handler(uint16_t ix, uint32_t carry)
+/* Runs the channel through the handler its record keeps. */
+uint32_t run_channel_handler(uint16_t channel, uint32_t carry)
 {
 	uint32_t jump_target = 0;
 
 	z80_block(42);
-	jump_target = CHANNEL(ix)->handler;
+	jump_target = CHANNEL(channel)->handler;
 	switch (jump_target)
 	{
 	case 0x000178u:
-		return speech_play(ix);
+		return speech_play(channel);
 	case 0x0001A4u:
-		return speech_wait(ix, carry);
+		return speech_wait(channel, carry);
 	case 0x0005D0u:
-		return stop_channel(ix);
+		return stop_channel(channel);
 	case 0x0005D6u:
-		free_channel(ix);
+		free_channel(channel);
 		return carry;
 	case 0x0005E7u:
 		channel_idle();
 		return carry;
 	case 0x0005E8u:
-		return stop_pcm_channel(ix);
+		return stop_pcm_channel(channel);
 	case 0x000885u:
-		return music_track_start(ix);
+		return music_track_start(channel);
 	case 0x0008CDu:
-		return music_track_first_tick(ix);
+		return music_track_first_tick(channel);
 	case 0x0008D6u:
-		return music_track_tick(ix);
+		return music_track_tick(channel);
 	case 0x0010AFu:
-		return pcm_effect_countdown(ix);
+		return pcm_effect_countdown(channel);
 	case 0x0010D0u:
-		return pcm_effect_81(ix);
+		return pcm_effect_81(channel);
 	case 0x0010F8u:
-		return sound_10F8(ix);
+		return pcm_effect_81_next(channel);
 	case 0x001114u:
-		sound_1114(ix);
+		pcm_effect_81_echo(channel);
 		return carry;
 	case 0x00111Eu:
-		return sound_111E(ix, carry);
+		return pcm_effect_81_echo_wait(channel, carry);
 	case 0x001125u:
-		return pcm_effect_82(ix);
+		return pcm_effect_82(channel);
 	case 0x00114Bu:
-		return sound_114B(ix);
+		return pcm_effect_ducking_fade(channel);
 	case 0x001165u:
-		return pcm_effect_83(ix);
+		return pcm_effect_83(channel);
 	case 0x001183u:
-		return pcm_effect_84(ix);
+		return pcm_effect_84(channel);
 	case 0x0011A1u:
-		return pcm_effect_85(ix);
+		return pcm_effect_85(channel);
 	case 0x0011AEu:
-		return pcm_effect_86(ix);
+		return pcm_effect_86(channel);
 	case 0x0011C8u:
-		return sound_11C8(ix);
+		return pcm_effect_86_countdown(channel);
 	case 0x0011F4u:
-		pcm_effect_8d(ix);
+		pcm_effect_8d(channel);
 		return carry;
 	case 0x0011FEu:
-		return sound_11FE(ix, carry);
+		return pcm_effect_8d_wait(channel, carry);
 	case 0x00120Eu:
-		return pcm_effect_87(ix);
+		return pcm_effect_87(channel);
 	case 0x00122Cu:
-		return pcm_effect_88(ix);
+		return pcm_effect_88(channel);
 	case 0x001232u:
-		return sound_1232(ix);
+		return pcm_effect_88_play(channel);
 	case 0x001250u:
-		sound_1250(ix);
+		pcm_effect_88_echo(channel);
 		return carry;
 	case 0x00125Au:
-		return sound_125A(ix, carry);
+		return pcm_effect_88_echo_wait(channel, carry);
 	case 0x001261u:
-		return pcm_effect_89(ix);
+		return pcm_effect_89(channel);
 	case 0x00128Cu:
-		return sound_128C(ix, carry);
+		return pcm_effect_89_next(channel, carry);
 	case 0x00129Cu:
-		return pcm_effect_8a(ix);
+		return pcm_effect_8a(channel);
 	case 0x0012BFu:
-		return sound_12BF(ix, carry);
+		return pcm_effect_8a_next(channel, carry);
 	case 0x0012D1u:
-		return pcm_effect_8b(ix);
+		return pcm_effect_8b(channel);
 	case 0x0012FCu:
-		return sound_12FC(ix, carry);
+		return pcm_effect_8b_next(channel, carry);
 	case 0x001338u:
-		sound_1338(ix);
+		pcm_effect_8b_echo(channel);
 		return carry;
 	case 0x001342u:
-		return sound_1342(ix, carry);
+		return pcm_effect_8b_echo_wait(channel, carry);
 	case 0x00134Cu:
-		return pcm_effect_8c(ix);
+		return pcm_effect_8c(channel);
 	case 0x001359u:
-		return pcm_effect_8e(ix);
+		return pcm_effect_8e(channel);
 	case 0x00137Du:
-		return pcm_effect_8f(ix);
+		return pcm_effect_8f(channel);
 	case 0x0013A3u:
-		return pcm_effect_90(ix);
+		return pcm_effect_90(channel);
 	case 0x0013C1u:
-		return pcm_effect_91(ix);
+		return pcm_effect_91(channel);
 	case 0x0013CEu:
-		return pcm_effect_92(ix);
+		return pcm_effect_92(channel);
 	case 0x0013D4u:
-		return pcm_effect_93(ix);
+		return pcm_effect_93(channel);
 	case 0x001638u:
-		return fm_effect_01(ix);
+		return fm_effect_01(channel);
 	case 0x001662u:
-		return sound_1662(ix);
+		return fm_effect_01_hold(channel);
 	case 0x00169Au:
-		return fm_effect_02(ix);
+		return fm_effect_02(channel);
 	case 0x0016CFu:
-		return sound_16CF(ix);
+		return fm_effect_02_slide(channel);
 	case 0x001727u:
-		return sound_1727(ix, carry);
+		return fm_effect_02_pause(channel, carry);
 	case 0x00174Fu:
-		return fm_effect_03(ix);
+		return fm_effect_03(channel);
 	case 0x00177Du:
-		return sound_177D(ix);
+		return fm_effect_03_fall(channel);
 	case 0x0017ADu:
-		return sound_17AD(ix);
+		return fm_effect_03_trill(channel);
 	case 0x0017E7u:
-		return fm_effect_04(ix);
+		return fm_effect_04(channel);
 	case 0x001811u:
-		return fm_effect_05(ix);
+		return fm_effect_05(channel);
 	case 0x00183Fu:
-		return sound_183F(ix);
+		return fm_effect_wobble_down(channel);
 	case 0x001868u:
-		return sound_1868(ix, carry);
+		return fm_effect_wobble_hold(channel, carry);
 	case 0x001877u:
-		fm_effect_37(ix);
+		fm_effect_37(channel);
 		return carry;
 	case 0x001881u:
-		return sound_1881(ix, carry);
+		return fm_effect_37_wait(channel, carry);
 	case 0x001888u:
-		return fm_effect_06(ix);
+		return fm_effect_06(channel);
 	case 0x0018A9u:
-		return sound_18A9(ix);
+		return fm_effect_06_fall(channel);
 	case 0x0018D9u:
-		return sound_18D9(ix);
+		return fm_effect_06_trill(channel);
 	case 0x00192Cu:
-		return fm_effect_07(ix);
+		return fm_effect_07(channel);
 	case 0x001962u:
-		return sound_1962(ix);
+		return fm_effect_07_step(channel);
 	case 0x0019D1u:
-		return fm_effect_08(ix);
+		return fm_effect_08(channel);
 	case 0x0019F9u:
-		return sound_19F9(ix);
+		return fm_effect_08_rise_and_warble(channel);
 	case 0x001A23u:
-		return fm_effect_09(ix);
+		return fm_effect_09(channel);
 	case 0x001A43u:
-		return fm_effect_0a(ix);
+		return fm_effect_0a(channel);
 	case 0x001A98u:
-		return sound_1A98(ix);
+		return fm_effect_0a_rise(channel);
 	case 0x001B1Bu:
-		return sound_1B1B(ix);
+		return fm_effect_33_hold(channel);
 	case 0x001B4Fu:
-		return fm_effect_0b(ix);
+		return fm_effect_0b(channel);
 	case 0x001B79u:
-		return sound_1B79(ix);
+		return fm_effect_0b_hold(channel);
 	case 0x001B9Cu:
-		return sound_1B9C(ix);
+		return fm_effect_0b_slide(channel);
 	case 0x001BDEu:
-		return fm_effect_0c(ix);
+		return fm_effect_0c(channel);
 	case 0x001C40u:
-		return sound_1C40(ix);
+		return fm_effect_zigzag_steps(channel);
 	case 0x001CA0u:
-		return fm_effect_0d(ix);
+		return fm_effect_0d(channel);
 	case 0x001CCEu:
-		return sound_1CCE(ix);
+		return fm_effect_0d_fall(channel);
 	case 0x001D0Au:
-		return sound_1D0A(ix);
+		return fm_effect_0d_trill(channel);
 	case 0x001D4Fu:
-		return sound_1D4F(ix, carry);
+		return fm_effect_0d_pause(channel, carry);
 	case 0x001D74u:
-		return fm_effect_0e(ix);
+		return fm_effect_0e(channel);
 	case 0x001D96u:
-		return sound_1D96(ix);
+		return fm_effect_0e_zigzag_down(channel);
 	case 0x001DE4u:
-		return sound_1DE4(ix);
+		return fm_effect_0e_zigzag_up(channel);
 	case 0x001E33u:
-		return fm_effect_0f(ix);
+		return fm_effect_0f(channel);
 	case 0x001E4Cu:
-		return sound_1E4C(ix);
+		return fm_effect_0f_drop(channel);
 	case 0x001EB5u:
-		return sound_1EB5(ix);
+		return fm_effect_burst_step(channel);
 	case 0x001F07u:
-		return fm_effect_10(ix);
+		return fm_effect_10(channel);
 	case 0x001F37u:
-		return sound_1F37(ix);
+		return fm_effect_10_fall(channel);
 	case 0x001F7Fu:
-		return sound_1F7F(ix);
+		return fm_effect_10_trill(channel);
 	case 0x001FCBu:
-		return fm_effect_11(ix);
+		return fm_effect_11(channel);
 	case 0x001FE4u:
-		return sound_1FE4(ix);
+		return fm_effect_drop_and_pcm(channel);
 	case 0x001FF6u:
-		return fm_effect_12(ix);
+		return fm_effect_12(channel);
 	case 0x002012u:
-		return fm_effect_13(ix);
+		return fm_effect_13(channel);
 	case 0x00203Eu:
-		return fm_effect_14(ix);
+		return fm_effect_14(channel);
 	case 0x002069u:
-		return sound_2069(ix, carry);
+		return fm_effect_14_fall(channel, carry);
 	case 0x0020ADu:
-		return fm_effect_15(ix);
+		return fm_effect_15(channel);
 	case 0x0020F5u:
-		return sound_20F5(ix, carry);
+		return fm_effect_15_sink(channel, carry);
 	case 0x00212Cu:
-		sound_212C(ix);
+		fm_effect_15_echo(channel);
 		return carry;
 	case 0x002136u:
-		return sound_2136(ix, carry);
+		return fm_effect_15_echo_wait(channel, carry);
 	case 0x00215Au:
-		return fm_effect_16(ix);
+		return fm_effect_16(channel);
 	case 0x002197u:
-		return sound_2197(ix);
+		return fm_effect_long_rise(channel);
 	case 0x0021C6u:
-		return sound_21C6(ix);
+		return fm_effect_16_echo(channel);
 	case 0x0021D6u:
-		return sound_21D6(ix, carry);
+		return fm_effect_16_echo_wait(channel, carry);
 	case 0x0021F6u:
-		return fm_effect_17(ix);
+		return fm_effect_17(channel);
 	case 0x002226u:
-		return sound_2226(ix);
+		return fm_effect_17_zigzag(channel);
 	case 0x002299u:
-		return fm_effect_18(ix);
+		return fm_effect_18(channel);
 	case 0x0022D2u:
-		return fm_effect_19(ix);
+		return fm_effect_19(channel);
 	case 0x002306u:
-		return sound_2306(ix);
+		return fm_effect_ladder(channel);
 	case 0x00234Eu:
-		return fm_effect_1a(ix);
+		return fm_effect_1a(channel);
 	case 0x002393u:
-		return sound_2393(ix);
+		return fm_effect_1a_fall(channel);
 	case 0x0023CAu:
-		return sound_23CA(ix);
+		return fm_effect_1a_burst_step(channel);
 	case 0x00244Fu:
-		return sound_244F(ix);
+		return fm_effect_1a_second_start(channel);
 	case 0x00247Au:
-		return sound_247A(ix);
+		return fm_effect_1a_second_fall(channel);
 	case 0x0024B7u:
-		return sound_24B7(ix);
+		return fm_effect_1a_second_burst_step(channel);
 	case 0x00250Fu:
-		return fm_effect_1b(ix);
+		return fm_effect_1b(channel);
 	case 0x002531u:
-		return sound_2531(ix);
+		return fm_effect_1b_rise(channel);
 	case 0x002556u:
-		return sound_2556(ix);
+		return fm_effect_1b_hold(channel);
 	case 0x00257Fu:
-		return fm_effect_1c(ix);
+		return fm_effect_1c(channel);
 	case 0x0025B8u:
-		return sound_25B8(ix);
+		return fm_effect_pulses(channel);
 	case 0x0025FEu:
-		sound_25FE(ix);
+		fm_effect_1c_echo(channel);
 		return carry;
 	case 0x002608u:
-		return sound_2608(ix, carry);
+		return fm_effect_1c_echo_wait(channel, carry);
 	case 0x00262Au:
-		return fm_effect_1d(ix);
+		return fm_effect_1d(channel);
 	case 0x00267Au:
-		return sound_267A(ix, carry);
+		return fm_effect_arpeggio(channel, carry);
 	case 0x0026A5u:
-		return sound_26A5(ix, carry);
+		return fm_effect_arpeggio_ring(channel, carry);
 	case 0x0026ACu:
-		sound_26AC(ix);
+		fm_effect_1d_echo(channel);
 		return carry;
 	case 0x0026B6u:
-		return sound_26B6(ix, carry);
+		return fm_effect_1d_echo_wait(channel, carry);
 	case 0x0026C4u:
-		return fm_effect_1e(ix);
+		return fm_effect_1e(channel);
 	case 0x0026D4u:
-		return sound_26D4(ix, carry);
+		return fm_effect_1e_wait(channel, carry);
 	case 0x0026F6u:
-		return fm_effect_1f(ix);
+		return fm_effect_1f(channel);
 	case 0x002713u:
-		return sound_2713(ix);
+		return fm_effect_1f_rise(channel);
 	case 0x00274Du:
-		return sound_274D(ix, carry);
+		return fm_effect_1f_hold(channel, carry);
 	case 0x002767u:
-		return fm_effect_20(ix);
+		return fm_effect_20(channel);
 	case 0x002785u:
-		return fm_effect_21(ix);
+		return fm_effect_21(channel);
 	case 0x0027A7u:
-		return sound_27A7(ix);
+		return fm_effect_21_rise(channel);
 	case 0x0027DDu:
-		return sound_27DD(ix);
+		return fm_effect_21_hold(channel);
 	case 0x002804u:
-		return fm_effect_22(ix);
+		return fm_effect_22(channel);
 	case 0x002857u:
-		return sound_2857(ix);
+		return fm_effect_22_on_channel_7(channel);
 	case 0x00285Cu:
-		return sound_285C(ix);
+		return fm_effect_22_on_channel_6(channel);
 	case 0x002861u:
-		return sound_2861(ix);
+		return fm_effect_22_on_channel_5(channel);
 	case 0x002866u:
-		return sound_2866(ix);
+		return fm_effect_22_on_channel_4(channel);
 	case 0x00286Bu:
-		return sound_286B(ix);
+		return fm_effect_22_on_channel_3(channel);
 	case 0x002870u:
-		return sound_2870(ix);
+		return fm_effect_22_on_channel_2(channel);
 	case 0x002875u:
-		return sound_2875(ix);
+		return fm_effect_22_on_channel_1(channel);
 	case 0x00288Eu:
-		return sound_288E(ix, carry);
+		return fm_effect_22_wait(channel, carry);
 	case 0x0028B6u:
-		return fm_effect_23(ix);
+		return fm_effect_23(channel);
 	case 0x0028E1u:
-		return sound_28E1(ix, carry);
+		return fm_effect_23_fall(channel, carry);
 	case 0x002925u:
-		return fm_effect_24(ix);
+		return fm_effect_24(channel);
 	case 0x002958u:
-		return sound_2958(ix);
+		return fm_effect_24_fall(channel);
 	case 0x002998u:
-		return sound_2998(ix);
+		return fm_effect_24_burst_step(channel);
 	case 0x0029EBu:
-		return fm_effect_25(ix);
+		return fm_effect_25(channel);
 	case 0x002A0Du:
-		return sound_2A0D(ix, carry);
+		return fm_effect_25_fall(channel, carry);
 	case 0x002A33u:
-		return sound_2A33(ix);
+		return fm_effect_25_bend(channel);
 	case 0x002A68u:
-		return fm_effect_26(ix);
+		return fm_effect_26(channel);
 	case 0x002AABu:
-		return sound_2AAB(ix);
+		return fm_effect_26_play(channel);
 	case 0x002B2Du:
-		return fm_effect_27(ix);
+		return fm_effect_27(channel);
 	case 0x002B52u:
-		return sound_2B52(ix);
+		return fm_effect_27_swell_and_warble(channel);
 	case 0x002BDFu:
-		return fm_effect_28(ix);
+		return fm_effect_28(channel);
 	case 0x002C09u:
-		return sound_2C09(ix);
+		return fm_effect_28_jitter(channel);
 	case 0x002C49u:
-		return fm_effect_29(ix);
+		return fm_effect_29(channel);
 	case 0x002C60u:
-		return sound_2C60(ix);
+		return fm_effect_29_fall(channel);
 	case 0x002C8Du:
-		return sound_2C8D(ix);
+		return fm_effect_29_tick(channel);
 	case 0x002CBAu:
-		return sound_2CBA(ix);
+		return fm_effect_29_drop(channel);
 	case 0x002CF5u:
-		return fm_effect_2a(ix);
+		return fm_effect_2a(channel);
 	case 0x002D1Du:
-		return sound_2D1D(ix);
+		return fm_effect_2a_swell_and_warble(channel);
 	case 0x002D40u:
-		return sound_2D40(ix, carry);
+		return fm_effect_2a_rest(channel, carry);
 	case 0x002D7Du:
-		return fm_effect_2b(ix);
+		return fm_effect_2b(channel);
 	case 0x002D9Du:
-		return sound_2D9D(ix);
+		return fm_effect_2b_drop(channel);
 	case 0x002DBFu:
-		return fm_effect_2c(ix);
+		return fm_effect_2c(channel);
 	case 0x002DF6u:
-		return sound_2DF6(ix);
+		return fm_effect_dive(channel);
 	case 0x002E35u:
-		return sound_2E35(ix, carry);
+		return fm_effect_dive_climb(channel, carry);
 	case 0x002E77u:
-		return fm_effect_2d(ix);
+		return fm_effect_2d(channel);
 	case 0x002EAAu:
-		return sound_2EAA(ix, carry);
+		return fm_effect_2d_zigzag(channel, carry);
 	case 0x002F11u:
-		return fm_effect_2e(ix);
+		return fm_effect_2e(channel);
 	case 0x002F3Cu:
-		return sound_2F3C(ix);
+		return fm_effect_2e_fall(channel);
 	case 0x002F76u:
-		return sound_2F76(ix, carry);
+		return fm_effect_2e_trill(channel, carry);
 	case 0x002FA8u:
-		return fm_effect_2f(ix);
+		return fm_effect_2f(channel);
 	case 0x002FD0u:
-		return sound_2FD0(ix);
+		return fm_effect_2f_swell_and_warble(channel);
 	case 0x003032u:
-		return fm_effect_30(ix);
+		return fm_effect_30(channel);
 	case 0x003042u:
-		return sound_3042(ix);
+		return fm_effect_30_sweep(channel);
 	case 0x00306Fu:
-		return sound_306F(ix);
+		return fm_effect_30_slow_sweep(channel);
 	case 0x0030A4u:
-		return fm_effect_31(ix);
+		return fm_effect_31(channel);
 	case 0x0030CFu:
-		return sound_30CF(ix);
+		return fm_effect_31_fall(channel);
 	case 0x003109u:
-		return sound_3109(ix, carry);
+		return fm_effect_31_trill(channel, carry);
 	case 0x003154u:
-		return fm_effect_32(ix);
+		return fm_effect_32(channel);
 	case 0x003181u:
-		return sound_3181(ix);
+		return fm_effect_32_bend(channel);
 	case 0x0031ADu:
-		return fm_effect_33(ix);
+		return fm_effect_33(channel);
 	case 0x0031CEu:
-		return fm_effect_34(ix);
+		return fm_effect_34(channel);
 	case 0x00320Du:
-		return sound_320D(ix);
+		return fm_effect_34_fall(channel);
 	case 0x003258u:
-		return sound_3258(ix);
+		return fm_effect_34_trill(channel);
 	case 0x00329Cu:
-		return sound_329C(ix);
+		return fm_effect_34_warbles(channel);
 	case 0x0032D4u:
-		return sound_32D4(ix);
+		return fm_effect_34_warble(channel);
 	case 0x003316u:
-		return fm_effect_35(ix);
+		return fm_effect_35(channel);
 	case 0x003336u:
-		return fm_effect_36(ix);
+		return fm_effect_36(channel);
 	case 0x003353u:
-		return sound_3353(ix);
+		return fm_effect_36_rise(channel);
 	case 0x003388u:
-		sound_3388(ix);
+		fm_effect_36_hold(channel);
 		return carry;
 	case 0x003395u:
-		return sound_3395(ix);
+		return fm_effect_36_fall(channel);
 	case 0x0033C2u:
-		return fm_effect_38(ix);
+		return fm_effect_38(channel);
 	case 0x0033E9u:
-		return sound_33E9(ix);
+		return fm_effect_38_trill(channel);
 	case 0x003432u:
-		return fm_effect_39(ix);
+		return fm_effect_39(channel);
 	case 0x00345Fu:
-		return sound_345F(ix, carry);
+		return fm_effect_39_next_note(channel, carry);
 	case 0x00348Bu:
-		return fm_effect_3a(ix);
+		return fm_effect_3a(channel);
 	case 0x0034C3u:
-		return sound_34C3(ix);
+		return fm_effect_3a_warble(channel);
 	case 0x003524u:
-		return fm_effect_3b(ix);
+		return fm_effect_3b(channel);
 	case 0x00354Cu:
-		return sound_354C(ix);
+		return fm_effect_3b_swell_and_warble(channel);
 	case 0x003570u:
-		return fm_effect_3c(ix);
+		return fm_effect_3c(channel);
 	case 0x0035A6u:
-		return sound_35A6(ix);
+		return fm_effect_3c_warble(channel);
 	case 0x0035D3u:
-		return fm_effect_3d(ix);
+		return fm_effect_3d(channel);
 	case 0x0035FDu:
-		return sound_35FD(ix);
+		return fm_effect_3d_on_channel_6(channel);
 	case 0x003604u:
-		return sound_3604(ix);
+		return fm_effect_3d_on_channel_7(channel);
 	case 0x00361Au:
-		return sound_361A(ix, carry);
+		return fm_effect_3d_wait(channel, carry);
 	case 0x003621u:
-		return fm_effect_3e(ix);
+		return fm_effect_3e(channel);
 	case 0x00363Au:
-		sound_363A(ix);
+		fm_effect_3e_delay(channel);
 		return carry;
 	case 0x003644u:
-		return sound_3644(ix, carry);
+		return fm_effect_3e_wait(channel, carry);
 	case 0x003664u:
-		return fm_effect_3f(ix);
+		return fm_effect_3f(channel);
 	case 0x003694u:
-		return sound_3694(ix);
+		return fm_effect_fall_and_trills_fall(channel);
 	case 0x0036C8u:
-		return sound_36C8(ix, carry);
+		return fm_effect_fall_and_trills(channel, carry);
 	case 0x003703u:
-		return fm_effect_40(ix);
+		return fm_effect_40(channel);
 	case 0x00373Fu:
-		return fm_effect_41(ix);
+		return fm_effect_41(channel);
 	case 0x003769u:
-		return sound_3769(ix, carry);
+		return fm_effect_41_rise(channel, carry);
 	default:
 		sound_invalid_jump(jump_target);
 	}
 }
 
-uint32_t stop_channel(uint16_t ix)
+/* Stops an FM channel: keyed off, its release at the fastest, then free. */
+uint32_t stop_channel(uint16_t channel)
 {
 	uint32_t carry = 0;
 
 	z80_block(17);
-	fm_key_off(ix);
+	fm_key_off(channel);
 	z80_block(17);
-	carry = fm_fast_release(ix);
-	free_channel(ix);
+	carry = fm_fast_release(channel);
+	free_channel(channel);
 	return carry;
 }
 
-void free_channel(uint16_t ix)
+/* Frees a channel: no sound, no priority, an idle handler. */
+void free_channel(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(48);
-	CHANNEL(ix)->sound = 0u;
-	CHANNEL(ix)->priority = 0u;
-	hl = 0x5E7u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->sound = 0u;
+	CHANNEL(channel)->priority = 0u;
+	handler = 0x5E7u;
+	set_channel_handler(handler, channel);
 }
 
-void set_channel_handler(uint16_t hl, uint16_t ix)
+/* The routine that runs the channel from its next pass on. */
+void set_channel_handler(uint16_t handler, uint16_t channel)
 {
 	z80_block(38);
-	CHANNEL(ix)->handler = hl;
+	CHANNEL(channel)->handler = handler;
 	channel_idle();
 }
 
+/* A free channel's handler: nothing to do. */
 void channel_idle(void)
 {
 	z80_block(10);
 }
 
-uint32_t stop_pcm_channel(uint16_t ix)
+/* Stops a PCM channel: the music's attenuation back, its volume 0, no loop, then free. */
+uint32_t stop_pcm_channel(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t bc = 0;
+	uint8_t volume = 0;
 
 	z80_block(51);
 	music_attenuation = 0u;
-	unk_83CC = 0u;
-	bc = 0u;
-	carry = set_pcm_volume(bc, ix);
+	music_attenuation_changed = 0u;
+	volume = 0u;
+	carry = set_pcm_volume(volume, channel);
 	z80_block(17);
-	carry = clear_pcm_loop(ix);
+	carry = clear_pcm_loop(channel);
 	z80_block(10);
-	free_channel(ix);
+	free_channel(channel);
 	return carry;
 }

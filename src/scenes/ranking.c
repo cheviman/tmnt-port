@@ -3,7 +3,7 @@
  *    Description: the ranking after a game: the players' places, their columns, the name entry, and the ranking's defaults
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -63,13 +63,13 @@ void ranking_setup(void)
 /* the layers cleared for the ranking */
 void ranking_clear_layers(void)
 {
-	uint16_t d7 = 0;
+	uint16_t job = 0;
 
 	if (jobs_pending == 0u)
 	{
 		jobs_pending = 1u;
-		d7 = 7u;
-		queue_job(d7);
+		job = 7u;
+		queue_job(job);
 		scene_substep++;
 	}
 }
@@ -77,16 +77,16 @@ void ranking_clear_layers(void)
 /* the objects cleared and the ranking's palettes requested */
 void ranking_clear(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0;
+	uint16_t kind = 0;
+	uint32_t data = 0;
 
 	if (jobs_pending == 0u)
 	{
 		clear_objects();
 		clear_sprite_ram();
-		a6 = 0xA02Eu;
-		d7 = 0x20Fu;
-		post_palette_request(d7, a6);
+		data = 0xA02Eu;
+		kind = 0x20Fu;
+		post_palette_request(kind, data);
 		clear_palette_effects();
 		scene_substep++;
 	}
@@ -116,79 +116,79 @@ void ranking_reset(void)
 void rank_players_scores(void)
 {
 	uint32_t carry = 0, extend = 0;
-	uint8_t d0_2 = 0;
-	uint16_t d0 = 0, d2 = 0, d6 = 0, d7 = 0;
-	uint32_t a4 = 0, a5 = 0, a6 = 0, d3 = 0, player = 0;
+	uint8_t place = 0;
+	uint16_t count = 0, count_2 = 0, initials_offset = 0, score = 0, score_offset = 0;
+	uint32_t initials = 0, moved_initials = 0, places = 0, player = 0, scores = 0;
 	uint8_t t4 = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t5 = 0, t6 = 0;
 
-	a6 = ranking_scores_ADDRESS;
-	a5 = ranking_initials_ADDRESS;
-	a4 = ranking_places_ADDRESS;
+	scores = ranking_scores_ADDRESS;
+	initials = ranking_initials_ADDRESS;
+	places = ranking_places_ADDRESS;
 	player = PLAYER_ADDRESS(3);
-	d7 = 3u;
+	count = 3u;
 	do
 	{
 		extend = 0u;
 		ranking_new_initials = 0x41414100u;
-		d6 = 0xC4u;
+		score_offset = 0xC4u;
 		ranking_new_score = PLAYER(player)->score;
 		do
 		{
-			d0 = RAM16(ranking_scores_ADDRESS + (uint32_t)(int16_t)d6);
-			if (RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)d6) < d0)
+			score = RAM16(ranking_scores_ADDRESS + (uint32_t)(int16_t)score_offset);
+			if (RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)score_offset) < score)
 				break;
-			RAM16(ranking_scores_ADDRESS + (uint32_t)(int16_t)d6) = RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)d6);
-			RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)d6) = d0;
-			d0_2 = m68k_sbcd(ranking_places((uint32_t)(int16_t)d7), 1u, extend);
-			ranking_places((uint32_t)(int16_t)d7) = d0_2;
-			if (d0_2 < 0x11u)
+			RAM16(ranking_scores_ADDRESS + (uint32_t)(int16_t)score_offset) = RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)score_offset);
+			RAM16(ranking_scores_ADDRESS + 0x2u + (uint32_t)(int16_t)score_offset) = score;
+			place = m68k_sbcd(ranking_places((uint32_t)(int16_t)count), 1u, extend);
+			ranking_places((uint32_t)(int16_t)count) = place;
+			if (place < 0x11u)
 			{
-				d2 = (uint16_t)d0_2;
-				if (d2 == 0x10u)
-					d2 = 0xAu;
-				d2 = (uint16_t)((d2 - 1u) << 2);
-				d3 = AT32(ranking_initials(4 + (uint32_t)(int16_t)d2), -3);
-				AT32(ranking_initials(4 + (uint32_t)(int16_t)d2), -3) = RAM32(ranking_initials_ADDRESS + (uint32_t)(int16_t)d2);
-				RAM32(ranking_initials_ADDRESS + (uint32_t)(int16_t)d2) = d3;
+				initials_offset = (uint16_t)place;
+				if (initials_offset == 0x10u)
+					initials_offset = 0xAu;
+				initials_offset = (uint16_t)((initials_offset - 1u) << 2);
+				moved_initials = AT32(ranking_initials(4 + (uint32_t)(int16_t)initials_offset), -3);
+				AT32(ranking_initials(4 + (uint32_t)(int16_t)initials_offset), -3) = RAM32(ranking_initials_ADDRESS + (uint32_t)(int16_t)initials_offset);
+				RAM32(ranking_initials_ADDRESS + (uint32_t)(int16_t)initials_offset) = moved_initials;
 			}
-			t1 = d6;
+			t1 = score_offset;
 			carry = t1 < 2u;
 			extend = carry;
-			d6 = (uint16_t)(t1 - 2u);
+			score_offset = (uint16_t)(t1 - 2u);
 		} while (t1 >= 2u);
-		t2 = d7 - 1u;
-		d7 = t2;
+		t2 = count - 1u;
+		count = t2;
 		player -= 8u;
 	} while (t2 != 0xFFFFu);
-	d7 = 3u;
+	count = 3u;
 	do
 	{
-		d0_2 = ranking_places((uint32_t)(int16_t)d7);
-		t3 = d7;
+		place = ranking_places((uint32_t)(int16_t)count);
+		t3 = count;
 		carry = t3 == 0u;
 		extend = carry;
-		d6 = (uint16_t)(t3 - 1u);
+		count_2 = (uint16_t)(t3 - 1u);
 		if (t3 != 0u)
 		{
 			do
 			{
-				if (d0_2 == 0u)
+				if (place == 0u)
 					break;
-				if (ranking_places((uint32_t)(int16_t)d6) != 0u && ranking_places((uint32_t)(int16_t)d6) <= d0_2)
+				if (ranking_places((uint32_t)(int16_t)count_2) != 0u && ranking_places((uint32_t)(int16_t)count_2) <= place)
 				{
-					t4 = m68k_abcd(d0_2, 1u, extend);
-					carry = m68k_abcd_cy(d0_2, 1u, extend);
+					t4 = m68k_abcd(place, 1u, extend);
+					carry = m68k_abcd_cy(place, 1u, extend);
 					extend = carry;
-					d0_2 = t4;
+					place = t4;
 				}
-				t5 = d6 - 1u;
-				d6 = t5;
+				t5 = count_2 - 1u;
+				count_2 = t5;
 			} while (t5 != 0xFFFFu);
 		}
-		ranking_places((uint32_t)(int16_t)d7) = d0_2;
-		t6 = d7 - 1u;
-		d7 = t6;
+		ranking_places((uint32_t)(int16_t)count) = place;
+		t6 = count - 1u;
+		count = t6;
 	} while (t6 != 0xFFFFu);
 	scene_step++;
 }
@@ -196,32 +196,32 @@ void rank_players_scores(void)
 /* each ranked player's column: frame, label, score, place and his turtle */
 void show_ranked_players(void)
 {
-	uint8_t d4 = 0;
-	uint16_t d0 = 0, d7 = 0;
-	uint32_t a0 = 0, d6 = 0, d7_2 = 0;
+	uint8_t score_players = 0;
+	uint16_t count = 0, player_number = 0;
+	uint32_t d6 = 0, picture_players = 0, places = 0;
 	uint16_t t1 = 0;
 
-	d7 = 3u;
-	a0 = ranking_places_ADDRESS;
+	count = 3u;
+	places = ranking_places_ADDRESS;
 	turtles_in_black = 0x4Fu;
 	do
 	{
-		if (ranking_places((uint32_t)(int16_t)d7) != 0u)
+		if (ranking_places((uint32_t)(int16_t)count) != 0u)
 		{
-			d6 = draw_ranking_frame(d6, d7);
-			draw_ranking_label((uint8_t)d6, d7);
-			d4 = (uint8_t)shl32(1u, (int)(d7 & 0x1Fu));
-			draw_scores(d4);
-			d7 = (uint16_t)d7;
-			draw_ranking_place(d7, a0);
-			d0 = (uint16_t)d7;
-			d7_2 = shl32(1u, (int)(d0 & 0x1Fu));
-			turtles_in_black &= ~shl32(1u, (int)(d0 & 7u));
-			draw_four_turtle_pictures(d7_2);
-			d7 = (uint16_t)d0;
+			d6 = draw_ranking_frame(d6, count);
+			draw_ranking_label((uint8_t)d6, count);
+			score_players = (uint8_t)shl32(1u, (int)(count & 0x1Fu));
+			draw_scores(score_players);
+			count = (uint16_t)count;
+			draw_ranking_place(count, places);
+			player_number = (uint16_t)count;
+			picture_players = shl32(1u, (int)(player_number & 0x1Fu));
+			turtles_in_black &= ~shl32(1u, (int)(player_number & 7u));
+			draw_four_turtle_pictures(picture_players);
+			count = (uint16_t)player_number;
 		}
-		t1 = d7 - 1u;
-		d7 = t1;
+		t1 = count - 1u;
+		count = t1;
 	} while (t1 != 0xFFFFu);
 	scene_step++;
 }
@@ -229,69 +229,69 @@ void show_ranked_players(void)
 /* back to the attract mode with no players, else the name entry for the top ten or a wait */
 void ranking_choose_entry(void)
 {
-	uint8_t d6 = 0, d7_2 = 0;
-	uint16_t d7 = 0;
-	uint32_t a5 = 0, a6 = 0, d7_3 = 0;
+	uint8_t entering = 0, sound = 0, unranked = 0;
+	uint16_t count = 0;
+	uint32_t d7 = 0, entered = 0, places = 0, players = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	a6 = ranking_places_ADDRESS;
-	d6 = 0u;
-	d7 = 3u;
+	places = ranking_places_ADDRESS;
+	unranked = 0u;
+	count = 3u;
 	for (;;)
 	{
-		if (ranking_places((uint32_t)(int16_t)d7) == 0u)
+		if (ranking_places((uint32_t)(int16_t)count) == 0u)
 		{
-			d6++;
-			t1 = d7 - 1u;
-			d7 = t1;
+			unranked++;
+			t1 = count - 1u;
+			count = t1;
 			if (t1 == 0xFFFFu)
 				break;
 			continue;
 		}
-		if (ranking_places((uint32_t)(int16_t)d7) < 0x11u)
+		if (ranking_places((uint32_t)(int16_t)count) < 0x11u)
 		{
-			d7_2 = 0x71u;
-			queue_sound(d7_2, a6);
-			a6 = ranking_places_ADDRESS;
-			a5 = initials_entered_ADDRESS;
-			d6 = 0u;
-			d7 = 3u;
+			sound = 0x71u;
+			queue_sound(sound);
+			places = ranking_places_ADDRESS;
+			entered = initials_entered_ADDRESS;
+			entering = 0u;
+			count = 3u;
 			do
 			{
-				if (ranking_places((uint32_t)(int16_t)d7) == 0u || ranking_places((uint32_t)(int16_t)d7) >= 0x11u)
-					initials_entered((uint32_t)(int16_t)d7) = 3u;
+				if (ranking_places((uint32_t)(int16_t)count) == 0u || ranking_places((uint32_t)(int16_t)count) >= 0x11u)
+					initials_entered((uint32_t)(int16_t)count) = 3u;
 				else
 				{
-					initials_entered((uint32_t)(int16_t)d7) = 0u;
-					d6 |= shl32(1u, (int)(d7 & 0x1Fu));
+					initials_entered((uint32_t)(int16_t)count) = 0u;
+					entering |= shl32(1u, (int)(count & 0x1Fu));
 				}
-				t2 = d7 - 1u;
-				d7 = t2;
+				t2 = count - 1u;
+				count = t2;
 			} while (t2 != 0xFFFFu);
-			players_entering_names = d6;
+			players_entering_names = entering;
 			initials_buttons_held = 0u;
-			d7_3 = draw_ranking_background();
-			d7_3 = (d7_3 & ~0xFFu) | turtles_in_black;
-			draw_four_turtle_pictures(d7_3);
+			d7 = draw_ranking_background();
+			players = (d7 & ~0xFFu) | turtles_in_black;
+			draw_four_turtle_pictures(players);
 			ranking_time = 0x5DCu;
 			scene_step += 2u;
 			return;
 		}
-		t1 = d7 - 1u;
-		d7 = t1;
+		t1 = count - 1u;
+		count = t1;
 		if (t1 == 0xFFFFu)
 			break;
 	}
-	if (d6 == 4u)
+	if (unranked == 4u)
 	{
 		back_to_attract();
 		return;
 	}
-	d7_2 = 0x71u;
-	queue_sound(d7_2, a6);
-	d7_3 = draw_ranking_background();
-	d7_3 = (d7_3 & ~0xFFu) | turtles_in_black;
-	draw_four_turtle_pictures(d7_3);
+	sound = 0x71u;
+	queue_sound(sound);
+	d7 = draw_ranking_background();
+	players = (d7 & ~0xFFu) | turtles_in_black;
+	draw_four_turtle_pictures(players);
 	ranking_time = 0x1E0u;
 	scene_step++;
 }
@@ -299,15 +299,15 @@ void ranking_choose_entry(void)
 /* the ranking shown until the time runs out or a button */
 void ranking_wait(void)
 {
-	uint8_t d7 = 0;
+	uint8_t sound = 0;
 	uint16_t t1 = 0;
 
 	t1 = ranking_time;
 	ranking_time = t1 - 1u;
 	if (t1 != 1u && ((player_inputs(0) | player_inputs(1) | player_inputs(2) | player_inputs(3)) & 0x30u) == 0u)
 		return;
-	d7 = 0xFEu;
-	queue_sound(d7, 0u);
+	sound = 0xFEu;
+	queue_sound(sound);
 	ranking_time = 0x3Cu;
 	scene_step = 7u;
 }
@@ -315,9 +315,9 @@ void ranking_wait(void)
 /* the top ten players enter their initials with the joystick and a button */
 void enter_initials(void)
 {
-	uint8_t d0 = 0, d1 = 0, d4 = 0, d6 = 0, d7_2 = 0;
-	uint16_t d5 = 0, d7 = 0;
-	uint32_t a3 = 0, a4 = 0, a5 = 0, a6 = 0;
+	uint8_t buttons_held = 0, joystick = 0, letter = 0, letter_sound = 0, players_done = 0, sound = 0;
+	uint16_t count = 0, initial_offset = 0;
+	uint32_t entered = 0, initials = 0, inputs = 0, places = 0;
 	uint32_t stack = 0;
 	uint8_t t3 = 0;
 	uint16_t t1 = 0, t2 = 0, t5 = 0;
@@ -327,8 +327,8 @@ void enter_initials(void)
 	ranking_time = t1 - 1u;
 	if (t1 == 1u)
 	{
-		d7_2 = 0xFEu;
-		queue_sound(d7_2, 0u);
+		sound = 0xFEu;
+		queue_sound(sound);
 		name_entered = 1u;
 		ranking_time = 0x3Cu;
 		scene_step = 7u;
@@ -336,118 +336,118 @@ void enter_initials(void)
 	}
 	if ((frame_count & 7u) != 0u)
 		return;
-	d7 = 3u;
+	count = 3u;
 	do
 	{
-		if ((players_entering_names & shl32(1u, (int)(d7 & 7u))) != 0u)
-			draw_initials(d7);
-		t2 = d7 - 1u;
-		d7 = t2;
+		if ((players_entering_names & shl32(1u, (int)(count & 7u))) != 0u)
+			draw_initials(count);
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
-	a3 = initials_entered_ADDRESS;
-	a4 = ranking_initials_ADDRESS;
-	a5 = ranking_places_ADDRESS;
+	entered = initials_entered_ADDRESS;
+	initials = ranking_initials_ADDRESS;
+	places = ranking_places_ADDRESS;
 	turtle_inputs_0_long = (((uint32_t)player_inputs(0) << 24u) | ((uint32_t)player_inputs(1) << 16u) | ((uint32_t)player_inputs(2) << 8u) | player_inputs(3)) | (((uint32_t)player_inputs_last_frame(0) << 24u) | ((uint32_t)player_inputs_last_frame(1) << 16u) | ((uint32_t)player_inputs_last_frame(2) << 8u) | player_inputs_last_frame(3)) | player_inputs_2_frames_ago | player_inputs_3_frames_ago;
 	turtle_inputs(0) = (uint8_t)(turtle_inputs_0_long >> 24u);
 	turtle_inputs(1) = (uint8_t)(turtle_inputs_0_long >> 16u);
 	turtle_inputs(2) = (uint8_t)(turtle_inputs_0_long >> 8u);
 	turtle_inputs(3) = (uint8_t)turtle_inputs_0_long;
-	a6 = turtle_inputs_ADDRESS;
-	d0 = 0u;
-	d1 = 0u;
-	d7 = 3u;
+	inputs = turtle_inputs_ADDRESS;
+	players_done = 0u;
+	buttons_held = 0u;
+	count = 3u;
 	do
 	{
-		if (initials_entered((uint32_t)(int16_t)d7) < 3u)
+		if (initials_entered((uint32_t)(int16_t)count) < 3u)
 		{
-			if ((players_entering_names & shl32(1u, (int)(d7 & 7u))) != 0u)
+			if ((players_entering_names & shl32(1u, (int)(count & 7u))) != 0u)
 			{
-				t3 = turtle_inputs((uint32_t)(int16_t)d7);
-				d6 = t3;
+				t3 = turtle_inputs((uint32_t)(int16_t)count);
+				joystick = t3;
 				if (t3 != 0u)
 				{
-					if ((d6 & 0x30u) == 0u)
+					if ((joystick & 0x30u) == 0u)
 					{
-						d5 = ranking_places((uint32_t)(int16_t)d7);
-						if (d5 == 0x10u)
-							d5 = 0xAu;
-						d5 = (uint16_t)((uint32_t)(uint8_t)(d5 - 1u) << 2);
-						d5 = (uint16_t)((d5 & ~0xFFu) | (uint8_t)(d5 + initials_entered((uint32_t)(int16_t)d7)));
-						d4 = (uint8_t)(ranking_initials(d5) - 0x40u);
-						if ((d6 & 1u) == 0u)
+						initial_offset = ranking_places((uint32_t)(int16_t)count);
+						if (initial_offset == 0x10u)
+							initial_offset = 0xAu;
+						initial_offset = (uint16_t)((uint32_t)(uint8_t)(initial_offset - 1u) << 2);
+						initial_offset = (uint16_t)((initial_offset & ~0xFFu) | (uint8_t)(initial_offset + initials_entered((uint32_t)(int16_t)count)));
+						letter = (uint8_t)(ranking_initials(initial_offset) - 0x40u);
+						if ((joystick & 1u) == 0u)
 						{
-							if ((d6 & 2u) != 0u)
+							if ((joystick & 2u) != 0u)
 							{
-								ranking_initials(d5) = ((d4 + 1u) & 0x1Fu) + 0x40u;
-								stack = d0;
-								d0 = 1u;
-								queue_sound_d0(d0);
-								d0 = (uint8_t)stack;
+								ranking_initials(initial_offset) = ((letter + 1u) & 0x1Fu) + 0x40u;
+								stack = players_done;
+								letter_sound = 1u;
+								queue_sound_d0(letter_sound);
+								players_done = (uint8_t)stack;
 							}
 						}
 						else
 						{
-							ranking_initials(d5) = ((d4 - 1u) & 0x1Fu) + 0x40u;
-							stack = d0;
-							d0 = 1u;
-							queue_sound_d0(d0);
-							d0 = (uint8_t)stack;
+							ranking_initials(initial_offset) = ((letter - 1u) & 0x1Fu) + 0x40u;
+							stack = players_done;
+							letter_sound = 1u;
+							queue_sound_d0(letter_sound);
+							players_done = (uint8_t)stack;
 						}
 					}
 					else
 					{
-						d1 |= shl32(1u, (int)(d7 & 0x1Fu));
-						if ((initials_buttons_held & shl32(1u, (int)(d7 & 7u))) != 0u)
+						buttons_held |= shl32(1u, (int)(count & 0x1Fu));
+						if ((initials_buttons_held & shl32(1u, (int)(count & 7u))) != 0u)
 						{
-							d5 = ranking_places((uint32_t)(int16_t)d7);
-							if (d5 == 0x10u)
-								d5 = 0xAu;
-							d5 = (uint16_t)((uint32_t)(uint8_t)(d5 - 1u) << 2);
-							d5 = (uint16_t)((d5 & ~0xFFu) | (uint8_t)(d5 + initials_entered((uint32_t)(int16_t)d7)));
-							d4 = (uint8_t)(ranking_initials(d5) - 0x40u);
-							if ((d6 & 1u) == 0u)
+							initial_offset = ranking_places((uint32_t)(int16_t)count);
+							if (initial_offset == 0x10u)
+								initial_offset = 0xAu;
+							initial_offset = (uint16_t)((uint32_t)(uint8_t)(initial_offset - 1u) << 2);
+							initial_offset = (uint16_t)((initial_offset & ~0xFFu) | (uint8_t)(initial_offset + initials_entered((uint32_t)(int16_t)count)));
+							letter = (uint8_t)(ranking_initials(initial_offset) - 0x40u);
+							if ((joystick & 1u) == 0u)
 							{
-								if ((d6 & 2u) != 0u)
+								if ((joystick & 2u) != 0u)
 								{
-									ranking_initials(d5) = ((d4 + 1u) & 0x1Fu) + 0x40u;
-									stack = d0;
-									d0 = 1u;
-									queue_sound_d0(d0);
-									d0 = (uint8_t)stack;
+									ranking_initials(initial_offset) = ((letter + 1u) & 0x1Fu) + 0x40u;
+									stack = players_done;
+									letter_sound = 1u;
+									queue_sound_d0(letter_sound);
+									players_done = (uint8_t)stack;
 								}
 							}
 							else
 							{
-								ranking_initials(d5) = ((d4 - 1u) & 0x1Fu) + 0x40u;
-								stack = d0;
-								d0 = 1u;
-								queue_sound_d0(d0);
-								d0 = (uint8_t)stack;
+								ranking_initials(initial_offset) = ((letter - 1u) & 0x1Fu) + 0x40u;
+								stack = players_done;
+								letter_sound = 1u;
+								queue_sound_d0(letter_sound);
+								players_done = (uint8_t)stack;
 							}
 						}
 						else
 						{
-							t4 = a3 + (int16_t)d7;
+							t4 = entered + (int16_t)count;
 							mem_write8(t4, mem_read8(t4) + 1u);
-							stack = d0;
-							d0 = 0x1Du;
-							queue_sound_d0(d0);
-							d0 = (uint8_t)stack;
+							stack = players_done;
+							letter_sound = 0x1Du;
+							queue_sound_d0(letter_sound);
+							players_done = (uint8_t)stack;
 						}
 					}
 				}
 			}
 		}
 		else
-			d0++;
-		t5 = d7 - 1u;
-		d7 = t5;
+			players_done++;
+		t5 = count - 1u;
+		count = t5;
 	} while (t5 != 0xFFFFu);
-	initials_buttons_held = d1;
-	if (d0 == 4u)
+	initials_buttons_held = buttons_held;
+	if (players_done == 4u)
 	{
-		d7_2 = 0xFEu;
-		queue_sound(d7_2, a6);
+		sound = 0xFEu;
+		queue_sound(sound);
 		name_entered = 1u;
 		ranking_time = 0x78u;
 		scene_step++;
@@ -514,225 +514,222 @@ void back_to_attract(void)
 /* the ranking's background of coloured rows */
 uint32_t draw_ranking_background(void)
 {
-	uint8_t d5 = 0;
-	uint16_t d4 = 0, d6 = 0;
-	uint32_t a5 = 0, a6 = 0, d7 = 0;
+	uint8_t tile_code = 0;
+	uint16_t column_offset = 0, count_2 = 0;
+	uint32_t count = 0, tile_place = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	a6 = TILE_RAM + 0x4F18u;
-	a5 = indexed_table_of_8_bit_values_00807E_ADDRESS;
-	d7 = 0x1Du;
+	tile_place = TILE_RAM + 0x4F18u;
+	count = 0x1Du;
 	do
 	{
-		d6 = 0x27u;
-		d5 = mem_read8(a5 + (int16_t)d7);
+		count_2 = 0x27u;
+		tile_code = TABLE8(ranking_background_tiles, (uint32_t)(int16_t)count);
 		do
 		{
-			d4 = (uint16_t)((uint32_t)(uint8_t)d6 << 1);
-			io_write8(a6 + d4, 0u);
-			io_write8(a6 + 1u + d4, d5);
-			t1 = d6 - 1u;
-			d6 = t1;
+			column_offset = (uint16_t)((uint32_t)(uint8_t)count_2 << 1);
+			io_write8(tile_place + column_offset, 0u);
+			io_write8(tile_place + 1u + column_offset, tile_code);
+			t1 = count_2 - 1u;
+			count_2 = t1;
 		} while (t1 != 0xFFFFu);
-		t2 = d7 - 1u;
-		d7 = t2;
-		a6 -= 0x80u;
+		t2 = count - 1u;
+		count = t2;
+		tile_place -= 0x80u;
 	} while (t2 != 0xFFFFu);
-	return d7;
+	return count;
 }
 
 /* a player's three initials, the one being entered highlighted */
-void draw_initials(uint16_t d7)
+void draw_initials(uint16_t count)
 {
-	uint8_t d0 = 0;
-	uint16_t d5 = 0, d6 = 0;
-	uint32_t a3 = 0, a4 = 0, a6 = 0;
+	uint8_t attribute = 0;
+	uint16_t initial = 0, initials_offset = 0;
+	uint32_t entered = 0, initials = 0, tile_place = 0;
 
-	a6 = mem_read32(0x840Au + (int16_t)((uint32_t)d7 << 2));
-	a3 = initials_entered_ADDRESS;
-	a4 = ranking_initials_ADDRESS;
-	d6 = mem_read8(ranking_places_ADDRESS + (int16_t)d7);
-	if (d6 == 0x10u)
-		d6 = 0xAu;
-	d6 = (uint16_t)((uint32_t)(uint8_t)(d6 - 1u) << 2);
-	d5 = ranking_initials(d6);
-	d0 = 0u;
-	if (initials_entered((uint32_t)(int16_t)d7) == 0u)
-		d0 = 0xA0u;
-	draw_initial(d0, d5, a6);
-	d5 = ranking_initials(1 + d6);
-	d0 = 0u;
-	a6 += 4u;
-	if (initials_entered((uint32_t)(int16_t)d7) == 1u)
-		d0 = 0xA0u;
-	draw_initial(d0, d5, a6);
-	d5 = ranking_initials(2 + d6);
-	d0 = 0u;
-	a6 += 4u;
-	if (initials_entered((uint32_t)(int16_t)d7) == 2u)
-		d0 = 0xA0u;
-	draw_initial(d0, d5, a6);
+	tile_place = TABLE32(ranking_initials_places, (uint32_t)(int16_t)((uint32_t)count << 2));
+	entered = initials_entered_ADDRESS;
+	initials = ranking_initials_ADDRESS;
+	initials_offset = mem_read8(ranking_places_ADDRESS + (int16_t)count);
+	if (initials_offset == 0x10u)
+		initials_offset = 0xAu;
+	initials_offset = (uint16_t)((uint32_t)(uint8_t)(initials_offset - 1u) << 2);
+	initial = ranking_initials(initials_offset);
+	attribute = 0u;
+	if (initials_entered((uint32_t)(int16_t)count) == 0u)
+		attribute = 0xA0u;
+	draw_initial(attribute, initial, tile_place);
+	initial = ranking_initials(1 + initials_offset);
+	attribute = 0u;
+	tile_place += 4u;
+	if (initials_entered((uint32_t)(int16_t)count) == 1u)
+		attribute = 0xA0u;
+	draw_initial(attribute, initial, tile_place);
+	initial = ranking_initials(2 + initials_offset);
+	attribute = 0u;
+	tile_place += 4u;
+	if (initials_entered((uint32_t)(int16_t)count) == 2u)
+		attribute = 0xA0u;
+	draw_initial(attribute, initial, tile_place);
 }
 
 /* a tall letter in a colour */
-void draw_initial(uint8_t d0, uint16_t d5, uint32_t a6)
+void draw_initial(uint8_t attribute, uint16_t initial, uint32_t tile_place)
 {
-	d5 = (uint16_t)((uint32_t)(uint8_t)(d5 - 0x30u) << 1);
-	mem_write8(a6, d0);
-	mem_write8(a6 + 1u, indexed_table_of_8_bit_values_002884[d5]);
-	mem_write8(a6 + 0x80u, d0);
-	mem_write8(a6 + 0x81u, rom_002885[d5]);
+	initial = (uint16_t)((uint32_t)(uint8_t)(initial - 0x30u) << 1);
+	io_write8(tile_place, attribute);
+	io_write8(tile_place + 1u, big_font_tiles_table[initial]);
+	io_write8(tile_place + 0x80u, attribute);
+	io_write8(tile_place + 0x81u, big_font_tiles_table[1 + initial]);
 }
 
 /* the frame of a player's column in his colour */
-uint32_t draw_ranking_frame(uint32_t d6, uint16_t d7)
+uint32_t draw_ranking_frame(uint32_t d6, uint16_t count)
 {
-	uint16_t d4 = 0, d5 = 0;
-	uint32_t a5 = 0, a6 = 0, d6_2 = 0;
+	uint16_t count_2 = 0, tile_offset = 0;
+	uint32_t player_number = 0, player_offset = 0, tile_place = 0, tiles = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
-	d6_2 = (d6 & ~0xFFFFu) | d7;
-	d6_2 = (d6_2 & ~0xFFFFu) | (uint16_t)(d6_2 << 2);
-	a6 = mem_read32(0x83DAu + (int16_t)d6_2);
-	d6_2 = (d6_2 & ~0xFFFFu) | d7;
-	d6_2 = ranking_frame_colour(d6_2);
-	d5 = 8u;
-	d4 = 0u;
-	a5 = 0x841Au;
+	player_offset = (d6 & ~0xFFFFu) | count;
+	player_offset = (player_offset & ~0xFFFFu) | (uint16_t)(player_offset << 2);
+	tile_place = TABLE32(ranking_frame_places, (uint32_t)(int16_t)player_offset);
+	player_number = (player_offset & ~0xFFFFu) | count;
+	player_number = ranking_frame_colour(player_number);
+	count_2 = 8u;
+	tile_offset = 0u;
+	tiles = ranking_frame_tiles_ADDRESS;
 	do
 	{
-		d4 += 0x80u;
-		mem_write8(a6 + (int16_t)d4, d6_2);
-		mem_write8(a6 + 1u + (int16_t)d4, DATA8(a5 + 9u));
-		d4 -= 0x80u;
-		mem_write8(a6 + (int16_t)d4, d6_2);
-		mem_write8(a6 + 1u + (int16_t)d4, DATA8(a5));
-		d4 = (uint16_t)((d4 & ~0xFFu) | (uint8_t)(d4 + 2u));
-		t1 = d5 - 1u;
-		d5 = t1;
-		a5++;
+		tile_offset += 0x80u;
+		mem_write8(tile_place + (int16_t)tile_offset, player_number);
+		mem_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles + 0x9u));
+		tile_offset -= 0x80u;
+		mem_write8(tile_place + (int16_t)tile_offset, player_number);
+		mem_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles));
+		tile_offset = (uint16_t)((tile_offset & ~0xFFu) | (uint8_t)(tile_offset + 2u));
+		t1 = count_2 - 1u;
+		count_2 = t1;
+		tiles++;
 	} while (t1 != 0xFFFFu);
-	d5 = 0x17u;
-	a6 += 0x100u;
+	count_2 = 0x17u;
+	tile_place += 0x100u;
 	do
 	{
-		mem_write8(a6, d6_2);
-		mem_write8(a6 + 1u, 0x1Au);
-		mem_write8(a6 + 0x10u, d6_2);
-		mem_write8(a6 + 0x11u, 0x1Du);
-		t2 = d5 - 1u;
-		d5 = t2;
-		a6 += 0x80u;
+		io_write8(tile_place, player_number);
+		io_write8(tile_place + 1u, 0x1Au);
+		io_write8(tile_place + 0x10u, player_number);
+		io_write8(tile_place + 0x11u, 0x1Du);
+		t2 = count_2 - 1u;
+		count_2 = t2;
+		tile_place += 0x80u;
 	} while (t2 != 0xFFFFu);
-	d5 = 8u;
-	d4 = 0u;
-	a5 = 0x842Cu;
+	count_2 = 8u;
+	tile_offset = 0u;
+	tiles = ranking_frame_tiles_2_ADDRESS;
 	do
 	{
-		mem_write8(a6 + d4, d6_2);
-		mem_write8(a6 + 1u + d4, DATA8(a5));
-		d4 = (uint8_t)(d4 + 2u);
-		t3 = d5 - 1u;
-		d5 = t3;
-		a5++;
+		io_write8(tile_place + tile_offset, player_number);
+		io_write8(tile_place + 1u + tile_offset, PICTURE_TILE(tiles));
+		tile_offset = (uint8_t)(tile_offset + 2u);
+		t3 = count_2 - 1u;
+		count_2 = t3;
+		tiles++;
 	} while (t3 != 0xFFFFu);
-	return d6_2;
+	return player_number;
 }
 
 /* a player's label at the top of his column */
-void draw_ranking_label(uint8_t d6, uint16_t d7)
+void draw_ranking_label(uint8_t colour, uint16_t count)
 {
-	uint32_t a5 = 0, a6 = 0;
+	uint32_t label = 0, tile_place = 0;
 
-	a6 = mem_read32(0x83EAu + (int16_t)((uint32_t)d7 << 2));
-	a5 = TABLE32(rom_00332A, (uint32_t)(int16_t)((uint32_t)d7 << 2));
-	mem_write8(a6, d6);
-	mem_write8(a6 + 2u, d6);
-	mem_write8(a6 + 0x80u, d6);
-	mem_write8(a6 + 0x82u, d6);
-	mem_write8(a6 + 1u, mem_read8(a5));
-	mem_write8(a6 + 3u, mem_read8(a5 + 1u));
-	mem_write8(a6 + 0x81u, mem_read8(a5 + 2u));
-	mem_write8(a6 + 0x83u, mem_read8(a5 + 3u));
+	tile_place = TABLE32(ranking_label_places, (uint32_t)(int16_t)((uint32_t)count << 2));
+	label = TABLE32(box_labels, (uint32_t)(int16_t)((uint32_t)count << 2));
+	io_write8(tile_place, colour);
+	io_write8(tile_place + 2u, colour);
+	io_write8(tile_place + 0x80u, colour);
+	io_write8(tile_place + 0x82u, colour);
+	io_write8(tile_place + 1u, TEXT(label));
+	io_write8(tile_place + 3u, TEXT(label + 0x1u));
+	io_write8(tile_place + 0x81u, TEXT(label + 0x2u));
+	io_write8(tile_place + 0x83u, TEXT(label + 0x3u));
 }
 
 /* a player's place, its digits and ending */
-void draw_ranking_place(uint16_t d7, uint32_t a0)
+void draw_ranking_place(uint16_t count, uint32_t a0)
 {
-	uint8_t d6 = 0;
-	uint16_t d5 = 0;
-	uint32_t a5 = 0, a6 = 0;
+	uint8_t place = 0;
+	uint16_t ending_offset = 0, tens_offset = 0, units_offset = 0;
+	uint32_t tile_place = 0;
 	uint16_t t1 = 0;
 
-	a6 = mem_read32(0x83FAu + (int16_t)((uint32_t)d7 << 2));
-	a5 = 0x8436u;
-	d6 = ranking_places((uint32_t)(int16_t)d7);
-	d5 = (uint16_t)d6;
-	d5 = (uint8_t)(d5 - 1u);
-	if (d5 >= 3u)
-		d5 = 3u;
-	d5 = (uint16_t)((uint32_t)d5 << 1);
-	mem_write8(a6 + 0x84u, 0u);
-	mem_write8(a6 + 0x85u, DATA8(a5 + d5));
-	mem_write8(a6 + 0x86u, 0u);
-	mem_write8(a6 + 0x87u, DATA8(a5 + 1u + d5));
-	a5 = indexed_table_of_8_bit_values_002884_ADDRESS;
-	d5 = (uint16_t)((d6 & 0xFu) << 1);
-	mem_write8(a6 + 2u, 0u);
-	mem_write8(a6 + 3u, indexed_table_of_8_bit_values_002884[d5]);
-	mem_write8(a6 + 0x82u, 0u);
-	mem_write8(a6 + 0x83u, indexed_table_of_8_bit_values_002884[(uint8_t)(d5 + 1u)]);
-	t1 = d6 & 0xF0u;
-	d5 = t1;
+	tile_place = TABLE32(ranking_place_places, (uint32_t)(int16_t)((uint32_t)count << 2));
+	place = ranking_places((uint32_t)(int16_t)count);
+	ending_offset = (uint16_t)place;
+	ending_offset = (uint8_t)(ending_offset - 1u);
+	if (ending_offset >= 3u)
+		ending_offset = 3u;
+	ending_offset = (uint16_t)((uint32_t)ending_offset << 1);
+	io_write8(tile_place + 0x84u, 0u);
+	io_write8(tile_place + 0x85u, ranking_place_tiles_1[ending_offset]);
+	io_write8(tile_place + 0x86u, 0u);
+	io_write8(tile_place + 0x87u, ranking_place_tiles_2[ending_offset]);
+	units_offset = (uint16_t)((place & 0xFu) << 1);
+	io_write8(tile_place + 2u, 0u);
+	io_write8(tile_place + 3u, big_font_tiles_table[units_offset]);
+	io_write8(tile_place + 0x82u, 0u);
+	io_write8(tile_place + 0x83u, big_font_tiles_table[(uint8_t)(units_offset + 1u)]);
+	t1 = place & 0xF0u;
+	tens_offset = t1;
 	if (t1 != 0u)
 	{
-		d5 = d5 >> 3;
-		mem_write8(a6, 0u);
-		mem_write8(a6 + 1u, DATA8(a5 + d5));
-		mem_write8(a6 + 0x80u, 0u);
-		mem_write8(a6 + 0x81u, DATA8(a5 + (uint8_t)(d5 + 1u)));
+		tens_offset = tens_offset >> 3;
+		io_write8(tile_place, 0u);
+		io_write8(tile_place + 1u, big_font_tiles_table[tens_offset]);
+		io_write8(tile_place + 0x80u, 0u);
+		io_write8(tile_place + 0x81u, big_font_tiles_table[(uint8_t)(tens_offset + 1u)]);
 	}
 }
 
 /* the colour of a player's column */
-uint32_t ranking_frame_colour(uint32_t d6)
+uint32_t ranking_frame_colour(uint32_t player_number)
 {
-	uint32_t d6_2 = 0;
+	uint32_t colour = 0;
 
-	d6_2 = (d6 & ~0xFFu) | TABLE8(rom_001F1B, (uint32_t)(int16_t)d6);
-	d6_2 = d6_2 | 1u;
-	return d6_2;
+	colour = (player_number & ~0xFFu) | TABLE8(text_colours, 0x1u + (uint32_t)(int16_t)player_number);
+	colour = colour | 1u;
+	return colour;
 }
 
 /* the ranking's default scores and initials, and the top score */
 void reset_ranking(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a5 = 0, a6 = 0;
+	uint16_t count = 0;
+	uint32_t defaults = 0, ranking_entry = 0;
 	uint16_t t2 = 0, t4 = 0;
 	uint32_t t1 = 0, t3 = 0;
 
-	a6 = ranking_scores_ADDRESS;
-	a5 = table_loaded_by_lea_0082E6_ADDRESS;
+	ranking_entry = ranking_scores_ADDRESS;
+	defaults = ranking_defaults_ADDRESS;
 	top_score = 0x1000u;
-	d7 = 0x31u;
+	count = 0x31u;
 	do
 	{
-		t1 = a6;
-		a6 += 4u;
-		mem_write32(t1, DATA32(a5));
-		t2 = d7 - 1u;
-		d7 = t2;
-		a5 += 4u;
+		t1 = ranking_entry;
+		ranking_entry += 4u;
+		mem_write32(t1, RANKING_DEFAULT(defaults));
+		t2 = count - 1u;
+		count = t2;
+		defaults += 4u;
 	} while (t2 != 0xFFFFu);
-	d7 = 0xAu;
+	count = 0xAu;
 	do
 	{
-		t3 = a6;
-		a6 += 4u;
-		mem_write32(t3, DATA32(a5));
-		t4 = d7 - 1u;
-		d7 = t4;
-		a5 += 4u;
+		t3 = ranking_entry;
+		ranking_entry += 4u;
+		mem_write32(t3, RANKING_DEFAULT(defaults));
+		t4 = count - 1u;
+		count = t4;
+		defaults += 4u;
 	} while (t4 != 0xFFFFu);
 }

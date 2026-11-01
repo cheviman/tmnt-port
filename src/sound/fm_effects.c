@@ -3,7 +3,7 @@
  *    Description: the FM effects (commands 01-41)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -11,5995 +11,6288 @@
  */
 #include "sound.h"
 
-uint32_t fm_effect_01(uint16_t ix)
+/* A note played three times, from the loudest. */
+uint32_t fm_effect_01(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 
 	z80_block(27);
-	unk_83E2 = 3u;
-	a = 7u;
-	return sound_163F(ix, a);
+	fm_effect_01_notes = 3u;
+	attenuation = 7u;
+	return fm_effect_01_note(channel, attenuation);
 }
 
-uint32_t sound_163F(uint16_t ix, uint8_t a)
+/* The note keyed on at the attenuation it is given, for 52 passes. */
+uint32_t fm_effect_01_note(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(40);
-	unk_83E3 = a;
+	fm_effect_01_attenuation = attenuation;
 	voice = 0x161Fu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(30);
-	a_2 = unk_83E3;
-	carry = set_fm_volume(ix, a_2);
+	attenuation = fm_effect_01_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(40);
-	unk_83DF = 0x34u;
-	hl = 0x1662u;
-	set_channel_handler(hl, ix);
+	fm_effect_01_timer = 0x34u;
+	handler = 0x1662u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_1662(uint16_t ix)
+/* Holds the note, almost silent for its last 5 passes; then it plays again 16 quieter, three times in
+   all. */
+uint32_t fm_effect_01_hold(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0, timer = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(31);
-	hl = unk_83DF_ADDRESS;
-	t1 = unk_83DF;
-	unk_83DF = t1 - 1u;
+	t1 = fm_effect_01_timer;
+	fm_effect_01_timer = t1 - 1u;
 	if (t1 == 1u)
 	{
 		z80_block(31);
-		t2 = unk_83E2;
-		unk_83E2 = t2 - 1u;
+		t2 = fm_effect_01_notes;
+		fm_effect_01_notes = t2 - 1u;
 		if (t2 == 1u)
-			return stop_channel(ix);
+			return stop_channel(channel);
 		z80_block(30);
-		a = unk_83E3 + 0x10u;
-		return sound_163F(ix, a);
+		attenuation = fm_effect_01_attenuation + 0x10u;
+		return fm_effect_01_note(channel, attenuation);
 	}
 	z80_block(19);
-	a = unk_83DF;
-	carry = a < 5u;
-	if (a != 5u)
+	timer = fm_effect_01_timer;
+	carry = timer < 5u;
+	if (timer != 5u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(17);
-	a = 0x29u;
-	return set_fm_volume(ix, a);
+	attenuation = 0x29u;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_02(uint16_t ix)
+/* A note sliding down a little, struck again step after step, each step longer: 13 steps, then after a
+   pause a quieter round of 9. */
+uint32_t fm_effect_02(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t steps = 0;
 	uint16_t voice = 0;
 
 	z80_block(47);
-	unk_83E9 = 0x19u;
+	fm_effect_02_attenuation = 0x19u;
 	voice = 0x1681u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	unk_83EA = 2u;
-	a = 0xDu;
-	return sound_16AC(ix, a);
-}
-
-uint32_t sound_16AC(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0;
-
-	z80_block(56);
-	unk_83E7 = a;
-	hl = 0x1400u;
-	unk_83E4 = 0x1400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(63);
-	unk_83E6 = 8u;
-	unk_83E8 = 8u;
-	a_2 = unk_83E9;
-	carry = set_fm_volume(ix, a_2);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x16CFu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_16CF(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
-
-	z80_block(31);
-	t1 = unk_83E6;
-	unk_83E6 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(63);
-		hl = unk_83E4 - 2u;
-		unk_83E4 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
-		return carry;
-	}
-	z80_block(31);
-	hl = unk_83E7_ADDRESS;
-	t2 = unk_83E7;
-	unk_83E7 = t2 - 1u;
-	if (t2 == 1u)
-	{
-		z80_block(31);
-		t3 = unk_83EA;
-		unk_83EA = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
-		z80_block(44);
-		unk_83E6 = 2u;
-		a = 0x31u;
-		carry = set_fm_volume(ix, a);
-		z80_block(20);
-		hl = 0x1727u;
-		set_channel_handler(hl, ix);
-		return carry;
-	}
-	z80_block(37);
-	t4 = unk_83E7;
-	a = unk_83E9;
-	if (t4 >= 7u)
-	{
-		z80_block(7);
-		a -= 4u;
-	}
-	z80_block(37);
-	a += 3u;
-	unk_83E9 = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(79);
-	a = unk_83E8 + 1u;
-	unk_83E6 = a;
-	unk_83E8 = a;
-	hl = 0x1400u;
-	unk_83E4 = 0x1400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	return carry;
-}
-
-uint32_t sound_1727(uint16_t ix, uint32_t carry)
-{
-	uint8_t a = 0;
-	uint8_t t1 = 0;
-
-	z80_block(26);
-	t1 = unk_83E6;
-	unk_83E6 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(37);
-	unk_83E9 = 0x3Bu;
-	a = 9u;
-	return sound_16AC(ix, a);
-}
-
-uint32_t fm_effect_03(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(53);
-	saved_ix = ix;
-	a = 0xA6u;
-	start_speech(a);
-	z80_block(41);
-	channel = saved_ix;
-	voice = 0x1736u;
 	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0xC00u;
-	sound_2B87(hl, channel, &ignored16, &carry);
-	z80_block(62);
-	CHANNEL(channel)->unk_20 = 0x1Cu;
-	a = 0xBu;
-	CHANNEL(channel)->unk_2E = 0xBu;
-	carry = set_fm_volume(channel, a);
+	fm_effect_02_rounds = 2u;
+	steps = 0xDu;
+	return fm_effect_02_round(channel, steps);
+}
+
+/* Starts a round of the steps it is given: the note from its first pitch, 8 passes a step. */
+uint32_t fm_effect_02_round(uint16_t channel, uint8_t steps)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+
+	z80_block(56);
+	fm_effect_02_steps = steps;
+	pitch = 0x1400u;
+	fm_effect_02_pitch = 0x1400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(63);
+	fm_effect_02_timer = 8u;
+	fm_effect_02_period = 8u;
+	attenuation = fm_effect_02_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x177Du;
-	set_channel_handler(hl, channel);
+	handler = 0x16CFu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_177D(uint16_t ix)
+/* The note slides down each pass; each step starts it again from its first pitch one pass longer, 1
+   louder while 7 or more steps are left and 3 quieter after; after the round, two passes almost silent. */
+uint32_t fm_effect_02_slide(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(17);
-		a = 8u;
-		return sound_2405(ix, a);
-	}
-	z80_block(27);
-	hl = 0xC00u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(129);
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 0x10u;
-	CHANNEL(ix)->unk_20 = 0xCu;
-	CHANNEL(ix)->unk_28 = 8u;
-	a = 0xBu;
-	CHANNEL(ix)->unk_2C = 0xBu;
-	carry = set_fm_volume(ix, a);
-	z80_block(20);
-	hl = 0x17ADu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_17AD(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t bc = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(20);
-		bc = 0xFFA0u;
-		return sound_241C(bc, ix);
-	}
-	z80_block(52);
-	CHANNEL(ix)->unk_20 = 0xCu;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(55);
-	a = CHANNEL(ix)->unk_2C + 4u;
-	CHANNEL(ix)->unk_2C = a;
-	return set_fm_volume(ix, a);
-}
-
-uint32_t fm_effect_04(uint16_t ix)
-{
-	uint16_t bc = 0, hl = 0;
-
-	z80_block(68);
-	CHANNEL(ix)->unk_2C = 0u;
-	CHANNEL(ix)->unk_21 = 0x1Cu;
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	bc = 0x17CEu;
-	return sound_2646(bc, hl, ix);
-}
-
-uint32_t fm_effect_05(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x37u;
-	carry = start_fm_effect(a);
-	z80_block(14);
-	ix_2 = saved_ix;
-	return sound_181A(ix_2);
-}
-
-uint32_t sound_181A(uint16_t ix)
-{
-	uint8_t a = 0;
-
-	z80_block(26);
-	CHANNEL(ix)->unk_28 = 2u;
-	a = 0u;
-	return sound_1820(ix, a);
-}
-
-uint32_t sound_1820(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(46);
-	CHANNEL(ix)->unk_2C = a;
-	voice = 0x17F8u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = 0x1200u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x20u;
-	hl = 0x183Fu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_183F(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(46);
-		CHANNEL(ix)->unk_20 = 0x40u;
-		hl = 0x1020u;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
-		z80_block(17);
-		carry = set_fm_volume_from_record(ix);
-		z80_block(20);
-		hl = 0x1868u;
-		set_channel_handler(hl, ix);
-		return carry;
-	}
-	z80_block(40);
-	bc = 0xFF80u;
-	if ((CHANNEL(ix)->unk_20 & 1u) != 0u)
-	{
-		sound_2B80(ix, &bc, &carry);
-		return carry;
-	}
-	z80_block(20);
-	bc = 0x40u;
-	sound_2B80(ix, &bc, &carry);
-	return carry;
-}
-
-uint32_t sound_1868(uint16_t ix, uint32_t carry)
-{
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(17);
-	a = 0x14u;
-	return sound_1820(ix, a);
-}
-
-void fm_effect_37(uint16_t ix)
-{
-	uint16_t hl = 0;
-
-	z80_block(39);
-	CHANNEL(ix)->unk_20 = 8u;
-	hl = 0x1881u;
-	set_channel_handler(hl, ix);
-}
-
-uint32_t sound_1881(uint16_t ix, uint32_t carry)
-{
-	uint8_t t1 = 0;
-
-	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(10);
-	return sound_181A(ix);
-}
-
-uint32_t fm_effect_06(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(27);
-	voice = 0x1736u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = 0xC00u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x20u;
-	a = 5u;
-	CHANNEL(ix)->unk_2E = 5u;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x18A9u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_18A9(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(17);
-		a = 0xCu;
-		return sound_2405(ix, a);
-	}
-	z80_block(46);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	hl = 0xC00u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(110);
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 0x10u;
-	CHANNEL(ix)->unk_28 = 0xEu;
-	a = 5u;
-	CHANNEL(ix)->unk_2C = 5u;
-	carry = set_fm_volume(ix, a);
-	z80_block(20);
-	hl = 0x18D9u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_18D9(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t bc = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(20);
-		bc = 0xFFF0u;
-		return sound_241C(bc, ix);
-	}
-	z80_block(52);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(55);
-	a = CHANNEL(ix)->unk_2C + 3u;
-	CHANNEL(ix)->unk_2C = a;
-	return set_fm_volume(ix, a);
-}
-
-uint32_t fm_effect_07(uint16_t ix)
-{
-	uint8_t a = 0;
-
-	z80_block(47);
-	unk_83F1 = 2u;
-	unk_83F0 = 0xCu;
-	a = 0u;
-	return sound_1938(ix, a);
-}
-
-uint32_t sound_1938(uint16_t ix, uint8_t a)
-{
-	z80_block(13);
-	unk_83F2 = a;
-	return sound_193B(ix);
-}
-
-uint32_t sound_193B(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(17);
-	hl = next_random_byte();
-	z80_block(62);
-	unk_83EF = ((hl | (hl >> 8)) & 7u) + 0x12u;
-	voice = 0x18FAu;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = 0xA00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(30);
-	a = unk_83F2;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1962u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1962(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-
-	z80_block(31);
-	hl = unk_83EF_ADDRESS;
-	t1 = unk_83EF;
-	unk_83EF = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(31);
-		hl = unk_83F0_ADDRESS;
-		t2 = unk_83F0;
-		unk_83F0 = t2 - 1u;
-		if (t2 == 1u)
-		{
-			z80_block(31);
-			t3 = unk_83F1;
-			unk_83F1 = t3 - 1u;
-			if (t3 == 1u)
-				return stop_channel(ix);
-			z80_block(37);
-			unk_83F0 = 6u;
-			a = 0x1Cu;
-			return sound_1938(ix, a);
-		}
-		z80_block(24);
-		if (unk_83F0 != 1u)
-			return sound_193B(ix);
-		z80_block(43);
-		unk_83F2 += 8u;
-		return sound_193B(ix);
-	}
-	z80_block(19);
-	a = unk_83EF;
-	carry = a < 8u;
-	if (a != 8u)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(45);
-	hl = unk_83F0_ADDRESS;
-	unk_83F0--;
-	if (unk_83F0 >= 9u)
-		return sound_193B(ix);
-	z80_block(38);
-	unk_83F0++;
-	voice = 0x1913u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(37);
-	a = unk_83F2 + 4u;
-	carry = set_fm_volume(ix, a);
-	z80_block(10);
-	return fm_key_on(ix);
-}
-
-uint32_t fm_effect_08(uint16_t ix)
-{
-	uint8_t a = 0;
-
-	z80_block(45);
-	CHANNEL(ix)->unk_28 = 3u;
-	CHANNEL(ix)->unk_2C = 0xFu;
-	a = 0x48u;
-	return sound_19DB(ix, a);
-}
-
-uint32_t sound_19DB(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(65);
-	CHANNEL(ix)->unk_20 = a;
-	CHANNEL(ix)->unk_21 = a;
-	voice = 0x19B8u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = 0x200u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x19F9u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_19F9(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(33);
-		t2 = CHANNEL(ix)->unk_28;
-		CHANNEL(ix)->unk_28 = t2 - 1u;
-		if (t2 == 1u)
-			return stop_channel(ix);
-		z80_block(81);
-		CHANNEL(ix)->unk_2C += 0x1Au;
-		a = CHANNEL(ix)->unk_21 + 2u;
-		return sound_19DB(ix, a);
-	}
-	z80_block(36);
-	if (CHANNEL(ix)->unk_20 < 0x40u)
-	{
-		sound_2B73(ix, &ignored16, &carry);
-		return carry;
-	}
-	z80_block(20);
-	bc = 0x40u;
-	sound_2B80(ix, &bc, &carry);
-	return carry;
-}
-
-uint32_t fm_effect_09(uint16_t ix)
-{
-	z80_block(27);
-	unk_83F3 = 0u;
-	return stop_channel(ix);
-}
-
-uint32_t fm_effect_0a(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x33u;
-	carry = start_fm_effect(a);
-	z80_block(61);
-	ix_2 = saved_ix;
-	unk_83F3 = 1u;
-	unk_83FB = 0x1Cu;
-	a = 6u;
-	return sound_1A58(ix_2, a);
-}
-
-uint32_t sound_1A58(uint16_t ix, uint8_t a)
-{
-	z80_block(33);
-	unk_83F7 = a;
-	unk_83F5 = 0x10u;
-	return sound_1A60(ix);
-}
-
-uint32_t sound_1A60(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t voice = 0;
-
-	z80_block(47);
-	unk_83FA = 2u;
-	voice = 0x1A2Au;
-	carry = load_fm_voice(voice, ix);
-	z80_block(13);
-	a = unk_83F7;
-	return sound_1A6E(ix, a);
-}
-
-uint32_t sound_1A6E(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint8_t a_2 = 0, d = 0;
-	uint16_t hl = 0, ignored16 = 0;
-
-	z80_block(30);
-	unk_83F6 = a;
-	hl = next_random_byte();
-	z80_block(73);
-	d = hl & 3u;
-	hl = 0x80u + (((uint32_t)d << 8) | (hl >> 8));
-	unk_83F8 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(54);
-	unk_83F4 = 0xCu;
-	a_2 = unk_83F6 + d;
-	carry = set_fm_volume(ix, a_2);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1A98u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1A98(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0, period = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
 	z80_block(31);
-	t1 = unk_83F4;
-	unk_83F4 = t1 - 1u;
+	t1 = fm_effect_02_timer;
+	fm_effect_02_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(63);
-		hl = unk_83F8 + 0x40u;
-		unk_83F8 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_02_pitch - 2u;
+		fm_effect_02_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
-	z80_block(27);
-	if (unk_83F3 == 0u)
-		return stop_channel(ix);
 	z80_block(31);
-	t2 = unk_83F5;
-	unk_83F5 = t2 - 1u;
+	t2 = fm_effect_02_steps;
+	fm_effect_02_steps = t2 - 1u;
 	if (t2 == 1u)
 	{
 		z80_block(31);
-		t3 = unk_83FB;
-		unk_83FB = t3 - 1u;
+		t3 = fm_effect_02_rounds;
+		fm_effect_02_rounds = t3 - 1u;
 		if (t3 == 1u)
-			return stop_channel(ix);
-		z80_block(30);
-		a = unk_83F7 + 1u;
-		return sound_1A58(ix, a);
+			return stop_channel(channel);
+		z80_block(44);
+		fm_effect_02_timer = 2u;
+		attenuation = 0x31u;
+		carry = set_fm_volume(channel, attenuation);
+		z80_block(20);
+		handler = 0x1727u;
+		set_channel_handler(handler, channel);
+		return carry;
 	}
-	z80_block(31);
-	t4 = unk_83FA;
-	unk_83FA = t4 - 1u;
-	if (t4 == 1u)
-		return sound_1A60(ix);
-	z80_block(30);
-	a = unk_83F6 + 0x10u;
-	return sound_1A6E(ix, a);
-}
-
-uint32_t sound_1AF8(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(40);
-	unk_83FE = a;
-	voice = 0x1AD8u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(27);
-	hl = 0xA0u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(50);
-	unk_83FC = 0x60u;
-	a_2 = unk_83FE;
-	carry = set_fm_volume(ix, a_2);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1B1Bu;
-	set_channel_handler(hl, ix);
+	z80_block(37);
+	t4 = fm_effect_02_steps;
+	attenuation = fm_effect_02_attenuation;
+	if (t4 >= 7u)
+	{
+		z80_block(7);
+		attenuation -= 4u;
+	}
+	z80_block(37);
+	attenuation += 3u;
+	fm_effect_02_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(79);
+	period = fm_effect_02_period + 1u;
+	fm_effect_02_timer = period;
+	fm_effect_02_period = period;
+	pitch = 0x1400u;
+	fm_effect_02_pitch = 0x1400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t sound_1B1B(uint16_t ix)
+/* After the two passes, the second round: 9 steps from attenuation 59. */
+uint32_t fm_effect_02_pause(uint16_t channel, uint32_t carry)
+{
+	uint8_t steps = 0;
+	uint8_t t1 = 0;
+
+	z80_block(26);
+	t1 = fm_effect_02_timer;
+	fm_effect_02_timer = t1 - 1u;
+	if (t1 != 1u)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(37);
+	fm_effect_02_attenuation = 0x3Bu;
+	steps = 9u;
+	return fm_effect_02_round(channel, steps);
+}
+
+/* Speech A6, and a falling note, then a trill that fades out. */
+uint32_t fm_effect_03(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(53);
+	saved_channel = channel;
+	command = 0xA6u;
+	start_speech(command);
+	z80_block(41);
+	channel = saved_channel;
+	voice = 0x1736u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0xC00u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(62);
+	CHANNEL(channel)->fm_effect.timer = 0x1Cu;
+	attenuation = 0xBu;
+	CHANNEL(channel)->fm_effect.base_attenuation = 0xBu;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x177Du;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note falls two semitones a pass for 28 passes, dying away near its end; then the trill of two
+   notes. */
+uint32_t fm_effect_03_fall(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(17);
+		die_away_pass = 8u;
+		return fm_effect_fall(channel, die_away_pass);
+	}
+	z80_block(27);
+	pitch = 0xC00u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(129);
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 0x10u;
+	CHANNEL(channel)->fm_effect.timer = 0xCu;
+	CHANNEL(channel)->fm_effect.count = 8u;
+	attenuation = 0xBu;
+	CHANNEL(channel)->fm_effect.attenuation = 0xBu;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(20);
+	handler = 0x17ADu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The two notes in turn, both sliding down; every 12 passes 4 quieter, 8 times. */
+uint32_t fm_effect_03_trill(uint16_t channel)
+{
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
+	uint8_t timer = 0, count = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(20);
+		step = 0xFFA0u;
+		return fm_effect_trill_slide(step, channel);
+	}
+	z80_block(52);
+	CHANNEL(channel)->fm_effect.timer = 0xCu;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
+	z80_block(55);
+	attenuation = CHANNEL(channel)->fm_effect.attenuation + 4u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
+}
+
+/* The three-note arpeggio of effect 1D, from the loudest, with another voice and slower. */
+uint32_t fm_effect_04(uint16_t channel)
+{
+	uint16_t pitch = 0, voice = 0;
+
+	z80_block(68);
+	CHANNEL(channel)->fm_effect.attenuation = 0u;
+	CHANNEL(channel)->fm_effect.period = 0x1Cu;
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	voice = 0x17CEu;
+	return fm_effect_arpeggio_start(voice, pitch, channel);
+}
+
+/* Starts effect 37 (its echo, 8 passes later on another channel) and plays a note that wobbles down,
+   then another note held, twice. */
+uint32_t fm_effect_05(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x37u;
+	carry = start_fm_effect(command);
+	z80_block(14);
+	channel = saved_channel;
+	return fm_effect_wobble_twice(channel);
+}
+
+/* Twice, from the loudest: the note that wobbles down and the note held after it. */
+uint32_t fm_effect_wobble_twice(uint16_t channel)
+{
+	uint8_t attenuation = 0;
+
+	z80_block(26);
+	CHANNEL(channel)->fm_effect.count = 2u;
+	attenuation = 0u;
+	return fm_effect_wobble_note(channel, attenuation);
+}
+
+/* The note keyed on at the attenuation it is given, for 32 passes. */
+uint32_t fm_effect_wobble_note(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(46);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	voice = 0x17F8u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0x1200u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(17);
+	carry = set_fm_volume_from_record(channel);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(39);
+	CHANNEL(channel)->fm_effect.timer = 0x20u;
+	handler = 0x183Fu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Two semitones down on the odd passes and one up on the even ones; then another note, held 64 passes. */
+uint32_t fm_effect_wobble_down(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, step = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
+	{
+		z80_block(46);
+		CHANNEL(channel)->fm_effect.timer = 0x40u;
+		pitch = 0x1020u;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
+		z80_block(17);
+		carry = set_fm_volume_from_record(channel);
+		z80_block(20);
+		handler = 0x1868u;
+		set_channel_handler(handler, channel);
+		return carry;
+	}
+	z80_block(40);
+	step = 0xFF80u;
+	if ((CHANNEL(channel)->fm_effect.timer & 1u) != 0u)
+	{
+		fm_effect_move_pitch(channel, &step, &carry);
+		return carry;
+	}
+	z80_block(20);
+	step = 0x40u;
+	fm_effect_move_pitch(channel, &step, &carry);
+	return carry;
+}
+
+/* Holds that note; then the second time, 20 quieter, and the channel stops. */
+uint32_t fm_effect_wobble_hold(uint16_t channel, uint32_t carry)
+{
+	uint8_t attenuation = 0;
+	uint8_t timer = 0, count = 0;
+
+	z80_block(28);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(33);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
+	z80_block(17);
+	attenuation = 0x14u;
+	return fm_effect_wobble_note(channel, attenuation);
+}
+
+/* Effect 05's wobbling notes 8 passes late, on a channel of their own (effect 05 starts it). */
+void fm_effect_37(uint16_t channel)
+{
+	uint16_t handler = 0;
+
+	z80_block(39);
+	CHANNEL(channel)->fm_effect.timer = 8u;
+	handler = 0x1881u;
+	set_channel_handler(handler, channel);
+}
+
+/* Waits the 8 passes, then the wobbling notes. */
+uint32_t fm_effect_37_wait(uint16_t channel, uint32_t carry)
+{
+	uint8_t timer = 0;
+
+	z80_block(28);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(10);
+	return fm_effect_wobble_twice(channel);
+}
+
+/* A falling note, then a trill that fades out (effect 03's without the speech, longer). */
+uint32_t fm_effect_06(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(27);
+	voice = 0x1736u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0xC00u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(62);
+	CHANNEL(channel)->fm_effect.timer = 0x20u;
+	attenuation = 5u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 5u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x18A9u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note falls two semitones a pass for 32 passes, dying away near its end; then the trill of two
+   notes. */
+uint32_t fm_effect_06_fall(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(17);
+		die_away_pass = 0xCu;
+		return fm_effect_fall(channel, die_away_pass);
+	}
+	z80_block(46);
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	pitch = 0xC00u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(110);
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 0x10u;
+	CHANNEL(channel)->fm_effect.count = 0xEu;
+	attenuation = 5u;
+	CHANNEL(channel)->fm_effect.attenuation = 5u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(20);
+	handler = 0x18D9u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The two notes in turn, both sliding down slowly; every 16 passes 3 quieter, 14 times. */
+uint32_t fm_effect_06_trill(uint16_t channel)
+{
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
+	uint8_t timer = 0, count = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(20);
+		step = 0xFFF0u;
+		return fm_effect_trill_slide(step, channel);
+	}
+	z80_block(52);
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
+	z80_block(55);
+	attenuation = CHANNEL(channel)->fm_effect.attenuation + 3u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
+}
+
+/* Low notes of 24 or 25 passes by the random bytes' place, the later ones each ending on a higher blip
+   with another voice, in two rounds: 12 notes, then 6 quieter. */
+uint32_t fm_effect_07(uint16_t channel)
+{
+	uint8_t attenuation = 0;
+
+	z80_block(47);
+	fm_effect_07_rounds = 2u;
+	fm_effect_07_notes = 0xCu;
+	attenuation = 0u;
+	return fm_effect_07_round(channel, attenuation);
+}
+
+/* Starts a round at the attenuation it is given. */
+uint32_t fm_effect_07_round(uint16_t channel, uint8_t attenuation)
+{
+	z80_block(13);
+	fm_effect_07_attenuation = attenuation;
+	return fm_effect_07_note(channel);
+}
+
+/* A low note keyed on for 24 or 25 passes, by the random bytes' place (the place taken for the byte: 18
+   to 25 meant). */
+uint32_t fm_effect_07_note(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, random_place = 0, voice = 0;
+
+	z80_block(17);
+	random_place = next_random_byte();
+	z80_block(62);
+	fm_effect_07_timer = ((random_place | (random_place >> 8)) & 7u) + 0x12u;
+	voice = 0x18FAu;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0xA00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(30);
+	attenuation = fm_effect_07_attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1962u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Counts the note down: the first notes of a round are cut 8 passes before their end by the next; in the
+   later ones a higher blip, 4 quieter, takes those 8 passes; the last of a round is 8 quieter; then the
+   second round from attenuation 28. */
+uint32_t fm_effect_07_step(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, timer = 0;
+	uint16_t ignored16 = 0, pitch = 0, voice = 0;
+	uint8_t t1 = 0, t2 = 0, t3 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_07_timer;
+	fm_effect_07_timer = t1 - 1u;
+	if (t1 == 1u)
+	{
+		z80_block(31);
+		t2 = fm_effect_07_notes;
+		fm_effect_07_notes = t2 - 1u;
+		if (t2 == 1u)
+		{
+			z80_block(31);
+			t3 = fm_effect_07_rounds;
+			fm_effect_07_rounds = t3 - 1u;
+			if (t3 == 1u)
+				return stop_channel(channel);
+			z80_block(37);
+			fm_effect_07_notes = 6u;
+			attenuation = 0x1Cu;
+			return fm_effect_07_round(channel, attenuation);
+		}
+		z80_block(24);
+		if (fm_effect_07_notes != 1u)
+			return fm_effect_07_note(channel);
+		z80_block(43);
+		fm_effect_07_attenuation += 8u;
+		return fm_effect_07_note(channel);
+	}
+	z80_block(19);
+	timer = fm_effect_07_timer;
+	carry = timer < 8u;
+	if (timer != 8u)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(45);
+	fm_effect_07_notes--;
+	if (fm_effect_07_notes >= 9u)
+		return fm_effect_07_note(channel);
+	z80_block(38);
+	fm_effect_07_notes++;
+	voice = 0x1913u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(37);
+	attenuation = fm_effect_07_attenuation + 4u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(10);
+	return fm_key_on(channel);
+}
+
+/* A low note that rises and then warbles, three times, each quieter and a little longer. */
+uint32_t fm_effect_08(uint16_t channel)
+{
+	uint8_t length = 0;
+
+	z80_block(45);
+	CHANNEL(channel)->fm_effect.count = 3u;
+	CHANNEL(channel)->fm_effect.attenuation = 0xFu;
+	length = 0x48u;
+	return fm_effect_08_note(channel, length);
+}
+
+/* The note keyed on for the passes it is given. */
+uint32_t fm_effect_08_note(uint16_t channel, uint8_t length)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(65);
+	CHANNEL(channel)->fm_effect.timer = length;
+	CHANNEL(channel)->fm_effect.period = length;
+	voice = 0x19B8u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0x200u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(17);
+	carry = set_fm_volume_from_record(channel);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x19F9u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* A semitone up each pass while 64 or more passes are left, then a warble; then the next note, 26
+   quieter and 2 passes longer. */
+uint32_t fm_effect_08_rise_and_warble(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t length = 0;
+	uint16_t ignored16 = 0, step = 0;
+	uint8_t timer = 0, count = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
+	{
+		z80_block(33);
+		count = CHANNEL(channel)->fm_effect.count;
+		CHANNEL(channel)->fm_effect.count = count - 1u;
+		if (count == 1u)
+			return stop_channel(channel);
+		z80_block(81);
+		CHANNEL(channel)->fm_effect.attenuation += 0x1Au;
+		length = CHANNEL(channel)->fm_effect.period + 2u;
+		return fm_effect_08_note(channel, length);
+	}
+	z80_block(36);
+	if (CHANNEL(channel)->fm_effect.timer < 0x40u)
+	{
+		fm_effect_warble(channel, &ignored16, &carry);
+		return carry;
+	}
+	z80_block(20);
+	step = 0x40u;
+	fm_effect_move_pitch(channel, &step, &carry);
+	return carry;
+}
+
+/* Stops effect 0A and the drone of effect 33 (clears their flag); its own channel stops at once. */
+uint32_t fm_effect_09(uint16_t channel)
+{
+	z80_block(27);
+	fm_effect_0a_on = 0u;
+	return stop_channel(channel);
+}
+
+/* Starts effect 33 (a low drone) and plays rounds of low notes that rise, at one of four pitches by the
+   random bytes' place, until effect 09 stops it or its 28 rounds end. */
+uint32_t fm_effect_0a(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x33u;
+	carry = start_fm_effect(command);
+	z80_block(61);
+	channel = saved_channel;
+	fm_effect_0a_on = 1u;
+	fm_effect_0a_rounds = 0x1Cu;
+	attenuation = 6u;
+	return fm_effect_0a_round(channel, attenuation);
+}
+
+/* Starts a round of 16 notes at the attenuation it is given. */
+uint32_t fm_effect_0a_round(uint16_t channel, uint8_t attenuation)
+{
+	z80_block(33);
+	fm_effect_0a_round_attenuation = attenuation;
+	fm_effect_0a_notes = 0x10u;
+	return fm_effect_0a_pair(channel);
+}
+
+/* Loads the voice again for a pair of notes. */
+uint32_t fm_effect_0a_pair(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t voice = 0;
+
+	z80_block(47);
+	fm_effect_0a_pair_notes = 2u;
+	voice = 0x1A2Au;
+	carry = load_fm_voice(voice, channel);
+	z80_block(13);
+	attenuation = fm_effect_0a_round_attenuation;
+	return fm_effect_0a_note(channel, attenuation);
+}
+
+/* A note at one of four low pitches by the random bytes' place (up to 3 quieter with the higher ones),
+   keyed on for 12 passes at the attenuation it is given. */
+uint32_t fm_effect_0a_note(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint8_t pitch_choice = 0;
+	uint16_t handler = 0, ignored16 = 0, random_place = 0;
+
+	z80_block(30);
+	fm_effect_0a_attenuation = attenuation;
+	random_place = next_random_byte();
+	z80_block(73);
+	pitch_choice = random_place & 3u;
+	random_place = 0x80u + (((uint32_t)pitch_choice << 8) | (random_place >> 8));
+	fm_effect_0a_pitch = random_place;
+	set_fm_pitch(random_place, channel, &ignored16, &carry);
+	z80_block(54);
+	fm_effect_0a_timer = 0xCu;
+	attenuation = fm_effect_0a_attenuation + pitch_choice;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1A98u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note rises a semitone a pass; then the next one, the second of a pair 16 quieter; each round 1
+   quieter than the last; it stops when its flag is cleared. */
+uint32_t fm_effect_0a_rise(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_0a_timer;
+	fm_effect_0a_timer = t1 - 1u;
+	if (t1 != 1u)
+	{
+		z80_block(63);
+		pitch = fm_effect_0a_pitch + 0x40u;
+		fm_effect_0a_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
+		return carry;
+	}
+	z80_block(27);
+	if (fm_effect_0a_on == 0u)
+		return stop_channel(channel);
+	z80_block(31);
+	t2 = fm_effect_0a_notes;
+	fm_effect_0a_notes = t2 - 1u;
+	if (t2 == 1u)
+	{
+		z80_block(31);
+		t3 = fm_effect_0a_rounds;
+		fm_effect_0a_rounds = t3 - 1u;
+		if (t3 == 1u)
+			return stop_channel(channel);
+		z80_block(30);
+		attenuation = fm_effect_0a_round_attenuation + 1u;
+		return fm_effect_0a_round(channel, attenuation);
+	}
+	z80_block(31);
+	t4 = fm_effect_0a_pair_notes;
+	fm_effect_0a_pair_notes = t4 - 1u;
+	if (t4 == 1u)
+		return fm_effect_0a_pair(channel);
+	z80_block(30);
+	attenuation = fm_effect_0a_attenuation + 0x10u;
+	return fm_effect_0a_note(channel, attenuation);
+}
+
+/* The low note keyed on at the attenuation it is given, for 96 passes. */
+uint32_t fm_effect_33_drone(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(40);
+	fm_effect_33_attenuation = attenuation;
+	voice = 0x1AD8u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = 0xA0u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(50);
+	fm_effect_33_timer = 0x60u;
+	attenuation = fm_effect_33_attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1B1Bu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Holds it; then strikes it again 1 quieter; stops when the flag is cleared or the 20 times end. */
+uint32_t fm_effect_33_hold(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(27);
 	carry = 0u;
-	if (unk_83F3 == 0u)
-		return stop_channel(ix);
+	if (fm_effect_0a_on == 0u)
+		return stop_channel(channel);
 	z80_block(26);
-	t1 = unk_83FC;
-	unk_83FC = t1 - 1u;
+	t1 = fm_effect_33_timer;
+	fm_effect_33_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(31);
-	t2 = unk_83FD;
-	unk_83FD = t2 - 1u;
+	t2 = fm_effect_33_repeats;
+	fm_effect_33_repeats = t2 - 1u;
 	if (t2 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(30);
-	a = unk_83FE + 1u;
-	return sound_1AF8(ix, a);
+	attenuation = fm_effect_33_attenuation + 1u;
+	return fm_effect_33_drone(channel, attenuation);
 }
 
-uint32_t fm_effect_0b(uint16_t ix)
+/* A low note held, then a long slow slide down, twice (the second quieter). */
+uint32_t fm_effect_0b(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(67);
-	unk_8404 = 0x1Cu;
-	unk_8403 = 2u;
+	fm_effect_0b_timer = 0x1Cu;
+	fm_effect_0b_slides = 2u;
 	voice = 0x1B36u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(43);
-	hl = 0x400u;
-	unk_8401 = 0x400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(37);
-	a = 8u;
-	unk_8400 = 8u;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1B79u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1B79(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
-	uint8_t t1 = 0;
-
-	z80_block(31);
-	hl = unk_8404_ADDRESS;
-	t1 = unk_8404;
-	unk_8404 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(7);
-		a = 0xAu;
-		return sound_1B8B(ix, a);
-	}
-	z80_block(19);
-	a = unk_8404;
-	carry = a < 0xCu;
-	if (a != 0xCu)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(17);
-	a = 0x27u;
-	return set_fm_volume(ix, a);
-}
-
-uint32_t sound_1B8B(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0;
-
-	z80_block(30);
-	unk_8400 = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(40);
-	unk_83FF = 0x60u;
-	hl = 0x1B9Cu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1B9C(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(31);
-	t1 = unk_83FF;
-	unk_83FF = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(63);
-		hl = unk_8401 - 8u;
-		unk_8401 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
-		return carry;
-	}
-	z80_block(31);
-	t2 = unk_8403;
-	unk_8403 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(43);
-	hl = 0x400u;
-	unk_8401 = 0x400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(17);
-	a = 0x17u;
-	return sound_1B8B(ix, a);
-}
-
-uint32_t fm_effect_0c(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t channel = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x90u;
-	start_pcm_effect(a);
-	z80_block(157);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_21 = 0xAu;
-	CHANNEL(channel)->unk_29 = 0x98u;
-	CHANNEL(channel)->unk_2D = 1u;
-	CHANNEL(channel)->unk_38 = 0xC5u;
-	CHANNEL(channel)->unk_39 = 0x1Bu;
-	CHANNEL(channel)->unk_3C = 0x30u;
-	CHANNEL(channel)->unk_3D = 2u;
-	return sound_1C04(channel);
-}
-
-uint32_t sound_1C04(uint16_t ix)
-{
-	z80_block(86);
-	CHANNEL(ix)->unk_28 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 7u;
-	return sound_1C13(ix);
-}
-
-uint32_t sound_1C13(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
-
-	z80_block(106);
-	CHANNEL(ix)->unk_2C = music_attenuation + CHANNEL(ix)->unk_2D;
-	voice = (CHANNEL(ix)->unk_38 | ((uint32_t)CHANNEL(ix)->unk_39 << 8u));
-	carry = load_fm_voice(voice, ix);
-	z80_block(10);
-	hl = 0x500u;
-	return sound_1C28(hl, ix);
-}
-
-uint32_t sound_1C28(uint16_t hl, uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ignored16 = 0;
-
-	z80_block(17);
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(19);
-	a = CHANNEL(ix)->unk_2C;
-	return sound_1C2E(ix, a);
-}
-
-uint32_t sound_1C2E(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0;
-
-	z80_block(17);
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(58);
-	CHANNEL(ix)->unk_20 = CHANNEL(ix)->unk_21;
-	hl = 0x1C40u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1C40(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0, h = 0, l = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-	uint16_t t4 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(40);
-		bc = 0x100u;
-		if ((CHANNEL(ix)->unk_20 & 1u) != 0u)
-		{
-			sound_2B80(ix, &bc, &carry);
-			return carry;
-		}
-		z80_block(20);
-		bc = 0xFE00u;
-		sound_2B80(ix, &bc, &carry);
-		return carry;
-	}
-	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(30);
-	if ((CHANNEL(ix)->unk_28 & 1u) == 0u)
-	{
-		z80_block(48);
-		if (CHANNEL(ix)->unk_3C <= CHANNEL(ix)->unk_28)
-			return sound_1C13(ix);
-		z80_block(55);
-		voice = (CHANNEL(ix)->unk_38 | ((uint32_t)CHANNEL(ix)->unk_39 << 8u));
-		carry = load_fm_voice(voice, ix);
-		z80_block(168);
-		a = CHANNEL(ix)->unk_2C;
-		t3 = CHANNEL(ix)->unk_3D;
-		carry = (uint8_t)(a + t3) < a;
-		CHANNEL(ix)->unk_2C = a + t3;
-		t4 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) - 0x80u - carry;
-		h = (uint8_t)(t4 >> 8);
-		l = (uint8_t)t4;
-		CHANNEL(ix)->unk_32 = l;
-		CHANNEL(ix)->unk_33 = h;
-		hl = ((uint32_t)h << 8) | l;
-		return sound_1C28(hl, ix);
-	}
-	z80_block(27);
-	hl = 0x500u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	z80_block(36);
-	a = CHANNEL(ix)->unk_2C + 0x18u;
-	return sound_1C2E(ix, a);
-}
-
-uint32_t fm_effect_0d(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(27);
-	voice = 0x1736u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(46);
-	CHANNEL(ix)->unk_29 = 4u;
-	hl = 0xD00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(110);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 8u;
-	CHANNEL(ix)->unk_20 = 0x18u;
-	a = 1u;
-	CHANNEL(ix)->unk_2E = 1u;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1CCEu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1CCE(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(7);
-		a = 1u;
-		return sound_1CDB(ix, a);
-	}
-	z80_block(17);
-	a = 0xCu;
-	return sound_2405(ix, a);
-}
-
-uint32_t sound_1CDB(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
-
-	z80_block(55);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_2D = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(65);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	CHANNEL(ix)->unk_28 = 6u;
-	hl = 0xD00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(116);
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 8u;
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	hl = 0x1D0Au;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1D0A(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(20);
-		bc = 0xFFC0u;
-		return sound_241C(bc, ix);
-	}
-	z80_block(52);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-	{
-		z80_block(33);
-		t3 = CHANNEL(ix)->unk_29;
-		CHANNEL(ix)->unk_29 = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
-		z80_block(43);
-		CHANNEL(ix)->unk_28 = 0xAu;
-		a = 0x31u;
-		carry = set_fm_volume(ix, a);
-		z80_block(20);
-		hl = 0x1D4Fu;
-		set_channel_handler(hl, ix);
-		return carry;
-	}
-	z80_block(62);
-	a = CHANNEL(ix)->unk_2C + 2u;
-	CHANNEL(ix)->unk_2C = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(68);
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 0xAu;
-	hl = 0x800u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	return carry;
-}
-
-uint32_t sound_1D4F(uint16_t ix, uint32_t carry)
-{
-	uint8_t a = 0;
-	uint8_t t1 = 0;
-
-	z80_block(28);
-	t1 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_cycles(6);
-		return carry;
-	}
-	z80_block(36);
-	a = CHANNEL(ix)->unk_2D + 0x12u;
-	return sound_1CDB(ix, a);
-}
-
-uint32_t fm_effect_0e(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(27);
-	voice = 0x1D5Bu;
-	carry = load_fm_voice(voice, ix);
-	z80_block(43);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	unk_8407 = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(44);
-	unk_8405 = 0x14u;
-	a = 0u;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1D96u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1D96(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint8_t t1 = 0;
-
-	z80_block(31);
-	hl = unk_8405_ADDRESS;
-	t1 = unk_8405;
-	unk_8405 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(57);
-		unk_8405 = 0x60u;
-		unk_8409 = 0x10u;
-		voice = 0x1D5Bu;
-		carry = load_fm_voice(voice, ix);
-		z80_block(43);
-		hl = 0x600u;
-		unk_8407 = 0x600u;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
-		z80_block(7);
-		a = 0u;
-		return sound_1DD5(ix, a);
-	}
-	z80_block(24);
-	a = unk_8405;
-	if (a == 6u)
-	{
-		z80_block(17);
-		a = 0x10u;
-		return set_fm_volume(ix, a);
-	}
-	z80_block(44);
-	hl = unk_8407;
-	bc = 0xFE00u;
-	if (a & 1u)
-	{
-		z80_block(10);
-		bc = 0x100u;
-	}
-	z80_block(37);
-	hl += bc;
-	unk_8407 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	return carry;
-}
-
-uint32_t sound_1DD5(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0;
-
-	z80_block(30);
-	unk_8406 = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x1DE4u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1DE4(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-
-	z80_block(31);
-	hl = unk_8405_ADDRESS;
-	t1 = unk_8405;
-	unk_8405 = t1 - 1u;
-	if (t1 == 1u)
-	{
-		z80_block(41);
-		unk_8405 = 0x20u;
-		t2 = unk_8409;
-		unk_8409 = t2 - 1u;
-		if (t2 == 1u)
-			return stop_channel(ix);
-		z80_block(43);
-		hl = 0x600u;
-		unk_8407 = 0x600u;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
-		z80_block(30);
-		a = unk_8406 + 4u;
-		return sound_1DD5(ix, a);
-	}
-	z80_block(48);
-	t3 = unk_8405;
-	hl = unk_8407;
-	bc = 0xFF00u;
-	if (t3 & 1u)
-	{
-		z80_block(10);
-		bc = 0x200u;
-	}
-	z80_block(37);
-	hl += bc;
-	unk_8407 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	return carry;
-}
-
-uint32_t fm_effect_0f(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x91u;
-	start_pcm_effect(a);
-	z80_block(60);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2E = 3u;
-	hl = 0x1E1Au;
-	carry = sound_1E5E(hl, channel);
-	z80_block(20);
-	hl = 0x1E4Cu;
-	set_channel_handler(hl, channel);
-	return carry;
-}
-
-uint32_t sound_1E4C(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_1E83(ix);
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x91u;
-	start_pcm_effect(a);
-	z80_block(24);
-	ix_2 = saved_ix;
-	return sound_1E88(ix_2);
-}
-
-uint32_t sound_1E5E(uint16_t hl, uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl_2 = 0, ignored16 = 0;
-
-	z80_block(17);
-	carry = load_fm_voice(hl, ix);
-	z80_block(27);
-	hl_2 = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl_2, ix, &ignored16, &carry);
-	z80_block(141);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 6u;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 6u;
-	CHANNEL(ix)->unk_20 = 0x20u;
-	a = CHANNEL(ix)->unk_2E;
-	carry = set_fm_volume(ix, a);
-	z80_block(10);
-	return fm_key_on(ix);
-}
-
-uint32_t sound_1E83(uint16_t ix)
-{
-	uint8_t a = 0;
-
-	z80_block(17);
-	a = 0x10u;
-	return sound_2405(ix, a);
-}
-
-uint32_t sound_1E88(uint16_t ix)
-{
-	z80_block(19);
-	CHANNEL(ix)->unk_29 = 0x11u;
-	return sound_1E8C(ix);
-}
-
-uint32_t sound_1E8C(uint16_t ix)
-{
-	uint8_t a = 0;
-
-	z80_block(19);
-	a = CHANNEL(ix)->unk_2E;
-	return sound_1E8F(ix, a);
-}
-
-uint32_t sound_1E8F(uint16_t ix, uint8_t a)
-{
-	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
-
-	z80_block(55);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_2D = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(65);
-	CHANNEL(ix)->unk_20 = 5u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xC00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(68);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	hl = 0x1EB5u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1EB5(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t4 = 0;
-	uint16_t t3 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
-	z80_block(52);
-	CHANNEL(ix)->unk_20 = 5u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 != 1u)
-	{
-		z80_block(17);
-		sound_2433(ix, &bc, &carry);
-		z80_block(83);
-		t3 = 0xA00u - bc - carry;
-		carry = z80_carry_sub16(0xA00u, bc, carry);
-		hl = t3;
-		AS16(CHANNEL(ix)->unk_32) = hl;
-		hl = 0x600u;
-		return sound_2B90(bc, hl, ix, carry);
-	}
-	z80_block(33);
-	t4 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_29 = t4 - 1u;
-	if (t4 == 1u)
-		return stop_channel(ix);
-	z80_block(30);
-	if ((((uint8_t)CHANNEL(ix)->unk_2A >> 4) & 1u) != 0u)
-		return sound_1E8C(ix);
-	z80_block(36);
-	a = CHANNEL(ix)->unk_2D + 3u;
-	return sound_1E8F(ix, a);
-}
-
-uint32_t fm_effect_10(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x84u;
-	start_pcm_effect(a);
-	z80_block(41);
-	channel = saved_ix;
-	voice = 0x1EEEu;
 	carry = load_fm_voice(voice, channel);
-	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, channel, &ignored16, &carry);
-	z80_block(27);
-	hl = 0x800u;
-	sound_2442(hl, channel);
-	z80_block(62);
-	CHANNEL(channel)->unk_20 = 0x20u;
-	a = 5u;
-	CHANNEL(channel)->unk_1E = 5u;
-	carry = set_fm_volume(channel, a);
+	z80_block(43);
+	pitch = 0x400u;
+	fm_effect_0b_pitch = 0x400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(37);
+	attenuation = 8u;
+	fm_effect_0b_attenuation = 8u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x1F37u;
-	set_channel_handler(hl, channel);
+	handler = 0x1B79u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_1F37(uint16_t ix)
+/* Holds the note 28 passes, much quieter for the last 12; then the slide. */
+uint32_t fm_effect_0b_hold(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0, timer = 0;
 	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-	{
-		z80_block(17);
-		a = 0xCu;
-		return sound_2405(ix, a);
-	}
-	z80_block(30);
-	if (unk_82C1 < 0x12u)
-	{
-		z80_block(66);
-		unk_82C2 = 0x1183u;
-		unk_82C1 = 4u;
-		unk_82CF = 0x11u;
-	}
-	z80_block(43);
-	a = 5u;
-	CHANNEL(ix)->unk_2C = 5u;
-	carry = set_fm_volume(ix, a);
-	z80_block(65);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	CHANNEL(ix)->unk_28 = 0x10u;
-	hl = 0xE00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(68);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	hl = 0x1F7Fu;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_1F7F(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
-	z80_block(52);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
-	z80_block(49);
-	a = CHANNEL(ix)->unk_2C;
-	if (((CHANNEL(ix)->unk_28 >> 3) & 1u) == 0u)
-	{
-		z80_block(7);
-		a++;
-	}
-	z80_block(43);
-	a += 2u;
-	CHANNEL(ix)->unk_2C = a;
-	carry = set_fm_volume(ix, a);
-	z80_block(68);
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 0xAu;
-	hl = 0x800u;
-	sound_2B87(hl, ix, &ignored16, &carry);
-	return carry;
-}
-
-uint32_t fm_effect_11(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x93u;
-	start_pcm_effect(a);
-	z80_block(43);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2E = 0u;
-	hl = 0x1FB2u;
-	return sound_1FDB(hl, channel);
-}
-
-uint32_t sound_1FDB(uint16_t hl, uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint16_t hl_2 = 0;
-
-	z80_block(17);
-	carry = sound_1E5E(hl, ix);
-	z80_block(20);
-	hl_2 = 0x1FE4u;
-	set_channel_handler(hl_2, ix);
-	return carry;
-}
-
-uint32_t sound_1FE4(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
-	uint8_t t1 = 0;
-
-	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_1E83(ix);
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x93u;
-	start_pcm_effect(a);
-	z80_block(24);
-	ix_2 = saved_ix;
-	return sound_1E88(ix_2);
-}
-
-uint32_t fm_effect_12(uint16_t ix)
-{
-	z80_block(10);
-	return stop_channel(ix);
-}
-
-uint32_t fm_effect_13(uint16_t ix)
-{
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
-
-	z80_block(39);
-	saved_ix = ix;
-	a = 0x93u;
-	start_pcm_effect(a);
-	z80_block(53);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2E = 0u;
-	hl = 0x1FF9u;
-	return sound_1FDB(hl, channel);
-}
-
-uint32_t fm_effect_14(uint16_t ix)
-{
-	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
-
-	z80_block(27);
-	voice = 0x2025u;
-	carry = load_fm_voice(voice, ix);
-	z80_block(43);
-	hl = 0x1700u;
-	unk_840A = 0x1700u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
-	z80_block(89);
-	unk_840C = 8u;
-	unk_840D = 8u;
-	unk_840E = 8u;
-	a = 0xEu;
-	unk_840F = 0xEu;
-	carry = set_fm_volume(ix, a);
-	z80_block(17);
-	carry = fm_key_on(ix);
-	z80_block(20);
-	hl = 0x2069u;
-	set_channel_handler(hl, ix);
-	return carry;
-}
-
-uint32_t sound_2069(uint16_t ix, uint32_t carry)
-{
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_840C_ADDRESS;
-	t1 = unk_840C;
-	unk_840C = t1 - 1u;
+	t1 = fm_effect_0b_timer;
+	fm_effect_0b_timer = t1 - 1u;
+	if (t1 == 1u)
+	{
+		z80_block(7);
+		attenuation = 0xAu;
+		return fm_effect_0b_slide_start(channel, attenuation);
+	}
+	z80_block(19);
+	timer = fm_effect_0b_timer;
+	carry = timer < 0xCu;
+	if (timer != 0xCu)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(17);
+	attenuation = 0x27u;
+	return set_fm_volume(channel, attenuation);
+}
+
+/* Sets the attenuation it is given for a slide of 96 passes. */
+uint32_t fm_effect_0b_slide_start(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0;
+
+	z80_block(30);
+	fm_effect_0b_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(40);
+	fm_effect_0b_slide_timer = 0x60u;
+	handler = 0x1B9Cu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note slides down an eighth of a semitone each pass; then again from its first pitch, at
+   attenuation 23. */
+uint32_t fm_effect_0b_slide(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+	uint8_t t1 = 0, t2 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_0b_slide_timer;
+	fm_effect_0b_slide_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(63);
-		hl = unk_840A - 0x80u;
-		unk_840A = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_0b_pitch - 8u;
+		fm_effect_0b_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
+		return carry;
+	}
+	z80_block(31);
+	t2 = fm_effect_0b_slides;
+	fm_effect_0b_slides = t2 - 1u;
+	if (t2 == 1u)
+		return stop_channel(channel);
+	z80_block(43);
+	pitch = 0x400u;
+	fm_effect_0b_pitch = 0x400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(17);
+	attenuation = 0x17u;
+	return fm_effect_0b_slide_start(channel, attenuation);
+}
+
+/* PCM effect 90 and a long run of zigzag notes (152 steps), at full while many steps are left, then
+   sinking and fading. */
+uint32_t fm_effect_0c(uint16_t channel)
+{
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x90u;
+	start_pcm_effect(command);
+	z80_block(157);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect_0c.period = 0xAu;
+	CHANNEL(channel)->fm_effect_0c.steps = 0x98u;
+	CHANNEL(channel)->fm_effect_0c.round_attenuation = 1u;
+	AS8(CHANNEL(channel)->fm_effect_0c.voice) = 0xC5u;
+	AT8(CHANNEL(channel)->fm_effect_0c.voice, 1) = 0x1Bu;
+	CHANNEL(channel)->fm_effect_0c.fade_start = 0x30u;
+	CHANNEL(channel)->fm_effect_0c.fading_step = 2u;
+	return fm_effect_zigzag_steps_start(channel);
+}
+
+/* Starts the steps the effect gives, with the sinking note at its first pitch. */
+uint32_t fm_effect_zigzag_steps_start(uint16_t channel)
+{
+	z80_block(86);
+	CHANNEL(channel)->fm_effect_zigzag_steps.count = CHANNEL(channel)->fm_effect_zigzag_steps.steps;
+	AS8(CHANNEL(channel)->fm_effect_zigzag_steps.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect_zigzag_steps.base_pitch, 1) = 7u;
+	return fm_effect_zigzag_steps_reload(channel);
+}
+
+/* The note again from its first pitch at full: the voice reloaded, the effect's attenuation over the
+   music's. */
+uint32_t fm_effect_zigzag_steps_reload(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint16_t pitch = 0, voice = 0;
+
+	z80_block(106);
+	CHANNEL(channel)->fm_effect_zigzag_steps.attenuation = music_attenuation + CHANNEL(channel)->fm_effect_zigzag_steps.round_attenuation;
+	voice = CHANNEL(channel)->fm_effect_zigzag_steps.voice;
+	carry = load_fm_voice(voice, channel);
+	z80_block(10);
+	pitch = 0x500u;
+	return fm_effect_zigzag_steps_note(pitch, channel);
+}
+
+/* The note at the pitch it is given and the record's attenuation. */
+uint32_t fm_effect_zigzag_steps_note(uint16_t pitch, uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0;
+
+	z80_block(17);
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(19);
+	attenuation = CHANNEL(channel)->fm_effect_zigzag_steps.attenuation;
+	return fm_effect_zigzag_steps_key_on(channel, attenuation);
+}
+
+/* Keys the note on at the attenuation it is given, for a step of the effect's period. */
+uint32_t fm_effect_zigzag_steps_key_on(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0;
+
+	z80_block(17);
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(58);
+	CHANNEL(channel)->fm_effect_zigzag_steps.timer = CHANNEL(channel)->fm_effect_zigzag_steps.period;
+	handler = 0x1C40u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note zigzags down (four semitones up and eight down in turn) for a step; then an odd step keys the
+   first pitch again 24 quieter, an even one starts at full again while the steps left are not below the
+   fade's start, else from the sinking pitch (two semitones lower each time), quieter by the fade's step. */
+uint32_t fm_effect_zigzag_steps(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, pitch_high = 0, pitch_low = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0, voice = 0;
+	uint8_t timer = 0, count = 0, fading_step = 0;
+	uint16_t t1 = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect_zigzag_steps.timer;
+	CHANNEL(channel)->fm_effect_zigzag_steps.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(40);
+		step = 0x100u;
+		if ((CHANNEL(channel)->fm_effect_zigzag_steps.timer & 1u) != 0u)
+		{
+			fm_effect_move_pitch(channel, &step, &carry);
+			return carry;
+		}
+		z80_block(20);
+		step = 0xFE00u;
+		fm_effect_move_pitch(channel, &step, &carry);
+		return carry;
+	}
+	z80_block(33);
+	count = CHANNEL(channel)->fm_effect_zigzag_steps.count;
+	CHANNEL(channel)->fm_effect_zigzag_steps.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
+	z80_block(30);
+	if ((CHANNEL(channel)->fm_effect_zigzag_steps.count & 1u) == 0u)
+	{
+		z80_block(48);
+		if (CHANNEL(channel)->fm_effect_zigzag_steps.fade_start <= CHANNEL(channel)->fm_effect_zigzag_steps.count)
+			return fm_effect_zigzag_steps_reload(channel);
+		z80_block(55);
+		voice = CHANNEL(channel)->fm_effect_zigzag_steps.voice;
+		carry = load_fm_voice(voice, channel);
+		z80_block(168);
+		attenuation = CHANNEL(channel)->fm_effect_zigzag_steps.attenuation;
+		fading_step = CHANNEL(channel)->fm_effect_zigzag_steps.fading_step;
+		carry = (uint8_t)(attenuation + fading_step) < attenuation;
+		CHANNEL(channel)->fm_effect_zigzag_steps.attenuation = attenuation + fading_step;
+		t1 = CHANNEL(channel)->fm_effect_zigzag_steps.base_pitch - 0x80u - carry;
+		pitch_high = (uint8_t)(t1 >> 8);
+		pitch_low = (uint8_t)t1;
+		AS8(CHANNEL(channel)->fm_effect_zigzag_steps.base_pitch) = pitch_low;
+		AT8(CHANNEL(channel)->fm_effect_zigzag_steps.base_pitch, 1) = pitch_high;
+		pitch = ((uint32_t)pitch_high << 8) | pitch_low;
+		return fm_effect_zigzag_steps_note(pitch, channel);
+	}
+	z80_block(27);
+	pitch = 0x500u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(36);
+	attenuation = CHANNEL(channel)->fm_effect_zigzag_steps.attenuation + 0x18u;
+	return fm_effect_zigzag_steps_key_on(channel, attenuation);
+}
+
+/* A falling note, then rounds of a trill that fades, each round quieter, 4 times. */
+uint32_t fm_effect_0d(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(27);
+	voice = 0x1736u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(46);
+	CHANNEL(channel)->fm_effect.rounds = 4u;
+	pitch = 0xD00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(110);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 8u;
+	CHANNEL(channel)->fm_effect.timer = 0x18u;
+	attenuation = 1u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 1u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1CCEu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note falls two semitones a pass for 24 passes, dying away near its end; then the first round of
+   the trill. */
+uint32_t fm_effect_0d_fall(uint16_t channel)
+{
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
+	{
+		z80_block(7);
+		attenuation = 1u;
+		return fm_effect_0d_trill_round(channel, attenuation);
+	}
+	z80_block(17);
+	die_away_pass = 0xCu;
+	return fm_effect_fall(channel, die_away_pass);
+}
+
+/* Starts a round of 6 trill steps at the attenuation it is given. */
+uint32_t fm_effect_0d_trill_round(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+
+	z80_block(55);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.round_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(65);
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	CHANNEL(channel)->fm_effect.count = 6u;
+	pitch = 0xD00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(116);
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 8u;
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	handler = 0x1D0Au;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The two notes in turn, sliding down; every 16 passes they start again from their pitches, 2 quieter;
+   after the round, a pause of 10 passes almost silent. */
+uint32_t fm_effect_0d_trill(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(20);
+		step = 0xFFC0u;
+		return fm_effect_trill_slide(step, channel);
+	}
+	z80_block(52);
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+	{
+		z80_block(33);
+		rounds = CHANNEL(channel)->fm_effect.rounds;
+		CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+		if (rounds == 1u)
+			return stop_channel(channel);
+		z80_block(43);
+		CHANNEL(channel)->fm_effect.count = 0xAu;
+		attenuation = 0x31u;
+		carry = set_fm_volume(channel, attenuation);
+		z80_block(20);
+		handler = 0x1D4Fu;
+		set_channel_handler(handler, channel);
+		return carry;
+	}
+	z80_block(62);
+	attenuation = CHANNEL(channel)->fm_effect.attenuation + 2u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(68);
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 0xAu;
+	pitch = 0x800u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	return carry;
+}
+
+/* After the pause, the next round, 18 quieter. */
+uint32_t fm_effect_0d_pause(uint16_t channel, uint32_t carry)
+{
+	uint8_t attenuation = 0;
+	uint8_t count = 0;
+
+	z80_block(28);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
+	{
+		z80_cycles(6);
+		return carry;
+	}
+	z80_block(36);
+	attenuation = CHANNEL(channel)->fm_effect.round_attenuation + 0x12u;
+	return fm_effect_0d_trill_round(channel, attenuation);
+}
+
+/* A note that zigzags down, then a low note that zigzags up, 16 times, each 4 quieter. */
+uint32_t fm_effect_0e(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(27);
+	voice = 0x1D5Bu;
+	carry = load_fm_voice(voice, channel);
+	z80_block(43);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	fm_effect_0e_pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(44);
+	fm_effect_0e_timer = 0x14u;
+	attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1D96u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Eight semitones down and four up in turn for 20 passes, quieter for the last 6; then the low note. */
+uint32_t fm_effect_0e_zigzag_down(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, timer = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0, voice = 0;
+	uint8_t t1 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_0e_timer;
+	fm_effect_0e_timer = t1 - 1u;
+	if (t1 == 1u)
+	{
+		z80_block(57);
+		fm_effect_0e_timer = 0x60u;
+		fm_effect_0e_repeats = 0x10u;
+		voice = 0x1D5Bu;
+		carry = load_fm_voice(voice, channel);
+		z80_block(43);
+		pitch = 0x600u;
+		fm_effect_0e_pitch = 0x600u;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
+		z80_block(7);
+		attenuation = 0u;
+		return fm_effect_0e_zigzag_up_start(channel, attenuation);
+	}
+	z80_block(24);
+	timer = fm_effect_0e_timer;
+	if (timer == 6u)
+	{
+		z80_block(17);
+		attenuation = 0x10u;
+		return set_fm_volume(channel, attenuation);
+	}
+	z80_block(44);
+	pitch = fm_effect_0e_pitch;
+	step = 0xFE00u;
+	if (timer & 1u)
+	{
+		z80_block(10);
+		step = 0x100u;
+	}
+	z80_block(37);
+	pitch += step;
+	fm_effect_0e_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	return carry;
+}
+
+/* Keys the low note on at the attenuation it is given. */
+uint32_t fm_effect_0e_zigzag_up_start(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0;
+
+	z80_block(30);
+	fm_effect_0e_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1DE4u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Four semitones down and eight up in turn: 96 passes the first time, then 32; each time again from the
+   low note, 4 quieter, 16 times. */
+uint32_t fm_effect_0e_zigzag_up(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0;
+	uint8_t t1 = 0, t2 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_0e_timer;
+	fm_effect_0e_timer = t1 - 1u;
+	if (t1 == 1u)
+	{
+		z80_block(41);
+		fm_effect_0e_timer = 0x20u;
+		t2 = fm_effect_0e_repeats;
+		fm_effect_0e_repeats = t2 - 1u;
+		if (t2 == 1u)
+			return stop_channel(channel);
+		z80_block(43);
+		pitch = 0x600u;
+		fm_effect_0e_pitch = 0x600u;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
+		z80_block(30);
+		attenuation = fm_effect_0e_attenuation + 4u;
+		return fm_effect_0e_zigzag_up_start(channel, attenuation);
+	}
+	z80_block(48);
+	pitch = fm_effect_0e_pitch;
+	step = 0xFF00u;
+	if (fm_effect_0e_timer & 1u)
+	{
+		z80_block(10);
+		step = 0x200u;
+	}
+	z80_block(37);
+	pitch += step;
+	fm_effect_0e_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	return carry;
+}
+
+/* PCM effect 91 and a falling note, then PCM effect 91 again and 17 bursts of notes that fade. */
+uint32_t fm_effect_0f(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t command = 0;
+	uint16_t handler = 0, voice = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x91u;
+	start_pcm_effect(command);
+	z80_block(60);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.base_attenuation = 3u;
+	voice = 0x1E1Au;
+	carry = fm_effect_drop_start(voice, channel);
+	z80_block(20);
+	handler = 0x1E4Cu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The fall for 32 passes; then PCM effect 91 again and the bursts. */
+uint32_t fm_effect_0f_drop(uint16_t channel)
+{
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_drop(channel);
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x91u;
+	start_pcm_effect(command);
+	z80_block(24);
+	channel = saved_channel;
+	return fm_effect_bursts_start(channel);
+}
+
+/* Loads the voice it is given and keys a note on at the effect's base attenuation, for a fall of 32
+   passes. */
+uint32_t fm_effect_drop_start(uint16_t voice, uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t base_attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+
+	z80_block(17);
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(141);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 6u;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 6u;
+	CHANNEL(channel)->fm_effect.timer = 0x20u;
+	base_attenuation = CHANNEL(channel)->fm_effect.base_attenuation;
+	carry = set_fm_volume(channel, base_attenuation);
+	z80_block(10);
+	return fm_key_on(channel);
+}
+
+/* A pass of the fall: two semitones down, the note dying away when 16 passes are left. */
+uint32_t fm_effect_drop(uint16_t channel)
+{
+	uint8_t die_away_pass = 0;
+
+	z80_block(17);
+	die_away_pass = 0x10u;
+	return fm_effect_fall(channel, die_away_pass);
+}
+
+/* Starts 17 bursts from the base attenuation. */
+uint32_t fm_effect_bursts_start(uint16_t channel)
+{
+	z80_block(19);
+	CHANNEL(channel)->fm_effect.rounds = 0x11u;
+	return fm_effect_burst_from_base(channel);
+}
+
+/* A burst at the base attenuation. */
+uint32_t fm_effect_burst_from_base(uint16_t channel)
+{
+	uint8_t base_attenuation = 0;
+
+	z80_block(19);
+	base_attenuation = CHANNEL(channel)->fm_effect.base_attenuation;
+	return fm_effect_burst(channel, base_attenuation);
+}
+
+/* A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 5 passes a step. */
+uint32_t fm_effect_burst(uint16_t channel, uint8_t attenuation)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+
+	z80_block(55);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.round_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(65);
+	CHANNEL(channel)->fm_effect.timer = 5u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xC00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(68);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	handler = 0x1EB5u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; after the
+   burst the next one, 3 quieter (or again from the base attenuation, by a flag no effect sets). */
+uint32_t fm_effect_burst_step(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, offset = 0, pitch = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+	uint16_t t1 = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
+	z80_block(52);
+	CHANNEL(channel)->fm_effect.timer = 5u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
+	{
+		z80_block(17);
+		fm_effect_quieter_pool_offset(channel, &offset, &carry);
+		z80_block(83);
+		t1 = 0xA00u - offset - carry;
+		carry = z80_carry_sub16(0xA00u, offset, carry);
+		base_pitch = t1;
+		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+		pitch = 0x600u;
+		return fm_effect_set_pitch_minus(offset, pitch, channel, carry);
+	}
+	z80_block(33);
+	rounds = CHANNEL(channel)->fm_effect.rounds;
+	CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+	if (rounds == 1u)
+		return stop_channel(channel);
+	z80_block(30);
+	if (((CHANNEL(channel)->fm_effect.burst_flags >> 4) & 1u) != 0u)
+		return fm_effect_burst_from_base(channel);
+	z80_block(36);
+	attenuation = CHANNEL(channel)->fm_effect.round_attenuation + 3u;
+	return fm_effect_burst(channel, attenuation);
+}
+
+/* PCM effect 84 and a falling note, then a trill that fades out. */
+uint32_t fm_effect_10(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x84u;
+	start_pcm_effect(command);
+	z80_block(41);
+	channel = saved_channel;
+	voice = 0x1EEEu;
+	carry = load_fm_voice(voice, channel);
+	z80_block(27);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(27);
+	pitch = 0x800u;
+	fm_effect_keep_pitch(pitch, channel);
+	z80_block(62);
+	CHANNEL(channel)->fm_effect_10.timer = 0x20u;
+	attenuation = 5u;
+	CHANNEL(channel)->fm_effect_10.unread_attenuation = 5u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x1F37u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The note falls two semitones a pass for 32 passes, dying away near its end; then PCM effect 84 again
+   on the PCM effects' second channel (unless effect 92 or 93 plays there) and the trill. */
+uint32_t fm_effect_10_fall(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect_10.timer;
+	CHANNEL(channel)->fm_effect_10.timer = timer - 1u;
+	if (timer != 1u)
+	{
+		z80_block(17);
+		die_away_pass = 0xCu;
+		return fm_effect_fall(channel, die_away_pass);
+	}
+	z80_block(30);
+	if (CHANNEL(PCM_EFFECT_B)->sound < 0x12u)
+	{
+		z80_block(66);
+		CHANNEL(PCM_EFFECT_B)->handler = 0x1183u;
+		CHANNEL(PCM_EFFECT_B)->sound = 4u;
+		CHANNEL(PCM_EFFECT_B)->priority = 0x11u;
+	}
+	z80_block(43);
+	attenuation = 5u;
+	CHANNEL(channel)->fm_effect_10.attenuation = 5u;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(65);
+	CHANNEL(channel)->fm_effect_10.timer = 0x10u;
+	CHANNEL(channel)->fm_effect_10.count = 0x10u;
+	pitch = 0xE00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(68);
+	AS8(CHANNEL(channel)->fm_effect_10.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect_10.pitch, 1) = 0xAu;
+	handler = 0x1F7Fu;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The two notes in turn, sliding down; every 16 passes they start again from their pitches, 2 quieter
+   for the first 8 steps and 3 for the last, 16 steps. */
+uint32_t fm_effect_10_trill(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+	uint8_t timer = 0, count = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect_10.timer;
+	CHANNEL(channel)->fm_effect_10.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
+	z80_block(52);
+	CHANNEL(channel)->fm_effect_10.timer = 0x10u;
+	count = CHANNEL(channel)->fm_effect_10.count;
+	CHANNEL(channel)->fm_effect_10.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
+	z80_block(49);
+	attenuation = CHANNEL(channel)->fm_effect_10.attenuation;
+	if (((CHANNEL(channel)->fm_effect_10.count >> 3) & 1u) == 0u)
+	{
+		z80_block(7);
+		attenuation++;
+	}
+	z80_block(43);
+	attenuation += 2u;
+	CHANNEL(channel)->fm_effect_10.attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(68);
+	AS8(CHANNEL(channel)->fm_effect_10.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect_10.base_pitch, 1) = 0xAu;
+	pitch = 0x800u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
+	return carry;
+}
+
+/* PCM effect 93 and a falling note, then PCM effect 93 again and 17 bursts of notes that fade. */
+uint32_t fm_effect_11(uint16_t channel)
+{
+	uint8_t command = 0;
+	uint16_t voice = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x93u;
+	start_pcm_effect(command);
+	z80_block(43);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.base_attenuation = 0u;
+	voice = 0x1FB2u;
+	return fm_effect_drop_and_pcm_start(voice, channel);
+}
+
+/* Keys the falling note on with the voice it is given. */
+uint32_t fm_effect_drop_and_pcm_start(uint16_t voice, uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint16_t handler = 0;
+
+	z80_block(17);
+	carry = fm_effect_drop_start(voice, channel);
+	z80_block(20);
+	handler = 0x1FE4u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* The fall for 32 passes; then PCM effect 93 again and the bursts. */
+uint32_t fm_effect_drop_and_pcm(uint16_t channel)
+{
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
+	uint8_t timer = 0;
+
+	z80_block(33);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_drop(channel);
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x93u;
+	start_pcm_effect(command);
+	z80_block(24);
+	channel = saved_channel;
+	return fm_effect_bursts_start(channel);
+}
+
+/* Nothing: its channel stops at once. */
+uint32_t fm_effect_12(uint16_t channel)
+{
+	z80_block(10);
+	return stop_channel(channel);
+}
+
+/* Effect 11's sound with another voice. */
+uint32_t fm_effect_13(uint16_t channel)
+{
+	uint8_t command = 0;
+	uint16_t voice = 0;
+	uint16_t saved_channel = 0;
+
+	z80_block(39);
+	saved_channel = channel;
+	command = 0x93u;
+	start_pcm_effect(command);
+	z80_block(53);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.base_attenuation = 0u;
+	voice = 0x1FF9u;
+	return fm_effect_drop_and_pcm_start(voice, channel);
+}
+
+/* A long fall from a high note, quieter step by step, 8 times. */
+uint32_t fm_effect_14(uint16_t channel)
+{
+	uint32_t carry = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+
+	z80_block(27);
+	voice = 0x2025u;
+	carry = load_fm_voice(voice, channel);
+	z80_block(43);
+	pitch = 0x1700u;
+	fm_effect_14_pitch = 0x1700u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
+	z80_block(89);
+	fm_effect_14_timer = 8u;
+	fm_effect_14_steps = 8u;
+	fm_effect_14_rounds = 8u;
+	attenuation = 0xEu;
+	fm_effect_14_attenuation = 0xEu;
+	carry = set_fm_volume(channel, attenuation);
+	z80_block(17);
+	carry = fm_key_on(channel);
+	z80_block(20);
+	handler = 0x2069u;
+	set_channel_handler(handler, channel);
+	return carry;
+}
+
+/* Two semitones down each pass (every other pass after the first 8); every 16 passes 5 quieter; it stops
+   the eighth time. */
+uint32_t fm_effect_14_fall(uint16_t channel, uint32_t carry)
+{
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+	uint8_t t1 = 0, t2 = 0, t3 = 0;
+
+	z80_block(31);
+	t1 = fm_effect_14_timer;
+	fm_effect_14_timer = t1 - 1u;
+	if (t1 != 1u)
+	{
+		z80_block(63);
+		pitch = fm_effect_14_pitch - 0x80u;
+		fm_effect_14_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(32);
-	unk_840C = 2u;
-	hl++;
-	t2 = unk_840D;
-	unk_840D = t2 - 1u;
+	fm_effect_14_timer = 2u;
+	t2 = fm_effect_14_steps;
+	fm_effect_14_steps = t2 - 1u;
 	if (t2 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(37);
-	unk_840D = 8u;
-	hl++;
-	t3 = unk_840E;
-	unk_840E = t3 - 1u;
+	fm_effect_14_steps = 8u;
+	t3 = fm_effect_14_rounds;
+	fm_effect_14_rounds = t3 - 1u;
 	if (t3 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(43);
-	a = unk_840F + 5u;
-	unk_840F = a;
-	return set_fm_volume(ix, a);
+	attenuation = fm_effect_14_attenuation + 5u;
+	fm_effect_14_attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_15(uint16_t ix)
+/* Starts effect 2D, puts an echo on the channel the FM effects take from the music's channel 7, and
+   plays a low note twice that then sinks in growing steps as it fades. */
+uint32_t fm_effect_15(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(105);
-	unk_8382 = 0x212Cu;
-	unk_8381 = 0x15u;
-	unk_838F = 0x13u;
-	saved_ix = ix;
-	a = 0x2Du;
-	carry = start_fm_effect(a);
+	CHANNEL(FM_EFFECT_7)->handler = 0x212Cu;
+	CHANNEL(FM_EFFECT_7)->sound = 0x15u;
+	CHANNEL(FM_EFFECT_7)->priority = 0x13u;
+	saved_channel = channel;
+	command = 0x2Du;
+	carry = start_fm_effect(command);
 	z80_block(33);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2D = 0xBu;
-	return sound_20CA(channel);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect_15.round_attenuation = 0xBu;
+	return fm_effect_15_start(channel);
 }
 
-uint32_t sound_20CA(uint16_t ix)
+/* The 20 steps from the attenuation the effect starts with: the note held 44 passes. */
+uint32_t fm_effect_15_start(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t length = 0;
 
 	z80_block(45);
-	CHANNEL(ix)->unk_32 = 4u;
-	CHANNEL(ix)->unk_28 = 0x14u;
-	a = 0x2Cu;
-	return sound_20D4(ix, a);
+	CHANNEL(channel)->fm_effect_15.fall_step = 4u;
+	CHANNEL(channel)->fm_effect_15.count = 0x14u;
+	length = 0x2Cu;
+	return fm_effect_15_note(channel, length);
 }
 
-uint32_t sound_20D4(uint16_t ix, uint8_t a)
+/* The note keyed on for the passes it is given, at the attenuation the effect starts with. */
+uint32_t fm_effect_15_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t round_attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(46);
-	CHANNEL(ix)->unk_20 = a;
+	CHANNEL(channel)->fm_effect_15.timer = length;
 	voice = 0x2094u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x400u;
-	sound_2B87(hl, ix, &ignored16, &carry);
+	pitch = 0x400u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(55);
-	a_2 = CHANNEL(ix)->unk_2D;
-	CHANNEL(ix)->unk_2C = a_2;
-	carry = set_fm_volume(ix, a_2);
+	round_attenuation = CHANNEL(channel)->fm_effect_15.round_attenuation;
+	CHANNEL(channel)->fm_effect_15.attenuation = round_attenuation;
+	carry = set_fm_volume(channel, round_attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x20F5u;
-	set_channel_handler(hl, ix);
+	handler = 0x20F5u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_20F5(uint16_t ix, uint32_t carry)
+/* After the first note, the note again for 88 passes; then every 14 passes it sinks by a step that grows
+   each time, 3 quieter. */
+uint32_t fm_effect_15_sink(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
+	uint8_t attenuation = 0, fall_step = 0, length = 0;
+	uint16_t pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, count_2 = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect_15.timer;
+	CHANNEL(channel)->fm_effect_15.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 0xEu;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	CHANNEL(channel)->fm_effect_15.timer = 0xEu;
+	count = CHANNEL(channel)->fm_effect_15.count;
+	CHANNEL(channel)->fm_effect_15.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(43);
-	t3 = CHANNEL(ix)->unk_28;
-	a = 0x58u;
-	if (t3 == 0x13u)
-		return sound_20D4(ix, a);
+	count_2 = CHANNEL(channel)->fm_effect_15.count;
+	length = 0x58u;
+	if (count_2 == 0x13u)
+		return fm_effect_15_note(channel, length);
 	z80_block(111);
-	a = CHANNEL(ix)->unk_32;
-	carry = (uint8_t)(a + 2u) < a;
-	a += 2u;
-	CHANNEL(ix)->unk_32 = a;
-	bc = a;
-	hl = (CHANNEL(ix)->unk_30 | ((uint32_t)CHANNEL(ix)->unk_31 << 8u));
-	carry = sound_2B90(bc, hl, ix, carry);
+	fall_step = CHANNEL(channel)->fm_effect_15.fall_step;
+	carry = (uint8_t)(fall_step + 2u) < fall_step;
+	fall_step += 2u;
+	CHANNEL(channel)->fm_effect_15.fall_step = fall_step;
+	step = fall_step;
+	pitch = CHANNEL(channel)->fm_effect_15.pitch;
+	carry = fm_effect_set_pitch_minus(step, pitch, channel, carry);
 	z80_block(55);
-	a = CHANNEL(ix)->unk_2C + 3u;
-	CHANNEL(ix)->unk_2C = a;
-	return set_fm_volume(ix, a);
+	attenuation = CHANNEL(channel)->fm_effect_15.attenuation + 3u;
+	CHANNEL(channel)->fm_effect_15.attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-void sound_212C(uint16_t ix)
+/* The echo's channel waits 16 passes. */
+void fm_effect_15_echo(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	hl = 0x2136u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect_15.timer = 0x10u;
+	handler = 0x2136u;
+	set_channel_handler(handler, channel);
 }
 
-uint32_t sound_2136(uint16_t ix, uint32_t carry)
+/* Then plays the same steps, at attenuation 23 (the first at 11). */
+uint32_t fm_effect_15_echo_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect_15.timer;
+	CHANNEL(channel)->fm_effect_15.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(29);
-	CHANNEL(ix)->unk_2D = 0x17u;
-	return sound_20CA(ix);
+	CHANNEL(channel)->fm_effect_15.round_attenuation = 0x17u;
+	return fm_effect_15_start(channel);
 }
 
-uint32_t fm_effect_16(uint16_t ix)
+/* A very low note that rises slowly for 496 passes, fading in its last 256; the same starts 80 passes
+   later on the channel the FM effects take from the music's channel 6. */
+uint32_t fm_effect_16(uint16_t channel)
 {
 	z80_block(66);
-	unk_8342 = 0x21C6u;
-	unk_8341 = 0x16u;
-	unk_834F = 0x12u;
-	return sound_216A(ix);
+	CHANNEL(FM_EFFECT_6)->handler = 0x21C6u;
+	CHANNEL(FM_EFFECT_6)->sound = 0x16u;
+	CHANNEL(FM_EFFECT_6)->priority = 0x12u;
+	return fm_effect_16_rise(channel);
 }
 
-uint32_t sound_216A(uint16_t ix)
+/* The rise at attenuation 12, an eighth of a semitone a pass, for 496 passes. */
+uint32_t fm_effect_16_rise(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t length = 0;
 
 	z80_block(48);
-	CHANNEL(ix)->unk_34 = 8u;
-	CHANNEL(ix)->unk_2C = 0xCu;
-	hl = 0x1F0u;
-	return sound_2175(hl, ix);
+	CHANNEL(channel)->fm_effect.rise_step = 8u;
+	CHANNEL(channel)->fm_effect.attenuation = 0xCu;
+	length = 0x1F0u;
+	return fm_effect_long_rise_start(length, channel);
 }
 
-uint32_t sound_2175(uint16_t hl, uint16_t ix)
+/* Keys a very low note on for the passes it is given. */
+uint32_t fm_effect_long_rise_start(uint16_t length, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl_2 = 0, ignored16 = 0, voice = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(84);
-	AS16(CHANNEL(ix)->unk_20) = hl;
-	CHANNEL(ix)->unk_28 = 8u;
+	CHANNEL(channel)->fm_effect_long_rise.long_timer = length;
+	CHANNEL(channel)->fm_effect_long_rise.count = 8u;
 	voice = 0x2141u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl_2 = 0x100u;
-	sound_2B87(hl_2, ix, &ignored16, &carry);
+	pitch = 0x100u;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x2197u;
-	set_channel_handler(hl_2, ix);
+	handler = 0x2197u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2197(uint16_t ix)
+/* Counts the passes down; each pass the note rises by the effect's step and, in the last 256 passes, it
+   gets 1 quieter every 8. */
+uint32_t fm_effect_long_rise(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t h = 0, l = 0;
-	uint16_t bc = 0;
-	uint8_t t2 = 0;
+	uint8_t timer_high = 0, timer_low = 0;
+	uint16_t step = 0;
+	uint8_t count = 0;
 	uint16_t t1 = 0;
 
 	z80_block(100);
-	t1 = (CHANNEL(ix)->unk_20 | ((uint32_t)CHANNEL(ix)->unk_21 << 8u)) - 1u;
-	h = (uint8_t)(t1 >> 8);
-	l = (uint8_t)t1;
-	CHANNEL(ix)->unk_20 = l;
-	CHANNEL(ix)->unk_21 = h;
-	if ((h | l) == 0u)
-		return stop_channel(ix);
+	t1 = CHANNEL(channel)->fm_effect_long_rise.long_timer - 1u;
+	timer_high = (uint8_t)(t1 >> 8);
+	timer_low = (uint8_t)t1;
+	AS8(CHANNEL(channel)->fm_effect_long_rise.long_timer) = timer_low;
+	AT8(CHANNEL(channel)->fm_effect_long_rise.long_timer, 1) = timer_high;
+	if ((timer_high | timer_low) == 0u)
+		return stop_channel(channel);
 	z80_block(18);
-	if (h == 0u)
+	if (timer_high == 0u)
 	{
 		z80_block(33);
-		t2 = CHANNEL(ix)->unk_28;
-		CHANNEL(ix)->unk_28 = t2 - 1u;
-		if (t2 == 1u)
+		count = CHANNEL(channel)->fm_effect_long_rise.count;
+		CHANNEL(channel)->fm_effect_long_rise.count = count - 1u;
+		if (count == 1u)
 		{
 			z80_block(59);
-			CHANNEL(ix)->unk_28 = 8u;
-			CHANNEL(ix)->unk_2C++;
-			carry = set_fm_volume_from_record(ix);
+			CHANNEL(channel)->fm_effect_long_rise.count = 8u;
+			CHANNEL(channel)->fm_effect_long_rise.attenuation++;
+			carry = set_fm_volume_from_record(channel);
 		}
 	}
 	z80_block(36);
-	bc = CHANNEL(ix)->unk_34;
-	sound_2B80(ix, &bc, &carry);
+	step = CHANNEL(channel)->fm_effect_long_rise.rise_step;
+	fm_effect_move_pitch(channel, &step, &carry);
 	return carry;
 }
 
-uint32_t sound_21C6(uint16_t ix)
+/* The echo's channel: keyed off at once, then waits 80 passes. */
+uint32_t fm_effect_16_echo(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(17);
-	fm_key_off(ix);
+	fm_key_off(channel);
 	z80_block(17);
-	carry = fm_fast_release(ix);
+	carry = fm_fast_release(channel);
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x50u;
-	hl = 0x21D6u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 0x50u;
+	handler = 0x21D6u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_21D6(uint16_t ix, uint32_t carry)
+/* Then the same rise. */
+uint32_t fm_effect_16_echo_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(10);
-	return sound_216A(ix);
+	return fm_effect_16_rise(channel);
 }
 
-uint32_t fm_effect_17(uint16_t ix)
+/* Zigzag notes, each followed by a quieter echo of the top note: at the top for the first steps, then
+   sinking and fading; 20 steps. */
+uint32_t fm_effect_17(uint16_t channel)
 {
 	z80_block(20);
-	unk_8416 = 0x14u;
-	return sound_21FB(ix);
+	fm_effect_17_steps = 0x14u;
+	return fm_effect_17_from_top(channel);
 }
 
-uint32_t sound_21FB(uint16_t ix)
+/* Starts again from the top note at attenuation 7. */
+uint32_t fm_effect_17_from_top(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t pitch = 0, voice = 0;
 
 	z80_block(47);
-	unk_8411 = 7u;
+	fm_effect_17_attenuation = 7u;
 	voice = 0x21DDu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(10);
-	hl = 0x500u;
-	return sound_2209(hl, ix);
+	pitch = 0x500u;
+	return fm_effect_17_note(pitch, channel);
 }
 
-uint32_t sound_2209(uint16_t hl, uint16_t ix)
+/* A note at the pitch it is given, for 9 passes. */
+uint32_t fm_effect_17_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 	uint16_t ignored16 = 0;
 
 	z80_block(49);
-	unk_8412 = hl;
-	unk_8414 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_17_pitch = pitch;
+	fm_effect_17_base_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(33);
-	unk_8410 = 9u;
-	a = unk_8411;
-	return sound_221A(ix, a);
+	fm_effect_17_timer = 9u;
+	attenuation = fm_effect_17_attenuation;
+	return fm_effect_17_key_on(channel, attenuation);
 }
 
-uint32_t sound_221A(uint16_t ix, uint8_t a)
+/* Keys the note on at the attenuation it is given. */
+uint32_t fm_effect_17_key_on(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(17);
-	carry = set_fm_volume(ix, a);
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2226u;
-	set_channel_handler(hl, ix);
+	handler = 0x2226u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2226(uint16_t ix)
+/* One semitone up and two down in turn; then the next step: an odd one is the top note again 20 quieter;
+   an even one starts at the top again while 10 or more steps are left, after that two semitones below
+   the last and 8 quieter. */
+uint32_t fm_effect_17_zigzag(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0, voice = 0;
+	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(31);
-	hl = unk_8410_ADDRESS;
-	t1 = unk_8410;
-	unk_8410 = t1 - 1u;
+	t1 = fm_effect_17_timer;
+	fm_effect_17_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(48);
-		t2 = unk_8410;
-		hl = unk_8412;
-		bc = 0x40u;
-		if ((t2 & 1u) == 0u)
+		pitch = fm_effect_17_pitch;
+		step = 0x40u;
+		if ((fm_effect_17_timer & 1u) == 0u)
 		{
 			z80_block(10);
-			bc = 0xFF80u;
+			step = 0xFF80u;
 		}
 		z80_block(37);
-		hl += bc;
-		unk_8412 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch += step;
+		fm_effect_17_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(41);
-	unk_8410 = 8u;
-	hl = unk_8416_ADDRESS;
-	t3 = unk_8416;
-	unk_8416 = t3 - 1u;
-	if (t3 == 1u)
-		return stop_channel(ix);
+	fm_effect_17_timer = 8u;
+	t2 = fm_effect_17_steps;
+	fm_effect_17_steps = t2 - 1u;
+	if (t2 == 1u)
+		return stop_channel(channel);
 	z80_block(22);
-	if ((unk_8416 & 1u) == 0u)
+	if ((fm_effect_17_steps & 1u) == 0u)
 	{
 		z80_block(24);
-		if (unk_8416 >= 0xAu)
-			return sound_21FB(ix);
+		if (fm_effect_17_steps >= 0xAu)
+			return fm_effect_17_from_top(channel);
 		z80_block(27);
 		voice = 0x21DDu;
-		carry = load_fm_voice(voice, ix);
+		carry = load_fm_voice(voice, channel);
 		z80_block(84);
-		a = unk_8411;
-		carry = (uint8_t)(a + 8u) < a;
-		unk_8411 = a + 8u;
-		hl = unk_8414 - 0x80u - carry;
-		return sound_2209(hl, ix);
+		attenuation = fm_effect_17_attenuation;
+		carry = (uint8_t)(attenuation + 8u) < attenuation;
+		fm_effect_17_attenuation = attenuation + 8u;
+		pitch = fm_effect_17_base_pitch - 0x80u - carry;
+		return fm_effect_17_note(pitch, channel);
 	}
 	z80_block(43);
-	hl = 0x500u;
-	unk_8412 = 0x500u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x500u;
+	fm_effect_17_pitch = 0x500u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(30);
-	a = unk_8411 + 0x14u;
-	return sound_221A(ix, a);
+	attenuation = fm_effect_17_attenuation + 0x14u;
+	return fm_effect_17_key_on(channel, attenuation);
 }
 
-uint32_t fm_effect_18(uint16_t ix)
+/* Effect 0C's zigzag notes without the PCM effect: 16 steps, another voice, quieter, sinking sooner and
+   fading faster. */
+uint32_t fm_effect_18(uint16_t channel)
 {
 	z80_block(153);
-	CHANNEL(ix)->unk_21 = 9u;
-	CHANNEL(ix)->unk_29 = 0x10u;
-	CHANNEL(ix)->unk_2D = 7u;
-	CHANNEL(ix)->unk_38 = 0x80u;
-	CHANNEL(ix)->unk_39 = 0x22u;
-	CHANNEL(ix)->unk_3C = 0xAu;
-	CHANNEL(ix)->unk_3D = 8u;
-	return sound_1C04(ix);
+	CHANNEL(channel)->fm_effect_18.period = 9u;
+	CHANNEL(channel)->fm_effect_18.steps = 0x10u;
+	CHANNEL(channel)->fm_effect_18.round_attenuation = 7u;
+	AS8(CHANNEL(channel)->fm_effect_18.voice) = 0x80u;
+	AT8(CHANNEL(channel)->fm_effect_18.voice, 1) = 0x22u;
+	CHANNEL(channel)->fm_effect_18.fade_start = 0xAu;
+	CHANNEL(channel)->fm_effect_18.fading_step = 8u;
+	return fm_effect_zigzag_steps_start(channel);
 }
 
-uint32_t fm_effect_19(uint16_t ix)
+/* Starts effect 1E (its echo) and plays a ladder of notes rising a semitone a step, 19 steps. */
+uint32_t fm_effect_19(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x1Eu;
-	carry = start_fm_effect(a);
+	saved_channel = channel;
+	command = 0x1Eu;
+	carry = start_fm_effect(command);
 	z80_block(21);
-	ix_2 = saved_ix;
-	a = 0u;
-	return sound_22DD(ix_2, a);
+	channel = saved_channel;
+	attenuation = 0u;
+	return fm_effect_ladder_start(channel, attenuation);
 }
 
-uint32_t sound_22DD(uint16_t ix, uint8_t a)
+/* Starts the 19 steps at the attenuation it is given. */
+uint32_t fm_effect_ladder_start(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t pitch = 0, voice = 0;
 
 	z80_block(65);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_28 = 0x13u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.count = 0x13u;
 	voice = 0x22B9u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(48);
-	hl = 0xF00u;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 0xFu;
-	return sound_22F3(hl, ix);
+	pitch = 0xF00u;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 0xFu;
+	return fm_effect_ladder_step(pitch, channel);
 }
 
-uint32_t sound_22F3(uint16_t hl, uint16_t ix)
+/* A step's note at the pitch it is given, for 10 passes. */
+uint32_t fm_effect_ladder_step(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl_2 = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0;
 
 	z80_block(17);
-	sound_2B87(hl, ix, &ignored16, &carry);
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0xAu;
-	hl_2 = 0x2306u;
-	set_channel_handler(hl_2, ix);
+	CHANNEL(channel)->fm_effect.timer = 0xAu;
+	handler = 0x2306u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2306(uint16_t ix)
+/* In a step's last two passes the note before it sounds again, 16 quieter; then the next step a semitone
+   higher (1 quieter every other step in the last 10). */
+uint32_t fm_effect_ladder(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0, h = 0, l = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-	uint16_t t4 = 0;
+	uint8_t attenuation = 0, pitch_high = 0, pitch_low = 0;
+	uint16_t base_pitch = 0, ignored16 = 0, pitch = 0;
+	uint8_t timer = 0, timer_2 = 0, count = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(31);
-		t2 = CHANNEL(ix)->unk_20;
-		carry = t2 > 2u;
-		if (2u != t2)
+		timer_2 = CHANNEL(channel)->fm_effect.timer;
+		carry = timer_2 > 2u;
+		if (2u != timer_2)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(55);
-		hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u));
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		base_pitch = CHANNEL(channel)->fm_effect.base_pitch;
+		set_fm_pitch(base_pitch, channel, &ignored16, &carry);
 		z80_block(36);
-		a = CHANNEL(ix)->unk_2C + 0x10u;
-		return set_fm_volume(ix, a);
+		attenuation = CHANNEL(channel)->fm_effect.attenuation + 0x10u;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(33);
-	t3 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t3 - 1u;
-	if (t3 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(36);
-	if (CHANNEL(ix)->unk_28 < 0xAu)
+	if (CHANNEL(channel)->fm_effect.count < 0xAu)
 	{
 		z80_block(30);
-		if ((CHANNEL(ix)->unk_28 & 1u) == 0u)
+		if ((CHANNEL(channel)->fm_effect.count & 1u) == 0u)
 		{
 			z80_block(23);
-			CHANNEL(ix)->unk_2C++;
+			CHANNEL(channel)->fm_effect.attenuation++;
 		}
 	}
 	z80_block(107);
-	l = CHANNEL(ix)->unk_30;
-	h = CHANNEL(ix)->unk_31;
-	CHANNEL(ix)->unk_32 = l;
-	CHANNEL(ix)->unk_33 = h;
-	t4 = (((uint32_t)h << 8) | l) + 0x40u;
-	hl = t4;
-	return sound_22F3(hl, ix);
+	pitch_low = (uint8_t)CHANNEL(channel)->fm_effect.pitch;
+	pitch_high = (uint8_t)(CHANNEL(channel)->fm_effect.pitch >> 8u);
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = pitch_low;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = pitch_high;
+	t1 = (((uint32_t)pitch_high << 8) | pitch_low) + 0x40u;
+	pitch = t1;
+	return fm_effect_ladder_step(pitch, channel);
 }
 
-uint32_t fm_effect_1a(uint16_t ix)
+/* Three channels: effect 13's sound on the channel the FM effects take from the music's channel 6, 8
+   falling notes and bursts on the one from channel 7, and here a falling note then 32 bursts of notes. */
+uint32_t fm_effect_1a(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(152);
-	unk_8382 = 0x244Fu;
-	unk_8342 = 0x2012u;
-	unk_8381 = 0x1Au;
-	unk_8341 = 0x13u;
-	unk_838F = 0x30u;
-	unk_834F = 0x30u;
+	CHANNEL(FM_EFFECT_7)->handler = 0x244Fu;
+	CHANNEL(FM_EFFECT_6)->handler = 0x2012u;
+	CHANNEL(FM_EFFECT_7)->sound = 0x1Au;
+	CHANNEL(FM_EFFECT_6)->sound = 0x13u;
+	CHANNEL(FM_EFFECT_7)->priority = 0x30u;
+	CHANNEL(FM_EFFECT_6)->priority = 0x30u;
 	voice = 0x1EEEu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x1080u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1080u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x680u;
-	sound_2442(hl, ix);
+	pitch = 0x680u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x18u;
-	a = 0u;
-	CHANNEL(ix)->unk_2E = 0u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x18u;
+	attenuation = 0u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2393u;
-	set_channel_handler(hl, ix);
+	handler = 0x2393u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2393(uint16_t ix)
+/* The note falls two semitones a pass for 24 passes, dying away near its end; then the bursts. */
+uint32_t fm_effect_1a_fall(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
 	{
 		z80_block(26);
-		CHANNEL(ix)->unk_29 = 0x20u;
-		a = 0u;
-		return sound_23A4(ix, a);
+		CHANNEL(channel)->fm_effect.rounds = 0x20u;
+		attenuation = 0u;
+		return fm_effect_1a_burst(channel, attenuation);
 	}
 	z80_block(17);
-	a = 8u;
-	return sound_2405(ix, a);
+	die_away_pass = 8u;
+	return fm_effect_fall(channel, die_away_pass);
 }
 
-uint32_t sound_23A4(uint16_t ix, uint8_t a)
+/* A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 6 passes a step. */
+uint32_t fm_effect_1a_burst(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(55);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_2D = a;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.round_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(65);
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xD80u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xD80u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(68);
-	CHANNEL(ix)->unk_30 = 0x80u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	hl = 0x23CAu;
-	set_channel_handler(hl, ix);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0x80u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	handler = 0x23CAu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_23CA(uint16_t ix)
+/* Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; then the
+   next burst, 1 quieter while 16 or more are left, then 2. */
+uint32_t fm_effect_1a_burst_step(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t4 = 0;
-	uint16_t t3 = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, offset = 0, pitch = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 != 1u)
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
 	{
 		z80_block(17);
-		sound_2433(ix, &bc, &carry);
+		fm_effect_quieter_pool_offset(channel, &offset, &carry);
 		z80_block(83);
-		t3 = 0xA80u - bc - carry;
-		carry = z80_carry_sub16(0xA80u, bc, carry);
-		hl = t3;
-		AS16(CHANNEL(ix)->unk_32) = hl;
-		hl = 0x680u;
-		return sound_2B90(bc, hl, ix, carry);
+		t1 = 0xA80u - offset - carry;
+		carry = z80_carry_sub16(0xA80u, offset, carry);
+		base_pitch = t1;
+		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+		pitch = 0x680u;
+		return fm_effect_set_pitch_minus(offset, pitch, channel, carry);
 	}
 	z80_block(33);
-	t4 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_29 = t4 - 1u;
-	if (t4 == 1u)
-		return stop_channel(ix);
+	rounds = CHANNEL(channel)->fm_effect.rounds;
+	CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+	if (rounds == 1u)
+		return stop_channel(channel);
 	z80_block(49);
-	a = CHANNEL(ix)->unk_2D;
-	if (((CHANNEL(ix)->unk_29 >> 4) & 1u) == 0u)
+	attenuation = CHANNEL(channel)->fm_effect.round_attenuation;
+	if (((CHANNEL(channel)->fm_effect.rounds >> 4) & 1u) == 0u)
 	{
 		z80_block(7);
-		a++;
+		attenuation++;
 	}
 	z80_block(17);
-	a++;
-	return sound_23A4(ix, a);
+	attenuation++;
+	return fm_effect_1a_burst(channel, attenuation);
 }
 
-uint32_t sound_2405(uint16_t ix, uint8_t a)
+/* A pass of a falling note: two semitones down, except on the pass of the timer it is given, when the
+   note dies away (32 over the base attenuation). */
+uint32_t fm_effect_fall(uint16_t channel, uint8_t die_away_pass)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t bc = 0;
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
 
 	z80_block(29);
-	if (a == CHANNEL(ix)->unk_20)
+	if (die_away_pass == CHANNEL(channel)->fm_effect.timer)
 	{
 		z80_block(36);
-		a_2 = CHANNEL(ix)->unk_2E + 0x20u;
-		return set_fm_volume(ix, a_2);
+		attenuation = CHANNEL(channel)->fm_effect.base_attenuation + 0x20u;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(20);
-	bc = 0xFF80u;
-	sound_2B80(ix, &bc, &carry);
+	step = 0xFF80u;
+	fm_effect_move_pitch(channel, &step, &carry);
 	return carry;
 }
 
-uint32_t sound_2419(uint16_t ix)
+/* A pass of a trill whose two notes slide two semitones down each time. */
+uint32_t fm_effect_trill_slide_down(uint16_t channel)
 {
-	uint16_t bc = 0;
+	uint16_t step = 0;
 
 	z80_block(10);
-	bc = 0xFF80u;
-	return sound_241C(bc, ix);
+	step = 0xFF80u;
+	return fm_effect_trill_slide(step, channel);
 }
 
-uint32_t sound_241C(uint16_t bc, uint16_t ix)
+/* Two notes in turn, both sliding: on odd passes the note's pitch moves by the step, on even ones the
+   base pitch moves by it and sounds. */
+uint32_t fm_effect_trill_slide(uint16_t step, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t h = 0, l = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t pitch_high = 0, pitch_low = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 	uint16_t t1 = 0;
 
 	z80_block(30);
-	if ((CHANNEL(ix)->unk_20 & 1u) != 0u)
+	if ((CHANNEL(channel)->fm_effect.timer & 1u) != 0u)
 	{
-		sound_2B80(ix, &bc, &carry);
+		fm_effect_move_pitch(channel, &step, &carry);
 		return carry;
 	}
 	z80_block(97);
-	t1 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + bc;
-	h = (uint8_t)(t1 >> 8);
-	l = (uint8_t)t1;
-	CHANNEL(ix)->unk_32 = l;
-	CHANNEL(ix)->unk_33 = h;
-	hl = ((uint32_t)h << 8) | l;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	t1 = CHANNEL(channel)->fm_effect.base_pitch + step;
+	pitch_high = (uint8_t)(t1 >> 8);
+	pitch_low = (uint8_t)t1;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = pitch_low;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = pitch_high;
+	pitch = ((uint32_t)pitch_high << 8) | pitch_low;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-void sound_2433(uint16_t ix, uint16_t *p_bc, uint32_t *p_carry)
+/* The note 1 quieter, and an offset for the next pitches from the random bytes' place (24 to 28
+   semitones: the place is taken for the byte). */
+void fm_effect_quieter_pool_offset(uint16_t channel, uint16_t *p_offset, uint32_t *p_carry)
 {
 	uint32_t carry = *p_carry;
-	uint16_t bc = 0, hl = 0;
+	uint16_t offset = 0, random_place = 0;
 
 	z80_block(40);
-	CHANNEL(ix)->unk_2C++;
-	carry = set_fm_volume_from_record(ix);
+	CHANNEL(channel)->fm_effect.attenuation++;
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	hl = next_random_byte();
+	random_place = next_random_byte();
 	z80_block(29);
 	carry = 0u;
-	bc = (((hl >> 8) & 0xFu) << 8) | (uint8_t)hl;
-	*p_bc = bc;
+	offset = (((random_place >> 8) & 0xFu) << 8) | (uint8_t)random_place;
+	*p_offset = offset;
 	*p_carry = carry;
 }
 
-void sound_2442(uint16_t hl, uint16_t ix)
+/* Keeps the pitch it is given as both the note's pitch and the base pitch. */
+void fm_effect_keep_pitch(uint16_t pitch, uint16_t channel)
 {
 	z80_block(86);
-	AS16(CHANNEL(ix)->unk_30) = hl;
-	AS16(CHANNEL(ix)->unk_32) = hl;
+	CHANNEL(channel)->fm_effect.pitch = pitch;
+	CHANNEL(channel)->fm_effect.base_pitch = pitch;
 }
 
-uint32_t sound_244F(uint16_t ix)
+/* The second channel's part: 8 falling notes, then 32 bursts. */
+uint32_t fm_effect_1a_second_start(uint16_t channel)
 {
 	z80_block(19);
-	CHANNEL(ix)->unk_28 = 8u;
-	return sound_2453(ix);
+	CHANNEL(channel)->fm_effect.count = 8u;
+	return fm_effect_1a_second_note(channel);
 }
 
-uint32_t sound_2453(uint16_t ix)
+/* A note keyed on high that falls for 32 passes. */
+uint32_t fm_effect_1a_second_note(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x1EEEu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x1100u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1100u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x700u;
-	sound_2442(hl, ix);
+	pitch = 0x700u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x20u;
-	a = 4u;
-	CHANNEL(ix)->unk_2E = 4u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x20u;
+	attenuation = 4u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 4u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x247Au;
-	set_channel_handler(hl, ix);
+	handler = 0x247Au;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_247A(uint16_t ix)
+/* The fall, two semitones a pass, dying away when 16 passes are left; after the 8 notes, the bursts. */
+uint32_t fm_effect_1a_second_fall(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(17);
-		a = 0x10u;
-		return sound_2405(ix, a);
+		die_away_pass = 0x10u;
+		return fm_effect_fall(channel, die_away_pass);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 != 1u)
-		return sound_2453(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
+		return fm_effect_1a_second_note(channel);
 	z80_block(26);
-	CHANNEL(ix)->unk_29 = 0x20u;
-	a = 6u;
-	return sound_2491(ix, a);
+	CHANNEL(channel)->fm_effect.rounds = 0x20u;
+	attenuation = 6u;
+	return fm_effect_1a_second_burst(channel, attenuation);
 }
 
-uint32_t sound_2491(uint16_t ix, uint8_t a)
+/* A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 6 passes a step. */
+uint32_t fm_effect_1a_second_burst(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(55);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_2D = a;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.round_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(65);
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xE00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xE00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(68);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xBu;
-	hl = 0x24B7u;
-	set_channel_handler(hl, ix);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xBu;
+	handler = 0x24B7u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_24B7(uint16_t ix)
+/* Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; then the
+   next burst, 1 louder for the first two, then 2 quieter. */
+uint32_t fm_effect_1a_second_burst_step(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t4 = 0, t5 = 0;
-	uint16_t t3 = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, offset = 0, pitch = 0;
+	uint8_t timer = 0, count = 0, rounds = 0, rounds_2 = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 != 1u)
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
 	{
 		z80_block(17);
-		sound_2433(ix, &bc, &carry);
+		fm_effect_quieter_pool_offset(channel, &offset, &carry);
 		z80_block(83);
-		t3 = 0xB00u - bc - carry;
-		carry = z80_carry_sub16(0xB00u, bc, carry);
-		hl = t3;
-		AS16(CHANNEL(ix)->unk_32) = hl;
-		hl = 0x700u;
-		return sound_2B90(bc, hl, ix, carry);
+		t1 = 0xB00u - offset - carry;
+		carry = z80_carry_sub16(0xB00u, offset, carry);
+		base_pitch = t1;
+		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+		pitch = 0x700u;
+		return fm_effect_set_pitch_minus(offset, pitch, channel, carry);
 	}
 	z80_block(33);
-	t4 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_29 = t4 - 1u;
-	if (t4 == 1u)
-		return stop_channel(ix);
+	rounds = CHANNEL(channel)->fm_effect.rounds;
+	CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+	if (rounds == 1u)
+		return stop_channel(channel);
 	z80_block(55);
-	t5 = CHANNEL(ix)->unk_29;
-	carry = t5 < 0x1Eu;
-	a = CHANNEL(ix)->unk_2D;
-	if (t5 < 0x1Eu)
+	rounds_2 = CHANNEL(channel)->fm_effect.rounds;
+	carry = rounds_2 < 0x1Eu;
+	attenuation = CHANNEL(channel)->fm_effect.round_attenuation;
+	if (rounds_2 < 0x1Eu)
 	{
 		z80_block(17);
-		a += 2u;
-		return sound_2491(ix, a);
+		attenuation += 2u;
+		return fm_effect_1a_second_burst(channel, attenuation);
 	}
 	z80_block(17);
-	a = a - 1u - carry;
-	return sound_2491(ix, a);
+	attenuation = attenuation - 1u - carry;
+	return fm_effect_1a_second_burst(channel, attenuation);
 }
 
-uint32_t fm_effect_1b(uint16_t ix)
+/* A very low note that rises two semitones a pass up to a ceiling and stays there, then quieter; 320
+   passes in all. */
+uint32_t fm_effect_1b(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x24F6u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x240u;
-	unk_8418 = 0x240u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x240u;
+	fm_effect_1b_pitch = 0x240u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(44);
-	unk_8417 = 0xB0u;
-	a = 9u;
-	carry = set_fm_volume(ix, a);
+	fm_effect_1b_timer = 0xB0u;
+	attenuation = 9u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2531u;
-	set_channel_handler(hl, ix);
+	handler = 0x2531u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2531(uint16_t ix)
+/* Rises for 176 passes (staying once it is at its highest); then much quieter. */
+uint32_t fm_effect_1b_rise(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0, semitone = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	hl = unk_8417_ADDRESS;
-	t1 = unk_8417;
-	unk_8417 = t1 - 1u;
+	t1 = fm_effect_1b_timer;
+	fm_effect_1b_timer = t1 - 1u;
 	if (t1 == 1u)
 	{
 		z80_block(34);
-		unk_8417 = 0x90u;
-		a = 0x2Du;
-		carry = set_fm_volume(ix, a);
+		fm_effect_1b_timer = 0x90u;
+		attenuation = 0x2Du;
+		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		hl = 0x2556u;
-		set_channel_handler(hl, ix);
+		handler = 0x2556u;
+		set_channel_handler(handler, channel);
 		return carry;
 	}
 	z80_block(53);
-	hl = unk_8418 + 0x80u;
-	a = (uint8_t)(hl >> 8);
-	carry = a < 0x11u;
-	if (a >= 0x11u)
+	pitch = fm_effect_1b_pitch + 0x80u;
+	semitone = (uint8_t)(pitch >> 8);
+	carry = semitone < 0x11u;
+	if (semitone >= 0x11u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(26);
-	unk_8418 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_1b_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t sound_2556(uint16_t ix)
+/* Holds the note 144 passes, a little louder after the first 8. */
+uint32_t fm_effect_1b_hold(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0, timer = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	hl = unk_8417_ADDRESS;
-	t1 = unk_8417;
-	unk_8417 = t1 - 1u;
+	t1 = fm_effect_1b_timer;
+	fm_effect_1b_timer = t1 - 1u;
 	if (t1 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(19);
-	a = unk_8417;
-	carry = a < 0x88u;
-	if (a != 0x88u)
+	timer = fm_effect_1b_timer;
+	carry = timer < 0x88u;
+	if (timer != 0x88u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(17);
-	a = 0x19u;
-	return set_fm_volume(ix, a);
+	attenuation = 0x19u;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_1c(uint16_t ix)
+/* Repeated notes in two rounds, with an echo 22 passes later on the channel the FM effects take from the
+   music's channel 6. */
+uint32_t fm_effect_1c(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 
 	z80_block(73);
-	unk_8342 = 0x25FEu;
-	unk_8341 = 0x1Cu;
-	unk_834F = 0x14u;
-	a = 5u;
-	return sound_2591(ix, a);
+	CHANNEL(FM_EFFECT_6)->handler = 0x25FEu;
+	CHANNEL(FM_EFFECT_6)->sound = 0x1Cu;
+	CHANNEL(FM_EFFECT_6)->priority = 0x14u;
+	attenuation = 5u;
+	return fm_effect_pulses_start(channel, attenuation);
 }
 
-uint32_t sound_2591(uint16_t ix, uint8_t a)
+/* Two rounds of 14 notes, from the attenuation it is given. */
+uint32_t fm_effect_pulses_start(uint16_t channel, uint8_t attenuation)
 {
 	z80_block(19);
-	CHANNEL(ix)->unk_29 = 2u;
-	return sound_2595(ix, a);
+	CHANNEL(channel)->fm_effect.rounds = 2u;
+	return fm_effect_pulses_round(channel, attenuation);
 }
 
-uint32_t sound_2595(uint16_t ix, uint8_t a)
+/* A round of 14 notes at the attenuation it is given. */
+uint32_t fm_effect_pulses_round(uint16_t channel, uint8_t attenuation)
 {
 	z80_block(38);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_28 = 0xEu;
-	return sound_259C(ix);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.count = 0xEu;
+	return fm_effect_pulse(channel);
 }
 
-uint32_t sound_259C(uint16_t ix)
+/* A note keyed on for 22 passes. */
+uint32_t fm_effect_pulse(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(46);
-	CHANNEL(ix)->unk_20 = 0x16u;
+	CHANNEL(channel)->fm_effect.timer = 0x16u;
 	voice = 0x2566u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0xA00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0xA00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x25B8u;
-	set_channel_handler(hl, ix);
+	handler = 0x25B8u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_25B8(uint16_t ix)
+/* The first 4 notes are cut 8 passes before their end by the next; the later ones fall silent for their
+   last 8 passes; the last of a round is 8 quieter; the second round at attenuation 29. */
+uint32_t fm_effect_pulses(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
+	uint8_t attenuation = 0, timer = 0;
+	uint8_t timer_2 = 0, count = 0, rounds = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
+	timer_2 = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer_2 - 1u;
+	if (timer_2 == 1u)
 	{
 		z80_block(33);
-		t2 = CHANNEL(ix)->unk_28;
-		CHANNEL(ix)->unk_28 = t2 - 1u;
-		if (t2 == 1u)
+		count = CHANNEL(channel)->fm_effect.count;
+		CHANNEL(channel)->fm_effect.count = count - 1u;
+		if (count == 1u)
 		{
 			z80_block(33);
-			t3 = CHANNEL(ix)->unk_29;
-			CHANNEL(ix)->unk_29 = t3 - 1u;
-			if (t3 == 1u)
-				return stop_channel(ix);
+			rounds = CHANNEL(channel)->fm_effect.rounds;
+			CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+			if (rounds == 1u)
+				return stop_channel(channel);
 			z80_block(17);
-			a = 0x1Du;
-			return sound_2595(ix, a);
+			attenuation = 0x1Du;
+			return fm_effect_pulses_round(channel, attenuation);
 		}
 		z80_block(36);
-		if (CHANNEL(ix)->unk_28 != 1u)
-			return sound_259C(ix);
+		if (CHANNEL(channel)->fm_effect.count != 1u)
+			return fm_effect_pulse(channel);
 		z80_block(55);
-		CHANNEL(ix)->unk_2C += 8u;
-		return sound_259C(ix);
+		CHANNEL(channel)->fm_effect.attenuation += 8u;
+		return fm_effect_pulse(channel);
 	}
 	z80_block(31);
-	a = CHANNEL(ix)->unk_20;
-	carry = a < 8u;
-	if (a != 8u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	carry = timer < 8u;
+	if (timer != 8u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(59);
-	CHANNEL(ix)->unk_28--;
-	if (CHANNEL(ix)->unk_28 >= 0xAu)
-		return sound_259C(ix);
+	CHANNEL(channel)->fm_effect.count--;
+	if (CHANNEL(channel)->fm_effect.count >= 0xAu)
+		return fm_effect_pulse(channel);
 	z80_block(59);
-	CHANNEL(ix)->unk_28++;
-	a = CHANNEL(ix)->unk_2C + 0x30u;
-	return set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.count++;
+	attenuation = CHANNEL(channel)->fm_effect.attenuation + 0x30u;
+	return set_fm_volume(channel, attenuation);
 }
 
-void sound_25FE(uint16_t ix)
+/* The echo's channel waits 22 passes. */
+void fm_effect_1c_echo(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x16u;
-	hl = 0x2608u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 0x16u;
+	handler = 0x2608u;
+	set_channel_handler(handler, channel);
 }
 
-uint32_t sound_2608(uint16_t ix, uint32_t carry)
+/* Then the repeated notes at attenuation 8. */
+uint32_t fm_effect_1c_echo_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0;
+	uint8_t attenuation = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(17);
-	a = 8u;
-	return sound_2591(ix, a);
+	attenuation = 8u;
+	return fm_effect_pulses_start(channel, attenuation);
 }
 
-uint32_t fm_effect_1d(uint16_t ix)
+/* A three-note arpeggio that rises and rings, with an echo 8 passes later on the channel the FM effects
+   take from the music's channel 7, a little sharp. */
+uint32_t fm_effect_1d(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t pitch = 0;
 
 	z80_block(88);
-	unk_8382 = 0x26ACu;
-	unk_8381 = 0x1Du;
-	unk_838F = 0x1Du;
-	CHANNEL(ix)->unk_2C = 0u;
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	return sound_263F(hl, ix);
+	CHANNEL(FM_EFFECT_7)->handler = 0x26ACu;
+	CHANNEL(FM_EFFECT_7)->sound = 0x1Du;
+	CHANNEL(FM_EFFECT_7)->priority = 0x1Du;
+	CHANNEL(channel)->fm_effect.attenuation = 0u;
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	return fm_effect_1d_arpeggio(pitch, channel);
 }
 
-uint32_t sound_263F(uint16_t hl, uint16_t ix)
+/* The arpeggio from the pitch it is given, 26 passes a note, with its voice. */
+uint32_t fm_effect_1d_arpeggio(uint16_t pitch, uint16_t channel)
 {
-	uint16_t bc = 0;
+	uint16_t voice = 0;
 
 	z80_block(29);
-	CHANNEL(ix)->unk_21 = 0x1Au;
-	bc = 0x2611u;
-	return sound_2646(bc, hl, ix);
+	CHANNEL(channel)->fm_effect.period = 0x1Au;
+	voice = 0x2611u;
+	return fm_effect_arpeggio_start(voice, pitch, channel);
 }
 
-uint32_t sound_2646(uint16_t bc, uint16_t hl, uint16_t ix)
+/* The arpeggio with the voice it is given: three notes from the pitch it is given. */
+uint32_t fm_effect_arpeggio_start(uint16_t voice, uint16_t pitch, uint16_t channel)
 {
 	z80_block(57);
-	AS16(CHANNEL(ix)->unk_38) = bc;
-	CHANNEL(ix)->unk_28 = 3u;
-	return sound_2650(hl, ix);
+	CHANNEL(channel)->fm_effect.voice = voice;
+	CHANNEL(channel)->fm_effect.count = 3u;
+	return fm_effect_arpeggio_note(pitch, channel);
 }
 
-uint32_t sound_2650(uint16_t hl, uint16_t ix)
+/* A note at the pitch it is given, keyed on for the effect's period. */
+uint32_t fm_effect_arpeggio_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl_2 = 0, ignored16 = 0, voice = 0;
+	uint16_t handler = 0, ignored16 = 0, voice = 0;
 
 	z80_block(131);
-	AS16(CHANNEL(ix)->unk_30) = hl;
-	CHANNEL(ix)->unk_20 = CHANNEL(ix)->unk_21;
-	voice = (CHANNEL(ix)->unk_38 | ((uint32_t)CHANNEL(ix)->unk_39 << 8u));
-	carry = load_fm_voice(voice, ix);
+	CHANNEL(channel)->fm_effect.pitch = pitch;
+	CHANNEL(channel)->fm_effect.timer = CHANNEL(channel)->fm_effect.period;
+	voice = CHANNEL(channel)->fm_effect.voice;
+	carry = load_fm_voice(voice, channel);
 	z80_block(55);
-	hl_2 = (CHANNEL(ix)->unk_30 | ((uint32_t)CHANNEL(ix)->unk_31 << 8u));
-	set_fm_pitch(hl_2, ix, &ignored16, &carry);
+	pitch = CHANNEL(channel)->fm_effect.pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x267Au;
-	set_channel_handler(hl_2, ix);
+	handler = 0x267Au;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_267A(uint16_t ix, uint32_t carry)
+/* Holds the note; then the next one, a fifth higher, then a fourth (an octave over the first); the last
+   rings 192 passes. */
+uint32_t fm_effect_arpeggio(uint16_t channel, uint32_t carry)
 {
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint16_t handler = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
 	{
 		z80_block(39);
-		CHANNEL(ix)->unk_20 = 0xC0u;
-		hl = 0x26A5u;
-		set_channel_handler(hl, ix);
+		CHANNEL(channel)->fm_effect.timer = 0xC0u;
+		handler = 0x26A5u;
+		set_channel_handler(handler, channel);
 		return carry;
 	}
 	z80_block(78);
-	hl = (CHANNEL(ix)->unk_30 | ((uint32_t)CHANNEL(ix)->unk_31 << 8u));
-	bc = 0x1C0u;
-	if (CHANNEL(ix)->unk_28 & 1u)
+	pitch = CHANNEL(channel)->fm_effect.pitch;
+	step = 0x1C0u;
+	if (CHANNEL(channel)->fm_effect.count & 1u)
 	{
 		z80_block(10);
-		bc = 0x140u;
+		step = 0x140u;
 	}
 	z80_block(21);
-	hl += bc;
-	return sound_2650(hl, ix);
+	pitch += step;
+	return fm_effect_arpeggio_note(pitch, channel);
 }
 
-uint32_t sound_26A5(uint16_t ix, uint32_t carry)
+/* The last note rings, then the channel stops. */
+uint32_t fm_effect_arpeggio_ring(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
-		return stop_channel(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
+		return stop_channel(channel);
 	z80_block(10);
 	return carry;
 }
 
-void sound_26AC(uint16_t ix)
+/* The echo's channel waits 8 passes. */
+void fm_effect_1d_echo(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 8u;
-	hl = 0x26B6u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 8u;
+	handler = 0x26B6u;
+	set_channel_handler(handler, channel);
 }
 
-uint32_t sound_26B6(uint16_t ix, uint32_t carry)
+/* Then the arpeggio 8 quieter and a sixty-fourth of a semitone sharp. */
+uint32_t fm_effect_1d_echo_wait(uint16_t channel, uint32_t carry)
 {
-	uint16_t hl = 0;
-	uint8_t t1 = 0;
+	uint16_t pitch = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(39);
-	CHANNEL(ix)->unk_2C = 8u;
-	hl = pcm_instruments_ADDRESS - 0x1u;
-	return sound_263F(hl, ix);
+	CHANNEL(channel)->fm_effect.attenuation = 8u;
+	pitch = pcm_instruments_ADDRESS - 0x1u;
+	return fm_effect_1d_arpeggio(pitch, channel);
 }
 
-uint32_t fm_effect_1e(uint16_t ix)
+/* Effect 19's ladder 48 passes later, 12 quieter, on its own channel (effect 19 starts it). */
+uint32_t fm_effect_1e(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(17);
-	fm_key_off(ix);
+	fm_key_off(channel);
 	z80_block(17);
-	carry = fm_fast_release(ix);
+	carry = fm_fast_release(channel);
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x30u;
-	hl = 0x26D4u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 0x30u;
+	handler = 0x26D4u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_26D4(uint16_t ix, uint32_t carry)
+/* Waits the 48 passes, then the ladder. */
+uint32_t fm_effect_1e_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0;
+	uint8_t attenuation = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(17);
-	a = 0xCu;
-	return sound_22DD(ix, a);
+	attenuation = 0xCu;
+	return fm_effect_ladder_start(channel, attenuation);
 }
 
-uint32_t fm_effect_1f(uint16_t ix)
+/* A note that rises two semitones a pass, then a high note held and struck again as it fades. */
+uint32_t fm_effect_1f(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x26DDu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x500u;
-	unk_841C = 0x500u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x500u;
+	fm_effect_1f_pitch = 0x500u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 1u;
-	carry = set_fm_volume(ix, a);
+	attenuation = 1u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2713u;
-	set_channel_handler(hl, ix);
+	handler = 0x2713u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2713(uint16_t ix)
+/* Rises for 22 passes; then the high note. */
+uint32_t fm_effect_1f_rise(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(58);
-	hl = unk_841C + 0x80u;
-	if (hl >> 8 != 0x10u)
+	pitch = fm_effect_1f_pitch + 0x80u;
+	if (pitch >> 8 != 0x10u)
 	{
 		z80_block(26);
-		unk_841C = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		fm_effect_1f_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(47);
-	unk_841E = 0x10u;
+	fm_effect_1f_repeats = 0x10u;
 	voice = 0x26DDu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(7);
-	a = 1u;
-	return sound_2733(ix, a);
+	attenuation = 1u;
+	return fm_effect_1f_strike(channel, attenuation);
 }
 
-uint32_t sound_2733(uint16_t ix, uint8_t a)
+/* Strikes the high note at the attenuation it is given, for 32 passes. */
+uint32_t fm_effect_1f_strike(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(30);
-	unk_841B = a;
-	carry = set_fm_volume(ix, a);
+	fm_effect_1f_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(37);
-	unk_841A = 0x20u;
-	carry = fm_key_on(ix);
+	fm_effect_1f_timer = 0x20u;
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x274Du;
-	set_channel_handler(hl, ix);
+	handler = 0x274Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_274D(uint16_t ix, uint32_t carry)
+/* Holds it 256 passes, then strikes it again every 32 passes, 1 quieter each time, 7 times. */
+uint32_t fm_effect_1f_hold(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0, repeats = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(26);
-	hl = unk_841A_ADDRESS;
-	t1 = unk_841A;
-	unk_841A = t1 - 1u;
+	t1 = fm_effect_1f_timer;
+	fm_effect_1f_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(41);
-	unk_841A = 0x20u;
-	hl = unk_841E_ADDRESS;
-	t2 = unk_841E;
-	unk_841E = t2 - 1u;
+	fm_effect_1f_timer = 0x20u;
+	t2 = fm_effect_1f_repeats;
+	fm_effect_1f_repeats = t2 - 1u;
 	if (t2 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(19);
-	a = unk_841E;
-	carry = a < 8u;
-	if (a >= 8u)
+	repeats = fm_effect_1f_repeats;
+	carry = repeats < 8u;
+	if (repeats >= 8u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(30);
-	a = unk_841B + 1u;
-	return sound_2733(ix, a);
+	attenuation = fm_effect_1f_attenuation + 1u;
+	return fm_effect_1f_strike(channel, attenuation);
 }
 
-uint32_t fm_effect_20(uint16_t ix)
+/* Effect 1C's repeated notes alone, at attenuation 8. */
+uint32_t fm_effect_20(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 
 	z80_block(17);
-	a = 8u;
-	return sound_2591(ix, a);
+	attenuation = 8u;
+	return fm_effect_pulses_start(channel, attenuation);
 }
 
-uint32_t fm_effect_21(uint16_t ix)
+/* A slow rise, then a held note that fades very slowly until effect 2B stops it. */
+uint32_t fm_effect_21(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(47);
-	unk_841F = 1u;
+	fm_effect_21_on = 1u;
 	voice = 0x276Cu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x400u;
-	unk_8423 = 0x400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x400u;
+	fm_effect_21_pitch = 0x400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 9u;
-	carry = set_fm_volume(ix, a);
+	attenuation = 9u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x27A7u;
-	set_channel_handler(hl, ix);
+	handler = 0x27A7u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_27A7(uint16_t ix)
+/* A quarter of a semitone up each pass for 112 passes; then the held note, keyed on again. */
+uint32_t fm_effect_21_rise(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(58);
-	hl = unk_8423 + 0x10u;
-	if (hl >> 8 != 0xBu)
+	pitch = fm_effect_21_pitch + 0x10u;
+	if (pitch >> 8 != 0xBu)
 	{
 		z80_block(26);
-		unk_8423 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		fm_effect_21_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(53);
-	unk_8420 = 0xF00u;
+	fm_effect_21_timer = 0xF00u;
 	voice = 0x276Cu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = fm_note_pitches_ADDRESS - 0xCu;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = fm_note_pitches_ADDRESS - 0xCu;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(37);
-	a = 0x11u;
-	unk_8422 = 0x11u;
-	carry = set_fm_volume(ix, a);
+	attenuation = 0x11u;
+	fm_effect_21_attenuation = 0x11u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x27DDu;
-	set_channel_handler(hl, ix);
+	handler = 0x27DDu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_27DD(uint16_t ix)
+/* Every 3840 passes 1 quieter, until it is silent or its flag is cleared. */
+uint32_t fm_effect_21_hold(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0;
+	uint16_t timer = 0;
 
 	z80_block(27);
-	if (unk_841F == 0u)
-		return stop_channel(ix);
+	if (fm_effect_21_on == 0u)
+		return stop_channel(channel);
 	z80_block(51);
-	hl = unk_8420 - 1u;
-	unk_8420 = hl;
+	timer = fm_effect_21_timer - 1u;
+	fm_effect_21_timer = timer;
 	carry = 0u;
-	if ((uint8_t)((hl >> 8) | hl) != 0u)
+	if ((uint8_t)((timer >> 8) | timer) != 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(64);
-	unk_8420 = 0xF00u;
-	a = unk_8422 + 1u;
-	if (((a >> 6) & 1u) != 0u)
-		return stop_channel(ix);
+	fm_effect_21_timer = 0xF00u;
+	attenuation = fm_effect_21_attenuation + 1u;
+	if (((attenuation >> 6) & 1u) != 0u)
+		return stop_channel(channel);
 	z80_block(23);
-	unk_8422 = a;
-	return set_fm_volume(ix, a);
+	fm_effect_21_attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_22(uint16_t ix)
+/* Takes every FM channel: here a slow rise at once, and on the music's channels 1 to 5 and the FM
+   effects' channels 6 and 7 the same rise in turn, 80 passes apart and 3 quieter each. */
+uint32_t fm_effect_22(uint16_t channel)
 {
-	uint8_t b = 0;
-	uint16_t channel = 0, de = 0;
-	uint16_t saved_ix = 0;
+	uint8_t count = 0;
+	uint16_t record_size = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(228);
-	unk_8042 = 0x2875u;
-	unk_8082 = 0x2870u;
-	unk_80C2 = 0x286Bu;
-	unk_8102 = 0x2866u;
-	unk_8142 = 0x2861u;
-	unk_8342 = 0x285Cu;
-	unk_8382 = 0x2857u;
-	saved_ix = ix;
-	b = 7u;
-	channel = CHANNEL_ADDRESS(1);
-	de = 0x40u;
+	CHANNEL(MUSIC_FM_1)->handler = 0x2875u;
+	CHANNEL(MUSIC_FM_2)->handler = 0x2870u;
+	CHANNEL(MUSIC_FM_3)->handler = 0x286Bu;
+	CHANNEL(MUSIC_FM_4)->handler = 0x2866u;
+	CHANNEL(MUSIC_FM_5)->handler = 0x2861u;
+	CHANNEL(FM_EFFECT_6)->handler = 0x285Cu;
+	CHANNEL(FM_EFFECT_7)->handler = 0x2857u;
+	saved_channel = channel;
+	count = 7u;
+	channel = MUSIC_FM_1;
+	record_size = 0x40u;
 	for (;;)
 	{
 		z80_block(75);
 		CHANNEL(channel)->sound = 0x22u;
 		CHANNEL(channel)->priority = 0x12u;
-		channel += de;
-		b--;
-		if (b == 0u)
+		channel += record_size;
+		count--;
+		if (count == 0u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(33);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2C = 0x14u;
-	return sound_284D(channel);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.attenuation = 0x14u;
+	return fm_effect_22_rise(channel);
 }
 
-uint32_t sound_284D(uint16_t ix)
+/* The slow rise: 704 passes, five sixty-fourths of a semitone a pass. */
+uint32_t fm_effect_22_rise(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t length = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_34 = 5u;
-	hl = 0x2C0u;
-	return sound_2175(hl, ix);
+	CHANNEL(channel)->fm_effect.rise_step = 5u;
+	length = 0x2C0u;
+	return fm_effect_long_rise_start(length, channel);
 }
 
-uint32_t sound_2857(uint16_t ix)
+/* The part on channel 7: the rise after 7 times 80 passes. */
+uint32_t fm_effect_22_on_channel_7(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 7u;
-	return sound_2877(ix, a);
+	waits = 7u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_285C(uint16_t ix)
+/* The part on channel 6: the rise after 6 times 80 passes. */
+uint32_t fm_effect_22_on_channel_6(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 6u;
-	return sound_2877(ix, a);
+	waits = 6u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_2861(uint16_t ix)
+/* The part on the music's channel 5: the rise after 5 times 80 passes. */
+uint32_t fm_effect_22_on_channel_5(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 5u;
-	return sound_2877(ix, a);
+	waits = 5u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_2866(uint16_t ix)
+/* The part on the music's channel 4: the rise after 4 times 80 passes. */
+uint32_t fm_effect_22_on_channel_4(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 4u;
-	return sound_2877(ix, a);
+	waits = 4u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_286B(uint16_t ix)
+/* The part on the music's channel 3: the rise after 3 times 80 passes. */
+uint32_t fm_effect_22_on_channel_3(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 3u;
-	return sound_2877(ix, a);
+	waits = 3u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_2870(uint16_t ix)
+/* The part on the music's channel 2: the rise after 2 times 80 passes. */
+uint32_t fm_effect_22_on_channel_2(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(17);
-	a = 2u;
-	return sound_2877(ix, a);
+	waits = 2u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_2875(uint16_t ix)
+/* The part on the music's channel 1: the rise after 80 passes. */
+uint32_t fm_effect_22_on_channel_1(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t waits = 0;
 
 	z80_block(7);
-	a = 1u;
-	return sound_2877(ix, a);
+	waits = 1u;
+	return fm_effect_22_delay(channel, waits);
 }
 
-uint32_t sound_2877(uint16_t ix, uint8_t a)
+/* Waits as many times 80 passes as it is given, at an attenuation of 20 plus 3 for each. */
+uint32_t fm_effect_22_delay(uint16_t channel, uint8_t waits)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
-	uint8_t t1 = 0;
+	uint16_t handler = 0;
+	uint8_t count = 0;
 
 	z80_block(111);
-	CHANNEL(ix)->unk_28 = a;
-	a = ((uint32_t)a << 1) + 0x14u;
-	t1 = CHANNEL(ix)->unk_28;
-	carry = (uint8_t)(a + t1) < a;
-	CHANNEL(ix)->unk_2C = a + t1;
-	CHANNEL(ix)->unk_20 = 0x50u;
-	hl = 0x288Eu;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.count = waits;
+	waits = ((uint32_t)waits << 1) + 0x14u;
+	count = CHANNEL(channel)->fm_effect.count;
+	carry = (uint8_t)(waits + count) < waits;
+	CHANNEL(channel)->fm_effect.attenuation = waits + count;
+	CHANNEL(channel)->fm_effect.timer = 0x50u;
+	handler = 0x288Eu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_288E(uint16_t ix, uint32_t carry)
+/* Counts the waits of 80 passes; then the rise. */
+uint32_t fm_effect_22_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(47);
-	CHANNEL(ix)->unk_20 = 0x50u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 != 1u)
+	CHANNEL(channel)->fm_effect.timer = 0x50u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(10);
-	return sound_284D(ix);
+	return fm_effect_22_rise(channel);
 }
 
-uint32_t fm_effect_23(uint16_t ix)
+/* A long fall from a high note, quieter step by step, 12 times. */
+uint32_t fm_effect_23(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x289Du;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x1700u;
-	unk_8425 = 0x1700u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1700u;
+	fm_effect_23_pitch = 0x1700u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(89);
-	unk_8427 = 8u;
-	unk_8428 = 8u;
-	unk_8429 = 0xCu;
-	a = 6u;
-	unk_842A = 6u;
-	carry = set_fm_volume(ix, a);
+	fm_effect_23_timer = 8u;
+	fm_effect_23_steps = 8u;
+	fm_effect_23_rounds = 0xCu;
+	attenuation = 6u;
+	fm_effect_23_attenuation = 6u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x28E1u;
-	set_channel_handler(hl, ix);
+	handler = 0x28E1u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_28E1(uint16_t ix, uint32_t carry)
+/* A little over two semitones down each pass (two passes of every three after the first 8); every 24
+   passes 4 quieter; it stops the twelfth time. */
+uint32_t fm_effect_23_fall(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_8427_ADDRESS;
-	t1 = unk_8427;
-	unk_8427 = t1 - 1u;
+	t1 = fm_effect_23_timer;
+	fm_effect_23_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(63);
-		hl = unk_8425 - 0x90u;
-		unk_8425 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_23_pitch - 0x90u;
+		fm_effect_23_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(32);
-	unk_8427 = 3u;
-	hl++;
-	t2 = unk_8428;
-	unk_8428 = t2 - 1u;
+	fm_effect_23_timer = 3u;
+	t2 = fm_effect_23_steps;
+	fm_effect_23_steps = t2 - 1u;
 	if (t2 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(37);
-	unk_8428 = 8u;
-	hl++;
-	t3 = unk_8429;
-	unk_8429 = t3 - 1u;
+	fm_effect_23_steps = 8u;
+	t3 = fm_effect_23_rounds;
+	fm_effect_23_rounds = t3 - 1u;
 	if (t3 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(43);
-	a = unk_842A + 4u;
-	unk_842A = a;
-	return set_fm_volume(ix, a);
+	attenuation = fm_effect_23_attenuation + 4u;
+	fm_effect_23_attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_24(uint16_t ix)
+/* PCM effect 93 and a falling note, then 16 bursts of low notes, each 4 quieter. */
+uint32_t fm_effect_24(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0, ignored16 = 0, voice = 0;
-	uint16_t saved_ix = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x93u;
-	start_pcm_effect(a);
+	saved_channel = channel;
+	command = 0x93u;
+	start_pcm_effect(command);
 	z80_block(41);
-	channel = saved_ix;
+	channel = saved_channel;
 	voice = 0x290Cu;
 	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0xC00u;
-	set_fm_pitch(hl, channel, &ignored16, &carry);
+	pitch = 0xC00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(110);
-	CHANNEL(channel)->unk_30 = 0u;
-	CHANNEL(channel)->unk_31 = 6u;
-	CHANNEL(channel)->unk_20 = 0x10u;
-	a = 2u;
-	CHANNEL(channel)->unk_2E = 2u;
-	carry = set_fm_volume(channel, a);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 6u;
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	attenuation = 2u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 2u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2958u;
-	set_channel_handler(hl, channel);
+	handler = 0x2958u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2958(uint16_t ix)
+/* The note falls two semitones a pass for 16 passes, dying away near its end; then the bursts. */
+uint32_t fm_effect_24_fall(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
 	uint16_t voice = 0;
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(17);
-		a = 8u;
-		return sound_2405(ix, a);
+		die_away_pass = 8u;
+		return fm_effect_fall(channel, die_away_pass);
 	}
 	z80_block(94);
-	CHANNEL(ix)->unk_29 = 0x10u;
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 6u;
+	CHANNEL(channel)->fm_effect.rounds = 0x10u;
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 6u;
 	voice = 0x290Cu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(7);
-	a = 2u;
-	return sound_2978(ix, a);
+	attenuation = 2u;
+	return fm_effect_24_burst(channel, attenuation);
 }
 
-uint32_t sound_2978(uint16_t ix, uint8_t a)
+/* A burst of 5 steps at the attenuation it is given, keyed on low. */
+uint32_t fm_effect_24_burst(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(55);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_2D = a;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.round_attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(65);
-	CHANNEL(ix)->unk_20 = 4u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0x200u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.timer = 4u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0x200u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2998u;
-	set_channel_handler(hl, ix);
+	handler = 0x2998u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2998(uint16_t ix)
+/* The note falls two semitones a pass; every 4 passes it jumps to a pitch that moves with the random
+   bytes' place, 1 quieter; then the next burst, 4 quieter. */
+uint32_t fm_effect_24_burst_step(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-	uint16_t t4 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, offset = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(20);
-		bc = 0xFF80u;
-		sound_2B80(ix, &bc, &carry);
+		step = 0xFF80u;
+		fm_effect_move_pitch(channel, &step, &carry);
 		return carry;
 	}
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 4u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
+	CHANNEL(channel)->fm_effect.timer = 4u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
 	{
 		z80_block(33);
-		t3 = CHANNEL(ix)->unk_29;
-		CHANNEL(ix)->unk_29 = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
+		rounds = CHANNEL(channel)->fm_effect.rounds;
+		CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+		if (rounds == 1u)
+			return stop_channel(channel);
 		z80_block(36);
-		a = CHANNEL(ix)->unk_2D + 4u;
-		return sound_2978(ix, a);
+		attenuation = CHANNEL(channel)->fm_effect.round_attenuation + 4u;
+		return fm_effect_24_burst(channel, attenuation);
 	}
 	z80_block(17);
-	sound_2433(ix, &bc, &carry);
+	fm_effect_quieter_pool_offset(channel, &offset, &carry);
 	z80_block(98);
-	t4 = 0xA00u - bc - carry;
-	carry = z80_carry_sub16(0xA00u, bc, carry);
-	hl = t4;
-	AS16(CHANNEL(ix)->unk_30) = hl;
-	hl = 0x600u - bc - carry;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	t1 = 0xA00u - offset - carry;
+	carry = z80_carry_sub16(0xA00u, offset, carry);
+	pitch = t1;
+	CHANNEL(channel)->fm_effect.pitch = pitch;
+	pitch = 0x600u - offset - carry;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_25(uint16_t ix)
+/* A short fall, then a held note that bends up a little. */
+uint32_t fm_effect_25(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x29D2u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x1100u;
-	unk_842C = 0x1100u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1100u;
+	fm_effect_25_pitch = 0x1100u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 0u;
-	carry = set_fm_volume(ix, a);
+	attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(40);
-	unk_842B = 8u;
-	hl = 0x2A0Du;
-	set_channel_handler(hl, ix);
+	fm_effect_25_timer = 8u;
+	handler = 0x2A0Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2A0D(uint16_t ix, uint32_t carry)
+/* A semitone down each pass for 8 passes; then another note, held 240 passes. */
+uint32_t fm_effect_25_fall(uint16_t channel, uint32_t carry)
 {
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	hl = unk_842B_ADDRESS;
-	t1 = unk_842B;
-	unk_842B = t1 - 1u;
+	t1 = fm_effect_25_timer;
+	fm_effect_25_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(67);
-		hl = unk_842C - 0x40u - carry;
-		unk_842C = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_25_pitch - 0x40u - carry;
+		fm_effect_25_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(53);
-	unk_842B = 0xF0u;
-	hl = 0xF40u;
-	unk_842C = 0xF40u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_25_timer = 0xF0u;
+	pitch = 0xF40u;
+	fm_effect_25_pitch = 0xF40u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(20);
-	hl = 0x2A33u;
-	set_channel_handler(hl, ix);
+	handler = 0x2A33u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2A33(uint16_t ix)
+/* After 24 passes the note bends up slowly (a thirty-second of a semitone a pass, 20 passes); the
+   channel stops when the 240 passes end. */
+uint32_t fm_effect_25_bend(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t pitch_fraction = 0, timer = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	hl = unk_842B_ADDRESS;
-	t1 = unk_842B;
-	unk_842B = t1 - 1u;
+	t1 = fm_effect_25_timer;
+	fm_effect_25_timer = t1 - 1u;
 	if (t1 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(19);
-	a = unk_842B;
-	carry = a < 0xD8u;
-	if (a >= 0xD8u)
+	timer = fm_effect_25_timer;
+	carry = timer < 0xD8u;
+	if (timer >= 0xD8u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(32);
-	hl = unk_842C;
-	a = (uint8_t)hl;
-	carry = a < 0x68u;
-	if (a == 0x68u)
+	pitch = fm_effect_25_pitch;
+	pitch_fraction = (uint8_t)pitch;
+	carry = pitch_fraction < 0x68u;
+	if (pitch_fraction == 0x68u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(47);
-	hl += 2u;
-	unk_842C = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch += 2u;
+	fm_effect_25_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_26(uint16_t ix)
+/* Starts effect 28 and plays a tune of 9 notes (the first, then the 8 of fm_effect_26_pitches from the
+   last), each with an echo of the one before, twice; then effect 34 again if it was playing. */
+uint32_t fm_effect_26(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
+	uint8_t attenuation = 0, command = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x28u;
-	carry = start_fm_effect(a);
+	saved_channel = channel;
+	command = 0x28u;
+	carry = start_fm_effect(command);
 	z80_block(41);
-	ix_2 = saved_ix;
-	unk_8430 = 2u;
-	a = 0u;
-	return sound_2A78(ix_2, a);
+	channel = saved_channel;
+	fm_effect_26_rounds = 2u;
+	attenuation = 0u;
+	return fm_effect_26_round(channel, attenuation);
 }
 
-uint32_t sound_2A78(uint16_t ix, uint8_t a)
+/* Starts the tune at the attenuation it is given. */
+uint32_t fm_effect_26_round(uint16_t channel, uint8_t attenuation)
 {
-	uint16_t de = 0;
+	uint16_t pitch = 0;
 
 	z80_block(63);
-	unk_8431 = a;
-	unk_842F = 9u;
-	de = 0x1200u;
-	unk_8434 = 0x1200u;
-	return sound_2A87(de, ix);
+	fm_effect_26_attenuation = attenuation;
+	fm_effect_26_notes = 9u;
+	pitch = 0x1200u;
+	fm_effect_26_previous_pitch = 0x1200u;
+	return fm_effect_26_note(pitch, channel);
 }
 
-uint32_t sound_2A87(uint16_t de, uint16_t ix)
+/* A note of the tune at the pitch it is given, keyed on for 28 passes. */
+uint32_t fm_effect_26_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch_2 = 0, voice = 0;
 
 	z80_block(47);
-	unk_8432 = de;
+	fm_effect_26_pitch = pitch;
 	voice = 0x2A4Fu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(33);
-	hl = unk_8432;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch_2 = fm_effect_26_pitch;
+	set_fm_pitch(pitch_2, channel, &ignored16, &carry);
 	z80_block(30);
-	a = unk_8431;
-	carry = set_fm_volume(ix, a);
+	attenuation = fm_effect_26_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(40);
-	unk_842E = 0x1Cu;
-	hl = 0x2AABu;
-	set_channel_handler(hl, ix);
+	fm_effect_26_timer = 0x1Cu;
+	handler = 0x2AABu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2AAB(uint16_t ix)
+/* For the last 12 passes of a note, the note before it sounds again 16 quieter; then the next note of
+   the table; after the tune, the second time 21 quieter; at the end effect 34 starts again if its flag
+   is set. */
+uint32_t fm_effect_26_play(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t de = 0, hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0, command = 0, note_offset = 0, timer = 0;
+	uint16_t ignored16 = 0, pitch = 0, pitch_2 = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_842E_ADDRESS;
-	t1 = unk_842E;
-	unk_842E = t1 - 1u;
+	t1 = fm_effect_26_timer;
+	fm_effect_26_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(19);
-		a = unk_842E;
-		carry = a < 0xCu;
-		if (a != 0xCu)
+		timer = fm_effect_26_timer;
+		carry = timer < 0xCu;
+		if (timer != 0xCu)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(33);
-		hl = unk_8434;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_26_previous_pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		z80_block(30);
-		a = unk_8431 + 0x10u;
-		return set_fm_volume(ix, a);
+		attenuation = fm_effect_26_attenuation + 0x10u;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(31);
-	t2 = unk_842F;
-	unk_842F = t2 - 1u;
+	t2 = fm_effect_26_notes;
+	fm_effect_26_notes = t2 - 1u;
 	if (t2 != 1u)
 	{
 		z80_block(115);
-		unk_8434 = unk_8432;
-		hl = fm_effect_26_pitches_ADDRESS - 0x2u + (uint8_t)((uint32_t)unk_842F << 1);
-		de = SOUND_ROM16(hl);
-		return sound_2A87(de, ix);
+		fm_effect_26_previous_pitch = fm_effect_26_pitch;
+		note_offset = (uint32_t)fm_effect_26_notes << 1;
+		pitch_2 = TABLE16(fm_effect_26_pitches, (uint16_t)(note_offset - 2u));
+		return fm_effect_26_note(pitch_2, channel);
 	}
 	z80_block(31);
-	t3 = unk_8430;
-	unk_8430 = t3 - 1u;
+	t3 = fm_effect_26_rounds;
+	fm_effect_26_rounds = t3 - 1u;
 	if (t3 != 1u)
 	{
 		z80_block(30);
-		a = unk_8431 + 0x15u;
-		return sound_2A78(ix, a);
+		attenuation = fm_effect_26_attenuation + 0x15u;
+		return fm_effect_26_round(channel, attenuation);
 	}
 	z80_block(17);
-	carry = stop_channel(ix);
+	carry = stop_channel(channel);
 	z80_block(22);
 	carry = 0u;
-	if (unk_8458 == 0u)
+	if (fm_effect_34_on == 0u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(39);
-	a = 0x34u;
-	carry = start_fm_effect(a);
+	command = 0x34u;
+	carry = start_fm_effect(command);
 	z80_block(24);
 	return carry;
 }
 
-uint32_t fm_effect_27(uint16_t ix)
+/* A note that swells and then warbles, and a second one four semitones higher and quieter. */
+uint32_t fm_effect_27(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t length = 0;
 	uint16_t voice = 0;
 
 	z80_block(113);
-	CHANNEL(ix)->unk_28 = 2u;
-	CHANNEL(ix)->unk_2C = 0x1Bu;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 5u;
+	CHANNEL(channel)->fm_effect.count = 2u;
+	CHANNEL(channel)->fm_effect.attenuation = 0x1Bu;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 5u;
 	voice = 0x2B14u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(7);
-	a = 0x28u;
-	return sound_2B46(ix, a);
+	length = 0x28u;
+	return fm_effect_27_note(channel, length);
 }
 
-uint32_t sound_2B46(uint16_t ix, uint8_t a)
+/* The note from the base pitch, keyed on for the passes it is given. */
+uint32_t fm_effect_27_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(36);
-	CHANNEL(ix)->unk_20 = a;
-	carry = sound_2B95(ix);
+	CHANNEL(channel)->fm_effect.timer = length;
+	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	hl = 0x2B52u;
-	set_channel_handler(hl, ix);
+	handler = 0x2B52u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2B52(uint16_t ix)
+/* Two louder each pass for the first 4 passes, then a warble; then the second note, four semitones up
+   and 38 quieter. */
+uint32_t fm_effect_27_swell_and_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, length = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(36);
-		carry = CHANNEL(ix)->unk_20 < 0x24u;
-		return sound_2BA4(ix, carry);
+		carry = CHANNEL(channel)->fm_effect.timer < 0x24u;
+		return fm_effect_swell_or_warble(channel, carry);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(17);
-	a = sound_2BB2(ix);
+	attenuation = fm_effect_raise_base_pitch(channel);
 	z80_block(43);
-	CHANNEL(ix)->unk_2C = a + 0x26u;
-	a = 0x2Cu;
-	return sound_2B46(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation + 0x26u;
+	length = 0x2Cu;
+	return fm_effect_27_note(channel, length);
 }
 
-void sound_2B73(uint16_t ix, uint16_t *p_bc, uint32_t *p_carry)
+/* A step of a warble: two semitones up on even passes, four down on odd ones. */
+void fm_effect_warble(uint16_t channel, uint16_t *p_step, uint32_t *p_carry)
 {
 	uint32_t carry = *p_carry;
-	uint16_t bc = 0;
+	uint16_t step = 0;
 
 	z80_block(40);
-	bc = 0x80u;
-	if ((CHANNEL(ix)->unk_20 & 1u) == 0u)
-		sound_2B80(ix, &bc, &carry);
+	step = 0x80u;
+	if ((CHANNEL(channel)->fm_effect.timer & 1u) == 0u)
+		fm_effect_move_pitch(channel, &step, &carry);
 	else
 	{
 		z80_block(10);
-		bc = 0xFF00u;
-		sound_2B80(ix, &bc, &carry);
+		step = 0xFF00u;
+		fm_effect_move_pitch(channel, &step, &carry);
 	}
-	*p_bc = bc;
+	*p_step = step;
 	*p_carry = carry;
 }
 
-void sound_2B80(uint16_t ix, uint16_t *p_bc, uint32_t *p_carry)
+/* The note's pitch moved by the step it is given. */
+void fm_effect_move_pitch(uint16_t channel, uint16_t *p_step, uint32_t *p_carry)
 {
-	uint16_t bc = (uint16_t)*p_bc;
+	uint16_t step = (uint16_t)*p_step;
 	uint32_t carry = *p_carry;
-	uint16_t hl = 0;
+	uint16_t pitch = 0;
 
 	z80_block(38);
-	hl = (CHANNEL(ix)->unk_30 | ((uint32_t)CHANNEL(ix)->unk_31 << 8u));
-	*p_bc = bc;
-	sound_2B86(hl, ix, p_bc, &carry);
+	pitch = CHANNEL(channel)->fm_effect.pitch;
+	*p_step = step;
+	fm_effect_set_pitch_plus(pitch, channel, p_step, &carry);
 	*p_carry = carry;
 }
 
-void sound_2B86(uint16_t hl, uint16_t ix, uint16_t *p_bc, uint32_t *p_carry)
+/* The note's pitch set to the pitch it is given plus the step. */
+void fm_effect_set_pitch_plus(uint16_t pitch, uint16_t channel, uint16_t *p_step, uint32_t *p_carry)
 {
-	uint16_t bc = (uint16_t)*p_bc;
+	uint16_t step = (uint16_t)*p_step;
 	uint32_t carry = *p_carry;
-	uint16_t bc_2 = 0;
+	uint16_t fm_write = 0;
 
 	z80_block(11);
-	hl += bc;
-	*p_bc = bc_2;
-	sound_2B87(hl, ix, p_bc, &carry);
+	pitch += step;
+	*p_step = fm_write;
+	fm_effect_set_pitch(pitch, channel, p_step, &carry);
 	*p_carry = carry;
 }
 
-void sound_2B87(uint16_t hl, uint16_t ix, uint16_t *p_bc, uint32_t *p_carry)
+/* The note's pitch set to the pitch it is given, kept in the record and on the chip. */
+void fm_effect_set_pitch(uint16_t pitch, uint16_t channel, uint16_t *p_fm_write, uint32_t *p_carry)
 {
 	uint32_t carry = *p_carry;
-	uint16_t bc = 0;
+	uint16_t fm_write = 0;
 
 	z80_block(48);
-	AS16(CHANNEL(ix)->unk_30) = hl;
-	*p_bc = bc;
-	set_fm_pitch(hl, ix, p_bc, &carry);
+	CHANNEL(channel)->fm_effect.pitch = pitch;
+	*p_fm_write = fm_write;
+	set_fm_pitch(pitch, channel, p_fm_write, &carry);
 	*p_carry = carry;
 }
 
-uint32_t sound_2B90(uint16_t bc, uint16_t hl, uint16_t ix, uint32_t carry)
+/* The note's pitch set to the pitch it is given less the step. */
+uint32_t fm_effect_set_pitch_minus(uint16_t step, uint16_t pitch, uint16_t channel, uint32_t carry)
 {
 	uint16_t ignored16 = 0;
 
 	z80_block(25);
-	hl = hl - bc - carry;
-	sound_2B87(hl, ix, &ignored16, &carry);
+	pitch = pitch - step - carry;
+	fm_effect_set_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t sound_2B95(uint16_t ix)
+/* The note again from its base pitch at the record's attenuation, keyed on. */
+uint32_t fm_effect_restart_note(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t base_pitch = 0, ignored16 = 0;
 
 	z80_block(55);
-	hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u));
-	sound_2B87(hl, ix, &ignored16, &carry);
+	base_pitch = CHANNEL(channel)->fm_effect.base_pitch;
+	fm_effect_set_pitch(base_pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(10);
-	return fm_key_on(ix);
+	return fm_key_on(channel);
 }
 
-uint32_t sound_2BA4(uint16_t ix, uint32_t carry)
+/* With the carry its caller leaves (the timer below the swell's end), a warble step; without it, the
+   note 2 louder. */
+uint32_t fm_effect_swell_or_warble(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 	uint16_t ignored16 = 0;
 
 	z80_block(10);
 	if (carry)
 	{
-		sound_2B73(ix, &ignored16, &carry);
+		fm_effect_warble(channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(55);
-	a = CHANNEL(ix)->unk_2C - 2u;
-	CHANNEL(ix)->unk_2C = a;
-	return set_fm_volume(ix, a);
+	attenuation = CHANNEL(channel)->fm_effect.attenuation - 2u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint8_t sound_2BB2(uint16_t ix)
+/* The base pitch four semitones higher; gives back the note's attenuation. */
+uint8_t fm_effect_raise_base_pitch(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 	uint16_t t1 = 0;
 
 	z80_block(126);
-	t1 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + 0x100u;
-	AS16(CHANNEL(ix)->unk_32) = t1;
-	a = CHANNEL(ix)->unk_2C;
-	return a;
+	t1 = CHANNEL(channel)->fm_effect.base_pitch + 0x100u;
+	CHANNEL(channel)->fm_effect.base_pitch = t1;
+	attenuation = CHANNEL(channel)->fm_effect.attenuation;
+	return attenuation;
 }
 
-uint32_t fm_effect_28(uint16_t ix)
+/* A jittering note that rises for its first 4 steps and then sinks, its steps getting longer; 28 steps. */
+uint32_t fm_effect_28(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t pitch = 0, voice = 0;
 
 	z80_block(80);
-	unk_843A = 0x1Cu;
+	fm_effect_28_steps = 0x1Cu;
 	voice = 0x2BC6u;
-	unk_8438 = 1u;
-	unk_8439 = 1u;
-	carry = load_fm_voice(voice, ix);
+	fm_effect_28_timer = 1u;
+	fm_effect_28_period = 1u;
+	carry = load_fm_voice(voice, channel);
 	z80_block(10);
-	hl = 0x1500u;
-	return sound_2BF5(hl, ix);
+	pitch = 0x1500u;
+	return fm_effect_28_step(pitch, channel);
 }
 
-uint32_t sound_2BF5(uint16_t hl, uint16_t ix)
+/* Keys the note on at the pitch it is given, attenuation 10. */
+uint32_t fm_effect_28_step(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl_2 = 0, ignored16 = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0;
 
 	z80_block(33);
-	unk_8436 = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_28_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 0xAu;
-	carry = set_fm_volume(ix, a);
+	attenuation = 0xAu;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x2C09u;
-	set_channel_handler(hl_2, ix);
+	handler = 0x2C09u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2C09(uint16_t ix)
+/* Each pass the pitch jumps above the note by the random bytes' place (up to four semitones); each step
+   the next note two semitones up (first 4 steps) or four down, 1 or 2 passes longer. */
+uint32_t fm_effect_28_jitter(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
+	uint8_t period = 0;
+	uint16_t ignored16 = 0, pitch = 0, random_place = 0, step = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(31);
-	t1 = unk_8438;
-	unk_8438 = t1 - 1u;
+	t1 = fm_effect_28_timer;
+	fm_effect_28_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(17);
-		hl = next_random_byte();
+		random_place = next_random_byte();
 		z80_block(48);
-		hl = unk_8436 + (uint8_t)hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		random_place = fm_effect_28_pitch + (uint8_t)random_place;
+		set_fm_pitch(random_place, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(31);
-	hl = unk_843A_ADDRESS;
-	t2 = unk_843A;
-	unk_843A = t2 - 1u;
+	t2 = fm_effect_28_steps;
+	fm_effect_28_steps = t2 - 1u;
 	if (t2 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(35);
-	a = unk_8439;
-	if (((unk_843A >> 4) & 1u) == 0u)
+	period = fm_effect_28_period;
+	if (((fm_effect_28_steps >> 4) & 1u) == 0u)
 	{
 		z80_block(7);
-		a++;
+		period++;
 	}
 	z80_block(67);
-	a++;
-	unk_8438 = a;
-	unk_8439 = a;
-	bc = 0x80u;
-	if (unk_843A < 0x18u)
+	period++;
+	fm_effect_28_timer = period;
+	fm_effect_28_period = period;
+	step = 0x80u;
+	if (fm_effect_28_steps < 0x18u)
 	{
 		z80_block(10);
-		bc = 0xFF00u;
+		step = 0xFF00u;
 	}
 	z80_block(37);
-	hl = unk_8436 + bc;
-	return sound_2BF5(hl, ix);
+	pitch = fm_effect_28_pitch + step;
+	return fm_effect_28_step(pitch, channel);
 }
 
-uint32_t fm_effect_29(uint16_t ix)
+/* A note that falls, then a low note that ticks down ever faster until effect 2B stops it; then a loud,
+   quick fall. */
+uint32_t fm_effect_29(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t handler = 0, pitch = 0, voice = 0;
 
 	z80_block(47);
-	unk_8440 = 1u;
+	fm_effect_29_on = 1u;
 	voice = 0x276Cu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = pcm_drums_ADDRESS - 0x2u;
-	carry = sound_2CCE(hl, ix);
+	pitch = pcm_drums_ADDRESS - 0x2u;
+	carry = fm_effect_29_strike(pitch, channel);
 	z80_block(20);
-	hl = 0x2C60u;
-	set_channel_handler(hl, ix);
+	handler = 0x2C60u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2C60(uint16_t ix)
+/* Half a semitone down each pass, from high to low; then the low note. */
+uint32_t fm_effect_29_fall(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(58);
-	hl = unk_843E - 0x20u;
-	if (hl >> 8 != 8u)
+	pitch = fm_effect_29_pitch - 0x20u;
+	if (pitch >> 8 != 8u)
 	{
 		z80_block(26);
-		unk_843E = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		fm_effect_29_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(60);
-	unk_843C = 0x33u;
-	unk_843D = 0x33u;
+	fm_effect_29_timer = 0x33u;
+	fm_effect_29_period = 0x33u;
 	voice = 0x276Cu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x910u;
-	carry = sound_2CCE(hl, ix);
+	pitch = 0x910u;
+	carry = fm_effect_29_strike(pitch, channel);
 	z80_block(20);
-	hl = 0x2C8Du;
-	set_channel_handler(hl, ix);
+	handler = 0x2C8Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2C8D(uint16_t ix)
+/* Every few passes an eighth of a semitone lower, the waits shrinking from 51 passes to 1 and starting
+   again at 16; when its flag is cleared, at full at once and the quick fall. */
+uint32_t fm_effect_29_tick(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0, period = 0;
+	uint16_t handler = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(27);
 	carry = 0u;
-	if (unk_8440 == 0u)
+	if (fm_effect_29_on == 0u)
 	{
 		z80_block(44);
-		unk_843C = 0xB0u;
-		a = 0u;
-		carry = set_fm_volume(ix, a);
+		fm_effect_29_timer = 0xB0u;
+		attenuation = 0u;
+		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		hl = 0x2CBAu;
-		set_channel_handler(hl, ix);
+		handler = 0x2CBAu;
+		set_channel_handler(handler, channel);
 		return carry;
 	}
 	z80_block(26);
-	hl = unk_843C_ADDRESS;
-	t1 = unk_843C;
-	unk_843C = t1 - 1u;
+	t1 = fm_effect_29_timer;
+	fm_effect_29_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(30);
-	t2 = unk_843D - 1u;
-	a = t2;
+	t2 = fm_effect_29_period - 1u;
+	period = t2;
 	if (t2 == 0u)
 	{
 		z80_block(7);
-		a = 0x10u;
+		period = 0x10u;
 	}
 	z80_block(30);
-	unk_843D = a;
-	unk_843C = a;
-	return sound_2CC1(ix);
+	fm_effect_29_period = period;
+	fm_effect_29_timer = period;
+	return fm_effect_29_lower(channel);
 }
 
-uint32_t sound_2CBA(uint16_t ix)
+/* The last 176 passes: an eighth of a semitone lower every pass, then the channel stops. */
+uint32_t fm_effect_29_drop(uint16_t channel)
 {
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	t1 = unk_843C;
-	unk_843C = t1 - 1u;
+	t1 = fm_effect_29_timer;
+	fm_effect_29_timer = t1 - 1u;
 	if (t1 == 1u)
-		return stop_channel(ix);
-	return sound_2CC1(ix);
+		return stop_channel(channel);
+	return fm_effect_29_lower(channel);
 }
 
-uint32_t sound_2CC1(uint16_t ix)
+/* The note an eighth of a semitone lower. */
+uint32_t fm_effect_29_lower(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 
 	z80_block(63);
-	hl = unk_843E - 8u;
-	unk_843E = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = fm_effect_29_pitch - 8u;
+	fm_effect_29_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t sound_2CCE(uint16_t hl, uint16_t ix)
+/* Keys the note on at the pitch it is given, attenuation 16. */
+uint32_t fm_effect_29_strike(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 	uint16_t ignored16 = 0;
 
 	z80_block(33);
-	unk_843E = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_29_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 0x10u;
-	carry = set_fm_volume(ix, a);
+	attenuation = 0x10u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(10);
-	return fm_key_on(ix);
+	return fm_key_on(channel);
 }
 
-uint32_t fm_effect_2a(uint16_t ix)
+/* Three notes that swell and warble, each a semitone higher, quieter and longer, with a rest between
+   them. */
+uint32_t fm_effect_2a(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t length = 0;
 
 	z80_block(93);
-	CHANNEL(ix)->unk_28 = 3u;
-	CHANNEL(ix)->unk_2C = 0x14u;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 5u;
-	a = 0x1Cu;
-	return sound_2D08(ix, a);
+	CHANNEL(channel)->fm_effect.count = 3u;
+	CHANNEL(channel)->fm_effect.attenuation = 0x14u;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 5u;
+	length = 0x1Cu;
+	return fm_effect_2a_note(channel, length);
 }
 
-uint32_t sound_2D08(uint16_t ix, uint8_t a)
+/* The note from the base pitch, keyed on for the passes it is given. */
+uint32_t fm_effect_2a_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t handler = 0, voice = 0;
 
 	z80_block(65);
-	CHANNEL(ix)->unk_20 = a;
-	CHANNEL(ix)->unk_21 = a;
+	CHANNEL(channel)->fm_effect.timer = length;
+	CHANNEL(channel)->fm_effect.period = length;
 	voice = 0x2CDCu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(17);
-	carry = sound_2B95(ix);
+	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	hl = 0x2D1Du;
-	set_channel_handler(hl, ix);
+	handler = 0x2D1Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2D1D(uint16_t ix)
+/* Two louder each pass for the first 4 passes, then a warble; then 8 passes almost silent. */
+uint32_t fm_effect_2a_swell_and_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(36);
-		carry = CHANNEL(ix)->unk_20 < 0x18u;
-		return sound_2BA4(ix, carry);
+		carry = CHANNEL(channel)->fm_effect.timer < 0x18u;
+		return fm_effect_swell_or_warble(channel, carry);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(43);
-	CHANNEL(ix)->unk_20 = 8u;
-	a = 0x34u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 8u;
+	attenuation = 0x34u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(20);
-	hl = 0x2D40u;
-	set_channel_handler(hl, ix);
+	handler = 0x2D40u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2D40(uint16_t ix, uint32_t carry)
+/* After the rest, the next note a semitone higher, 34 quieter and 4 passes longer. */
+uint32_t fm_effect_2a_rest(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0;
-	uint16_t t2 = 0;
+	uint8_t length = 0;
+	uint8_t timer = 0;
+	uint16_t t1 = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(178);
-	t2 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + 0x40u;
-	AS16(CHANNEL(ix)->unk_32) = t2;
-	CHANNEL(ix)->unk_2C += 0x22u;
-	a = CHANNEL(ix)->unk_21 + 4u;
-	return sound_2D08(ix, a);
+	t1 = CHANNEL(channel)->fm_effect.base_pitch + 0x40u;
+	CHANNEL(channel)->fm_effect.base_pitch = t1;
+	CHANNEL(channel)->fm_effect.attenuation += 0x22u;
+	length = CHANNEL(channel)->fm_effect.period + 4u;
+	return fm_effect_2a_note(channel, length);
 }
 
-uint32_t fm_effect_2b(uint16_t ix)
+/* Stops effects 21 and 29 (clears their flags) and plays PCM effect 85 and a falling note, then 17
+   bursts of notes that fade. */
+uint32_t fm_effect_2b(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t handler = 0, voice = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(69);
-	unk_8440 = 0u;
-	unk_841F = 0u;
-	saved_ix = ix;
-	a = 0x85u;
-	start_pcm_effect(a);
+	fm_effect_29_on = 0u;
+	fm_effect_21_on = 0u;
+	saved_channel = channel;
+	command = 0x85u;
+	start_pcm_effect(command);
 	z80_block(60);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_2E = 5u;
-	hl = 0x2D64u;
-	carry = sound_1E5E(hl, channel);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.base_attenuation = 5u;
+	voice = 0x2D64u;
+	carry = fm_effect_drop_start(voice, channel);
 	z80_block(20);
-	hl = 0x2D9Du;
-	set_channel_handler(hl, channel);
+	handler = 0x2D9Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2D9D(uint16_t ix)
+/* The fall for 32 passes; then the bursts. */
+uint32_t fm_effect_2b_drop(uint16_t channel)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_1E83(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_drop(channel);
 	z80_block(10);
-	return sound_1E88(ix);
+	return fm_effect_bursts_start(channel);
 }
 
-uint32_t fm_effect_2c(uint16_t ix)
+/* A note that dives, then 18 notes climbing two semitones a step, plus 2 to 14 more by the random bytes'
+   place. */
+uint32_t fm_effect_2c(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t dives = 0;
 
 	z80_block(112);
-	CHANNEL(ix)->unk_21 = 0xFu;
-	CHANNEL(ix)->unk_22 = 0x18u;
-	CHANNEL(ix)->unk_34 = 0u;
-	CHANNEL(ix)->unk_35 = 0xDu;
-	CHANNEL(ix)->unk_29 = 0x12u;
-	a = 1u;
-	return sound_2DD6(ix, a);
+	CHANNEL(channel)->fm_effect_2c.period = 0xFu;
+	CHANNEL(channel)->fm_effect_2c.dive_period = 0x18u;
+	AS8(CHANNEL(channel)->fm_effect_2c.start_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect_2c.start_pitch, 1) = 0xDu;
+	CHANNEL(channel)->fm_effect_2c.climb_notes = 0x12u;
+	dives = 1u;
+	return fm_effect_dive_times(channel, dives);
 }
 
-uint32_t sound_2DD6(uint16_t ix, uint8_t a)
+/* As many dives as it is given, then the climb. */
+uint32_t fm_effect_dive_times(uint16_t channel, uint8_t dives)
 {
 	z80_block(19);
-	CHANNEL(ix)->unk_28 = a;
-	return sound_2DD9(ix);
+	CHANNEL(channel)->fm_effect_dive.count = dives;
+	return fm_effect_dive_start(channel);
 }
 
-uint32_t sound_2DD9(uint16_t ix)
+/* A dive: the voice loaded again and the note keyed on at full, eight semitones below the start pitch,
+   for the dive's passes. */
+uint32_t fm_effect_dive_start(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, start_pitch = 0, step = 0;
 
 	z80_block(17);
-	hl = sound_2E64(ix);
+	start_pitch = fm_effect_dive_reload(channel);
 	z80_block(27);
-	bc = 0xFE00u;
-	sound_2B86(hl, ix, &bc, &carry);
+	step = 0xFE00u;
+	fm_effect_set_pitch_plus(start_pitch, channel, &step, &carry);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = CHANNEL(ix)->unk_22;
-	a = 0u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect_dive.timer = CHANNEL(channel)->fm_effect_dive.dive_period;
+	attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2DF6u;
-	set_channel_handler(hl, ix);
+	handler = 0x2DF6u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2DF6(uint16_t ix)
+/* Two semitones down each pass, quiet for the last 4; then the next dive, or the climb from the start
+   pitch. */
+uint32_t fm_effect_dive(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0;
+	uint16_t start_pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
+	timer = CHANNEL(channel)->fm_effect_dive.timer;
+	CHANNEL(channel)->fm_effect_dive.timer = timer - 1u;
+	if (timer == 1u)
 	{
 		z80_block(33);
-		t2 = CHANNEL(ix)->unk_28;
-		CHANNEL(ix)->unk_28 = t2 - 1u;
-		if (t2 != 1u)
-			return sound_2DD9(ix);
+		count = CHANNEL(channel)->fm_effect_dive.count;
+		CHANNEL(channel)->fm_effect_dive.count = count - 1u;
+		if (count != 1u)
+			return fm_effect_dive_start(channel);
 		z80_block(55);
-		CHANNEL(ix)->unk_28 = CHANNEL(ix)->unk_29;
-		hl = sound_2E64(ix);
-		return sound_2E1E(hl, ix);
+		CHANNEL(channel)->fm_effect_dive.count = CHANNEL(channel)->fm_effect_dive.climb_notes;
+		start_pitch = fm_effect_dive_reload(channel);
+		return fm_effect_dive_climb_note(start_pitch, channel);
 	}
 	z80_block(36);
-	if (CHANNEL(ix)->unk_20 == 4u)
+	if (CHANNEL(channel)->fm_effect_dive.timer == 4u)
 	{
 		z80_block(17);
-		a = 0x10u;
-		return set_fm_volume(ix, a);
+		attenuation = 0x10u;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(20);
-	bc = 0xFF7Fu;
-	sound_2B80(ix, &bc, &carry);
+	step = 0xFF7Fu;
+	fm_effect_move_pitch(channel, &step, &carry);
 	return carry;
 }
 
-uint32_t sound_2E1E(uint16_t hl, uint16_t ix)
+/* A note of the climb at the pitch it is given, at full, for the effect's period. */
+uint32_t fm_effect_dive_climb_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl_2 = 0, ignored16 = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0;
 
 	z80_block(17);
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = CHANNEL(ix)->unk_21;
-	a = 0u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect_dive.timer = CHANNEL(channel)->fm_effect_dive.period;
+	attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x2E35u;
-	set_channel_handler(hl_2, ix);
+	handler = 0x2E35u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2E35(uint16_t ix, uint32_t carry)
+/* The next note two semitones above the last plus 2 to 14 semitones by the random bytes' place; while 16
+   or more are left the voice and the pitch start again from the start pitch. */
+uint32_t fm_effect_dive_climb(uint16_t channel, uint32_t carry)
 {
-	uint8_t d = 0, e = 0;
-	uint16_t hl = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t place_low = 0, place_page = 0;
+	uint16_t pitch = 0, random_place = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect_dive.timer;
+	CHANNEL(channel)->fm_effect_dive.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect_dive.count;
+	CHANNEL(channel)->fm_effect_dive.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(30);
-	if (((CHANNEL(ix)->unk_28 >> 4) & 1u) != 0u)
+	if (((CHANNEL(channel)->fm_effect_dive.count >> 4) & 1u) != 0u)
 	{
 		z80_cycles(7);
-		sound_2E64(ix);
+		fm_effect_dive_reload(channel);
 	}
 	z80_block(17);
-	hl = next_random_byte();
+	random_place = next_random_byte();
 	z80_block(145);
-	d = (uint8_t)hl;
-	e = (uint8_t)(hl >> 8);
-	hl = (CHANNEL(ix)->unk_30 | ((uint32_t)CHANNEL(ix)->unk_31 << 8u)) + 0x80u;
-	AS16(CHANNEL(ix)->unk_30) = hl;
-	hl += e | ((d & 3u) << 8);
-	return sound_2E1E(hl, ix);
+	place_low = (uint8_t)random_place;
+	place_page = (uint8_t)(random_place >> 8);
+	pitch = CHANNEL(channel)->fm_effect_dive.pitch + 0x80u;
+	CHANNEL(channel)->fm_effect_dive.pitch = pitch;
+	pitch += place_page | ((place_low & 3u) << 8);
+	return fm_effect_dive_climb_note(pitch, channel);
 }
 
-uint16_t sound_2E64(uint16_t ix)
+/* Loads the voice again and puts the note back at the start pitch. */
+uint16_t fm_effect_dive_reload(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t h = 0, l = 0;
-	uint16_t hl = 0, voice = 0;
+	uint8_t pitch_high = 0, pitch_low = 0;
+	uint16_t start_pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x2DA6u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(86);
-	l = CHANNEL(ix)->unk_34;
-	h = CHANNEL(ix)->unk_35;
-	CHANNEL(ix)->unk_30 = l;
-	CHANNEL(ix)->unk_31 = h;
-	hl = ((uint32_t)h << 8) | l;
-	return hl;
+	pitch_low = (uint8_t)CHANNEL(channel)->fm_effect_dive.start_pitch;
+	pitch_high = (uint8_t)(CHANNEL(channel)->fm_effect_dive.start_pitch >> 8u);
+	AS8(CHANNEL(channel)->fm_effect_dive.pitch) = pitch_low;
+	AT8(CHANNEL(channel)->fm_effect_dive.pitch, 1) = pitch_high;
+	start_pitch = ((uint32_t)pitch_high << 8) | pitch_low;
+	return start_pitch;
 }
 
-uint32_t fm_effect_2d(uint16_t ix)
+/* 32 zigzag notes: the first 5 two semitones higher each and louder, the rest a semitone lower each and
+   quieter. */
+uint32_t fm_effect_2d(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t pitch = 0;
 
 	z80_block(50);
-	unk_8447 = 0x20u;
-	unk_8442 = 0xCu;
-	hl = 0x600u;
-	return sound_2E84(hl, ix);
+	fm_effect_2d_notes = 0x20u;
+	fm_effect_2d_attenuation = 0xCu;
+	pitch = 0x600u;
+	return fm_effect_2d_note(pitch, channel);
 }
 
-uint32_t sound_2E84(uint16_t hl, uint16_t ix)
+/* A note at the pitch it is given, keyed on for 10 passes. */
+uint32_t fm_effect_2d_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl_2 = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, voice = 0;
 
 	z80_block(59);
-	unk_8443 = hl;
-	unk_8445 = hl;
+	fm_effect_2d_base_pitch = pitch;
+	fm_effect_2d_pitch = pitch;
 	voice = 0x1EEEu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(33);
-	hl_2 = unk_8443;
-	set_fm_pitch(hl_2, ix, &ignored16, &carry);
+	pitch = fm_effect_2d_base_pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(50);
-	unk_8441 = 0xAu;
-	a = unk_8442;
-	carry = set_fm_volume(ix, a);
+	fm_effect_2d_timer = 0xAu;
+	attenuation = fm_effect_2d_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x2EAAu;
-	set_channel_handler(hl_2, ix);
+	handler = 0x2EAAu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2EAA(uint16_t ix, uint32_t carry)
+/* Two semitones up and four down in turn; then the next note: two semitones up and 1 louder for the
+   first 5, then a semitone down and 1 quieter (2 in the second half). */
+uint32_t fm_effect_2d_zigzag(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0;
+	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_8441_ADDRESS;
-	t1 = unk_8441;
-	unk_8441 = t1 - 1u;
+	t1 = fm_effect_2d_timer;
+	fm_effect_2d_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(48);
-		t2 = unk_8441;
-		hl = unk_8445;
-		bc = 0xFF80u;
-		if (t2 & 1u)
+		pitch = fm_effect_2d_pitch;
+		step = 0xFF80u;
+		if (fm_effect_2d_timer & 1u)
 		{
 			z80_block(10);
-			bc = 0x100u;
+			step = 0x100u;
 		}
 		z80_block(41);
-		hl = hl - bc - carry;
-		unk_8445 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = pitch - step - carry;
+		fm_effect_2d_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(31);
-	hl = unk_8447_ADDRESS;
-	t3 = unk_8447;
-	unk_8447 = t3 - 1u;
-	if (t3 == 1u)
-		return stop_channel(ix);
+	t2 = fm_effect_2d_notes;
+	fm_effect_2d_notes = t2 - 1u;
+	if (t2 == 1u)
+		return stop_channel(channel);
 	z80_block(37);
-	t4 = unk_8447;
-	carry = t4 < 0x1Bu;
-	a = unk_8442;
-	if (t4 < 0x1Bu)
+	t3 = fm_effect_2d_notes;
+	carry = t3 < 0x1Bu;
+	attenuation = fm_effect_2d_attenuation;
+	if (t3 < 0x1Bu)
 	{
 		z80_block(29);
-		a++;
-		if (((unk_8447 >> 4) & 1u) == 0u)
+		attenuation++;
+		if (((fm_effect_2d_notes >> 4) & 1u) == 0u)
 		{
 			z80_block(7);
-			a++;
+			attenuation++;
 		}
 		z80_block(23);
-		unk_8442 = a;
-		bc = 0xFFC0u;
+		fm_effect_2d_attenuation = attenuation;
+		step = 0xFFC0u;
 	}
 	else
 	{
 		z80_block(40);
-		unk_8442 = a - 1u - carry;
-		bc = 0x80u;
+		fm_effect_2d_attenuation = attenuation - 1u - carry;
+		step = 0x80u;
 	}
 	z80_block(37);
-	hl = unk_8443 + bc;
-	return sound_2E84(hl, ix);
+	pitch = fm_effect_2d_base_pitch + step;
+	return fm_effect_2d_note(pitch, channel);
 }
 
-uint32_t fm_effect_2e(uint16_t ix)
+/* Two falling notes, then 24 trills that fade. */
+uint32_t fm_effect_2e(uint16_t channel)
 {
 	z80_block(19);
-	CHANNEL(ix)->unk_29 = 2u;
-	return sound_2F15(ix);
+	CHANNEL(channel)->fm_effect.rounds = 2u;
+	return fm_effect_2e_note(channel);
 }
 
-uint32_t sound_2F15(uint16_t ix)
+/* A note keyed on high, which falls for 32 passes. */
+uint32_t fm_effect_2e_note(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x2EF8u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x1200u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1200u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x400u;
-	sound_2442(hl, ix);
+	pitch = 0x400u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x20u;
-	a = 4u;
-	CHANNEL(ix)->unk_2E = 4u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x20u;
+	attenuation = 4u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 4u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x2F3Cu;
-	set_channel_handler(hl, ix);
+	handler = 0x2F3Cu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2F3C(uint16_t ix)
+/* The fall, two semitones a pass, dying away near its end; after the second note, the trills. */
+uint32_t fm_effect_2e_fall(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0, rounds = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(17);
-		a = 4u;
-		return sound_2405(ix, a);
+		die_away_pass = 4u;
+		return fm_effect_fall(channel, die_away_pass);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_29 = t2 - 1u;
-	if (t2 != 1u)
-		return sound_2F15(ix);
+	rounds = CHANNEL(channel)->fm_effect.rounds;
+	CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+	if (rounds != 1u)
+		return fm_effect_2e_note(channel);
 	z80_block(26);
-	CHANNEL(ix)->unk_29 = 0x18u;
-	a = 4u;
-	return sound_2F53(ix, a);
+	CHANNEL(channel)->fm_effect.rounds = 0x18u;
+	attenuation = 4u;
+	return fm_effect_2e_trill_start(channel, attenuation);
 }
 
-uint32_t sound_2F53(uint16_t ix, uint8_t a)
+/* A trill of 5 steps at the attenuation it is given. */
+uint32_t fm_effect_2e_trill_start(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(84);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xE00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xE00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(65);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xCu;
-	carry = set_fm_volume_from_record(ix);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xCu;
+	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	hl = 0x2F76u;
-	set_channel_handler(hl, ix);
+	handler = 0x2F76u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2F76(uint16_t ix, uint32_t carry)
+/* The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill,
+   6 quieter. */
+uint32_t fm_effect_2e_trill(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-	uint16_t t4 = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
 	{
 		z80_block(33);
-		t3 = CHANNEL(ix)->unk_29;
-		CHANNEL(ix)->unk_29 = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
+		rounds = CHANNEL(channel)->fm_effect.rounds;
+		CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+		if (rounds == 1u)
+			return stop_channel(channel);
 		z80_block(36);
-		a = CHANNEL(ix)->unk_2C + 6u;
-		return sound_2F53(ix, a);
+		attenuation = CHANNEL(channel)->fm_effect.attenuation + 6u;
+		return fm_effect_2e_trill_start(channel, attenuation);
 	}
 	z80_block(93);
-	bc = 0x200u;
-	t4 = 0xA00u - carry;
+	step = 0x200u;
+	t1 = 0xA00u - carry;
 	carry = z80_carry_sub16(0xC00u, 0x200u, carry);
-	hl = t4;
-	AS16(CHANNEL(ix)->unk_32) = hl;
-	hl = 0x600u;
-	return sound_2B90(bc, hl, ix, carry);
+	base_pitch = t1;
+	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+	pitch = 0x600u;
+	return fm_effect_set_pitch_minus(step, pitch, channel, carry);
 }
 
-uint32_t fm_effect_2f(uint16_t ix)
+/* Three notes that swell and warble, each four semitones higher, quieter and longer. */
+uint32_t fm_effect_2f(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t length = 0;
 
 	z80_block(93);
-	CHANNEL(ix)->unk_28 = 3u;
-	CHANNEL(ix)->unk_2C = 0x1Eu;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 5u;
-	a = 0x2Cu;
-	return sound_2FBB(ix, a);
+	CHANNEL(channel)->fm_effect.count = 3u;
+	CHANNEL(channel)->fm_effect.attenuation = 0x1Eu;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 5u;
+	length = 0x2Cu;
+	return fm_effect_2f_note(channel, length);
 }
 
-uint32_t sound_2FBB(uint16_t ix, uint8_t a)
+/* The note from the base pitch, keyed on for the passes it is given. */
+uint32_t fm_effect_2f_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t handler = 0, voice = 0;
 
 	z80_block(65);
-	CHANNEL(ix)->unk_20 = a;
-	CHANNEL(ix)->unk_21 = a;
+	CHANNEL(channel)->fm_effect.timer = length;
+	CHANNEL(channel)->fm_effect.period = length;
 	voice = 0x2CDCu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(17);
-	carry = sound_2B95(ix);
+	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	hl = 0x2FD0u;
-	set_channel_handler(hl, ix);
+	handler = 0x2FD0u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_2FD0(uint16_t ix)
+/* Two louder each pass for the first 4 passes, then a warble; then the next note four semitones up, 42
+   quieter and 3 passes longer. */
+uint32_t fm_effect_2f_swell_and_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, length = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(36);
-		carry = CHANNEL(ix)->unk_20 < 0x28u;
-		return sound_2BA4(ix, carry);
+		carry = CHANNEL(channel)->fm_effect.timer < 0x28u;
+		return fm_effect_swell_or_warble(channel, carry);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(17);
-	a = sound_2BB2(ix);
+	attenuation = fm_effect_raise_base_pitch(channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_2C = a + 0x2Au;
-	a = CHANNEL(ix)->unk_21 + 3u;
-	return sound_2FBB(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation + 0x2Au;
+	length = CHANNEL(channel)->fm_effect.period + 3u;
+	return fm_effect_2f_note(channel, length);
 }
 
-uint32_t sound_300D(uint16_t ix, uint8_t a)
+/* A low note keyed on for the passes it is given. */
+uint32_t fm_effect_30_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(40);
-	unk_8448 = a;
+	fm_effect_30_timer = length;
 	voice = 0x2FF4u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x400u;
-	unk_844A = 0x400u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x400u;
+	fm_effect_30_pitch = 0x400u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(30);
-	a_2 = unk_844C;
-	carry = set_fm_volume(ix, a_2);
+	attenuation = fm_effect_30_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(10);
-	return fm_key_on(ix);
+	return fm_key_on(channel);
 }
 
-uint32_t sound_3028(uint16_t bc, uint16_t ix)
+/* The note's pitch up by the step it is given. */
+uint32_t fm_effect_30_raise(uint16_t step, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 
 	z80_block(53);
-	hl = unk_844A + bc;
-	unk_844A = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = fm_effect_30_pitch + step;
+	fm_effect_30_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_30(uint16_t ix)
+/* A low note that sweeps up fast, then 5 slower sweeps up, each 16 quieter. */
+uint32_t fm_effect_30(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0;
+	uint8_t length = 0;
+	uint16_t handler = 0;
 
 	z80_block(44);
-	unk_844C = 2u;
-	a = 0x14u;
-	carry = sound_300D(ix, a);
+	fm_effect_30_attenuation = 2u;
+	length = 0x14u;
+	carry = fm_effect_30_note(channel, length);
 	z80_block(20);
-	hl = 0x3042u;
-	set_channel_handler(hl, ix);
+	handler = 0x3042u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3042(uint16_t ix)
+/* Four semitones up each pass for 20 passes, quiet for the last 4; then the slower sweeps. */
+uint32_t fm_effect_30_sweep(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	hl = unk_8448_ADDRESS;
-	t1 = unk_8448;
-	unk_8448 = t1 - 1u;
+	t1 = fm_effect_30_timer;
+	fm_effect_30_timer = t1 - 1u;
 	if (t1 == 1u)
 	{
 		z80_block(27);
-		unk_8449 = 5u;
-		a = 2u;
-		return sound_3061(ix, a);
+		fm_effect_30_repeats = 5u;
+		attenuation = 2u;
+		return fm_effect_30_slow_sweep_start(channel, attenuation);
 	}
 	z80_block(24);
-	if (unk_8448 == 4u)
+	if (fm_effect_30_timer == 4u)
 	{
 		z80_block(17);
-		a = 0x22u;
-		return set_fm_volume(ix, a);
+		attenuation = 0x22u;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(20);
-	bc = 0x100u;
-	return sound_3028(bc, ix);
+	step = 0x100u;
+	return fm_effect_30_raise(step, channel);
 }
 
-uint32_t sound_3061(uint16_t ix, uint8_t a)
+/* A slow sweep of 48 passes at the attenuation it is given. */
+uint32_t fm_effect_30_slow_sweep_start(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0;
+	uint8_t length = 0;
+	uint16_t handler = 0;
 
 	z80_block(37);
-	unk_844C = a;
-	a_2 = 0x30u;
-	carry = sound_300D(ix, a_2);
+	fm_effect_30_attenuation = attenuation;
+	length = 0x30u;
+	carry = fm_effect_30_note(channel, length);
 	z80_block(20);
-	hl = 0x306Fu;
-	set_channel_handler(hl, ix);
+	handler = 0x306Fu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_306F(uint16_t ix)
+/* Two semitones up each pass; then the next sweep, 16 quieter, 5 in all. */
+uint32_t fm_effect_30_slow_sweep(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0;
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(31);
-	t1 = unk_8448;
-	unk_8448 = t1 - 1u;
+	t1 = fm_effect_30_timer;
+	fm_effect_30_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(20);
-		bc = 0x80u;
-		return sound_3028(bc, ix);
+		step = 0x80u;
+		return fm_effect_30_raise(step, channel);
 	}
 	z80_block(31);
-	t2 = unk_8449;
-	unk_8449 = t2 - 1u;
+	t2 = fm_effect_30_repeats;
+	fm_effect_30_repeats = t2 - 1u;
 	if (t2 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(30);
-	a = unk_844C + 0x10u;
-	return sound_3061(ix, a);
+	attenuation = fm_effect_30_attenuation + 0x10u;
+	return fm_effect_30_slow_sweep_start(channel, attenuation);
 }
 
-uint32_t fm_effect_31(uint16_t ix)
+/* Two falling notes, then 16 trills that fade. */
+uint32_t fm_effect_31(uint16_t channel)
 {
 	z80_block(19);
-	CHANNEL(ix)->unk_29 = 2u;
-	return sound_30A8(ix);
+	CHANNEL(channel)->fm_effect.rounds = 2u;
+	return fm_effect_31_note(channel);
 }
 
-uint32_t sound_30A8(uint16_t ix)
+/* A note keyed on high, which falls for 24 passes. */
+uint32_t fm_effect_31_note(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x308Bu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x400u;
-	sound_2442(hl, ix);
+	pitch = 0x400u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x18u;
-	a = 7u;
-	CHANNEL(ix)->unk_2E = 7u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x18u;
+	attenuation = 7u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 7u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x30CFu;
-	set_channel_handler(hl, ix);
+	handler = 0x30CFu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_30CF(uint16_t ix)
+/* The fall, two semitones a pass, dying away near its end; after the second note, the trills. */
+uint32_t fm_effect_31_fall(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0, rounds = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(17);
-		a = 4u;
-		return sound_2405(ix, a);
+		die_away_pass = 4u;
+		return fm_effect_fall(channel, die_away_pass);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_29;
-	CHANNEL(ix)->unk_29 = t2 - 1u;
-	if (t2 != 1u)
-		return sound_30A8(ix);
+	rounds = CHANNEL(channel)->fm_effect.rounds;
+	CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+	if (rounds != 1u)
+		return fm_effect_31_note(channel);
 	z80_block(26);
-	CHANNEL(ix)->unk_29 = 0x10u;
-	a = 7u;
-	return sound_30E6(ix, a);
+	CHANNEL(channel)->fm_effect.rounds = 0x10u;
+	attenuation = 7u;
+	return fm_effect_31_trill_start(channel, attenuation);
 }
 
-uint32_t sound_30E6(uint16_t ix, uint8_t a)
+/* A trill of 5 steps at the attenuation it is given. */
+uint32_t fm_effect_31_trill_start(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(84);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xC00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xC00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(65);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	carry = set_fm_volume_from_record(ix);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	hl = 0x3109u;
-	set_channel_handler(hl, ix);
+	handler = 0x3109u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3109(uint16_t ix, uint32_t carry)
+/* The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill,
+   8 quieter. */
+uint32_t fm_effect_31_trill(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0;
-	uint16_t t4 = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, rounds = 0;
+	uint16_t t1 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
 	{
 		z80_block(33);
-		t3 = CHANNEL(ix)->unk_29;
-		CHANNEL(ix)->unk_29 = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
+		rounds = CHANNEL(channel)->fm_effect.rounds;
+		CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+		if (rounds == 1u)
+			return stop_channel(channel);
 		z80_block(36);
-		a = CHANNEL(ix)->unk_2C + 8u;
-		return sound_30E6(ix, a);
+		attenuation = CHANNEL(channel)->fm_effect.attenuation + 8u;
+		return fm_effect_31_trill_start(channel, attenuation);
 	}
 	z80_block(93);
-	bc = 0x200u;
-	t4 = 0x800u - carry;
+	step = 0x200u;
+	t1 = 0x800u - carry;
 	carry = z80_carry_sub16(0xA00u, 0x200u, carry);
-	hl = t4;
-	AS16(CHANNEL(ix)->unk_32) = hl;
-	hl = 0x400u;
-	return sound_2B90(bc, hl, ix, carry);
+	base_pitch = t1;
+	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+	pitch = 0x400u;
+	return fm_effect_set_pitch_minus(step, pitch, channel, carry);
 }
 
-uint32_t fm_effect_32(uint16_t ix)
+/* A note that bends up a little and then down, twice (the second quieter). */
+uint32_t fm_effect_32(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 	uint16_t voice = 0;
 
 	z80_block(47);
-	unk_8451 = 2u;
+	fm_effect_32_repeats = 2u;
 	voice = 0x313Bu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(7);
-	a = 0xBu;
-	return sound_3161(ix, a);
+	attenuation = 0xBu;
+	return fm_effect_32_note(channel, attenuation);
 }
 
-uint32_t sound_3161(uint16_t ix, uint8_t a)
+/* The note keyed on at the attenuation it is given, for 48 passes. */
+uint32_t fm_effect_32_note(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(56);
-	unk_844E = a;
-	hl = 0xF00u;
-	unk_844F = 0xF00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	fm_effect_32_attenuation = attenuation;
+	pitch = 0xF00u;
+	fm_effect_32_pitch = 0xF00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(30);
-	a_2 = unk_844E;
-	carry = set_fm_volume(ix, a_2);
+	attenuation = fm_effect_32_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(40);
-	unk_844D = 0x30u;
-	hl = 0x3181u;
-	set_channel_handler(hl, ix);
+	fm_effect_32_timer = 0x30u;
+	handler = 0x3181u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3181(uint16_t ix)
+/* A sixteenth of a semitone up each pass for 4 passes, then an eighth down for 36, then held 8; then the
+   second note, at attenuation 39. */
+uint32_t fm_effect_32_bend(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0, timer = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(31);
-	hl = unk_844D_ADDRESS;
-	t1 = unk_844D;
-	unk_844D = t1 - 1u;
+	t1 = fm_effect_32_timer;
+	fm_effect_32_timer = t1 - 1u;
 	if (t1 == 1u)
 	{
 		z80_block(31);
-		t2 = unk_8451;
-		unk_8451 = t2 - 1u;
+		t2 = fm_effect_32_repeats;
+		fm_effect_32_repeats = t2 - 1u;
 		if (t2 == 1u)
-			return stop_channel(ix);
+			return stop_channel(channel);
 		z80_block(17);
-		a = 0x27u;
-		return sound_3161(ix, a);
+		attenuation = 0x27u;
+		return fm_effect_32_note(channel, attenuation);
 	}
 	z80_block(19);
-	a = unk_844D;
-	carry = a < 8u;
-	if (a < 8u)
+	timer = fm_effect_32_timer;
+	carry = timer < 8u;
+	if (timer < 8u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(43);
-	hl = unk_844F;
-	bc = 0xFFF8u;
-	if (a >= 0x2Cu)
+	pitch = fm_effect_32_pitch;
+	step = 0xFFF8u;
+	if (timer >= 0x2Cu)
 	{
 		z80_block(10);
-		bc = 4u;
+		step = 4u;
 	}
 	z80_block(37);
-	hl += bc;
-	unk_844F = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch += step;
+	fm_effect_32_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_33(uint16_t ix)
+/* A very low drone, struck 20 times, each 1 quieter, while effect 0A's flag stays set (effect 0A starts
+   it). */
+uint32_t fm_effect_33(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t attenuation = 0;
 
 	z80_block(30);
-	unk_83F3 = 1u;
+	fm_effect_0a_on = 1u;
 	z80_block(27);
-	unk_83FD = 0x14u;
-	a = 0xBu;
-	return sound_1AF8(ix, a);
+	fm_effect_33_repeats = 0x14u;
+	attenuation = 0xBu;
+	return fm_effect_33_drone(channel, attenuation);
 }
 
-uint32_t fm_effect_34(uint16_t ix)
+/* A sound that goes on until effect 35 stops it: here a falling note and then trills over and over; on
+   the channel the FM effects take from the music's channel 6, warbling notes whose length moves with the
+   random bytes' place; no song starts while it plays. */
+uint32_t fm_effect_34(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(137);
-	unk_8458 = 1u;
-	unk_8342 = 0x329Cu;
-	unk_8341 = CHANNEL(ix)->sound;
-	unk_834F = CHANNEL(ix)->priority;
+	fm_effect_34_on = 1u;
+	CHANNEL(FM_EFFECT_6)->handler = 0x329Cu;
+	CHANNEL(FM_EFFECT_6)->sound = CHANNEL(channel)->sound;
+	CHANNEL(FM_EFFECT_6)->priority = CHANNEL(channel)->priority;
 	voice = 0x31B5u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x1080u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1080u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x400u;
-	sound_2442(hl, ix);
+	pitch = 0x400u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(60);
-	CHANNEL(ix)->unk_20 = 0x18u;
-	a = music_attenuation + 6u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x18u;
+	attenuation = music_attenuation + 6u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x320Du;
-	set_channel_handler(hl, ix);
+	handler = 0x320Du;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_320D(uint16_t ix)
+/* Two semitones down each pass for 24 passes, at attenuation 12 for the last 8; then the trills. */
+uint32_t fm_effect_34_fall(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0;
-	uint8_t t1 = 0;
+	uint8_t attenuation = 0;
+	uint16_t step = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
-		return sound_3226(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
+		return fm_effect_34_trill_start(channel);
 	z80_block(36);
-	if (8u == CHANNEL(ix)->unk_20)
+	if (8u == CHANNEL(channel)->fm_effect.timer)
 	{
 		z80_block(17);
-		a = 0xCu;
-		return set_fm_volume(ix, a);
+		attenuation = 0xCu;
+		return set_fm_volume(channel, attenuation);
 	}
 	z80_block(20);
-	bc = 0xFF80u;
-	sound_2B80(ix, &bc, &carry);
+	step = 0xFF80u;
+	fm_effect_move_pitch(channel, &step, &carry);
 	return carry;
 }
 
-uint32_t sound_3226(uint16_t ix)
+/* A trill of 5 steps at 6 over the music's attenuation. */
+uint32_t fm_effect_34_trill_start(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x31B5u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0xE80u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0xE80u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(108);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	a = music_attenuation + 6u;
-	CHANNEL(ix)->unk_2C = a;
-	carry = set_fm_volume(ix, a);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	attenuation = music_attenuation + 6u;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(58);
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0x3258u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	handler = 0x3258u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3258(uint16_t ix)
+/* The two notes in turn, sliding down; every 6 passes a warble step and the pair again lower; after 5
+   steps the trill again from its start; it stops when its flag is cleared. */
+uint32_t fm_effect_34_trill(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0;
-	uint16_t t3 = 0;
+	uint16_t base_pitch = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0;
+	uint16_t t1 = 0;
 
 	z80_block(27);
-	if (unk_8458 == 0u)
-		return stop_channel(ix);
+	if (fm_effect_34_on == 0u)
+		return stop_channel(channel);
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return sound_3226(ix);
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return fm_effect_34_trill_start(channel);
 	z80_block(17);
-	sound_2B73(ix, &bc, &carry);
+	fm_effect_warble(channel, &step, &carry);
 	z80_block(83);
-	t3 = 0xA00u - bc - carry;
-	carry = z80_carry_sub16(0xA00u, bc, carry);
-	hl = t3;
-	AS16(CHANNEL(ix)->unk_32) = hl;
-	hl = 0x400u;
-	return sound_2B90(bc, hl, ix, carry);
+	t1 = 0xA00u - step - carry;
+	carry = z80_carry_sub16(0xA00u, step, carry);
+	base_pitch = t1;
+	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+	pitch = 0x400u;
+	return fm_effect_set_pitch_minus(step, pitch, channel, carry);
 }
 
-uint32_t sound_329C(uint16_t ix)
+/* The second channel's part: 6 warbling notes from 32 passes, at 8 over the music's attenuation. */
+uint32_t fm_effect_34_warbles(uint16_t channel)
 {
-	uint8_t a = 0;
+	uint8_t length = 0;
 
 	z80_block(47);
-	unk_8456 = 6u;
-	unk_8457 = 8u;
-	a = 0x20u;
-	return sound_32A8(ix, a);
+	fm_effect_34_notes = 6u;
+	fm_effect_34_attenuation = 8u;
+	length = 0x20u;
+	return fm_effect_34_warble_note(channel, length);
 }
 
-uint32_t sound_32A8(uint16_t ix, uint8_t a)
+/* A low note keyed on for the passes it is given, at the music's attenuation plus the note's. */
+uint32_t fm_effect_34_warble_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(53);
-	unk_8454 = a;
-	unk_8455 = a;
+	fm_effect_34_timer = length;
+	fm_effect_34_length = length;
 	voice = 0x3283u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x1100u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1100u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(77);
-	unk_8452 = 0x700u;
-	a_2 = music_attenuation + unk_8457;
-	carry = set_fm_volume(ix, a_2);
+	fm_effect_34_pitch = 0x700u;
+	attenuation = music_attenuation + fm_effect_34_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x32D4u;
-	set_channel_handler(hl, ix);
+	handler = 0x32D4u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_32D4(uint16_t ix)
+/* Two semitones up and four down in turn (wrapping within the lowest 32 semitones); then the next note,
+   0 to 7 passes longer by the random bytes' place and 4 to 11 over the music's attenuation; after 6
+   notes, again from the first; it stops when its flag is cleared. */
+uint32_t fm_effect_34_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0, b = 0, bc = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t extra = 0, length = 0, step = 0, step_high = 0;
+	uint16_t ignored16 = 0, pitch = 0, random_place = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(27);
-	if (unk_8458 == 0u)
-		return stop_channel(ix);
+	if (fm_effect_34_on == 0u)
+		return stop_channel(channel);
 	z80_block(31);
-	hl = unk_8454_ADDRESS;
-	t1 = unk_8454;
-	unk_8454 = t1 - 1u;
+	t1 = fm_effect_34_timer;
+	fm_effect_34_timer = t1 - 1u;
 	if (t1 == 1u)
 	{
 		z80_block(31);
-		t2 = unk_8456;
-		unk_8456 = t2 - 1u;
+		t2 = fm_effect_34_notes;
+		fm_effect_34_notes = t2 - 1u;
 		if (t2 == 1u)
-			return sound_329C(ix);
+			return fm_effect_34_warbles(channel);
 		z80_block(17);
-		hl = next_random_byte();
+		random_place = next_random_byte();
 		z80_block(66);
-		b = hl & 7u;
-		unk_8457 = 4u + b;
-		a = unk_8455 + b;
-		return sound_32A8(ix, a);
+		extra = random_place & 7u;
+		fm_effect_34_attenuation = 4u + extra;
+		length = fm_effect_34_length + extra;
+		return fm_effect_34_warble_note(channel, length);
 	}
 	z80_block(32);
-	bc = 0x80u;
-	b = 0u;
-	if (unk_8454 & 1u)
+	step = 0x80u;
+	step_high = 0u;
+	if (fm_effect_34_timer & 1u)
 	{
 		z80_block(10);
-		bc = 0u;
-		b = 0xFFu;
+		step = 0u;
+		step_high = 0xFFu;
 	}
 	z80_block(68);
-	hl = unk_8452 + (((uint32_t)b << 8) | (bc & 0xFFu));
-	unk_8452 = hl;
-	hl = (hl & 0xFFu) | (((hl >> 8) & 7u) << 8);
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = fm_effect_34_pitch + (((uint32_t)step_high << 8) | (step & 0xFFu));
+	fm_effect_34_pitch = pitch;
+	pitch = (pitch & 0xFFu) | (((pitch >> 8) & 7u) << 8);
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_35(uint16_t ix)
+/* Stops effect 34 (clears its flag); its own channel stops at once. */
+uint32_t fm_effect_35(uint16_t channel)
 {
 	z80_block(27);
-	unk_8458 = 0u;
-	return stop_channel(ix);
+	fm_effect_34_on = 0u;
+	return stop_channel(channel);
 }
 
-uint32_t fm_effect_36(uint16_t ix)
+/* A note that rises a semitone a pass, is held, then falls. */
+uint32_t fm_effect_36(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x331Du;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x700u;
-	unk_845B = 0x700u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x700u;
+	fm_effect_36_pitch = 0x700u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(24);
-	a = 0xAu;
-	carry = set_fm_volume(ix, a);
+	attenuation = 0xAu;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x3353u;
-	set_channel_handler(hl, ix);
+	handler = 0x3353u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3353(uint16_t ix)
+/* Rises for 24 passes; then the high note, keyed on again. */
+uint32_t fm_effect_36_rise(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(58);
-	hl = unk_845B + 0x40u;
-	if (hl >> 8 != 0xDu)
+	pitch = fm_effect_36_pitch + 0x40u;
+	if (pitch >> 8 != 0xDu)
 	{
 		z80_block(26);
-		unk_845B = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		fm_effect_36_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(27);
 	voice = 0x331Du;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0xD10u;
-	unk_845B = 0xD10u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0xD10u;
+	fm_effect_36_pitch = 0xD10u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(44);
-	unk_8459 = 0xA0u;
-	a = 0xAu;
-	carry = set_fm_volume(ix, a);
+	fm_effect_36_timer = 0xA0u;
+	attenuation = 0xAu;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x3388u;
-	set_channel_handler(hl, ix);
+	handler = 0x3388u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-void sound_3388(uint16_t ix)
+/* Holds it 160 passes. */
+void fm_effect_36_hold(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 	uint8_t t1 = 0;
 
 	z80_block(26);
-	hl = unk_8459_ADDRESS;
-	t1 = unk_8459;
-	unk_8459 = t1 - 1u;
+	t1 = fm_effect_36_timer;
+	fm_effect_36_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(30);
-	unk_8459 = 0x30u;
-	hl = 0x3395u;
-	set_channel_handler(hl, ix);
+	fm_effect_36_timer = 0x30u;
+	handler = 0x3395u;
+	set_channel_handler(handler, channel);
 }
 
-uint32_t sound_3395(uint16_t ix)
+/* A semitone down each pass for 48 passes, then the channel stops. */
+uint32_t fm_effect_36_fall(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
-	t1 = unk_8459;
-	unk_8459 = t1 - 1u;
+	t1 = fm_effect_36_timer;
+	fm_effect_36_timer = t1 - 1u;
 	if (t1 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(63);
-	hl = unk_845B - 0x40u;
-	unk_845B = hl;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = fm_effect_36_pitch - 0x40u;
+	fm_effect_36_pitch = pitch;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	return carry;
 }
 
-uint32_t fm_effect_38(uint16_t ix)
+/* A fast trill between two notes, swelling then fading: 48 steps of 12 passes. */
+uint32_t fm_effect_38(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(47);
-	unk_8460 = 0x30u;
+	fm_effect_38_steps = 0x30u;
 	voice = 0x33A9u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = 0x600u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x600u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(57);
-	unk_845E = 0xCu;
-	a = 0x12u;
-	unk_845F = 0x12u;
-	carry = set_fm_volume(ix, a);
+	fm_effect_38_timer = 0xCu;
+	attenuation = 0x12u;
+	fm_effect_38_attenuation = 0x12u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x33E9u;
-	set_channel_handler(hl, ix);
+	handler = 0x33E9u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_33E9(uint16_t ix)
+/* The two notes in turn, a pass each; every 12 passes 1 louder for the first 7 steps, then 1 quieter. */
+uint32_t fm_effect_38_trill(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
+	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_845E_ADDRESS;
-	t1 = unk_845E;
-	unk_845E = t1 - 1u;
+	t1 = fm_effect_38_timer;
+	fm_effect_38_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(32);
-		t2 = unk_845E;
-		hl = 0x600u;
-		if ((t2 & 1u) != 0u)
+		pitch = 0x600u;
+		if ((fm_effect_38_timer & 1u) != 0u)
 		{
-			set_fm_pitch(hl, ix, &ignored16, &carry);
+			set_fm_pitch(pitch, channel, &ignored16, &carry);
 			return carry;
 		}
 		z80_block(20);
-		hl = pcm_instruments_ADDRESS - 0x2u;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = pcm_instruments_ADDRESS - 0x2u;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(41);
-	unk_845E = 0xCu;
-	hl = unk_8460_ADDRESS;
-	t3 = unk_8460;
-	unk_8460 = t3 - 1u;
-	if (t3 == 1u)
-		return stop_channel(ix);
+	fm_effect_38_timer = 0xCu;
+	t2 = fm_effect_38_steps;
+	fm_effect_38_steps = t2 - 1u;
+	if (t2 == 1u)
+		return stop_channel(channel);
 	z80_block(37);
-	t4 = unk_8460;
-	a = unk_845F;
-	if (t4 < 0x29u)
+	t3 = fm_effect_38_steps;
+	attenuation = fm_effect_38_attenuation;
+	if (t3 < 0x29u)
 	{
 		z80_block(7);
-		a += 2u;
+		attenuation += 2u;
 	}
 	z80_block(27);
-	a--;
-	unk_845F = a;
-	return set_fm_volume(ix, a);
+	attenuation--;
+	fm_effect_38_attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }
 
-uint32_t fm_effect_39(uint16_t ix)
+/* Six notes climbing two semitones a step, plus 2 to 14 more by the random bytes' place, each 6 quieter. */
+uint32_t fm_effect_39(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, voice = 0;
+	uint16_t pitch = 0, voice = 0;
 
 	z80_block(67);
-	unk_8462 = 2u;
-	unk_8465 = 6u;
+	fm_effect_39_attenuation = 2u;
+	fm_effect_39_notes = 6u;
 	voice = 0x3419u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(26);
-	hl = 0xA00u;
-	unk_8463 = 0xA00u;
-	return sound_3448(hl, ix);
+	pitch = 0xA00u;
+	fm_effect_39_pitch = 0xA00u;
+	return fm_effect_39_note(pitch, channel);
 }
 
-uint32_t sound_3448(uint16_t hl, uint16_t ix)
+/* A note at the pitch it is given, keyed on for 16 passes. */
+uint32_t fm_effect_39_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl_2 = 0, ignored16 = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0;
 
 	z80_block(17);
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(50);
-	unk_8461 = 0x10u;
-	a = unk_8462;
-	carry = set_fm_volume(ix, a);
+	fm_effect_39_timer = 0x10u;
+	attenuation = fm_effect_39_attenuation;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x345Fu;
-	set_channel_handler(hl_2, ix);
+	handler = 0x345Fu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_345F(uint16_t ix, uint32_t carry)
+/* After the 16 passes the next note: two semitones higher plus 2 to 14 more by the random bytes' place,
+   6 quieter. */
+uint32_t fm_effect_39_next_note(uint16_t channel, uint32_t carry)
 {
-	uint8_t d = 0, e = 0;
-	uint16_t hl = 0;
+	uint8_t place_low = 0, place_page = 0;
+	uint16_t pitch = 0, random_place = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(26);
-	t1 = unk_8461;
-	unk_8461 = t1 - 1u;
+	t1 = fm_effect_39_timer;
+	fm_effect_39_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(31);
-	t2 = unk_8465;
-	unk_8465 = t2 - 1u;
+	t2 = fm_effect_39_notes;
+	fm_effect_39_notes = t2 - 1u;
 	if (t2 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(50);
-	unk_8462 += 6u;
-	hl = next_random_byte();
+	fm_effect_39_attenuation += 6u;
+	random_place = next_random_byte();
 	z80_block(101);
-	d = (uint8_t)hl;
-	e = (uint8_t)(hl >> 8);
-	hl = unk_8463 + 0x80u;
-	unk_8463 = hl;
-	hl += e | ((d & 3u) << 8);
-	return sound_3448(hl, ix);
+	place_low = (uint8_t)random_place;
+	place_page = (uint8_t)(random_place >> 8);
+	pitch = fm_effect_39_pitch + 0x80u;
+	fm_effect_39_pitch = pitch;
+	pitch += place_page | ((place_low & 3u) << 8);
+	return fm_effect_39_note(pitch, channel);
 }
 
-uint32_t fm_effect_3a(uint16_t ix)
+/* PCM effect 8C and a warbling note that steps up 8 times getting louder, holds two steps, then sinks
+   slowly as it fades: 74 steps. */
+uint32_t fm_effect_3a(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t pitch = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x8Cu;
-	start_pcm_effect(a);
+	saved_channel = channel;
+	command = 0x8Cu;
+	start_pcm_effect(command);
 	z80_block(88);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_28 = 0x4Au;
-	CHANNEL(channel)->unk_20 = 5u;
-	CHANNEL(channel)->unk_2C = 0xAu;
-	hl = 0x500u;
-	return sound_34A5(hl, channel);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.count = 0x4Au;
+	CHANNEL(channel)->fm_effect.timer = 5u;
+	CHANNEL(channel)->fm_effect.attenuation = 0xAu;
+	pitch = 0x500u;
+	return fm_effect_3a_note(pitch, channel);
 }
 
-uint32_t sound_34A5(uint16_t hl, uint16_t ix)
+/* Keys the warbling note on at the pitch it is given. */
+uint32_t fm_effect_3a_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl_2 = 0, ignored16 = 0, voice = 0;
+	uint16_t base_pitch = 0, handler = 0, ignored16 = 0, voice = 0;
 
 	z80_block(17);
-	sound_2442(hl, ix);
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(27);
 	voice = 0x1EEEu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(55);
-	hl_2 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u));
-	set_fm_pitch(hl_2, ix, &ignored16, &carry);
+	base_pitch = CHANNEL(channel)->fm_effect.base_pitch;
+	set_fm_pitch(base_pitch, channel, &ignored16, &carry);
 	z80_block(17);
-	carry = set_fm_volume_from_record(ix);
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x34C3u;
-	set_channel_handler(hl_2, ix);
+	handler = 0x34C3u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_34C3(uint16_t ix)
+/* Warbles; each step the note again: a semitone up and 1 louder for the first 8 (5 passes each), the
+   same for the next 2, then a quarter of a semitone down and 1 or 2 quieter (12 passes each). */
+uint32_t fm_effect_3a_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t timer = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0;
+	uint8_t timer_2 = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer_2 = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer_2 - 1u;
+	if (timer_2 != 1u)
 	{
-		sound_2B73(ix, &ignored16, &carry);
+		fm_effect_warble(channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(36);
-	if (CHANNEL(ix)->unk_28 >= 0x42u)
+	if (CHANNEL(channel)->fm_effect.count >= 0x42u)
 	{
 		z80_block(50);
-		CHANNEL(ix)->unk_2C--;
-		bc = 0x40u;
-		a = 5u;
+		CHANNEL(channel)->fm_effect.attenuation--;
+		step = 0x40u;
+		timer = 5u;
 		z80_block(78);
-		CHANNEL(ix)->unk_20 = a;
-		hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + bc;
-		return sound_34A5(hl, ix);
+		CHANNEL(channel)->fm_effect.timer = timer;
+		pitch = CHANNEL(channel)->fm_effect.base_pitch + step;
+		return fm_effect_3a_note(pitch, channel);
 	}
 	z80_block(40);
-	bc = 0u;
-	if (((CHANNEL(ix)->unk_28 >> 6) & 1u) != 0u)
+	step = 0u;
+	if (((CHANNEL(channel)->fm_effect.count >> 6) & 1u) != 0u)
 	{
 		z80_block(7);
-		a = 0xCu;
+		timer = 0xCu;
 		z80_block(78);
-		CHANNEL(ix)->unk_20 = a;
-		hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + bc;
-		return sound_34A5(hl, ix);
+		CHANNEL(channel)->fm_effect.timer = timer;
+		pitch = CHANNEL(channel)->fm_effect.base_pitch + step;
+		return fm_effect_3a_note(pitch, channel);
 	}
 	z80_block(30);
-	if ((CHANNEL(ix)->unk_28 & 1u) == 0u)
+	if ((CHANNEL(channel)->fm_effect.count & 1u) == 0u)
 	{
 		z80_block(23);
-		CHANNEL(ix)->unk_2C++;
+		CHANNEL(channel)->fm_effect.attenuation++;
 	}
 	z80_block(33);
-	CHANNEL(ix)->unk_2C++;
-	bc = 0xFFF0u;
+	CHANNEL(channel)->fm_effect.attenuation++;
+	step = 0xFFF0u;
 	z80_block(7);
-	a = 0xCu;
+	timer = 0xCu;
 	z80_block(78);
-	CHANNEL(ix)->unk_20 = a;
-	hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + bc;
-	return sound_34A5(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = timer;
+	pitch = CHANNEL(channel)->fm_effect.base_pitch + step;
+	return fm_effect_3a_note(pitch, channel);
 }
 
-uint32_t fm_effect_3b(uint16_t ix)
+/* Four notes that swell and warble, each four semitones higher, quieter and longer. */
+uint32_t fm_effect_3b(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
+	uint8_t length = 0;
 	uint16_t voice = 0;
 
 	z80_block(113);
-	CHANNEL(ix)->unk_28 = 4u;
-	CHANNEL(ix)->unk_2C = 0x16u;
-	CHANNEL(ix)->unk_32 = 0u;
-	CHANNEL(ix)->unk_33 = 5u;
+	CHANNEL(channel)->fm_effect.count = 4u;
+	CHANNEL(channel)->fm_effect.attenuation = 0x16u;
+	AS8(CHANNEL(channel)->fm_effect.base_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 5u;
 	voice = 0x350Bu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(7);
-	a = 0x24u;
-	return sound_353D(ix, a);
+	length = 0x24u;
+	return fm_effect_3b_note(channel, length);
 }
 
-uint32_t sound_353D(uint16_t ix, uint8_t a)
+/* The note from the base pitch, keyed on for the passes it is given. */
+uint32_t fm_effect_3b_note(uint16_t channel, uint8_t length)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(55);
-	CHANNEL(ix)->unk_20 = a;
-	CHANNEL(ix)->unk_21 = a;
-	carry = sound_2B95(ix);
+	CHANNEL(channel)->fm_effect.timer = length;
+	CHANNEL(channel)->fm_effect.period = length;
+	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	hl = 0x354Cu;
-	set_channel_handler(hl, ix);
+	handler = 0x354Cu;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_354C(uint16_t ix)
+/* Two louder each pass for the first 2 passes, then a warble; then the next note four semitones up, 26
+   quieter and 3 passes longer. */
+uint32_t fm_effect_3b_swell_and_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint8_t attenuation = 0, length = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_block(36);
-		carry = CHANNEL(ix)->unk_20 < 0x22u;
-		return sound_2BA4(ix, carry);
+		carry = CHANNEL(channel)->fm_effect.timer < 0x22u;
+		return fm_effect_swell_or_warble(channel, carry);
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(17);
-	a = sound_2BB2(ix);
+	attenuation = fm_effect_raise_base_pitch(channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_2C = a + 0x1Au;
-	a = CHANNEL(ix)->unk_21 + 3u;
-	return sound_353D(ix, a);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation + 0x1Au;
+	length = CHANNEL(channel)->fm_effect.period + 3u;
+	return fm_effect_3b_note(channel, length);
 }
 
-uint32_t fm_effect_3c(uint16_t ix)
+/* PCM effect 83 and a warbling note that steps up 5 times getting louder, then sinks as it fades: 32
+   steps. */
+uint32_t fm_effect_3c(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t channel = 0, hl = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t pitch = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x83u;
-	start_pcm_effect(a);
+	saved_channel = channel;
+	command = 0x83u;
+	start_pcm_effect(command);
 	z80_block(62);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_28 = 0x20u;
-	CHANNEL(channel)->unk_2C = 0xCu;
-	hl = 0x500u;
-	return sound_3584(hl, channel);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect.count = 0x20u;
+	CHANNEL(channel)->fm_effect.attenuation = 0xCu;
+	pitch = 0x500u;
+	return fm_effect_3c_note(pitch, channel);
 }
 
-uint32_t sound_3584(uint16_t hl, uint16_t ix)
+/* Keys the warbling note on at the pitch it is given, for 12 passes. */
+uint32_t fm_effect_3c_note(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t hl_2 = 0, ignored16 = 0, voice = 0;
+	uint16_t base_pitch = 0, handler = 0, ignored16 = 0, voice = 0;
 
 	z80_block(17);
-	sound_2442(hl, ix);
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(27);
 	voice = 0x1EEEu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(55);
-	hl_2 = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u));
-	set_fm_pitch(hl_2, ix, &ignored16, &carry);
+	base_pitch = CHANNEL(channel)->fm_effect.base_pitch;
+	set_fm_pitch(base_pitch, channel, &ignored16, &carry);
 	z80_block(36);
-	CHANNEL(ix)->unk_20 = 0xCu;
-	carry = set_fm_volume_from_record(ix);
+	CHANNEL(channel)->fm_effect.timer = 0xCu;
+	carry = set_fm_volume_from_record(channel);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl_2 = 0x35A6u;
-	set_channel_handler(hl_2, ix);
+	handler = 0x35A6u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_35A6(uint16_t ix)
+/* Warbles; each step the note again: two semitones up and 1 louder for the first 5, then a little under
+   two semitones down and 1 quieter. */
+uint32_t fm_effect_3c_warble(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint16_t bc = 0, hl = 0, ignored16 = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint16_t ignored16 = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
-		sound_2B73(ix, &ignored16, &carry);
+		fm_effect_warble(channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(33);
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
-		return stop_channel(ix);
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
+		return stop_channel(channel);
 	z80_block(36);
-	if (CHANNEL(ix)->unk_28 < 0x1Bu)
+	if (CHANNEL(channel)->fm_effect.count < 0x1Bu)
 	{
 		z80_block(33);
-		CHANNEL(ix)->unk_2C++;
-		bc = 0xFF90u;
+		CHANNEL(channel)->fm_effect.attenuation++;
+		step = 0xFF90u;
 	}
 	else
 	{
 		z80_block(43);
-		CHANNEL(ix)->unk_2C--;
-		bc = 0x80u;
+		CHANNEL(channel)->fm_effect.attenuation--;
+		step = 0x80u;
 	}
 	z80_block(59);
-	hl = (CHANNEL(ix)->unk_32 | ((uint32_t)CHANNEL(ix)->unk_33 << 8u)) + bc;
-	return sound_3584(hl, ix);
+	pitch = CHANNEL(channel)->fm_effect.base_pitch + step;
+	return fm_effect_3c_note(pitch, channel);
 }
 
-uint32_t fm_effect_3d(uint16_t ix)
+/* A slow rise on three channels: here at once, and on the FM effects' channels 6 and 7 after 128 and 255
+   passes, quieter. */
+uint32_t fm_effect_3d(uint16_t channel)
 {
 	z80_block(137);
-	unk_8342 = 0x35FDu;
-	unk_8382 = 0x3604u;
-	unk_8341 = 0x22u;
-	unk_8381 = 0x22u;
-	unk_834F = 0x15u;
-	unk_838F = 0x15u;
-	CHANNEL(ix)->unk_2C = 8u;
-	return sound_35F3(ix);
+	CHANNEL(FM_EFFECT_6)->handler = 0x35FDu;
+	CHANNEL(FM_EFFECT_7)->handler = 0x3604u;
+	CHANNEL(FM_EFFECT_6)->sound = 0x22u;
+	CHANNEL(FM_EFFECT_7)->sound = 0x22u;
+	CHANNEL(FM_EFFECT_6)->priority = 0x15u;
+	CHANNEL(FM_EFFECT_7)->priority = 0x15u;
+	CHANNEL(channel)->fm_effect.attenuation = 8u;
+	return fm_effect_3d_rise(channel);
 }
 
-uint32_t sound_35F3(uint16_t ix)
+/* The slow rise: 320 passes, a quarter of a semitone a pass. */
+uint32_t fm_effect_3d_rise(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t length = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_34 = 0x10u;
-	hl = 0x140u;
-	return sound_2175(hl, ix);
+	CHANNEL(channel)->fm_effect.rise_step = 0x10u;
+	length = 0x140u;
+	return fm_effect_long_rise_start(length, channel);
 }
 
-uint32_t sound_35FD(uint16_t ix)
+/* The part on channel 6: the rise after 128 passes, at attenuation 20. */
+uint32_t fm_effect_3d_on_channel_6(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0;
+	uint8_t wait = 0;
+	uint16_t attenuation = 0;
 
 	z80_block(24);
-	a = 0x80u;
-	bc = 0x1400u;
-	return sound_3608(bc, ix, a);
+	wait = 0x80u;
+	attenuation = 0x1400u;
+	return fm_effect_3d_delay(attenuation, channel, wait);
 }
 
-uint32_t sound_3604(uint16_t ix)
+/* The part on channel 7: the rise after 255 passes, at attenuation 32. */
+uint32_t fm_effect_3d_on_channel_7(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0;
+	uint8_t wait = 0;
+	uint16_t attenuation = 0;
 
 	z80_block(14);
-	a = 0xFFu;
-	bc = 0x2000u;
-	return sound_3608(bc, ix, a);
+	wait = 0xFFu;
+	attenuation = 0x2000u;
+	return fm_effect_3d_delay(attenuation, channel, wait);
 }
 
-uint32_t sound_3608(uint16_t bc, uint16_t ix, uint8_t a)
+/* Keys the channel off and waits the passes it is given, then plays at the attenuation it is given. */
+uint32_t fm_effect_3d_delay(uint16_t attenuation, uint16_t channel, uint8_t wait)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(55);
-	CHANNEL(ix)->unk_20 = a;
-	CHANNEL(ix)->unk_2C = bc >> 8;
-	fm_key_off(ix);
+	CHANNEL(channel)->fm_effect.timer = wait;
+	CHANNEL(channel)->fm_effect.attenuation = attenuation >> 8;
+	fm_key_off(channel);
 	z80_block(17);
-	carry = fm_fast_release(ix);
+	carry = fm_fast_release(channel);
 	z80_block(20);
-	hl = 0x361Au;
-	set_channel_handler(hl, ix);
+	handler = 0x361Au;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_361A(uint16_t ix, uint32_t carry)
+/* Counts the wait down; then the rise. */
+uint32_t fm_effect_3d_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(10);
-	return sound_35F3(ix);
+	return fm_effect_3d_rise(channel);
 }
 
-uint32_t fm_effect_3e(uint16_t ix)
+/* Starts effect 3F and plays its falling note and trills 16 passes later, here and on the channel the FM
+   effects take from the music's channel 6. */
+uint32_t fm_effect_3e(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(105);
-	unk_8342 = 0x363Au;
-	unk_8341 = 0x3Eu;
-	unk_834F = 0x15u;
-	saved_ix = ix;
-	a = 0x3Fu;
-	carry = start_fm_effect(a);
+	CHANNEL(FM_EFFECT_6)->handler = 0x363Au;
+	CHANNEL(FM_EFFECT_6)->sound = 0x3Eu;
+	CHANNEL(FM_EFFECT_6)->priority = 0x15u;
+	saved_channel = channel;
+	command = 0x3Fu;
+	carry = start_fm_effect(command);
 	z80_block(14);
-	ix_2 = saved_ix;
-	sound_363A(ix_2);
+	channel = saved_channel;
+	fm_effect_3e_delay(channel);
 	return carry;
 }
 
-void sound_363A(uint16_t ix)
+/* Waits 16 passes. */
+void fm_effect_3e_delay(uint16_t channel)
 {
-	uint16_t hl = 0;
+	uint16_t handler = 0;
 
 	z80_block(39);
-	CHANNEL(ix)->unk_20 = 0x10u;
-	hl = 0x3644u;
-	set_channel_handler(hl, ix);
+	CHANNEL(channel)->fm_effect.timer = 0x10u;
+	handler = 0x3644u;
+	set_channel_handler(handler, channel);
 }
 
-uint32_t sound_3644(uint16_t ix, uint32_t carry)
+/* Then effect 3F's falling note and trills. */
+uint32_t fm_effect_3e_wait(uint16_t channel, uint32_t carry)
 {
-	uint8_t t1 = 0;
+	uint8_t timer = 0;
 
 	z80_block(28);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(10);
-	return sound_366D(ix);
+	return fm_effect_fall_and_trills_start(channel);
 }
 
-uint32_t fm_effect_3f(uint16_t ix)
+/* PCM effect 85 and a falling note, then 16 trills that fade. */
+uint32_t fm_effect_3f(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint16_t ix_2 = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x85u;
-	start_pcm_effect(a);
+	saved_channel = channel;
+	command = 0x85u;
+	start_pcm_effect(command);
 	z80_block(14);
-	ix_2 = saved_ix;
-	return sound_366D(ix_2);
+	channel = saved_channel;
+	return fm_effect_fall_and_trills_start(channel);
 }
 
-uint32_t sound_366D(uint16_t ix)
+/* A note keyed on high at full, which falls for 22 passes. */
+uint32_t fm_effect_fall_and_trills_start(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x364Bu;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(27);
-	hl = pcm_instruments_ADDRESS - 0x2u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = pcm_instruments_ADDRESS - 0x2u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(27);
-	hl = 0x400u;
-	sound_2442(hl, ix);
+	pitch = 0x400u;
+	fm_effect_keep_pitch(pitch, channel);
 	z80_block(62);
-	CHANNEL(ix)->unk_20 = 0x16u;
-	a = 0u;
-	CHANNEL(ix)->unk_2E = 0u;
-	carry = set_fm_volume(ix, a);
+	CHANNEL(channel)->fm_effect.timer = 0x16u;
+	attenuation = 0u;
+	CHANNEL(channel)->fm_effect.base_attenuation = 0u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x3694u;
-	set_channel_handler(hl, ix);
+	handler = 0x3694u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3694(uint16_t ix)
+/* The fall, two semitones a pass, dying away when 6 passes are left; then the trills. */
+uint32_t fm_effect_fall_and_trills_fall(uint16_t channel)
 {
-	uint8_t a = 0;
-	uint8_t t1 = 0;
+	uint8_t attenuation = 0, die_away_pass = 0;
+	uint8_t timer = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 == 1u)
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer == 1u)
 	{
 		z80_block(26);
-		CHANNEL(ix)->unk_29 = 0x10u;
-		a = 0u;
-		return sound_36A5(ix, a);
+		CHANNEL(channel)->fm_effect.rounds = 0x10u;
+		attenuation = 0u;
+		return fm_effect_fall_and_trills_round(channel, attenuation);
 	}
 	z80_block(17);
-	a = 6u;
-	return sound_2405(ix, a);
+	die_away_pass = 6u;
+	return fm_effect_fall(channel, die_away_pass);
 }
 
-uint32_t sound_36A5(uint16_t ix, uint8_t a)
+/* A trill of 5 steps at the attenuation it is given. */
+uint32_t fm_effect_fall_and_trills_round(uint16_t channel, uint8_t attenuation)
 {
 	uint32_t carry = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0;
 
 	z80_block(84);
-	CHANNEL(ix)->unk_2C = a;
-	CHANNEL(ix)->unk_20 = 6u;
-	CHANNEL(ix)->unk_28 = 5u;
-	hl = 0xC00u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	CHANNEL(channel)->fm_effect.attenuation = attenuation;
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	CHANNEL(channel)->fm_effect.count = 5u;
+	pitch = 0xC00u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(65);
-	CHANNEL(ix)->unk_30 = 0u;
-	CHANNEL(ix)->unk_31 = 0xAu;
-	carry = set_fm_volume_from_record(ix);
+	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
+	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	hl = 0x36C8u;
-	set_channel_handler(hl, ix);
+	handler = 0x36C8u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_36C8(uint16_t ix, uint32_t carry)
+/* The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill,
+   10 quieter (the round's bit 3 it tests first decides nothing: the add after it sets the flag the jump
+   reads). */
+uint32_t fm_effect_fall_and_trills(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t bc = 0, hl = 0;
-	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
-	uint16_t t5 = 0;
+	uint8_t attenuation = 0;
+	uint16_t base_pitch = 0, pitch = 0, step = 0;
+	uint8_t timer = 0, count = 0, rounds = 0, t1 = 0;
+	uint16_t t2 = 0;
 
 	z80_block(33);
-	t1 = CHANNEL(ix)->unk_20;
-	CHANNEL(ix)->unk_20 = t1 - 1u;
-	if (t1 != 1u)
-		return sound_2419(ix);
+	timer = CHANNEL(channel)->fm_effect.timer;
+	CHANNEL(channel)->fm_effect.timer = timer - 1u;
+	if (timer != 1u)
+		return fm_effect_trill_slide_down(channel);
 	z80_block(52);
-	CHANNEL(ix)->unk_20 = 6u;
-	t2 = CHANNEL(ix)->unk_28;
-	CHANNEL(ix)->unk_28 = t2 - 1u;
-	if (t2 == 1u)
+	CHANNEL(channel)->fm_effect.timer = 6u;
+	count = CHANNEL(channel)->fm_effect.count;
+	CHANNEL(channel)->fm_effect.count = count - 1u;
+	if (count == 1u)
 	{
 		z80_block(33);
-		t3 = CHANNEL(ix)->unk_29;
-		CHANNEL(ix)->unk_29 = t3 - 1u;
-		if (t3 == 1u)
-			return stop_channel(ix);
+		rounds = CHANNEL(channel)->fm_effect.rounds;
+		CHANNEL(channel)->fm_effect.rounds = rounds - 1u;
+		if (rounds == 1u)
+			return stop_channel(channel);
 		z80_block(56);
-		t4 = CHANNEL(ix)->unk_2C + 3u;
-		a = t4;
-		if (t4 == 0u)
-			return sound_36A5(ix, a);
+		t1 = CHANNEL(channel)->fm_effect.attenuation + 3u;
+		attenuation = t1;
+		if (t1 == 0u)
+			return fm_effect_fall_and_trills_round(channel, attenuation);
 		z80_block(17);
-		a += 7u;
-		return sound_36A5(ix, a);
+		attenuation += 7u;
+		return fm_effect_fall_and_trills_round(channel, attenuation);
 	}
 	z80_block(93);
-	bc = 0x200u;
-	t5 = 0x800u - carry;
+	step = 0x200u;
+	t2 = 0x800u - carry;
 	carry = z80_carry_sub16(0xA00u, 0x200u, carry);
-	hl = t5;
-	AS16(CHANNEL(ix)->unk_32) = hl;
-	hl = 0x400u;
-	return sound_2B90(bc, hl, ix, carry);
+	base_pitch = t2;
+	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
+	pitch = 0x400u;
+	return fm_effect_set_pitch_minus(step, pitch, channel, carry);
 }
 
-uint32_t fm_effect_40(uint16_t ix)
+/* Starts effect 2C and plays two dives from a lower start, then 19 climbing notes. */
+uint32_t fm_effect_40(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t channel = 0;
-	uint16_t saved_ix = 0;
+	uint8_t command = 0, dives = 0;
+	uint16_t saved_channel = 0;
 
 	z80_block(39);
-	saved_ix = ix;
-	a = 0x2Cu;
-	carry = start_fm_effect(a);
+	saved_channel = channel;
+	command = 0x2Cu;
+	carry = start_fm_effect(command);
 	z80_block(136);
-	channel = saved_ix;
-	CHANNEL(channel)->unk_21 = 0x10u;
-	CHANNEL(channel)->unk_22 = 0x14u;
-	CHANNEL(channel)->unk_29 = 0x13u;
-	CHANNEL(channel)->unk_34 = 0u;
-	CHANNEL(channel)->unk_35 = 0xCu;
-	a = 2u;
-	return sound_2DD6(channel, a);
+	channel = saved_channel;
+	CHANNEL(channel)->fm_effect_40.period = 0x10u;
+	CHANNEL(channel)->fm_effect_40.dive_period = 0x14u;
+	CHANNEL(channel)->fm_effect_40.climb_notes = 0x13u;
+	AS8(CHANNEL(channel)->fm_effect_40.start_pitch) = 0u;
+	AT8(CHANNEL(channel)->fm_effect_40.start_pitch, 1) = 0xCu;
+	dives = 2u;
+	return fm_effect_dive_times(channel, dives);
 }
 
-uint32_t fm_effect_41(uint16_t ix)
+/* A long rise from a high note, four semitones a pass, quieter step by step, 20 times. */
+uint32_t fm_effect_41(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0, voice = 0;
+	uint8_t attenuation = 0;
+	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(27);
 	voice = 0x3726u;
-	carry = load_fm_voice(voice, ix);
+	carry = load_fm_voice(voice, channel);
 	z80_block(43);
-	hl = 0x1200u;
-	unk_8466 = 0x1200u;
-	set_fm_pitch(hl, ix, &ignored16, &carry);
+	pitch = 0x1200u;
+	fm_effect_41_pitch = 0x1200u;
+	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(89);
-	unk_8468 = 8u;
-	unk_8469 = 4u;
-	unk_846A = 0x14u;
-	a = 4u;
-	unk_846B = 4u;
-	carry = set_fm_volume(ix, a);
+	fm_effect_41_timer = 8u;
+	fm_effect_41_steps = 4u;
+	fm_effect_41_rounds = 0x14u;
+	attenuation = 4u;
+	fm_effect_41_attenuation = 4u;
+	carry = set_fm_volume(channel, attenuation);
 	z80_block(17);
-	carry = fm_key_on(ix);
+	carry = fm_key_on(channel);
 	z80_block(20);
-	hl = 0x3769u;
-	set_channel_handler(hl, ix);
+	handler = 0x3769u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t sound_3769(uint16_t ix, uint32_t carry)
+/* Four semitones up each pass (two passes of every three after the first 8); every 12 passes 2 quieter;
+   it stops the twentieth time. */
+uint32_t fm_effect_41_rise(uint16_t channel, uint32_t carry)
 {
-	uint8_t a = 0;
-	uint16_t hl = 0, ignored16 = 0;
+	uint8_t attenuation = 0;
+	uint16_t ignored16 = 0, pitch = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	z80_block(31);
-	hl = unk_8468_ADDRESS;
-	t1 = unk_8468;
-	unk_8468 = t1 - 1u;
+	t1 = fm_effect_41_timer;
+	fm_effect_41_timer = t1 - 1u;
 	if (t1 != 1u)
 	{
 		z80_block(63);
-		hl = unk_8466 + 0x100u;
-		unk_8466 = hl;
-		set_fm_pitch(hl, ix, &ignored16, &carry);
+		pitch = fm_effect_41_pitch + 0x100u;
+		fm_effect_41_pitch = pitch;
+		set_fm_pitch(pitch, channel, &ignored16, &carry);
 		return carry;
 	}
 	z80_block(32);
-	unk_8468 = 3u;
-	hl++;
-	t2 = unk_8469;
-	unk_8469 = t2 - 1u;
+	fm_effect_41_timer = 3u;
+	t2 = fm_effect_41_steps;
+	fm_effect_41_steps = t2 - 1u;
 	if (t2 != 1u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(37);
-	unk_8469 = 4u;
-	hl++;
-	t3 = unk_846A;
-	unk_846A = t3 - 1u;
+	fm_effect_41_steps = 4u;
+	t3 = fm_effect_41_rounds;
+	fm_effect_41_rounds = t3 - 1u;
 	if (t3 == 1u)
-		return stop_channel(ix);
+		return stop_channel(channel);
 	z80_block(43);
-	a = unk_846B + 2u;
-	unk_846B = a;
-	return set_fm_volume(ix, a);
+	attenuation = fm_effect_41_attenuation + 2u;
+	fm_effect_41_attenuation = attenuation;
+	return set_fm_volume(channel, attenuation);
 }

@@ -30,7 +30,14 @@
 #   takes in a register (the sound coverage takes every constant the analysis sees there as one);
 #   ADDRESS io NAME TYPE: a register of the board on the Z80's bus; ADDRESS var NAME[COUNT] TYPE: a variable in
 #   the RAM; ADDRESS table NAME TYPE: a table the C reads by name (the game loads the asset piece of that name);
-#   struct NAME SIZE, array STRUCT FIRST COUNT, field: records in the RAM.
+#   struct NAME SIZE, array STRUCT FIRST COUNT, field: records in the RAM; scoped STRUCT FAMILY OFFSET NAME TYPE:
+#   a field as the functions whose names start with FAMILY use it (the music's fields are the record's own, the
+#   FM and PCM effects name the same bytes their own way: fm_effect, pcm_effect and one family for an effect that
+#   uses a byte otherwise, which takes the rest from the family its name starts with); param FUNCTION REGISTER
+#   NAME [STRUCT[.FAMILY]]: what a function takes or hands back in a register; local FUNCTION WHERE REGISTER NAME:
+#   the variable the instructions at WHERE write (decompile_sound.py --variables lists the sites); comment
+#   FUNCTION TEXT: what the C says above it; constant FUNCTION VALUE NAME: a number by name in one function.
+#   Every name has its evidence above it: the instruction of build/sound/listing.s that shows it.
 
 # ======== the driver ========
 #
@@ -54,7 +61,7 @@
 00AE  func  title_music_timer           # the main loop's, while title_music_on (83C4): 250 passes 13 times, then stop_title_music
 00BD  code  start_speech                # commands A0-C3: the speech on the speech channel (8300) if its priority (speech_priorities) is not below the one playing; DF stops it
 00FE  code  stop_speech                 # command DF: sres 0 then 2 (the uPD7759 reset by bit 1, the title music off by bit 2), the speech channel idle
-0121  code  speech_fallback             # a speech whose priority is below the one playing: one of priority 12 plays PCM effect 87 instead, one of 13 PCM effect 8A
+0121  code  speech_fallback             # a speech whose priority is below the one playing: one of priority 12 plays PCM effect 87 instead; the test for 13 (0128 "cp $13") comes after 0123 "ld a,$87", so it compares the effect's number and PCM effect 8A never plays
 0178  func  speech_play                 # the speech channel's handler: the sample number to the uPD7759 (D000), a pulse on its start line (E000), the music's attenuation from speech_music_attenuation
 01A4  func  speech_wait                 # the speech channel's handler while it speaks: waits for the uPD7759's busy line (F000 bit 0), then frees the channel and the music's attenuation
 01C4  code  start_music                 # commands 60-78: the music's 9 channels (8040-8240) on music_track_start, song_header (83C0) the song's entry of songs less 2
@@ -164,10 +171,159 @@
 10AF  func  pcm_effect_countdown        # a PCM effect's handler: +30 ticks down, then stop_pcm_channel
 10C2  func  queue_pcm_effect_a          # PCM effect channel A (8280) on the handler HL as sound 88, unless music_pcm_hold (83DE)
 
+# ---- the driver's routines no line above names, and their parameters ----
+# 06F1-06F4 "or $0F; ld c,a; jp $0408": an operator's release register (B, from fm_fast_release 06D7 "ld b,$E0") with the release rate at its fastest
+06F1  func  fm_fast_release_operator
+# 07CD-07D8 "sla l; jp nc,$07DA; add a,(ix+$04); jp p,$07DA; ld a,$7F": an operator's total level (register B), the channel's attenuation added when the carrier mask's next bit says it is a carrier
+07CD  func  set_fm_operator_level
+# 071D-071E "ld a,h; and $1F": HL the pitch (the high byte the semitone, the low one its fraction), into registers 30 and 28
+param   set_fm_pitch hl pitch
+# 07A0 "ld (ix+$04),a": A the attenuation added to the carriers
+param   set_fm_volume a attenuation
+# 07CD "sla l": L the carriers' mask, a bit for each operator (fm_carrier_masks)
+param   set_fm_operator_level hl carriers
+# 07D2 "add a,(ix+$04)": A the operator's total level in the voice (set_fm_volume 07B0 "ld a,(ix+$06)")
+param   set_fm_operator_level a level
+# 07DA-07DB "ld c,a; jp $0408" with B from set_fm_volume (07B3 "ld b,$60"): the operator's register
+param   set_fm_operator_level bc fm_register
+# 06F1 "or $0F": A the operator's register E0 in the voice (fm_fast_release 06D4 "ld a,(ix+$0a)")
+param   fm_fast_release_operator a release
+# fm_fast_release 06D7 "ld b,$E0": B the operator's release register
+param   fm_fast_release_operator bc fm_register
+# 0414-0420 "ld a,b; ld ($C000),a ... ld a,c; ld ($C001),a": B the YM2151's register, C its value
+param   write_fm_register bc fm_write
+# 0408-040C "ld a,(ix+$00); add a,b; ld b,a": B the register of the channel's first one, C its value
+param   write_fm_channel_register bc fm_write
+# 0402-0405 "ld a,d; add a,e; ld b,a; jp $040D": D + E the register (silence 0369 "ld de,$3800", then "inc e" for each channel)
+param   write_fm_register_de de fm_register
+# silence 0367 "ld c,$00": C the value
+param   write_fm_register_de bc value
+# 07EA "ld a,c", 07EE "ld ($B002),de", 07F2 "ld ($B004),a": DE the sample's start in the K007232's ROM, C its bit 16
+param   set_pcm_start de start
+param   set_pcm_start bc bank
+# 0805 "ld ($B000),de" (080A "ld ($B006),de" for channel B): DE the K007232 channel's pitch
+param   set_pcm_pitch de pitch
+# 081B "sla c", 0823 "or c", 0827 "ld ($B00C),a": C the channel's volume (0-F), into its nibble of the volume port
+param   set_pcm_volume bc volume
+# 1094-109A "ld (ix+$30),l; ld (ix+$31),h; call $07E6" (set_pcm_start): HL the passes the sample plays, DE its start, C its bit 16
+param   play_pcm_sample hl ticks
+param   play_pcm_sample de start
+param   play_pcm_sample bc bank
+# 10C7-10CC "ld ($8282),hl; ld a,$88; ld ($8281),a": HL the handler the PCM effects' channel A runs
+param   queue_pcm_effect_a hl handler
+# sound_command 0056 "jp c,$026E" (start_fm_effect) with A the 68000's command (01-41: the effect's number, fm_effect_priorities and fm_effect_handlers by it)
+param   start_fm_effect a command
+# sound_command 0060 "jp c,$021B" (start_pcm_effect) with A the command (80-93)
+param   start_pcm_effect a command
+# sound_command 0065 "jp c,$00BD" (start_speech) with A the command (A0-C3 a speech, DF its stop)
+param   start_speech a command
+# 02D5-02DC "cp (ix+$0f); ret c; push ix; pop hl; ld a,(ix+$0f)": HL the channel of the lowest priority so far, A that priority
+param   lower_priority_channel hl lowest_channel
+param   lower_priority_channel a lowest_priority
+# 087C-0881 "ld hl,($83D3); ld a,(hl); inc l; ld ($83D3),hl": HL the place the next random byte is at (the FM effects that call it take HL, the place, not the byte in A)
+param   next_random_byte hl random_place
+# 0DB0-0DB8 "sla a; ld c,a; ld b,$00; ld hl,$37B5; add hl,bc": A the instrument, an entry of fm_voice_pointers
+param   load_instrument a instrument
+# 0E16-0E1D "ld c,a; ld b,$00; ld hl,$0CF8; add hl,bc; ld a,(hl)": A a length's code (1-D) of note_lengths
+param   add_note_length a length_code
+# 0E0E-0E14 "srl a" four times, then add_note_length: A a byte whose high nibble is a length's code
+param   add_note_length_high a length_codes
+# 0CDD-0CE1 "inc hl; ld (ix+$10),l; ld (ix+$11),h": HL the place of the note in the track; 0CE4-0CEB "ld a,d; srl a ..." (the length's code in D's high nibble, the note's pitch in E)
+param   next_note_length hl note_place
+param   next_note_length de note
+# read_transpose 0E3C, read_volume_offset 0E6B and read_track_address 0F5A "ld a,(de)": DE the place of the command's argument in the track
+param   read_transpose de argument
+param   read_volume_offset de argument
+param   read_track_address de argument
+# 0002 and 0437 "ld hl,$8000": the RAM's start (the test and the clearing go from there to 87FF), no channel's
+constant sound_reset 8000 RAM_START
+constant sound_main 8000 RAM_START
+# 0279 start_fm_effect "ld ($83C7),a" (fm_effect_priorities' for the effect), 02CA and 02E0 "ld a,($83C7)": the priority of the FM effect starting, while start_fm_effect looks for its channel
+83C7  var  new_effect_priority   u8
+# 0911-0915 music_track_tick "ld a,($83CC); or a; jp z,$0939": while set, each FM music channel works its attenuation out again; set when the music's attenuation changes (the fade's steps 0506, a speech 019B, PCM effects 82 and 8F 1133 and 1382), cleared after the music's channels each pass (0599)
+83CC  var  music_attenuation_changed  u8
+
+# ---- what the C says above each function of the driver ----
+comment sound_reset The reset: tests the RAM with four patterns and then the ROM; a failure beeps and starts again.
+comment check_rom Adds up the program ROM and compares the sum with the one it should have, then starts the program (the game's board puts its own in place of it: there is no ROM to add up).
+comment sound_command The interrupt: takes the 68000's command and starts what it asks for: a reset, silence, the music's fade-out, the title music, an FM effect, a song, a PCM effect or a speech.
+comment self_test_failed A failed test: a beep on the K007232, then the reset again.
+comment stop_title_music Stops the title music, and with it a speech (they share the line that resets the speech chip).
+comment title_music_timer Counts the main loop's passes while the title music plays: after 13 rounds of 250 it stops it.
+comment start_speech Starts a speech on the speech channel when its priority is not below the one speaking (the speech chip reset first); one of priority 12 that cannot plays PCM effect 87 instead (the test meant for 13 compares the effect's number, so it never holds). Command DF stops the speech.
+comment stop_speech Stops the speech: the speech chip reset, the title music off, the speech channel free, the music back to its attenuation.
+comment speech_play The speech channel's first pass: the speech's number to the speech chip and a pulse on its start line; the music turned down while it speaks.
+comment speech_wait Waits for the speech chip to finish; then frees the channel and turns the music back up.
+comment start_pcm_effect Starts a PCM effect on the PCM effects' channel B (effect 86 on channel A) when its priority is not below the one playing there; an effect that plays already starts again.
+comment start_fm_effect Starts an FM effect: one of priority 20 or more on the first FM effects' channel; effects 0A and 21 on the music's channel 6, and one that plays already on its own channel; the others on whichever of the three has the lowest priority, when theirs is not below it.
+comment lower_priority_channel Of the channel found so far and this one, the one with the lower priority.
+comment reset_sound Command 00 and the start: the speech, the music's fade and attenuation and the FM effects' flags cleared, then silence.
+comment silence Command FF: no LFO on the 8 FM channels and every channel stopped (the music's PCM channels only freed while an effect holds them).
+comment stop_fm_effect_channels Stops the three FM effects' channels at their next pass.
+comment stop_music_fm_6_7 Stops the music's FM channels 6 and 7 at their next pass.
+comment stop_music_fm_1_5 Stops the music's FM channels 1 to 5 at their next pass.
+comment free_music_fm_6_7 Frees the music's FM channels 6 and 7 at their next pass, without keying them off.
+comment stop_music_pcm_a Stops the music's PCM channel A at its next pass.
+comment free_music_pcm_a Frees the music's PCM channel A at its next pass, without stopping the sample.
+comment stop_pcm_effect_b Stops the PCM effects' channel B at its next pass.
+comment free_music_pcm_b Frees the music's PCM channel B at its next pass, without stopping the sample.
+comment stop_music_pcm_b Stops the music's PCM channel B at its next pass.
+comment stop_pcm_effect_a Stops the PCM effects' channel A at its next pass.
+comment free_speech_channel Frees the speech channel at its next pass.
+comment sound_main The program's start: clears the RAM, sets up the K007232 and the YM2151 (no LFO), the random numbers and each channel's chip channel, and starts the frame's timer.
+comment sound_main_loop A pass of the main loop: random bytes while it waits for the YM2151's timer, then a step of the music's fade-out, every channel's handler and the title music's timer.
+comment run_channel_handler Runs the channel through the handler its record keeps.
+comment stop_channel Stops an FM channel: keyed off, its release at the fastest, then free.
+comment free_channel Frees a channel: no sound, no priority, an idle handler.
+comment set_channel_handler The routine that runs the channel from its next pass on.
+comment channel_idle A free channel's handler: nothing to do.
+comment stop_pcm_channel Stops a PCM channel: the music's attenuation back, its volume 0, no loop, then free.
+comment write_fm_register_de Writes a YM2151 register, a base plus an offset, with a value.
+comment write_fm_channel_register Writes the channel's own YM2151 register: the register given plus its chip channel.
+comment write_fm_register Writes a YM2151 register, each write once the chip is not busy.
+comment restart_frame_timer Restarts the YM2151's timer B, the main loop's tick, and clears its flag.
+comment load_fm_voice Loads a voice into the channel (keyed off and released fast first), keeping its operators' total levels and releases in the record.
+comment fm_key_on Keys the channel's four operators on (an FM channel only).
+comment fm_key_off Keys the channel's operators off (an FM channel only).
+comment fm_fast_release Sets the four operators' release to its fastest, so that a note keyed off stops at once.
+comment fm_fast_release_operator Writes an operator's release register with the release at its fastest.
+comment fm_restore_release Puts the four operators' release back as the voice has it.
+comment set_fm_pitch Sets the channel's pitch: the key code from the semitone, the key fraction from its fraction.
+comment set_fm_volume_from_record Sets the FM effect's attenuation it keeps in its record.
+comment set_fm_volume Sets the channel's attenuation: each carrier's total level is the voice's plus it (at most silence); the modulators keep the voice's.
+comment set_fm_operator_level Writes an operator's total level: the voice's, plus the channel's attenuation when the operator is a carrier.
+comment set_pcm_start Sets where the sample of the channel's K007232 channel starts.
+comment set_pcm_pitch Sets the pitch of the channel's K007232 channel.
+comment set_pcm_volume Sets the volume of the channel's K007232 channel, keeping the other's.
+comment start_pcm Starts the channel's K007232 channel.
+comment set_pcm_loop Makes the channel's K007232 channel loop its sample (nothing calls it).
+comment clear_pcm_loop Makes the channel's K007232 channel play its sample once.
+comment next_random_byte Reads the next of the random bytes and moves the place on; the FM effects that call it take the place, not the byte.
+comment music_track_start A music channel's first pass: keyed off (but the music's channels 6 and 7 while an FM effect has them), its record cleared, its track from the song's header.
+comment music_track_first_tick Reads the track's first commands; from the next pass on the tempo runs the channel.
+comment music_track_tick A music channel's pass: the tempo, and at a note's end the track's next commands; else the note's key-off, its attenuation again when the music's changes, the portamento and the LFO sensitivity's ramp, or a PCM note's decay.
+comment clear_note_hook Puts the note hook that does nothing back on the channel.
+comment note_hook_none The note hook that does nothing.
+comment accelerando_tick The music speeds up: the tempo one faster every so many passes, as the accelerando command set it.
+comment check_fm_effect_override On the music's FM channels 6 and 7: while an FM effect plays there, the music keeps its note keyed off and its instrument to load again.
+comment read_track Reads the track's commands up to the next note and plays it: a note, a rest, or the end of the track.
+comment next_note_length Moves the track past the note and sets its length in ticks.
+comment load_instrument Loads the FM instrument the track asks for.
+comment add_note_length_high Adds the length its high nibble gives to the note's ticks.
+comment add_note_length Adds a length to the note's ticks.
+comment read_transpose Reads a transposition argument: semitones and octaves, down with its high bit.
+comment read_volume_offset Reads an attenuation offset argument: negative with its high bit.
+comment read_track_address Reads the address the track goes on at, and moves past it.
+comment unused_note_hook A note hook no track sets: it puts the one that does nothing back.
+comment play_pcm_sample Plays a sample on the effect's K007232 channel: its start, the volume and pitch the effect keeps, for so many passes.
+comment pcm_effect_countdown A PCM effect's last handler: counts the sample's passes down, then stops the channel.
+comment queue_pcm_effect_a Puts the PCM effects' channel A on a handler of the effect's (as sound 88), unless an effect holds the music's PCM channels.
+
 # ======== the effects ========
 # The handlers of fm_effect_handlers and pcm_effect_handlers, by command (each runs its channel through the
-# handlers it stores after it, unnamed). An FM effect loads its voice first (load_fm_voice, the 25 bytes
-# before its code).
+# handlers it stores after it: pcm_effect_XX_... and fm_effect_XX_..., below, which the family of their names
+# gives the effect's own names of the channel's bytes). An FM effect loads its voice first (load_fm_voice, the 25
+# bytes before its code).
 10D0  func  pcm_effect_81         # pcm_effect_handlers[01]: command 81
 1125  func  pcm_effect_82         # pcm_effect_handlers[02]: command 82
 1165  func  pcm_effect_83         # pcm_effect_handlers[03]: command 83
@@ -187,77 +343,1576 @@
 13C1  func  pcm_effect_91         # pcm_effect_handlers[11]: command 91
 13CE  func  pcm_effect_92         # pcm_effect_handlers[12]: command 92
 13D4  func  pcm_effect_93         # pcm_effect_handlers[13]: command 93
-1638  func  fm_effect_01          # fm_effect_handlers[01]: command 01
-169A  func  fm_effect_02          # fm_effect_handlers[02]: command 02
-174F  func  fm_effect_03          # fm_effect_handlers[03]: command 03
-17E7  func  fm_effect_04          # fm_effect_handlers[04]: command 04
-1811  func  fm_effect_05          # fm_effect_handlers[05]: command 05
-1877  func  fm_effect_37          # fm_effect_handlers[37]: command 37
-1888  func  fm_effect_06          # fm_effect_handlers[06]: command 06
-192C  func  fm_effect_07          # fm_effect_handlers[07]: command 07
-19D1  func  fm_effect_08          # fm_effect_handlers[08]: command 08
-1A23  func  fm_effect_09          # fm_effect_handlers[09]: command 09
-1A43  func  fm_effect_0a          # fm_effect_handlers[0A]: command 0A
-1B4F  func  fm_effect_0b          # fm_effect_handlers[0B]: command 0B
-1BDE  func  fm_effect_0c          # fm_effect_handlers[0C]: command 0C
-1CA0  func  fm_effect_0d          # fm_effect_handlers[0D]: command 0D
-1D74  func  fm_effect_0e          # fm_effect_handlers[0E]: command 0E
-1E33  func  fm_effect_0f          # fm_effect_handlers[0F]: command 0F
-1F07  func  fm_effect_10          # fm_effect_handlers[10]: command 10
-1FCB  func  fm_effect_11          # fm_effect_handlers[11]: command 11
-1FF6  func  fm_effect_12          # fm_effect_handlers[12]: command 12
-2012  func  fm_effect_13          # fm_effect_handlers[13]: command 13
-203E  func  fm_effect_14          # fm_effect_handlers[14]: command 14
-20AD  func  fm_effect_15          # fm_effect_handlers[15]: command 15
-215A  func  fm_effect_16          # fm_effect_handlers[16]: command 16
-21F6  func  fm_effect_17          # fm_effect_handlers[17]: command 17
-2299  func  fm_effect_18          # fm_effect_handlers[18]: command 18
-22D2  func  fm_effect_19          # fm_effect_handlers[19]: command 19
-234E  func  fm_effect_1a          # fm_effect_handlers[1A]: command 1A
-250F  func  fm_effect_1b          # fm_effect_handlers[1B]: command 1B
-257F  func  fm_effect_1c          # fm_effect_handlers[1C]: command 1C
-262A  func  fm_effect_1d          # fm_effect_handlers[1D]: command 1D
-26C4  func  fm_effect_1e          # fm_effect_handlers[1E]: command 1E
-26F6  func  fm_effect_1f          # fm_effect_handlers[1F]: command 1F
-2767  func  fm_effect_20          # fm_effect_handlers[20]: command 20
-2785  func  fm_effect_21          # fm_effect_handlers[21]: command 21
-2804  func  fm_effect_22          # fm_effect_handlers[22]: command 22
-28B6  func  fm_effect_23          # fm_effect_handlers[23]: command 23
-2925  func  fm_effect_24          # fm_effect_handlers[24]: command 24
-29EB  func  fm_effect_25          # fm_effect_handlers[25]: command 25
-2A68  func  fm_effect_26          # fm_effect_handlers[26]: command 26
-2B2D  func  fm_effect_27          # fm_effect_handlers[27]: command 27
-2BDF  func  fm_effect_28          # fm_effect_handlers[28]: command 28
-2C49  func  fm_effect_29          # fm_effect_handlers[29]: command 29
-2CF5  func  fm_effect_2a          # fm_effect_handlers[2A]: command 2A
-2D7D  func  fm_effect_2b          # fm_effect_handlers[2B]: command 2B
-2DBF  func  fm_effect_2c          # fm_effect_handlers[2C]: command 2C
-2E77  func  fm_effect_2d          # fm_effect_handlers[2D]: command 2D
-2F11  func  fm_effect_2e          # fm_effect_handlers[2E]: command 2E
-2FA8  func  fm_effect_2f          # fm_effect_handlers[2F]: command 2F
-3032  func  fm_effect_30          # fm_effect_handlers[30]: command 30
-30A4  func  fm_effect_31          # fm_effect_handlers[31]: command 31
-3154  func  fm_effect_32          # fm_effect_handlers[32]: command 32
-31AD  func  fm_effect_33          # fm_effect_handlers[33]: command 33
-31CE  func  fm_effect_34          # fm_effect_handlers[34]: command 34
-3316  func  fm_effect_35          # fm_effect_handlers[35]: command 35
-3336  func  fm_effect_36          # fm_effect_handlers[36]: command 36
-33C2  func  fm_effect_38          # fm_effect_handlers[38]: command 38
-3432  func  fm_effect_39          # fm_effect_handlers[39]: command 39
-348B  func  fm_effect_3a          # fm_effect_handlers[3A]: command 3A
-3524  func  fm_effect_3b          # fm_effect_handlers[3B]: command 3B
-3570  func  fm_effect_3c          # fm_effect_handlers[3C]: command 3C
-35D3  func  fm_effect_3d          # fm_effect_handlers[3D]: command 3D
-3621  func  fm_effect_3e          # fm_effect_handlers[3E]: command 3E
-3664  func  fm_effect_3f          # fm_effect_handlers[3F]: command 3F
-3703  func  fm_effect_40          # fm_effect_handlers[40]: command 40
-373F  func  fm_effect_41          # fm_effect_handlers[41]: command 41
+# ---- each PCM effect: its handlers (the sample's start and bit 16 in DE and C, the passes in HL, the pitch and
+# volume in the record: play_pcm_sample); queue_pcm_effect_a puts channel A on a handler of the effect's too ----
+# 10D6-10DA "ld (ix+$36),$02; ld hl,$00F0": two plays, the first 240 passes
+10D6  func  pcm_effect_81_twice
+# 10DD-10EF "ld (ix+$32),$0F; ld bc,$0FAE ... ld c,$01; ld de,$0000; call $1094": the sample at 10000, pitch FAE, for the passes in HL
+10DD  func  pcm_effect_81_play
+# 10F8-1107 "dec hl ... ret nz", 1108-1111 "dec (ix+$36); jp z,$05E8; ld hl,$0220; jp $10DD": the second play 544 passes
+10F8  func  pcm_effect_81_next
+# 1114-111B "ld (ix+$35),$20; ld hl,$111E; jp $05E1": channel A's handler (pcm_effect_81 10D0 "ld hl,$1114; call $10C2")
+1114  func  pcm_effect_81_echo
+# 111E-1122 "dec (ix+$35); ret nz; jp $10D6": 32 passes, then the two plays on channel A
+111E  func  pcm_effect_81_echo_wait
+# 1128-1142 "ld (ix+$33),c ... ld a,$01; ld ($83DB),a; ld ($83CC),a; ld hl,$0048 ... call $1094": the music a step quieter (pcm_effect_82 and pcm_effect_92 jump here with their pitch in BC)
+1128  func  pcm_effect_play_ducking
+# 114B-115C "dec (ix+$30); jp z,$05E8; ld a,(ix+$30); cp $1E; ret nc; bit 0,(ix+$30); ret z; dec (ix+$32)"
+114B  func  pcm_effect_ducking_fade
+# 116F-117A "ld (ix+$33),c; ld (ix+$34),b; ld c,$01; ld de,$6320; call $1094": the sample at 16320 (pcm_effect_83 and pcm_effect_8c jump here)
+116F  func  pcm_effect_83_play
+# 1187-118A "ld hl,$00FC; ld bc,$0FA0" (pcm_effect_84, and pcm_effect_93 13D8 "jp $1187")
+1187  func  pcm_effect_84_sound
+# 118D-1198 "ld (ix+$33),c; ld (ix+$34),b; ld c,$00; ld de,$5620; call $1094": the sample at 05620 (effects 84, 85, 91, 93)
+118D  func  pcm_effect_84_play
+# 11C8-11DC "dec hl ... ret nz; xor a; ld ($83DE),a; jp $05E8": at the sample's end the music's PCM channels are let go
+11C8  func  pcm_effect_86_countdown
+# 11DF-11F1 "ld (ix+$33),c ... ld hl,$0130; ld (ix+$32),$0F; ld c,$01; ld de,$9BE0; jp $1094": the sample at 19BE0 for 304 passes (effects 86 and 8D)
+11DF  func  pcm_effect_86_play
+# 11FE-1205 "dec (ix+$35); ret nz; ld bc,$0FD5; call $11DF"
+11FE  func  pcm_effect_8d_wait
+# 1232-1247 "ld hl,$02A0; ld (ix+$32),$0F; ld bc,$0F94 ... ld de,$0000; call $1094" (also channel A's handler for effects 88 and 8E: 122C "ld hl,$1250", 1359 "ld hl,$1232")
+1232  func  pcm_effect_88_play
+# 1250-1257 "ld (ix+$30),$02; ld hl,$125A; jp $05E1": channel A's handler (pcm_effect_88 122C "ld hl,$1250; call $10C2")
+1250  func  pcm_effect_88_echo
+# 125A-125E "dec (ix+$30); ret nz; jp $1232"
+125A  func  pcm_effect_88_echo_wait
+# 1271-1283 "ld (ix+$32),$0F; ld bc,$0F88 ... ld de,$5550; call $1094": the sample at 15550 for the passes in HL
+1271  func  pcm_effect_89_play
+# 128C-1299 "dec (ix+$30); ret nz; dec (ix+$36); jp z,$05E8; ld hl,$0060; jp $1271"
+128C  func  pcm_effect_89_next
+# 12A2-12B6 "ld (ix+$32),a; ld bc,$0FAA ... ld hl,$0034 ... ld de,$5550; call $1094": the sample at 15550 at the volume in A
+12A2  func  pcm_effect_8a_play
+# 12BF-12CE "dec (ix+$30); ret nz; dec (ix+$36); jp z,$05E8; ld a,(ix+$32); add a,$F6; jp $12A2"
+12BF  func  pcm_effect_8a_next
+# 12DA-12E8 "ld (ix+$33),c; ld (ix+$34),b; ld (ix+$36),$04; ld (ix+$32),$0F; ld hl,$0080": four plays from 128 passes
+12DA  func  pcm_effect_8b_start
+# 12EB-12F3 "ld (ix+$35),l; ld c,$01; ld de,$0000; call $1094"
+12EB  func  pcm_effect_8b_play
+# 12FC-132B "dec (ix+$36) ... ld c,$00; call $080F; call $0860 ... add a,$FB ... ld a,(ix+$35); add a,$0C"; 132E-1335 "ld a,($8201); or a; jp z,$05E8; jp $05D6"
+12FC  func  pcm_effect_8b_next
+# 1338-133F "ld (ix+$36),$08; ld hl,$1342; jp $05E1": channel A's handler (pcm_effect_8b 12D1 "ld hl,$1338; call $10C2")
+1338  func  pcm_effect_8b_echo
+# 1342-1349 "dec (ix+$36); ret nz; ld bc,$0F68; jp $12DA"
+1342  func  pcm_effect_8b_echo_wait
+# 12EB "ld (ix+$35),l": the passes of the play; 1323-1328 "ld a,(ix+$35); add a,$0C; ld l,a": the next one 12 longer
+scoped  channel pcm_effect_8b 35 play_length u8
+# 1128 "ld (ix+$33),c": BC the sample's pitch (pcm_effect_82 1125 "ld bc,$0F84", pcm_effect_92 13CE "ld bc,$0F98")
+param   pcm_effect_play_ducking bc pitch
+param   pcm_effect_83_play bc pitch
+param   pcm_effect_84_play bc pitch
+param   pcm_effect_86_play bc pitch
+param   pcm_effect_8b_start bc pitch
+# 117A "call $1094" with HL from the effect (pcm_effect_83 1165 "ld hl,$017A"): the passes the sample plays
+param   pcm_effect_83_play hl ticks
+param   pcm_effect_84_play hl ticks
+param   pcm_effect_81_play hl ticks
+param   pcm_effect_89_play hl ticks
+param   pcm_effect_8b_play hl ticks
+# 12A2 "ld (ix+$32),a": A the volume (pcm_effect_8a 12A0 "ld a,$0F", 12CC "add a,$F6")
+param   pcm_effect_8a_play a volume
+
+comment pcm_effect_81 The sample of effects 81, 82, 88 and 8B twice on channel B (240 and 544 passes), and the same on channel A 32 passes later.
+comment pcm_effect_81_twice Two plays of the sample, the first 240 passes long.
+comment pcm_effect_81_play The sample of effects 81, 82, 88 and 8B at its pitch and full volume, for the passes it is given.
+comment pcm_effect_81_next Counts the play down; then the second, 544 passes long, or the end.
+comment pcm_effect_81_echo Channel A's part: a wait of 32 passes.
+comment pcm_effect_81_echo_wait After the wait, the two plays on channel A.
+comment pcm_effect_82 The sample of effects 81, 82, 88 and 8B, pitch F84, 72 passes, the music a step quieter, fading out at its end.
+comment pcm_effect_play_ducking The sample of effects 81, 82, 88 and 8B at the pitch it is given and full volume for 72 passes, with the music a step quieter.
+comment pcm_effect_ducking_fade Counts the play down; over its last 30 passes the volume goes down by one every other pass.
+comment pcm_effect_83 The sample of effects 83 and 8C, pitch FA3, volume D, 378 passes.
+comment pcm_effect_83_play The sample of effects 83 and 8C at the pitch and for the passes it is given (effect 8C's too).
+comment pcm_effect_84 The sample of effects 84, 85, 91 and 93, pitch FA0, volume 9, 252 passes.
+comment pcm_effect_84_sound Effect 84's sound at the volume the effect set (effect 93's too).
+comment pcm_effect_84_play The sample of effects 84, 85, 91 and 93 at the pitch and for the passes it is given (effects 84, 85, 91 and 93).
+comment pcm_effect_85 The sample of effects 84, 85, 91 and 93, pitch F90, full volume, 255 passes.
+comment pcm_effect_86 Holds the music's PCM channels, starts PCM effect 8D and plays the sample of effects 86, 8D and 90, pitch FD3, 304 passes on channel A.
+comment pcm_effect_86_countdown Counts the play down; at its end the music's PCM channels are let go and the channel stops.
+comment pcm_effect_86_play The sample of effects 86, 8D and 90 at the pitch it is given, full volume, 304 passes (effect 8D's too).
+comment pcm_effect_8d Waits 8 passes, then plays effect 86's sample a little higher.
+comment pcm_effect_8d_wait After the wait, the sample of effects 86, 8D and 90, pitch FD5, then its countdown.
+comment pcm_effect_87 The sample of effects 87, 89 and 8A, pitch FA3, full volume, 72 passes.
+comment pcm_effect_88 The sample of effects 81, 82, 88 and 8B, pitch F94, 672 passes, and the same on channel A 2 passes later.
+comment pcm_effect_88_play The sample of effects 81, 82, 88 and 8B, pitch F94, full volume, 672 passes, then its countdown.
+comment pcm_effect_88_echo Channel A's part: a wait of 2 passes.
+comment pcm_effect_88_echo_wait After the wait, the sample on channel A.
+comment pcm_effect_89 Speech A3 and the sample of effects 87, 89 and 8A, pitch F88, twice (20 and 96 passes).
+comment pcm_effect_89_play The sample of effects 87, 89 and 8A, pitch F88, full volume, for the passes it is given.
+comment pcm_effect_89_next Counts the play down; then the second, 96 passes long, or the end.
+comment pcm_effect_8a The sample of effects 87, 89 and 8A, pitch FAA, 52 passes, twice, the second 10 quieter.
+comment pcm_effect_8a_play The sample of effects 87, 89 and 8A, pitch FAA, 52 passes, at the volume it is given.
+comment pcm_effect_8a_next Counts the play down; then the second, 10 quieter, or the end.
+comment pcm_effect_8b The sample of effects 81, 82, 88 and 8B, pitch FA8, four times, each 12 passes longer and quieter; and on channel A, 8 passes later, the same at pitch F68.
+comment pcm_effect_8b_start Four plays of the sample at the pitch it is given, the first at full volume for 128 passes.
+comment pcm_effect_8b_play The sample of effects 81, 82, 88 and 8B for the passes it is given, which it keeps.
+comment pcm_effect_8b_next Counts the play down; then the next, silenced first, 12 passes longer and 5 quieter (3 in the last, which also gives up the channel's sound); at the end the channel stops, or only frees itself while the music's PCM channel A plays.
+comment pcm_effect_8b_echo Channel A's part: a wait of 8 passes.
+comment pcm_effect_8b_echo_wait After the wait, the four plays at pitch F68.
+comment pcm_effect_8c The sample of effects 83 and 8C, pitch FB0, volume B, 80 passes.
+comment pcm_effect_8e The sample of effects 8E and 8F, pitch EF0, full volume, 640 passes, and effect 88's sample on channel A.
+comment pcm_effect_8f The sample of effects 8E and 8F, pitch F7C, full volume, 272 passes, the music a step quieter.
+comment pcm_effect_90 The sample of effects 86, 8D and 90, pitch E40, full volume, 1344 passes.
+comment pcm_effect_91 The sample of effects 84, 85, 91 and 93, pitch FB0, volume 9, 248 passes.
+comment pcm_effect_92 Effect 82's sound at pitch F98.
+comment pcm_effect_93 Effect 84's sound at volume C.
+1638  func  fm_effect_01          # fm_effect_handlers[00]: command 01
+169A  func  fm_effect_02          # fm_effect_handlers[01]: command 02
+174F  func  fm_effect_03          # fm_effect_handlers[02]: command 03
+17E7  func  fm_effect_04          # fm_effect_handlers[03]: command 04
+1811  func  fm_effect_05          # fm_effect_handlers[04]: command 05
+1877  func  fm_effect_37          # fm_effect_handlers[36]: command 37
+1888  func  fm_effect_06          # fm_effect_handlers[05]: command 06
+192C  func  fm_effect_07          # fm_effect_handlers[06]: command 07
+19D1  func  fm_effect_08          # fm_effect_handlers[07]: command 08
+1A23  func  fm_effect_09          # fm_effect_handlers[08]: command 09
+1A43  func  fm_effect_0a          # fm_effect_handlers[09]: command 0A
+1B4F  func  fm_effect_0b          # fm_effect_handlers[0A]: command 0B
+1BDE  func  fm_effect_0c          # fm_effect_handlers[0B]: command 0C
+1CA0  func  fm_effect_0d          # fm_effect_handlers[0C]: command 0D
+1D74  func  fm_effect_0e          # fm_effect_handlers[0D]: command 0E
+1E33  func  fm_effect_0f          # fm_effect_handlers[0E]: command 0F
+1F07  func  fm_effect_10          # fm_effect_handlers[0F]: command 10
+1FCB  func  fm_effect_11          # fm_effect_handlers[10]: command 11
+1FF6  func  fm_effect_12          # fm_effect_handlers[11]: command 12
+2012  func  fm_effect_13          # fm_effect_handlers[12]: command 13
+203E  func  fm_effect_14          # fm_effect_handlers[13]: command 14
+20AD  func  fm_effect_15          # fm_effect_handlers[14]: command 15
+215A  func  fm_effect_16          # fm_effect_handlers[15]: command 16
+21F6  func  fm_effect_17          # fm_effect_handlers[16]: command 17
+2299  func  fm_effect_18          # fm_effect_handlers[17]: command 18
+22D2  func  fm_effect_19          # fm_effect_handlers[18]: command 19
+234E  func  fm_effect_1a          # fm_effect_handlers[19]: command 1A
+250F  func  fm_effect_1b          # fm_effect_handlers[1A]: command 1B
+257F  func  fm_effect_1c          # fm_effect_handlers[1B]: command 1C
+262A  func  fm_effect_1d          # fm_effect_handlers[1C]: command 1D
+26C4  func  fm_effect_1e          # fm_effect_handlers[1D]: command 1E
+26F6  func  fm_effect_1f          # fm_effect_handlers[1E]: command 1F
+2767  func  fm_effect_20          # fm_effect_handlers[1F]: command 20
+2785  func  fm_effect_21          # fm_effect_handlers[20]: command 21
+2804  func  fm_effect_22          # fm_effect_handlers[21]: command 22
+28B6  func  fm_effect_23          # fm_effect_handlers[22]: command 23
+2925  func  fm_effect_24          # fm_effect_handlers[23]: command 24
+29EB  func  fm_effect_25          # fm_effect_handlers[24]: command 25
+2A68  func  fm_effect_26          # fm_effect_handlers[25]: command 26
+2B2D  func  fm_effect_27          # fm_effect_handlers[26]: command 27
+2BDF  func  fm_effect_28          # fm_effect_handlers[27]: command 28
+2C49  func  fm_effect_29          # fm_effect_handlers[28]: command 29
+2CF5  func  fm_effect_2a          # fm_effect_handlers[29]: command 2A
+2D7D  func  fm_effect_2b          # fm_effect_handlers[2A]: command 2B
+2DBF  func  fm_effect_2c          # fm_effect_handlers[2B]: command 2C
+2E77  func  fm_effect_2d          # fm_effect_handlers[2C]: command 2D
+2F11  func  fm_effect_2e          # fm_effect_handlers[2D]: command 2E
+2FA8  func  fm_effect_2f          # fm_effect_handlers[2E]: command 2F
+3032  func  fm_effect_30          # fm_effect_handlers[2F]: command 30
+30A4  func  fm_effect_31          # fm_effect_handlers[30]: command 31
+3154  func  fm_effect_32          # fm_effect_handlers[31]: command 32
+31AD  func  fm_effect_33          # fm_effect_handlers[32]: command 33
+31CE  func  fm_effect_34          # fm_effect_handlers[33]: command 34
+3316  func  fm_effect_35          # fm_effect_handlers[34]: command 35
+3336  func  fm_effect_36          # fm_effect_handlers[35]: command 36
+33C2  func  fm_effect_38          # fm_effect_handlers[37]: command 38
+3432  func  fm_effect_39          # fm_effect_handlers[38]: command 39
+348B  func  fm_effect_3a          # fm_effect_handlers[39]: command 3A
+3524  func  fm_effect_3b          # fm_effect_handlers[3A]: command 3B
+3570  func  fm_effect_3c          # fm_effect_handlers[3B]: command 3C
+35D3  func  fm_effect_3d          # fm_effect_handlers[3C]: command 3D
+3621  func  fm_effect_3e          # fm_effect_handlers[3D]: command 3E
+3664  func  fm_effect_3f          # fm_effect_handlers[3E]: command 3F
+3703  func  fm_effect_40          # fm_effect_handlers[3F]: command 40
+373F  func  fm_effect_41          # fm_effect_handlers[40]: command 41
+
+# The helpers the FM effects' handlers share (build/sound/index.txt: only they call them), on the fields of the
+# fm_effect family: the note's pitch (+30) and the step's (+32), the timer (+20), the attenuation (+2C)
+# 2405 "cp (ix+$20); jp z,$2411": on the pass A of the timer, 2411-2416 "ld a,(ix+$2e); add a,$20; jp set_fm_volume" (the note dies away); on the others 240B "ld bc,$ff80; jp 2B80" (its pitch falls)
+2405  func  fm_effect_fall
+# 2419 "ld bc,$ff80", then fm_effect_trill_slide
+2419  func  fm_effect_trill_slide_down
+# 241C "bit 0,(ix+$20); jp nz,2B80": odd passes move the note's pitch by BC; 2423-2430 even ones the step's ("ld l,(ix+$32) ... add hl,bc ... jp set_fm_pitch") and sound it: two notes in turn, both sliding
+241C  func  fm_effect_trill_slide
+# 2433 "inc (ix+$2c); call set_fm_volume_from_record" (a step quieter), then 2439-2440 "call $087C; ld a,h; and $0F; ld b,a; ld c,l": in BC an offset from the place of the random bytes next_random_byte hands back (H is their page, 86: 600-6FF)
+2433  func  fm_effect_quieter_pool_offset
+# 2442-244B "ld (ix+$30),l; ld (ix+$31),h; ld (ix+$32),l; ld (ix+$33),h": the note's and the step's pitch both HL
+2442  func  fm_effect_keep_pitch
+# 2B73 "bit 0,(ix+$20); ld bc,$0080; jp z,2B80", 2B7D "ld bc,$ff00": even passes the pitch up 80h, odd ones down 100h (a warble that sinks)
+2B73  func  fm_effect_warble
+# 2B80/2B83 "ld l,(ix+$30); ld h,(ix+$31)", then 2B86 "add hl,bc": the note's pitch moved by BC
+2B80  func  fm_effect_move_pitch
+# 2B86 "add hl,bc", then fm_effect_set_pitch: the pitch HL + BC
+2B86  func  fm_effect_set_pitch_plus
+# 2B87-2B8D "ld (ix+$30),l; ld (ix+$31),h; jp set_fm_pitch": HL the note's pitch, on the chip
+2B87  func  fm_effect_set_pitch
+# 2B90 "sbc hl,bc; jp 2B87": the pitch HL - BC
+2B90  func  fm_effect_set_pitch_minus
+# 2B95-2BA1 "ld l,(ix+$32); ld h,(ix+$33); call 2B87; call set_fm_volume_from_record; jp fm_key_on": the step's note from its start
+2B95  func  fm_effect_restart_note
+# 2BA4 "jp c,2B73" (with the carry, fm_effect_warble), 2BA7-2BAF "ld a,(ix+$2c); add a,$fe; ld (ix+$2c),a; jp set_fm_volume" (without, the note 2 louder)
+2BA4  func  fm_effect_swell_or_warble
+# 2BB2-2BC5 "ld l,(ix+$32) ... ld bc,$0100; add hl,bc; ld (ix+$32),l ...; ld a,(ix+$2c)": the step's pitch up 100h, A its attenuation
+2BB2  func  fm_effect_raise_base_pitch
+
+# ---- each FM effect: its handlers and routines, what it keeps in its channel and in the RAM ----
+# Pitches are in 1/64 semitone (set_fm_pitch): 40h a semitone, 80h two, 100h four. A pass is one of the main loop's.
+# Routines several effects run are fm_effect_<what>; the groups whose bytes mean something else than the fm_effect
+# family's have a family of their own (fm_effect_zigzag_steps, fm_effect_long_rise, fm_effect_dive: scoped lines).
+
+# ---- FM effect 01 ----
+# 163F-1654 "ld ($83E3),a; ld hl,$161F; call $05F9; ld hl,$1000; call $071D; ld a,($83E3); call $07A0; call $06B4": the voice, the pitch, the attenuation it is given, keyed on
+163F  func  fm_effect_01_note
+# 1662-1666 "ld hl,$83DF; dec (hl); jp z,$1672", 166A-166F "cp $05; ret nz; ld a,$29; jp $07A0", 1679-167E "ld a,($83E3); add a,$10; jp $163F"
+1662  func  fm_effect_01_hold
+comment fm_effect_01 A note played three times, from the loudest.
+comment fm_effect_01_note The note keyed on at the attenuation it is given, for 52 passes.
+comment fm_effect_01_hold Holds the note, almost silent for its last 5 passes; then it plays again 16 quieter, three times in all.
+# 1657-1659 "ld a,$34; ld ($83DF),a", 1662-1665 "ld hl,$83DF; dec (hl)": passes left of the note
+83DF  var  fm_effect_01_timer  u8
+# 1638-163A "ld a,$03; ld ($83E2),a", 1672-1676 "ld hl,$83E2; dec (hl); jp z,$05D0": the notes left
+83E2  var  fm_effect_01_notes  u8
+# 163F "ld ($83E3),a", 164E "ld a,($83E3)" into set_fm_volume, 1679-167C "ld a,($83E3); add a,$10": the note's attenuation
+83E3  var  fm_effect_01_attenuation  u8
+# 163F "ld ($83E3),a", then 164E-1651 "ld a,($83E3); call $07A0": what it takes in A is the note's attenuation
+param fm_effect_01_note a attenuation
+
+# ---- FM effect 02 ----
+# 16AC-16B5 "ld ($83E7),a; ld hl,$1400; ld ($83E4),hl; call $071D", 16B8-16BD "ld a,$08; ld ($83E6),a; ld ($83E8),a": a round of the steps in A
+16AC  func  fm_effect_02_round
+# 16D6-16E0 "ld hl,($83E4); ld bc,$FFFE; add hl,bc; ld ($83E4),hl; jp $071D"; 16FD-170D the next step: "inc a; ld ($83E6),a; ld ($83E8),a; ld hl,$1400"
+16CF  func  fm_effect_02_slide
+# 1727-172B "ld hl,$83E6; dec (hl); ret nz", 172C-1733 "ld a,$3B; ld ($83E9),a; ld a,$09; jp $16AC"
+1727  func  fm_effect_02_pause
+comment fm_effect_02 A note sliding down a little, struck again step after step, each step longer: 13 steps, then after a pause a quieter round of 9.
+comment fm_effect_02_round Starts a round of the steps it is given: the note from its first pitch, 8 passes a step.
+comment fm_effect_02_slide The note slides down each pass; each step starts it again from its first pitch one pass longer, 1 louder while 7 or more steps are left and 3 quieter after; after the round, two passes almost silent.
+comment fm_effect_02_pause After the two passes, the second round: 9 steps from attenuation 59.
+# 16AF-16B2 "ld hl,$1400; ld ($83E4),hl", 16D6-16DD "ld hl,($83E4); ld bc,$FFFE; add hl,bc; ld ($83E4),hl": the note's pitch
+83E4  var  fm_effect_02_pitch  u16
+# 16B8-16BA "ld a,$08; ld ($83E6),a", 16CF-16D3 "ld hl,$83E6; dec (hl); jp z,$16E3": passes left of the step (and of the pause, 1717-1719)
+83E6  var  fm_effect_02_timer  u8
+# 16AC "ld ($83E7),a", 16E3-16E7 "ld hl,$83E7; dec (hl); jp z,$1710": the steps left of the round
+83E7  var  fm_effect_02_steps  u8
+# 16BD "ld ($83E8),a", 16FD-1704 "ld a,($83E8); inc a; ld ($83E6),a; ld ($83E8),a": a step's passes, one more each step
+83E8  var  fm_effect_02_period  u8
+# 169A-169C "ld a,$19; ld ($83E9),a", 16ED-16F7 "ld a,($83E9); jp c,$16F5; add a,$FC; add a,$03; ld ($83E9),a": the note's attenuation
+83E9  var  fm_effect_02_attenuation  u8
+# 16A5-16A7 "ld a,$02; ld ($83EA),a", 1710-1714 "ld hl,$83EA; dec (hl); jp z,$05D0": the rounds left
+83EA  var  fm_effect_02_rounds  u8
+# 16AC "ld ($83E7),a": A is the round's steps (169A-16AA "ld a,$0D", 1731 "ld a,$09")
+param fm_effect_02_round a steps
+
+# ---- FM effect 03 ----
+# 177D-1785 "dec (ix+$20); jp z,$1788; ld a,$08; jp $2405"; 1788-17A1 "ld hl,$0C00; call $2B87; ld hl,$1000; ld (ix+$32),l ... ld (ix+$28),$08"
+177D  func  fm_effect_03_fall
+# 17B3-17B6 "ld bc,$FFA0; jp $241C"; 17B9-17C8 "ld (ix+$20),$0C; dec (ix+$28); jp z,$05D0; ld a,(ix+$2c); add a,$04"
+17AD  func  fm_effect_03_trill
+comment fm_effect_03 Speech A6, and a falling note, then a trill that fades out.
+comment fm_effect_03_fall The note falls two semitones a pass for 28 passes, dying away near its end; then the trill of two notes.
+comment fm_effect_03_trill The two notes in turn, both sliding down; every 12 passes 4 quieter, 8 times.
+
+# ---- FM effect 04 ----
+comment fm_effect_04 The three-note arpeggio of effect 1D, from the loudest, with another voice and slower.
+
+# ---- FM effects 05 and 37 (37 is 05's sound 8 passes late, on another channel) ----
+# 181A-181E "ld (ix+$28),$02; ld a,$00": two times from attenuation 0
+181A  func  fm_effect_wobble_twice
+# 1820-1835 "ld (ix+$2c),a; ld hl,$17F8; call $05F9; ld hl,$1200; call $2B87; call $079D; call $06B4; ld (ix+$20),$20"
+1820  func  fm_effect_wobble_note
+# 1845-1852 "bit 0,(ix+$20); ld bc,$FF80; jp nz,$2B80; ld bc,$0040; jp $2B80"; 1855-185C "ld (ix+$20),$40; ld hl,$1020; call $071D"
+183F  func  fm_effect_wobble_down
+# 1868-186F "dec (ix+$20); ret nz; dec (ix+$28); jp z,$05D0", 1872-1874 "ld a,$14; jp $1820"
+1868  func  fm_effect_wobble_hold
+# 1881-1885 "dec (ix+$20); ret nz; jp $181A"
+1881  func  fm_effect_37_wait
+comment fm_effect_05 Starts effect 37 (its echo, 8 passes later on another channel) and plays a note that wobbles down, then another note held, twice.
+comment fm_effect_wobble_twice Twice, from the loudest: the note that wobbles down and the note held after it.
+comment fm_effect_wobble_note The note keyed on at the attenuation it is given, for 32 passes.
+comment fm_effect_wobble_down Two semitones down on the odd passes and one up on the even ones; then another note, held 64 passes.
+comment fm_effect_wobble_hold Holds that note; then the second time, 20 quieter, and the channel stops.
+comment fm_effect_37 Effect 05's wobbling notes 8 passes late, on a channel of their own (effect 05 starts it).
+comment fm_effect_37_wait Waits the 8 passes, then the wobbling notes.
+
+# ---- FM effect 06 ----
+# 18AF-18B1 "ld a,$0C; jp $2405"; 18B4-18CD "ld (ix+$20),$10; ld hl,$0C00; call $2B87; ld hl,$1000; ld (ix+$32),l ... ld (ix+$28),$0E"
+18A9  func  fm_effect_06_fall
+# 18DF-18E2 "ld bc,$FFF0; jp $241C"; 18E5-18F4 "ld (ix+$20),$10; dec (ix+$28); jp z,$05D0; ld a,(ix+$2c); add a,$03"
+18D9  func  fm_effect_06_trill
+comment fm_effect_06 A falling note, then a trill that fades out (effect 03's without the speech, longer).
+comment fm_effect_06_fall The note falls two semitones a pass for 32 passes, dying away near its end; then the trill of two notes.
+comment fm_effect_06_trill The two notes in turn, both sliding down slowly; every 16 passes 3 quieter, 14 times.
+
+# ---- FM effect 07 ----
+# 1938 "ld ($83F2),a": the round's attenuation
+1938  func  fm_effect_07_round
+# 193B-1944 "call $087C; ld a,l; or h; and $07; add a,$12; ld ($83EF),a", 1947-1959 the voice, the pitch $0A00, "ld a,($83F2); call $07A0; call $06B4"
+193B  func  fm_effect_07_note
+# 1962-196C "dec (hl); jp z,$198F; ld a,(hl); cp $08; ret nz", 1977-198C "inc (hl); ld hl,$1913; call $05F9; ld hl,$1000 ... add a,$04"; 199C-19A1 "add a,$08"; 19A7-19B5 the next round
+1962  func  fm_effect_07_step
+comment fm_effect_07 Low notes of 24 or 25 passes by the random bytes' place, the later ones each ending on a higher blip with another voice, in two rounds: 12 notes, then 6 quieter.
+comment fm_effect_07_round Starts a round at the attenuation it is given.
+comment fm_effect_07_note A low note keyed on for 24 or 25 passes, by the random bytes' place (the place taken for the byte: 18 to 25 meant).
+comment fm_effect_07_step Counts the note down: the first notes of a round are cut 8 passes before their end by the next; in the later ones a higher blip, 4 quieter, takes those 8 passes; the last of a round is 8 quieter; then the second round from attenuation 28.
+# 1944 "ld ($83EF),a" (18 to 25), 1962-1966 "ld hl,$83EF; dec (hl); jp z,$198F": passes left of the note
+83EF  var  fm_effect_07_timer  u8
+# 1931-1933 "ld a,$0C; ld ($83F0),a", 198F-1993 "ld hl,$83F0; dec (hl); jp z,$19A7": the notes left of the round
+83F0  var  fm_effect_07_notes  u8
+# 192C-192E "ld a,$02; ld ($83F1),a", 19A7-19AB "ld hl,$83F1; dec (hl); jp z,$05D0": the rounds left
+83F1  var  fm_effect_07_rounds  u8
+# 1938 "ld ($83F2),a", 1953 "ld a,($83F2)" into set_fm_volume, 199C-19A1 "add a,$08; ld ($83F2),a": the notes' attenuation
+83F2  var  fm_effect_07_attenuation  u8
+# 1938 "ld ($83F2),a": A is the round's attenuation (1936 "ld a,$00", 19B3 "ld a,$1C")
+param fm_effect_07_round a attenuation
+
+# ---- FM effect 08 ----
+# 19DB-19F0 "ld (ix+$20),a; ld (ix+$21),a; ld hl,$19B8; call $05F9; ld hl,$0200; call $2B87; call $079D; call $06B4"
+19DB  func  fm_effect_08_note
+# 19FF-1A0A "ld a,(ix+$20); cp $40; jp c,$2B73; ld bc,$0040; jp $2B80"; 1A0D-1A20 "dec (ix+$28) ... add a,$1A ... ld a,(ix+$21); add a,$02; jp $19DB"
+19F9  func  fm_effect_08_rise_and_warble
+comment fm_effect_08 A low note that rises and then warbles, three times, each quieter and a little longer.
+comment fm_effect_08_note The note keyed on for the passes it is given.
+comment fm_effect_08_rise_and_warble A semitone up each pass while 64 or more passes are left, then a warble; then the next note, 26 quieter and 2 passes longer.
+# 19DB-19DE "ld (ix+$20),a; ld (ix+$21),a": A is the note's passes (19D9 "ld a,$48", 1A1B-1A1E "ld a,(ix+$21); add a,$02")
+param fm_effect_08_note a length
+
+# ---- FM effect 09 ----
+comment fm_effect_09 Stops effect 0A and the drone of effect 33 (clears their flag); its own channel stops at once.
+
+# ---- FM effect 0A (and 33, the drone it starts, whose code is here) ----
+# 1A58-1A5D "ld ($83F7),a; ld a,$10; ld ($83F5),a": a round of 16 notes at the attenuation in A
+1A58  func  fm_effect_0a_round
+# 1A60-1A68 "ld a,$02; ld ($83FA),a; ld hl,$1A2A; call $05F9": the voice again, for two notes
+1A60  func  fm_effect_0a_pair
+# 1A71-1A80 "call $087C; ld a,l; and $03; ld d,a; ld e,h; ld hl,$0080; add hl,de; ld ($83F8),hl; call $071D", 1A88-1A8C "ld a,($83F6); add a,d; call $07A0"
+1A6E  func  fm_effect_0a_note
+# 1A9F-1AA9 "ld hl,($83F8); ld bc,$0040; add hl,bc; ld ($83F8),hl; jp $071D"; 1AAC-1AB0 "ld a,($83F3); or a; jp z,$05D0"; 1AC1-1AC6 "add a,$10; jp $1A6E"
+1A98  func  fm_effect_0a_rise
+comment fm_effect_0a Starts effect 33 (a low drone) and plays rounds of low notes that rise, at one of four pitches by the random bytes' place, until effect 09 stops it or its 28 rounds end.
+comment fm_effect_0a_round Starts a round of 16 notes at the attenuation it is given.
+comment fm_effect_0a_pair Loads the voice again for a pair of notes.
+comment fm_effect_0a_note A note at one of four low pitches by the random bytes' place (up to 3 quieter with the higher ones), keyed on for 12 passes at the attenuation it is given.
+comment fm_effect_0a_rise The note rises a semitone a pass; then the next one, the second of a pair 16 quieter; each round 1 quieter than the last; it stops when its flag is cleared.
+# 1A83-1A85 "ld a,$0C; ld ($83F4),a", 1A98-1A9C "ld hl,$83F4; dec (hl); jp z,$1AAC": passes left of the note
+83F4  var  fm_effect_0a_timer  u8
+# 1A5B-1A5D "ld a,$10; ld ($83F5),a", 1AB3-1AB7 "ld hl,$83F5; dec (hl); jp z,$1AC9": the notes left of the round
+83F5  var  fm_effect_0a_notes  u8
+# 1A6E "ld ($83F6),a", 1A88 "ld a,($83F6)" into set_fm_volume, 1AC1-1AC4 "ld a,($83F6); add a,$10": the note's attenuation
+83F6  var  fm_effect_0a_attenuation  u8
+# 1A58 "ld ($83F7),a", 1A6B "ld a,($83F7)", 1AD0-1AD3 "ld a,($83F7); add a,$01": the attenuation the round starts at
+83F7  var  fm_effect_0a_round_attenuation  u8
+# 1A7D "ld ($83F8),hl", 1A9F-1AA6 "ld hl,($83F8); ld bc,$0040; add hl,bc; ld ($83F8),hl": the note's pitch
+83F8  var  fm_effect_0a_pitch  u16
+# 1A60-1A62 "ld a,$02; ld ($83FA),a", 1ABA-1ABE "ld hl,$83FA; dec (hl); jp z,$1A60": the notes left before the voice is loaded again
+83FA  var  fm_effect_0a_pair_notes  u8
+# 1A51-1A53 "ld a,$1C; ld ($83FB),a", 1AC9-1ACD "ld hl,$83FB; dec (hl); jp z,$05D0": the rounds left
+83FB  var  fm_effect_0a_rounds  u8
+# 1A58 "ld ($83F7),a": A is the round's attenuation (1A56 "ld a,$06", 1AD0-1AD3 "ld a,($83F7); add a,$01")
+param fm_effect_0a_round a attenuation
+# 1A6E "ld ($83F6),a": A is the note's attenuation (1A6B "ld a,($83F7)", 1AC1-1AC4 "ld a,($83F6); add a,$10")
+param fm_effect_0a_note a attenuation
+# 1AF8-1B12 "ld ($83FE),a; ld hl,$1AD8; call $05F9; ld hl,$00A0; call $071D; ld a,$60; ld ($83FC),a; ld a,($83FE); call $07A0; call $06B4"
+1AF8  func  fm_effect_33_drone
+# 1B1B-1B1F "ld a,($83F3); or a; jp z,$05D0", 1B22-1B26 "ld hl,$83FC; dec (hl); ret nz", 1B27-1B33 "ld hl,$83FD; dec (hl); jp z,$05D0 ... add a,$01; jp $1AF8"
+1B1B  func  fm_effect_33_hold
+comment fm_effect_33 A very low drone, struck 20 times, each 1 quieter, while effect 0A's flag stays set (effect 0A starts it).
+comment fm_effect_33_drone The low note keyed on at the attenuation it is given, for 96 passes.
+comment fm_effect_33_hold Holds it; then strikes it again 1 quieter; stops when the flag is cleared or the 20 times end.
+# 1B07-1B09 "ld a,$60; ld ($83FC),a", 1B22-1B26 "ld hl,$83FC; dec (hl); ret nz": passes left of the drone's note
+83FC  var  fm_effect_33_timer  u8
+# 1AF1-1AF3 "ld a,$14; ld ($83FD),a", 1B27-1B2B "ld hl,$83FD; dec (hl); jp z,$05D0": the times left
+83FD  var  fm_effect_33_repeats  u8
+# 1AF8 "ld ($83FE),a", 1B0C "ld a,($83FE)" into set_fm_volume, 1B2E-1B31 "add a,$01": the drone's attenuation
+83FE  var  fm_effect_33_attenuation  u8
+# 1AF8 "ld ($83FE),a": A is the drone's attenuation (1AF6 "ld a,$0B", 1B2E-1B31 "ld a,($83FE); add a,$01")
+param fm_effect_33_drone a attenuation
+# set by effects 0A (1A4C-1A4E "ld a,$01; ld ($83F3),a") and 33 (31AD-31AF), cleared by effect 09 (1A23-1A24 "xor a; ld ($83F3),a")
+# and reset_sound (035C); 1AAC-1AB0 and 1B1B-1B1F "ld a,($83F3); or a; jp z,$05D0": effect 0A and its drone go on while it is set
+83F3  var  fm_effect_0a_on  u8
+
+# ---- FM effect 0B ----
+# 1B79-1B7D "ld hl,$8404; dec (hl); jp z,$1B89", 1B80-1B86 "cp $0C; ret nz; ld a,$27; jp $07A0", 1B89 "ld a,$0A"
+1B79  func  fm_effect_0b_hold
+# 1B8B-1B99 "ld ($8400),a; call $07A0; ld a,$60; ld ($83FF),a; ld hl,$1B9C; jp $05E1"
+1B8B  func  fm_effect_0b_slide_start
+# 1BA3-1BAD "ld hl,($8401); ld bc,$FFF8; add hl,bc; ld ($8401),hl; jp $071D"; 1BB0-1BC2 "ld hl,$8403; dec (hl); jp z,$05D0; ld hl,$0400 ... ld a,$17; jp $1B8B"
+1B9C  func  fm_effect_0b_slide
+comment fm_effect_0b A low note held, then a long slow slide down, twice (the second quieter).
+comment fm_effect_0b_hold Holds the note 28 passes, much quieter for the last 12; then the slide.
+comment fm_effect_0b_slide_start Sets the attenuation it is given for a slide of 96 passes.
+comment fm_effect_0b_slide The note slides down an eighth of a semitone each pass; then again from its first pitch, at attenuation 23.
+# 1B91-1B93 "ld a,$60; ld ($83FF),a", 1B9C-1BA0 "ld hl,$83FF; dec (hl); jp z,$1BB0": passes left of the slide
+83FF  var  fm_effect_0b_slide_timer  u8
+# 1B68-1B6A "ld a,$08; ld ($8400),a", 1B8B "ld ($8400),a": the attenuation it sets (nothing reads it back)
+8400  var  fm_effect_0b_attenuation  u8
+# 1B5F-1B62 "ld hl,$0400; ld ($8401),hl", 1BA3-1BAA "ld hl,($8401); ld bc,$FFF8; add hl,bc; ld ($8401),hl": the note's pitch
+8401  var  fm_effect_0b_pitch  u16
+# 1B54-1B56 "ld a,$02; ld ($8403),a", 1BB0-1BB4 "ld hl,$8403; dec (hl); jp z,$05D0": the slides left
+8403  var  fm_effect_0b_slides  u8
+# 1B4F-1B51 "ld a,$1C; ld ($8404),a", 1B79-1B7D "ld hl,$8404; dec (hl); jp z,$1B89": passes left of the first note
+8404  var  fm_effect_0b_timer  u8
+# 1B8B-1B8E "ld ($8400),a; call $07A0": A is the slide's attenuation (1B89 "ld a,$0A", 1BC0 "ld a,$17")
+param fm_effect_0b_slide_start a attenuation
+
+# ---- FM effects 0C and 18: zigzag steps (a family of their own: +29 is the steps they start with) ----
+# 1C04-1C10 "ld a,(ix+$29); ld (ix+$28),a; ld hl,$0700; ld (ix+$32),l; ld (ix+$33),h"
+1C04  func  fm_effect_zigzag_steps_start
+# 1C13-1C25 "ld a,($83DB); add a,(ix+$2d); ld (ix+$2c),a; ld l,(ix+$38); ld h,(ix+$39); call $05F9; ld hl,$0500"
+1C13  func  fm_effect_zigzag_steps_reload
+# 1C28-1C2B "call $2B87; ld a,(ix+$2c)": the pitch in HL, the record's attenuation
+1C28  func  fm_effect_zigzag_steps_note
+# 1C2E-1C37 "call $07A0; call $06B4; ld a,(ix+$21); ld (ix+$20),a"
+1C2E  func  fm_effect_zigzag_steps_key_on
+# 1C46-1C53 "bit 0,(ix+$20); ld bc,$0100; jp nz,$2B80; ld bc,$FE00; jp $2B80"; 1C5C-1C6E odd steps "ld hl,$0500 ... add a,$18; jp $1C2E"; 1C71-1C77 "cp (ix+$3c); jp nc,$1C13"; 1C83-1C95 "add a,(ix+$3d) ... sbc hl,bc"
+1C40  func  fm_effect_zigzag_steps
+comment fm_effect_0c PCM effect 90 and a long run of zigzag notes (152 steps), at full while many steps are left, then sinking and fading.
+comment fm_effect_18 Effect 0C's zigzag notes without the PCM effect: 16 steps, another voice, quieter, sinking sooner and fading faster.
+comment fm_effect_zigzag_steps_start Starts the steps the effect gives, with the sinking note at its first pitch.
+comment fm_effect_zigzag_steps_reload The note again from its first pitch at full: the voice reloaded, the effect's attenuation over the music's.
+comment fm_effect_zigzag_steps_note The note at the pitch it is given and the record's attenuation.
+comment fm_effect_zigzag_steps_key_on Keys the note on at the attenuation it is given, for a step of the effect's period.
+comment fm_effect_zigzag_steps The note zigzags down (four semitones up and eight down in turn) for a step; then an odd step keys the first pitch again 24 quieter, an even one starts at full again while the steps left are not below the fade's start, else from the sinking pitch (two semitones lower each time), quieter by the fade's step.
+# 1C2E-1C31 "call $07A0; call $06B4": A is the attenuation the note is keyed on at (1C2B "ld a,(ix+$2c)", 1C69-1C6C "ld a,(ix+$2c); add a,$18")
+param fm_effect_zigzag_steps_key_on a attenuation
+# 1BFC "ld (ix+$3c),$30", 22AE "ld (ix+$3c),$0A"; 1C71-1C77 "ld a,(ix+$28); cp (ix+$3c); jp nc,$1C13": below so many steps left the steps fade and sink
+scoped  channel fm_effect 3C fade_start u8
+# 1C00 "ld (ix+$3d),$02", 22B2 "ld (ix+$3d),$08"; 1C83-1C89 "ld a,(ix+$2c); add a,(ix+$3d); ld (ix+$2c),a": how much quieter each fading step is
+scoped  channel fm_effect 3D fading_step u8
+# 1C04-1C07 "ld a,(ix+$29); ld (ix+$28),a": the steps the count starts with (not the rounds left, as for the other effects)
+scoped  channel fm_effect_zigzag_steps 29 steps u8
+# 1BEB "ld (ix+$29),$98": the steps
+scoped  channel fm_effect_0c 29 steps u8
+# 229D "ld (ix+$29),$10": the steps
+scoped  channel fm_effect_18 29 steps u8
+
+# ---- FM effect 0D ----
+# 1CD4-1CD6 "ld a,$0C; jp $2405"; 1CD9 "ld a,$01" into the first round
+1CCE  func  fm_effect_0d_fall
+# 1CDB-1CE8 "ld (ix+$2c),a; ld (ix+$2d),a; call $07A0; ld (ix+$20),$10; ld (ix+$28),$06"; 1CF2-1D01 "ld hl,$0800; ld (ix+$32),l ... ld hl,$0A00; ld (ix+$30),l"
+1CDB  func  fm_effect_0d_trill_round
+# 1D10-1D13 "ld bc,$FFC0; jp $241C"; 1D20-1D37 "add a,$02 ... ld hl,$0A00; ld (ix+$32),l ... ld hl,$0800; jp $2B87"; 1D3A-1D46 "dec (ix+$29); jp z,$05D0; ld (ix+$28),$0A; ld a,$31; call $07A0"
+1D0A  func  fm_effect_0d_trill
+# 1D4F-1D58 "dec (ix+$28); ret nz; ld a,(ix+$2d); add a,$12; jp $1CDB"
+1D4F  func  fm_effect_0d_pause
+comment fm_effect_0d A falling note, then rounds of a trill that fades, each round quieter, 4 times.
+comment fm_effect_0d_fall The note falls two semitones a pass for 24 passes, dying away near its end; then the first round of the trill.
+comment fm_effect_0d_trill_round Starts a round of 6 trill steps at the attenuation it is given.
+comment fm_effect_0d_trill The two notes in turn, sliding down; every 16 passes they start again from their pitches, 2 quieter; after the round, a pause of 10 passes almost silent.
+comment fm_effect_0d_pause After the pause, the next round, 18 quieter.
+# 1CDB-1CDE "ld (ix+$2c),a; ld (ix+$2d),a": A is the round's attenuation (1CD9 "ld a,$01", 1D53-1D56 "ld a,(ix+$2d); add a,$12")
+param fm_effect_0d_trill_round a attenuation
+
+# ---- FM effect 0E ----
+# 1D9D-1DB5 "cp $06; jp z,$1DB8; bit 0,a; ld hl,($8407); ld bc,$FE00; jp z,$1DB1; ld bc,$0100; add hl,bc; ld ($8407),hl; jp $071D"; 1DBD-1DD3 the low note
+1D96  func  fm_effect_0e_zigzag_down
+# 1DD5-1DDB "ld ($8406),a; call $07A0; call $06B4"
+1DD5  func  fm_effect_0e_zigzag_up_start
+# 1DEB-1DFD "bit 0,(hl); ld hl,($8407); ld bc,$FF00; jp z,$1DF9; ld bc,$0200; add hl,bc"; 1E00-1E17 "ld (hl),$20; ld hl,$8409; dec (hl); jp z,$05D0 ... add a,$04; jp $1DD5"
+1DE4  func  fm_effect_0e_zigzag_up
+comment fm_effect_0e A note that zigzags down, then a low note that zigzags up, 16 times, each 4 quieter.
+comment fm_effect_0e_zigzag_down Eight semitones down and four up in turn for 20 passes, quieter for the last 6; then the low note.
+comment fm_effect_0e_zigzag_up_start Keys the low note on at the attenuation it is given.
+comment fm_effect_0e_zigzag_up Four semitones down and eight up in turn: 96 passes the first time, then 32; each time again from the low note, 4 quieter, 16 times.
+# 1D83-1D85 "ld a,$14; ld ($8405),a", 1DBD "ld (hl),$60", 1E00 "ld (hl),$20"; 1D96-1D9A "ld hl,$8405; dec (hl); jp z,$1DBD": passes left of the zigzag
+8405  var  fm_effect_0e_timer  u8
+# 1DD5 "ld ($8406),a", 1E12-1E15 "ld a,($8406); add a,$04": the note's attenuation
+8406  var  fm_effect_0e_attenuation  u8
+# 1D7A-1D7D "ld hl,$1000; ld ($8407),hl", 1DA5-1DB2 "ld hl,($8407) ... add hl,bc; ld ($8407),hl": the note's pitch
+8407  var  fm_effect_0e_pitch  u16
+# 1DBF-1DC1 "ld a,$10; ld ($8409),a", 1E02-1E06 "ld hl,$8409; dec (hl); jp z,$05D0": the zigzags up left
+8409  var  fm_effect_0e_repeats  u8
+# 1DD5 "ld ($8406),a": A is the note's attenuation (1DD3 "ld a,$00", 1E12-1E15 "ld a,($8406); add a,$04")
+param fm_effect_0e_zigzag_up_start a attenuation
+
+# ---- FM effects 0F, 11, 13 and 2B: a dropping note, then bursts of notes ----
+# 1E4C-1E5B "dec (ix+$20); jp nz,$1E83; push ix; ld a,$91; call $021B; pop ix; jp $1E88"
+1E4C  func  fm_effect_0f_drop
+# 1E5E-1E80 "call $05F9; ld hl,$1000; call $071D; ld hl,$0600; ld (ix+$30),l ... ld (ix+$20),$20; ld a,(ix+$2e); call $07A0; jp $06B4"
+1E5E  func  fm_effect_drop_start
+# 1E83-1E85 "ld a,$10; jp $2405"
+1E83  func  fm_effect_drop
+# 1E88 "ld (ix+$29),$11"
+1E88  func  fm_effect_bursts_start
+# 1E8C "ld a,(ix+$2e)"
+1E8C  func  fm_effect_burst_from_base
+# 1E8F-1EB2 "ld (ix+$2c),a; ld (ix+$2d),a; call $07A0; ld (ix+$20),$05; ld (ix+$28),$05; ld hl,$0C00; call $071D; ld hl,$0A00; ld (ix+$30),l"
+1E8F  func  fm_effect_burst
+# 1EB5-1EB8 "dec (ix+$20); jp nz,$2419"; 1EC5-1ED6 "call $2433; ld hl,$0A00; sbc hl,bc ... ld hl,$0600; jp $2B90"; 1ED9-1EEB "dec (ix+$29); jp z,$05D0; bit 4,(ix+$2a) ... add a,$03; jp $1E8F"
+1EB5  func  fm_effect_burst_step
+# 1FDB-1FE1 "call $1E5E; ld hl,$1FE4; jp $05E1"
+1FDB  func  fm_effect_drop_and_pcm_start
+# 1FE4-1FF3 "dec (ix+$20); jp nz,$1E83; push ix; ld a,$93; call $021B; pop ix; jp $1E88"
+1FE4  func  fm_effect_drop_and_pcm
+comment fm_effect_0f PCM effect 91 and a falling note, then PCM effect 91 again and 17 bursts of notes that fade.
+comment fm_effect_0f_drop The fall for 32 passes; then PCM effect 91 again and the bursts.
+comment fm_effect_drop_start Loads the voice it is given and keys a note on at the effect's base attenuation, for a fall of 32 passes.
+comment fm_effect_drop A pass of the fall: two semitones down, the note dying away when 16 passes are left.
+comment fm_effect_bursts_start Starts 17 bursts from the base attenuation.
+comment fm_effect_burst_from_base A burst at the base attenuation.
+comment fm_effect_burst A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 5 passes a step.
+comment fm_effect_burst_step Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; after the burst the next one, 3 quieter (or again from the base attenuation, by a flag no effect sets).
+comment fm_effect_11 PCM effect 93 and a falling note, then PCM effect 93 again and 17 bursts of notes that fade.
+comment fm_effect_drop_and_pcm_start Keys the falling note on with the voice it is given.
+comment fm_effect_drop_and_pcm The fall for 32 passes; then PCM effect 93 again and the bursts.
+comment fm_effect_12 Nothing: its channel stops at once.
+comment fm_effect_13 Effect 11's sound with another voice.
+# 1E8F "ld (ix+$2c),a; ld (ix+$2d),a": A is the burst's attenuation (1E8C "ld a,(ix+$2e)", 1EE6-1EE9 "ld a,(ix+$2d); add a,$03")
+param fm_effect_burst a attenuation
+# 1EDF-1EE3 "bit 4,(ix+$2a); jp nz,$1E8C": with bit 4 the next burst starts again from the base attenuation; no FM effect writes the
+# byte (read_track's 0F51 "ld (ix+$2a),e" is the music's, on its own channels), so on an effect's channel it stays 0
+scoped  channel fm_effect 2A burst_flags u8
+
+# ---- FM effect 10 ----
+# 1F3D-1F3F "ld a,$0C; jp $2405"; 1F42-1F57 "ld a,($82C1); cp $12; jp nc,$1F5A; ld hl,$1183; ld ($82C2),hl; ld a,$04; ld ($82C1),a; ld a,$11; ld ($82CF),a"
+1F37  func  fm_effect_10_fall
+# 1F7F-1F82 "dec (ix+$20); jp nz,$2419"; 1F85-1FAF "ld (ix+$20),$10; dec (ix+$28); jp z,$05D0 ... bit 3,(ix+$28) ... ld hl,$0800; jp $2B87"
+1F7F  func  fm_effect_10_trill
+comment fm_effect_10 PCM effect 84 and a falling note, then a trill that fades out.
+comment fm_effect_10_fall The note falls two semitones a pass for 32 passes, dying away near its end; then PCM effect 84 again on the PCM effects' second channel (unless effect 92 or 93 plays there) and the trill.
+comment fm_effect_10_trill The two notes in turn, sliding down; every 16 passes they start again from their pitches, 2 quieter for the first 8 steps and 3 for the last, 16 steps.
+# 1F26-1F28 "ld a,$05; ld (ix+$1e),a" then 1F2B set_fm_volume: the note's attenuation, which nothing reads (the fall, fm_effect_fall 2411,
+# reads the base attenuation at +2E, which this effect never sets)
+scoped  channel fm_effect_10 1E unread_attenuation u8
+
+# ---- FM effect 14 ----
+# 2069-206D "ld hl,$840C; dec (hl); jp z,$207D", 2070-207A "ld hl,($840A); ld bc,$FF80; add hl,bc; ld ($840A),hl; jp $071D"; 207D-2091 "ld (hl),$02; inc hl; dec (hl); ret nz ... add a,$05"
+2069  func  fm_effect_14_fall
+comment fm_effect_14 A long fall from a high note, quieter step by step, 8 times.
+comment fm_effect_14_fall Two semitones down each pass (every other pass after the first 8); every 16 passes 5 quieter; it stops the eighth time.
+# 2044-2047 "ld hl,$1700; ld ($840A),hl", 2070-2077 "ld hl,($840A); ld bc,$FF80; add hl,bc; ld ($840A),hl": the note's pitch
+840A  var  fm_effect_14_pitch  u16
+# 204D-2050 "ld hl,$840C; ld (hl),$08", 2069-206D "ld hl,$840C; dec (hl); jp z,$207D", 207D "ld (hl),$02": passes left to the next count
+840C  var  fm_effect_14_timer  u8
+# 2052-2053 "inc hl; ld (hl),$08", 207F-2082 "inc hl; dec (hl); ret nz; ld (hl),$08": counts left to the next attenuation step
+840D  var  fm_effect_14_steps  u8
+# 2055-2056 "inc hl; ld (hl),$08", 2084-2086 "inc hl; dec (hl); jp z,$05D0": the attenuation steps left
+840E  var  fm_effect_14_rounds  u8
+# 2058-205A "ld a,$0E; ld ($840F),a", 2089-208E "ld a,($840F); add a,$05; ld ($840F),a": the note's attenuation
+840F  var  fm_effect_14_attenuation  u8
+
+# ---- FM effect 15 ----
+# 20CA-20D2 "ld (ix+$32),$04; ld (ix+$28),$14; ld a,$2C"
+20CA  func  fm_effect_15_start
+# 20D4-20EC "ld (ix+$20),a; ld hl,$2094; call $05F9; ld hl,$0400; call $2B87; ld a,(ix+$2d); ld (ix+$2c),a; call $07A0; call $06B4"
+20D4  func  fm_effect_15_note
+# 20F5-2100 "dec (ix+$20); ret nz; ld (ix+$20),$0E; dec (ix+$28); jp z,$05D0", 2103-210A "cp $13; ld a,$58; jp z,$20D4"; 210D-2129 "add a,$02 ... call $2B90 ... add a,$03"
+20F5  func  fm_effect_15_sink
+# 212C-2133 "ld (ix+$20),$10; ld hl,$2136; jp $05E1" (the handler effect 15 puts in 8382)
+212C  func  fm_effect_15_echo
+# 2136-213E "dec (ix+$20); ret nz; ld (ix+$2d),$17; jp $20CA"
+2136  func  fm_effect_15_echo_wait
+comment fm_effect_15 Starts effect 2D, puts an echo on the channel the FM effects take from the music's channel 7, and plays a low note twice that then sinks in growing steps as it fades.
+comment fm_effect_15_start The 20 steps from the attenuation the effect starts with: the note held 44 passes.
+comment fm_effect_15_note The note keyed on for the passes it is given, at the attenuation the effect starts with.
+comment fm_effect_15_sink After the first note, the note again for 88 passes; then every 14 passes it sinks by a step that grows each time, 3 quieter.
+comment fm_effect_15_echo The echo's channel waits 16 passes.
+comment fm_effect_15_echo_wait Then plays the same steps, at attenuation 23 (the first at 11).
+# 20D4 "ld (ix+$20),a": A is the note's passes (20D2 "ld a,$2C", 2108 "ld a,$58")
+param fm_effect_15_note a length
+# 20CA "ld (ix+$32),$04"; 210D-2117 "ld a,(ix+$32); add a,$02; ld (ix+$32),a; ld b,$00; ld c,a" into fm_effect_set_pitch_minus: how much the pitch sinks at the next step, 2 more each time
+scoped  channel fm_effect_15 32 fall_step u8
+
+# ---- FM effects 16, 22 and 3D: a long slow rise (a family of their own: +20 is a 16-bit timer) ----
+# 216A-2172 "ld (ix+$34),$08; ld (ix+$2c),$0C; ld hl,$01F0"
+216A  func  fm_effect_16_rise
+# 2175-218E "ld (ix+$20),l; ld (ix+$21),h; ld (ix+$28),$08; ld hl,$2141; call $05F9; ld hl,$0100; call $2B87; call $079D; call $06B4"
+2175  func  fm_effect_long_rise_start
+# 2197-21A6 "ld l,(ix+$20); ld h,(ix+$21); dec hl; ld (ix+$20),l; ld (ix+$21),h; ld a,h; or l; jp z,$05D0"; 21A9-21B8 "ld a,h; or a; jp nz,$21BE; dec (ix+$28); jp nz,$21BE; ld (ix+$28),$08; inc (ix+$2c)"; 21BE-21C3 "ld b,$00; ld c,(ix+$34); jp $2B80"
+2197  func  fm_effect_long_rise
+# 21C6-21D3 "call $06C2; call $06CE; ld (ix+$20),$50; ld hl,$21D6; jp $05E1" (the handler effect 16 puts in 8342)
+21C6  func  fm_effect_16_echo
+# 21D6-21DA "dec (ix+$20); ret nz; jp $216A"
+21D6  func  fm_effect_16_echo_wait
+comment fm_effect_16 A very low note that rises slowly for 496 passes, fading in its last 256; the same starts 80 passes later on the channel the FM effects take from the music's channel 6.
+comment fm_effect_16_rise The rise at attenuation 12, an eighth of a semitone a pass, for 496 passes.
+comment fm_effect_long_rise_start Keys a very low note on for the passes it is given.
+comment fm_effect_long_rise Counts the passes down; each pass the note rises by the effect's step and, in the last 256 passes, it gets 1 quieter every 8.
+comment fm_effect_16_echo The echo's channel: keyed off at once, then waits 80 passes.
+comment fm_effect_16_echo_wait Then the same rise.
+# 2175-2178 "ld (ix+$20),l; ld (ix+$21),h": HL is the rise's passes (2172 "ld hl,$01F0", 2851 "ld hl,$02C0", 35F7 "ld hl,$0140")
+param fm_effect_long_rise_start hl length
+# 2175-2178 "ld (ix+$20),l; ld (ix+$21),h", 2197-21A6 "ld l,(ix+$20); ld h,(ix+$21); dec hl; ld (ix+$20),l; ld (ix+$21),h; ld a,h; or l; jp z,$05D0": passes left of the rise
+scoped  channel fm_effect_long_rise 20 long_timer u16
+
+# ---- FM effect 17 ----
+# 21FB-2206 "ld a,$07; ld ($8411),a; ld hl,$21DD; call $05F9; ld hl,$0500"
+21FB  func  fm_effect_17_from_top
+# 2209-2217 "ld ($8412),hl; ld ($8414),hl; call $071D; ld a,$09; ld ($8410),a; ld a,($8411)"
+2209  func  fm_effect_17_note
+# 221A-221D "call $07A0; call $06B4"
+221A  func  fm_effect_17_key_on
+# 222D-223F "bit 0,(hl); ld hl,($8412); ld bc,$0040; jp nz,$223B; ld bc,$FF80; add hl,bc"; 224B-225E odd steps "ld hl,$0500 ... add a,$14; jp $221A"; 2261-227D "cp $0A; jp nc,$21FB ... add a,$08 ... sbc hl,bc; jp $2209"
+2226  func  fm_effect_17_zigzag
+comment fm_effect_17 Zigzag notes, each followed by a quieter echo of the top note: at the top for the first steps, then sinking and fading; 20 steps.
+comment fm_effect_17_from_top Starts again from the top note at attenuation 7.
+comment fm_effect_17_note A note at the pitch it is given, for 9 passes.
+comment fm_effect_17_key_on Keys the note on at the attenuation it is given.
+comment fm_effect_17_zigzag One semitone up and two down in turn; then the next step: an odd one is the top note again 20 quieter; an even one starts at the top again while 10 or more steps are left, after that two semitones below the last and 8 quieter.
+# 2214 "ld ($8410),a", 2226-222A "ld hl,$8410; dec (hl); jp z,$2242", 2242 "ld (hl),$08": passes left of the step
+8410  var  fm_effect_17_timer  u8
+# 21FB-21FD "ld a,$07; ld ($8411),a", 226D-2272 "ld a,($8411); add a,$08; ld ($8411),a": the notes' attenuation
+8411  var  fm_effect_17_attenuation  u8
+# 2209 "ld ($8412),hl", 222F-223C "ld hl,($8412) ... add hl,bc; ld ($8412),hl": the note's pitch
+8412  var  fm_effect_17_pitch  u16
+# 220C "ld ($8414),hl", 2278-227B "ld hl,($8414); sbc hl,bc": the pitch the step started at
+8414  var  fm_effect_17_base_pitch  u16
+# 21F6-21F8 "ld a,$14; ld ($8416),a", 2244-2248 "ld hl,$8416; dec (hl); jp z,$05D0": the steps left
+8416  var  fm_effect_17_steps  u8
+# 2209-220F "ld ($8412),hl; ld ($8414),hl; call $071D": HL is the note's pitch (2206 "ld hl,$0500", 2275-227B "ld hl,($8414); sbc hl,bc")
+param fm_effect_17_note hl pitch
+# 221A "call $07A0": A is the attenuation (2217 "ld a,($8411)", 2259-225C "ld a,($8411); add a,$14")
+param fm_effect_17_key_on a attenuation
+
+# ---- FM effects 19 and 1E: a ladder of notes (1E is 19's echo, 48 passes later) ----
+# 22DD-22F0 "ld (ix+$2c),a; ld (ix+$28),$13; ld hl,$22B9; call $05F9; ld hl,$0F00; ld (ix+$32),l; ld (ix+$33),h"
+22DD  func  fm_effect_ladder_start
+# 22F3-22FC "call $2B87; call $079D; call $06B4; ld (ix+$20),$0A"
+22F3  func  fm_effect_ladder_step
+# 230C-2320 "ld a,$02; cp (ix+$20); ret nz; ld l,(ix+$32); ld h,(ix+$33); call $071D; ld a,(ix+$2c); add a,$10; jp $07A0"; 2323-234B "dec (ix+$28) ... inc (ix+$2c) ... ld bc,$0040; add hl,bc; jp $22F3"
+2306  func  fm_effect_ladder
+# 26D4-26DA "dec (ix+$20); ret nz; ld a,$0C; jp $22DD"
+26D4  func  fm_effect_1e_wait
+comment fm_effect_19 Starts effect 1E (its echo) and plays a ladder of notes rising a semitone a step, 19 steps.
+comment fm_effect_ladder_start Starts the 19 steps at the attenuation it is given.
+comment fm_effect_ladder_step A step's note at the pitch it is given, for 10 passes.
+comment fm_effect_ladder In a step's last two passes the note before it sounds again, 16 quieter; then the next step a semitone higher (1 quieter every other step in the last 10).
+comment fm_effect_1e Effect 19's ladder 48 passes later, 12 quieter, on its own channel (effect 19 starts it).
+comment fm_effect_1e_wait Waits the 48 passes, then the ladder.
+
+# ---- FM effect 1A ----
+# 2399-239B "ld a,$08; jp $2405"; 239E-23A2 "ld (ix+$29),$20; ld a,$00"
+2393  func  fm_effect_1a_fall
+# 23A4-23C1 "ld (ix+$2c),a; ld (ix+$2d),a; call $07A0; ld (ix+$20),$06; ld (ix+$28),$05; ld hl,$0D80; call $071D; ld hl,$0A80; ld (ix+$30),l"
+23A4  func  fm_effect_1a_burst
+# 23CA-23CD "dec (ix+$20); jp nz,$2419"; 23DA-23EB "call $2433; ld hl,$0A80; sbc hl,bc ... ld hl,$0680; jp $2B90"; 23EE-2402 "dec (ix+$29) ... bit 4,(ix+$29) ... add a,$01; add a,$01; jp $23A4"
+23CA  func  fm_effect_1a_burst_step
+# 244F "ld (ix+$28),$08" (the handler effect 1A puts in 8382)
+244F  func  fm_effect_1a_second_start
+# 2453-2471 "ld hl,$1EEE; call $05F9; ld hl,$1100; call $071D; ld hl,$0700; call $2442; ld (ix+$20),$20; ld a,$04; ld (ix+$2e),a; call $07A0; call $06B4"
+2453  func  fm_effect_1a_second_note
+# 247A-2482 "dec (ix+$20); jp z,$2485; ld a,$10; jp $2405"; 2485-248F "dec (ix+$28); jp nz,$2453; ld (ix+$29),$20; ld a,$06"
+247A  func  fm_effect_1a_second_fall
+# 2491-24AE "ld (ix+$2c),a; ld (ix+$2d),a; call $07A0; ld (ix+$20),$06; ld (ix+$28),$05; ld hl,$0E00; call $071D; ld hl,$0B00; ld (ix+$30),l"
+2491  func  fm_effect_1a_second_burst
+# 24B7-24BA "dec (ix+$20); jp nz,$2419"; 24C7-24D8 "call $2433; ld hl,$0B00; sbc hl,bc ... ld hl,$0700; jp $2B90"; 24DB-24F3 "dec (ix+$29) ... cp $1E ... sbc a,$01 ... add a,$02"
+24B7  func  fm_effect_1a_second_burst_step
+comment fm_effect_1a Three channels: effect 13's sound on the channel the FM effects take from the music's channel 6, 8 falling notes and bursts on the one from channel 7, and here a falling note then 32 bursts of notes.
+comment fm_effect_1a_fall The note falls two semitones a pass for 24 passes, dying away near its end; then the bursts.
+comment fm_effect_1a_burst A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 6 passes a step.
+comment fm_effect_1a_burst_step Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; then the next burst, 1 quieter while 16 or more are left, then 2.
+comment fm_effect_1a_second_start The second channel's part: 8 falling notes, then 32 bursts.
+comment fm_effect_1a_second_note A note keyed on high that falls for 32 passes.
+comment fm_effect_1a_second_fall The fall, two semitones a pass, dying away when 16 passes are left; after the 8 notes, the bursts.
+comment fm_effect_1a_second_burst A burst of 5 steps at the attenuation it is given: two notes in turn sliding down, 6 passes a step.
+comment fm_effect_1a_second_burst_step Each step the two notes at lower pitches that move with the random bytes' place, 1 quieter; then the next burst, 1 louder for the first two, then 2 quieter.
+# 23A4-23A7 "ld (ix+$2c),a; ld (ix+$2d),a": A is the burst's attenuation (23A2 "ld a,$00", 23F8-2400 "ld a,(ix+$2d) ... add a,$01")
+param fm_effect_1a_burst a attenuation
+# 2491-2494 "ld (ix+$2c),a; ld (ix+$2d),a": A is the burst's attenuation (248F "ld a,$06", 24E6-24F1 "ld a,(ix+$2d) ... add a,$02")
+param fm_effect_1a_second_burst a attenuation
+
+# ---- FM effect 1B ----
+# 2531-2535 "ld hl,$8417; dec (hl); jp z,$2549", 2538-2546 "ld hl,($8418); ld bc,$0080; add hl,bc; ld a,h; cp $11; ret nc; ld ($8418),hl; jp $071D"; 2549-254D "ld (hl),$90; ld a,$2D; call $07A0"
+2531  func  fm_effect_1b_rise
+# 2556-255A "ld hl,$8417; dec (hl); jp z,$05D0", 255D-2563 "cp $88; ret nz; ld a,$19; jp $07A0"
+2556  func  fm_effect_1b_hold
+comment fm_effect_1b A very low note that rises two semitones a pass up to a ceiling and stays there, then quieter; 320 passes in all.
+comment fm_effect_1b_rise Rises for 176 passes (staying once it is at its highest); then much quieter.
+comment fm_effect_1b_hold Holds the note 144 passes, a little louder after the first 8.
+# 251E-2520 "ld a,$B0; ld ($8417),a", 2549 "ld (hl),$90"; 2531-2535 "ld hl,$8417; dec (hl); jp z,$2549": passes left
+8417  var  fm_effect_1b_timer  u8
+# 2515-2518 "ld hl,$0240; ld ($8418),hl", 2538-2543 "ld hl,($8418); ld bc,$0080; add hl,bc ... ld ($8418),hl": the note's pitch
+8418  var  fm_effect_1b_pitch  u16
+
+# ---- FM effects 1C and 20: repeated notes ----
+# 2591 "ld (ix+$29),$02"
+2591  func  fm_effect_pulses_start
+# 2595-2598 "ld (ix+$2c),a; ld (ix+$28),$0E"
+2595  func  fm_effect_pulses_round
+# 259C-25AF "ld (ix+$20),$16; ld hl,$2566; call $05F9; ld hl,$0A00; call $071D; call $079D; call $06B4"
+259C  func  fm_effect_pulse
+# 25BE-25D7 "ld a,(ix+$20); cp $08; ret nz; dec (ix+$28); ld a,(ix+$28); cp $0A; jp nc,$259C; inc (ix+$28); ld a,(ix+$2c); add a,$30; jp $07A0"; 25DA-25FB "dec (ix+$28); jp z,$25F3 ... add a,$08 ... dec (ix+$29); jp z,$05D0; ld a,$1D; jp $2595"
+25B8  func  fm_effect_pulses
+# 25FE-2605 "ld (ix+$20),$16; ld hl,$2608; jp $05E1" (the handler effect 1C puts in 8342)
+25FE  func  fm_effect_1c_echo
+# 2608-260E "dec (ix+$20); ret nz; ld a,$08; jp $2591"
+2608  func  fm_effect_1c_echo_wait
+comment fm_effect_1c Repeated notes in two rounds, with an echo 22 passes later on the channel the FM effects take from the music's channel 6.
+comment fm_effect_pulses_start Two rounds of 14 notes, from the attenuation it is given.
+comment fm_effect_pulses_round A round of 14 notes at the attenuation it is given.
+comment fm_effect_pulse A note keyed on for 22 passes.
+comment fm_effect_pulses The first 4 notes are cut 8 passes before their end by the next; the later ones fall silent for their last 8 passes; the last of a round is 8 quieter; the second round at attenuation 29.
+comment fm_effect_1c_echo The echo's channel waits 22 passes.
+comment fm_effect_1c_echo_wait Then the repeated notes at attenuation 8.
+comment fm_effect_20 Effect 1C's repeated notes alone, at attenuation 8.
+
+# ---- FM effects 1D and 04: a rising arpeggio ----
+# 263F-2643 "ld (ix+$21),$1A; ld bc,$2611"
+263F  func  fm_effect_1d_arpeggio
+# 2646-264C "ld (ix+$38),c; ld (ix+$39),b; ld (ix+$28),$03"
+2646  func  fm_effect_arpeggio_start
+# 2650-2671 "ld (ix+$30),l; ld (ix+$31),h; ld a,(ix+$21); ld (ix+$20),a; ld l,(ix+$38); ld h,(ix+$39); call $05F9 ... call $071D; call $079D; call $06B4"
+2650  func  fm_effect_arpeggio_note
+# 267A-2698 "dec (ix+$20); ret nz; dec (ix+$28); jp z,$269B; bit 0,(ix+$28) ... ld bc,$01C0; jp z,$2697; ld bc,$0140; add hl,bc; jp $2650"; 269B "ld (ix+$20),$C0"
+267A  func  fm_effect_arpeggio
+# 26A5-26A8 "dec (ix+$20); jp z,$05D0"
+26A5  func  fm_effect_arpeggio_ring
+# 26AC-26B3 "ld (ix+$20),$08; ld hl,$26B6; jp $05E1" (the handler effect 1D puts in 8382)
+26AC  func  fm_effect_1d_echo
+# 26B6-26C1 "dec (ix+$20); ret nz; ld (ix+$2c),$08; ld hl,$1001; jp $263F"
+26B6  func  fm_effect_1d_echo_wait
+comment fm_effect_1d A three-note arpeggio that rises and rings, with an echo 8 passes later on the channel the FM effects take from the music's channel 7, a little sharp.
+comment fm_effect_1d_arpeggio The arpeggio from the pitch it is given, 26 passes a note, with its voice.
+comment fm_effect_arpeggio_start The arpeggio with the voice it is given: three notes from the pitch it is given.
+comment fm_effect_arpeggio_note A note at the pitch it is given, keyed on for the effect's period.
+comment fm_effect_arpeggio Holds the note; then the next one, a fifth higher, then a fourth (an octave over the first); the last rings 192 passes.
+comment fm_effect_arpeggio_ring The last note rings, then the channel stops.
+comment fm_effect_1d_echo The echo's channel waits 8 passes.
+comment fm_effect_1d_echo_wait Then the arpeggio 8 quieter and a sixty-fourth of a semitone sharp.
+
+# ---- FM effect 1F ----
+# 2713-2723 "ld hl,($841C); ld bc,$0080; add hl,bc; ld a,h; cp $10; jp z,$2726; ld ($841C),hl; jp $071D"; 2726-2731 "ld a,$10; ld ($841E),a; ld hl,$26DD; call $05F9; ld a,$01"
+2713  func  fm_effect_1f_rise
+# 2733-2744 "ld ($841B),a; call $07A0; ld hl,$1000; call $071D; ld a,$20; ld ($841A),a; call $06B4"
+2733  func  fm_effect_1f_strike
+# 274D-2751 "ld hl,$841A; dec (hl); ret nz", 2752-2764 "ld (hl),$20; ld hl,$841E; dec (hl); jp z,$05D0; ld a,(hl); cp $08; ret nc; ld a,($841B); add a,$01; jp $2733"
+274D  func  fm_effect_1f_hold
+comment fm_effect_1f A note that rises two semitones a pass, then a high note held and struck again as it fades.
+comment fm_effect_1f_rise Rises for 22 passes; then the high note.
+comment fm_effect_1f_strike Strikes the high note at the attenuation it is given, for 32 passes.
+comment fm_effect_1f_hold Holds it 256 passes, then strikes it again every 32 passes, 1 quieter each time, 7 times.
+# 273F-2741 "ld a,$20; ld ($841A),a", 274D-2752 "ld hl,$841A; dec (hl); ret nz; ld (hl),$20": passes left of the strike
+841A  var  fm_effect_1f_timer  u8
+# 2733 "ld ($841B),a", 275F-2762 "ld a,($841B); add a,$01": the note's attenuation
+841B  var  fm_effect_1f_attenuation  u8
+# 26FC-26FF "ld hl,$0500; ld ($841C),hl", 2713-2720 "ld hl,($841C); ld bc,$0080; add hl,bc ... ld ($841C),hl": the rising note's pitch
+841C  var  fm_effect_1f_pitch  u16
+# 2726-2728 "ld a,$10; ld ($841E),a", 2754-2758 "ld hl,$841E; dec (hl); jp z,$05D0": the strikes' times left
+841E  var  fm_effect_1f_repeats  u8
+# 2733 "ld ($841B),a" then "call $07A0": A is the attenuation (2731 "ld a,$01", 275F-2762 "ld a,($841B); add a,$01")
+param fm_effect_1f_strike a attenuation
+
+# ---- FM effect 21 ----
+# 27A7-27B7 "ld hl,($8423); ld bc,$0010; add hl,bc; ld a,h; cp $0B; jp z,$27BA; ld ($8423),hl; jp $071D"; 27BA-27D4 "ld hl,$0F00; ld ($8420),hl ... ld a,$11; ld ($8422),a; call $07A0; call $06B4"
+27A7  func  fm_effect_21_rise
+# 27DD-27E1 "ld a,($841F); or a; jp z,$05D0", 27E4-27ED "ld hl,($8420); dec hl; ld ($8420),hl; ld a,h; or l; ret nz", 27F4-2801 "ld a,($8422); add a,$01; bit 6,a; jp nz,$05D0 ... jp $07A0"
+27DD  func  fm_effect_21_hold
+comment fm_effect_21 A slow rise, then a held note that fades very slowly until effect 2B stops it.
+comment fm_effect_21_rise A quarter of a semitone up each pass for 112 passes; then the held note, keyed on again.
+comment fm_effect_21_hold Every 3840 passes 1 quieter, until it is silent or its flag is cleared.
+# 27BA-27BD "ld hl,$0F00; ld ($8420),hl", 27E4-27E8 "ld hl,($8420); dec hl; ld ($8420),hl": passes left to the next attenuation step
+8420  var  fm_effect_21_timer  u16
+# 27CC-27CE "ld a,$11; ld ($8422),a", 27F4-27FE "ld a,($8422); add a,$01; bit 6,a; jp nz,$05D0; ld ($8422),a": the held note's attenuation
+8422  var  fm_effect_21_attenuation  u8
+# 2790-2793 "ld hl,$0400; ld ($8423),hl", 27A7-27B4 "ld hl,($8423); ld bc,$0010; add hl,bc ... ld ($8423),hl": the rising note's pitch
+8423  var  fm_effect_21_pitch  u16
+# set by effect 21 (2785-2787 "ld a,$01; ld ($841F),a"), cleared by effect 2B (2D7D-2D81 "xor a ... ld ($841F),a") and reset_sound
+# (035F); 27DD-27E1 "ld a,($841F); or a; jp z,$05D0": effect 21's held note goes on while it is set
+841F  var  fm_effect_21_on  u8
+
+# ---- FM effect 22 ----
+# 284D-2854 "ld (ix+$34),$05; ld hl,$02C0; jp $2175"
+284D  func  fm_effect_22_rise
+# 2857-2859 "ld a,$07; jp $2877" (the handler effect 22 puts in 8382)
+2857  func  fm_effect_22_on_channel_7
+# 285C-285E "ld a,$06; jp $2877" (in 8342)
+285C  func  fm_effect_22_on_channel_6
+# 2861-2863 "ld a,$05; jp $2877" (in 8142, the music's FM channel 5)
+2861  func  fm_effect_22_on_channel_5
+# 2866-2868 "ld a,$04; jp $2877" (in 8102)
+2866  func  fm_effect_22_on_channel_4
+# 286B-286D "ld a,$03; jp $2877" (in 80C2)
+286B  func  fm_effect_22_on_channel_3
+# 2870-2872 "ld a,$02; jp $2877" (in 8082)
+2870  func  fm_effect_22_on_channel_2
+# 2875 "ld a,$01" (in 8042)
+2875  func  fm_effect_22_on_channel_1
+# 2877-2884 "ld (ix+$28),a; sla a; add a,$14; add a,(ix+$28); ld (ix+$2c),a; ld (ix+$20),$50"
+2877  func  fm_effect_22_delay
+# 288E-289A "dec (ix+$20); ret nz; ld (ix+$20),$50; dec (ix+$28); ret nz; jp $284D"
+288E  func  fm_effect_22_wait
+comment fm_effect_22 Takes every FM channel: here a slow rise at once, and on the music's channels 1 to 5 and the FM effects' channels 6 and 7 the same rise in turn, 80 passes apart and 3 quieter each.
+comment fm_effect_22_rise The slow rise: 704 passes, five sixty-fourths of a semitone a pass.
+comment fm_effect_22_on_channel_7 The part on channel 7: the rise after 7 times 80 passes.
+comment fm_effect_22_on_channel_6 The part on channel 6: the rise after 6 times 80 passes.
+comment fm_effect_22_on_channel_5 The part on the music's channel 5: the rise after 5 times 80 passes.
+comment fm_effect_22_on_channel_4 The part on the music's channel 4: the rise after 4 times 80 passes.
+comment fm_effect_22_on_channel_3 The part on the music's channel 3: the rise after 3 times 80 passes.
+comment fm_effect_22_on_channel_2 The part on the music's channel 2: the rise after 2 times 80 passes.
+comment fm_effect_22_on_channel_1 The part on the music's channel 1: the rise after 80 passes.
+comment fm_effect_22_delay Waits as many times 80 passes as it is given, at an attenuation of 20 plus 3 for each.
+comment fm_effect_22_wait Counts the waits of 80 passes; then the rise.
+# 2877 "ld (ix+$28),a": A is how many waits of 80 passes (the channel's number: 2857 "ld a,$07" ... 2875 "ld a,$01")
+param fm_effect_22_delay a waits
+
+# ---- FM effect 23 ----
+# 28E1-28E5 "ld hl,$8427; dec (hl); jp z,$28F5", 28E8-28F2 "ld hl,($8425); ld bc,$FF70; add hl,bc; ld ($8425),hl; jp $071D"; 28F5-2909 "ld (hl),$03; inc hl; dec (hl); ret nz ... add a,$04"
+28E1  func  fm_effect_23_fall
+comment fm_effect_23 A long fall from a high note, quieter step by step, 12 times.
+comment fm_effect_23_fall A little over two semitones down each pass (two passes of every three after the first 8); every 24 passes 4 quieter; it stops the twelfth time.
+# 28BC-28BF "ld hl,$1700; ld ($8425),hl", 28E8-28EF "ld hl,($8425); ld bc,$FF70; add hl,bc; ld ($8425),hl": the note's pitch
+8425  var  fm_effect_23_pitch  u16
+# 28C5-28C8 "ld hl,$8427; ld (hl),$08", 28E1-28E5 "ld hl,$8427; dec (hl); jp z,$28F5", 28F5 "ld (hl),$03": passes left to the next count
+8427  var  fm_effect_23_timer  u8
+# 28CA-28CB "inc hl; ld (hl),$08", 28F7-28FA "inc hl; dec (hl); ret nz; ld (hl),$08": counts left to the next attenuation step
+8428  var  fm_effect_23_steps  u8
+# 28CD-28CE "inc hl; ld (hl),$0C", 28FC-28FE "inc hl; dec (hl); jp z,$05D0": the attenuation steps left
+8429  var  fm_effect_23_rounds  u8
+# 28D0-28D2 "ld a,$06; ld ($842A),a", 2901-2906 "ld a,($842A); add a,$04; ld ($842A),a": the note's attenuation
+842A  var  fm_effect_23_attenuation  u8
+
+# ---- FM effect 24 ----
+# 295E-2960 "ld a,$08; jp $2405"; 2963-2976 "ld (ix+$29),$10; ld hl,$0600; ld (ix+$30),l ... ld hl,$290C; call $05F9; ld a,$02"
+2958  func  fm_effect_24_fall
+# 2978-298F "ld (ix+$2c),a; ld (ix+$2d),a; call $07A0; ld (ix+$20),$04; ld (ix+$28),$05; ld hl,$0200; call $071D; call $06B4"
+2978  func  fm_effect_24_burst
+# 299E-29A1 "ld bc,$FF80; jp $2B80"; 29AE-29C1 "call $2433; ld hl,$0A00; sbc hl,bc; ld (ix+$30),l ... ld hl,$0600; sbc hl,bc; jp $071D"; 29C4-29CF "dec (ix+$29) ... add a,$04; jp $2978"
+2998  func  fm_effect_24_burst_step
+comment fm_effect_24 PCM effect 93 and a falling note, then 16 bursts of low notes, each 4 quieter.
+comment fm_effect_24_fall The note falls two semitones a pass for 16 passes, dying away near its end; then the bursts.
+comment fm_effect_24_burst A burst of 5 steps at the attenuation it is given, keyed on low.
+comment fm_effect_24_burst_step The note falls two semitones a pass; every 4 passes it jumps to a pitch that moves with the random bytes' place, 1 quieter; then the next burst, 4 quieter.
+# 2978-297B "ld (ix+$2c),a; ld (ix+$2d),a": A is the burst's attenuation (2976 "ld a,$02", 29CA-29CD "ld a,(ix+$2d); add a,$04")
+param fm_effect_24_burst a attenuation
+
+# ---- FM effect 25 ----
+# 2A0D-2A11 "ld hl,$842B; dec (hl); jp z,$2A22", 2A14-2A1F "ld hl,($842C); ld bc,$0040; sbc hl,bc; ld ($842C),hl; jp $071D"; 2A22-2A2A "ld (hl),$F0; ld hl,$0F40; ld ($842C),hl; call $071D"
+2A0D  func  fm_effect_25_fall
+# 2A33-2A37 "ld hl,$842B; dec (hl); jp z,$05D0", 2A3A-2A4C "cp $D8; ret nc; ld hl,($842C); ld a,l; cp $68; ret z; ld bc,$0002; add hl,bc; ld ($842C),hl; jp $071D"
+2A33  func  fm_effect_25_bend
+comment fm_effect_25 A short fall, then a held note that bends up a little.
+comment fm_effect_25_fall A semitone down each pass for 8 passes; then another note, held 240 passes.
+comment fm_effect_25_bend After 24 passes the note bends up slowly (a thirty-second of a semitone a pass, 20 passes); the channel stops when the 240 passes end.
+# 2A02-2A04 "ld a,$08; ld ($842B),a", 2A22 "ld (hl),$F0"; 2A0D-2A11 "ld hl,$842B; dec (hl); jp z,$2A22": passes left
+842B  var  fm_effect_25_timer  u8
+# 29F1-29F4 "ld hl,$1100; ld ($842C),hl", 2A14-2A1C "ld hl,($842C); ld bc,$0040; sbc hl,bc; ld ($842C),hl": the note's pitch
+842C  var  fm_effect_25_pitch  u16
+
+# ---- FM effect 26 ----
+# 2A78-2A83 "ld ($8431),a; ld a,$09; ld ($842F),a; ld de,$1200; ld ($8434),de"
+2A78  func  fm_effect_26_round
+# 2A87-2AA2 "ld ($8432),de; ld hl,$2A4F; call $05F9; ld hl,($8432); call $071D; ld a,($8431); call $07A0; call $06B4; ld a,$1C; ld ($842E),a"
+2A87  func  fm_effect_26_note
+# 2AB2-2AC1 "cp $0C; ret nz; ld hl,($8434); call $071D; ld a,($8431); add a,$10; jp $07A0"; 2ACB-2AE0 "ld ($8434),hl; ld hl,$2B02 ... ld e,(hl); inc hl; ld d,(hl); jp $2A87"; 2AF2-2AFE "call $05D0; ld a,($8458); or a; ret z ... ld a,$34; call $026E"
+2AAB  func  fm_effect_26_play
+comment fm_effect_26 Starts effect 28 and plays a tune of 9 notes (the first, then the 8 of fm_effect_26_pitches from the last), each with an echo of the one before, twice; then effect 34 again if it was playing.
+comment fm_effect_26_round Starts the tune at the attenuation it is given.
+comment fm_effect_26_note A note of the tune at the pitch it is given, keyed on for 28 passes.
+comment fm_effect_26_play For the last 12 passes of a note, the note before it sounds again 16 quieter; then the next note of the table; after the tune, the second time 21 quieter; at the end effect 34 starts again if its flag is set.
+# 2AA0-2AA2 "ld a,$1C; ld ($842E),a", 2AAB-2AAF "ld hl,$842E; dec (hl); jp z,$2AC4": passes left of the note
+842E  var  fm_effect_26_timer  u8
+# 2A7B-2A7D "ld a,$09; ld ($842F),a", 2AC4-2AC8 "ld hl,$842F; dec (hl); jp z,$2AE3", 2AD4 "ld a,($842F)" the table's index: the notes left
+842F  var  fm_effect_26_notes  u8
+# 2A71-2A73 "ld a,$02; ld ($8430),a", 2AE3-2AE7 "ld hl,$8430; dec (hl); jp z,$2AF2": the times left
+8430  var  fm_effect_26_rounds  u8
+# 2A78 "ld ($8431),a", 2A97 "ld a,($8431)" into set_fm_volume, 2AEA-2AED "ld a,($8431); add a,$15": the tune's attenuation
+8431  var  fm_effect_26_attenuation  u8
+# 2A87 "ld ($8432),de", 2A91 "ld hl,($8432)" into set_fm_pitch: the note's pitch
+8432  var  fm_effect_26_pitch  u16
+# 2A83 "ld ($8434),de", 2ACB-2ACE "ld hl,($8432); ld ($8434),hl", 2AB6 "ld hl,($8434)" into set_fm_pitch: the note before, echoed
+8434  var  fm_effect_26_previous_pitch  u16
+# 2A78 "ld ($8431),a": A is the tune's attenuation (2A76 "ld a,$00", 2AEA-2AED "ld a,($8431); add a,$15")
+param fm_effect_26_round a attenuation
+# 2A87 "ld ($8432),de": DE is the note's pitch (2A80 "ld de,$1200", 2ADD-2ADF "ld e,(hl); inc hl; ld d,(hl)" of fm_effect_26_pitches)
+param fm_effect_26_note de pitch
+
+# ---- FM effect 27 ----
+# 2B46-2B49 "ld (ix+$20),a; call $2B95"
+2B46  func  fm_effect_27_note
+# 2B58-2B5D "ld a,(ix+$20); cp $24; jp $2BA4"; 2B60-2B70 "dec (ix+$28); jp z,$05D0; call $2BB2; add a,$26; ld (ix+$2c),a; ld a,$2C; jp $2B46"
+2B52  func  fm_effect_27_swell_and_warble
+comment fm_effect_27 A note that swells and then warbles, and a second one four semitones higher and quieter.
+comment fm_effect_27_note The note from the base pitch, keyed on for the passes it is given.
+comment fm_effect_27_swell_and_warble Two louder each pass for the first 4 passes, then a warble; then the second note, four semitones up and 38 quieter.
+# 2B46 "ld (ix+$20),a": A is the note's passes (2B44 "ld a,$28", 2B6E "ld a,$2C")
+param fm_effect_27_note a length
+
+# ---- FM effect 28 ----
+# 2BF5-2C00 "ld ($8436),hl; call $071D; ld a,$0A; call $07A0; call $06B4"
+2BF5  func  fm_effect_28_step
+# 2C10-2C1A "call $087C; ld b,$00; ld c,l; ld hl,($8436); add hl,bc; jp $071D"; 2C1D-2C46 "ld hl,$843A; dec (hl); jp z,$05D0; bit 4,(hl) ... cp $18; ld bc,$0080 ... ld bc,$FF00 ... jp $2BF5"
+2C09  func  fm_effect_28_jitter
+comment fm_effect_28 A jittering note that rises for its first 4 steps and then sinks, its steps getting longer; 28 steps.
+comment fm_effect_28_step Keys the note on at the pitch it is given, attenuation 10.
+comment fm_effect_28_jitter Each pass the pitch jumps above the note by the random bytes' place (up to four semitones); each step the next note two semitones up (first 4 steps) or four down, 1 or 2 passes longer.
+# 2BF5 "ld ($8436),hl", 2C16 "ld hl,($8436)", 2C42-2C45 "ld hl,($8436); add hl,bc": the step's pitch
+8436  var  fm_effect_28_pitch  u16
+# 2BE7-2BE9 "ld a,$01; ld ($8438),a", 2C09-2C0D "ld hl,$8438; dec (hl); jp z,$2C1D", 2C30 "ld ($8438),a": passes left of the step
+8438  var  fm_effect_28_timer  u8
+# 2BEC "ld ($8439),a", 2C26-2C33 "ld a,($8439) ... add a,$01; ld ($8438),a; ld ($8439),a": a step's passes, longer each step
+8439  var  fm_effect_28_period  u8
+# 2BDF-2BE1 "ld a,$1C; ld ($843A),a", 2C1D-2C21 "ld hl,$843A; dec (hl); jp z,$05D0": the steps left
+843A  var  fm_effect_28_steps  u8
+# 2BF5-2BF8 "ld ($8436),hl; call $071D": HL is the step's pitch (2BF2 "ld hl,$1500", 2C42-2C45 "ld hl,($8436); add hl,bc")
+param fm_effect_28_step hl pitch
+
+# ---- FM effect 29 ----
+# 2C60-2C70 "ld hl,($843E); ld bc,$FFE0; add hl,bc; ld a,h; cp $08; jp z,$2C73; ld ($843E),hl; jp $071D"; 2C73-2C84 "ld a,$33; ld ($843C),a; ld ($843D),a ... ld hl,$0910; call $2CCE"
+2C60  func  fm_effect_29_fall
+# 2C8D-2C91 "ld a,($8440); or a; jp z,$2CAA", 2C94-2CA7 "ld hl,$843C; dec (hl); ret nz; ld a,($843D); add a,$FF; jp nz,$2CA3; ld a,$10 ... jp $2CC1"; 2CAA-2CB1 "ld a,$B0; ld ($843C),a; ld a,$00; call $07A0"
+2C8D  func  fm_effect_29_tick
+# 2CBA-2CBE "ld hl,$843C; dec (hl); jp z,$05D0"
+2CBA  func  fm_effect_29_drop
+# 2CC1-2CCB "ld bc,$FFF8; ld hl,($843E); add hl,bc; ld ($843E),hl; jp $071D"
+2CC1  func  fm_effect_29_lower
+# 2CCE-2CD9 "ld ($843E),hl; call $071D; ld a,$10; call $07A0; jp $06B4"
+2CCE  func  fm_effect_29_strike
+comment fm_effect_29 A note that falls, then a low note that ticks down ever faster until effect 2B stops it; then a loud, quick fall.
+comment fm_effect_29_fall Half a semitone down each pass, from high to low; then the low note.
+comment fm_effect_29_tick Every few passes an eighth of a semitone lower, the waits shrinking from 51 passes to 1 and starting again at 16; when its flag is cleared, at full at once and the quick fall.
+comment fm_effect_29_drop The last 176 passes: an eighth of a semitone lower every pass, then the channel stops.
+comment fm_effect_29_lower The note an eighth of a semitone lower.
+comment fm_effect_29_strike Keys the note on at the pitch it is given, attenuation 16.
+# 2C75-2C78 "ld ($843C),a; ld ($843D),a", 2C94-2C98 "ld hl,$843C; dec (hl); ret nz", 2CAA-2CAC "ld a,$B0; ld ($843C),a": passes left to the next step
+843C  var  fm_effect_29_timer  u8
+# 2C78 "ld ($843D),a", 2C99-2CA3 "ld a,($843D); add a,$FF; jp nz,$2CA3; ld a,$10; ld ($843D),a": a step's passes, one fewer each step
+843D  var  fm_effect_29_period  u8
+# 2CCE "ld ($843E),hl", 2C60-2C6D and 2CC1-2CC8 "ld hl,($843E) ... add hl,bc; ld ($843E),hl": the note's pitch
+843E  var  fm_effect_29_pitch  u16
+# set by effect 29 (2C49-2C4B "ld a,$01; ld ($8440),a"), cleared by effect 2B (2D7D-2D7E "xor a; ld ($8440),a"); 2C8D-2C91
+# "ld a,($8440); or a; jp z,$2CAA": effect 29's ticking goes on while it is set
+8440  var  fm_effect_29_on  u8
+# 2CCE-2CD1 "ld ($843E),hl; call $071D": HL is the note's pitch (2C54 "ld hl,$1010", 2C81 "ld hl,$0910")
+param fm_effect_29_strike hl pitch
+
+# ---- FM effect 2A ----
+# 2D08-2D14 "ld (ix+$20),a; ld (ix+$21),a; ld hl,$2CDC; call $05F9; call $2B95"
+2D08  func  fm_effect_2a_note
+# 2D23-2D28 "ld a,(ix+$20); cp $18; jp $2BA4"; 2D2B-2D37 "dec (ix+$28); jp z,$05D0; ld (ix+$20),$08; ld a,$34; call $07A0"
+2D1D  func  fm_effect_2a_swell_and_warble
+# 2D40-2D61 "dec (ix+$20); ret nz ... ld bc,$0040; add hl,bc ... add a,$22 ... ld a,(ix+$21); add a,$04; jp $2D08"
+2D40  func  fm_effect_2a_rest
+comment fm_effect_2a Three notes that swell and warble, each a semitone higher, quieter and longer, with a rest between them.
+comment fm_effect_2a_note The note from the base pitch, keyed on for the passes it is given.
+comment fm_effect_2a_swell_and_warble Two louder each pass for the first 4 passes, then a warble; then 8 passes almost silent.
+comment fm_effect_2a_rest After the rest, the next note a semitone higher, 34 quieter and 4 passes longer.
+# 2D08-2D0B "ld (ix+$20),a; ld (ix+$21),a": A is the note's passes (2D06 "ld a,$1C", 2D5C-2D5F "ld a,(ix+$21); add a,$04")
+param fm_effect_2a_note a length
+
+# ---- FM effect 2B ----
+# 2D9D-2DA3 "dec (ix+$20); jp nz,$1E83; jp $1E88"
+2D9D  func  fm_effect_2b_drop
+comment fm_effect_2b Stops effects 21 and 29 (clears their flags) and plays PCM effect 85 and a falling note, then 17 bursts of notes that fade.
+comment fm_effect_2b_drop The fall for 32 passes; then the bursts.
+
+# ---- FM effects 2C and 40: dives, then a climb of notes (a family of their own: +29 and +34) ----
+# 2DD6 "ld (ix+$28),a"
+2DD6  func  fm_effect_dive_times
+# 2DD9-2DF0 "call $2E64; ld bc,$FE00; call $2B86; ld a,(ix+$22); ld (ix+$20),a; ld a,$00; call $07A0; call $06B4"
+2DD9  func  fm_effect_dive_start
+# 2DFC-2E07 "ld a,(ix+$20); cp $04; jp z,$2E0A; ld bc,$FF7F; jp $2B80"; 2E0F-2E1B "dec (ix+$28); jp nz,$2DD9; ld a,(ix+$29); ld (ix+$28),a; call $2E64"
+2DF6  func  fm_effect_dive
+# 2E1E-2E2C "call $071D; ld a,(ix+$21); ld (ix+$20),a; ld a,$00; call $07A0; call $06B4"
+2E1E  func  fm_effect_dive_climb_note
+# 2E35-2E43 "dec (ix+$20); ret nz; dec (ix+$28); jp z,$05D0; bit 4,(ix+$28); call nz,$2E64"; 2E46-2E61 "call $087C ... ld bc,$0080; add hl,bc ... and $03; ld b,a; add hl,bc; jp $2E1E"
+2E35  func  fm_effect_dive_climb
+# 2E64-2E73 "ld hl,$2DA6; call $05F9; ld l,(ix+$34); ld h,(ix+$35); ld (ix+$30),l; ld (ix+$31),h"
+2E64  func  fm_effect_dive_reload
+comment fm_effect_2c A note that dives, then 18 notes climbing two semitones a step, plus 2 to 14 more by the random bytes' place.
+comment fm_effect_dive_times As many dives as it is given, then the climb.
+comment fm_effect_dive_start A dive: the voice loaded again and the note keyed on at full, eight semitones below the start pitch, for the dive's passes.
+comment fm_effect_dive Two semitones down each pass, quiet for the last 4; then the next dive, or the climb from the start pitch.
+comment fm_effect_dive_climb_note A note of the climb at the pitch it is given, at full, for the effect's period.
+comment fm_effect_dive_climb The next note two semitones above the last plus 2 to 14 semitones by the random bytes' place; while 16 or more are left the voice and the pitch start again from the start pitch.
+comment fm_effect_dive_reload Loads the voice again and puts the note back at the start pitch.
+comment fm_effect_40 Starts effect 2C and plays two dives from a lower start, then 19 climbing notes.
+# 2DD6 "ld (ix+$28),a": A is the dives (2DD4 "ld a,$01", 3721 "ld a,$02")
+param fm_effect_dive_times a dives
+# 2E1E "call $071D": HL is the note's pitch (2E1B "call $2E64" leaves the start pitch, 2E60 "add hl,bc")
+param fm_effect_dive_climb_note hl pitch
+# 2DC3 "ld (ix+$22),$18", 3710 "ld (ix+$22),$14"; 2DE2-2DE5 "ld a,(ix+$22); ld (ix+$20),a": a dive's passes
+scoped  channel fm_effect 22 dive_period u8
+# 2E15-2E18 "ld a,(ix+$29); ld (ix+$28),a": the climb's notes the count starts with (not the rounds left)
+scoped  channel fm_effect_dive 29 climb_notes u8
+# 2DD0 "ld (ix+$29),$12": the climb's notes
+scoped  channel fm_effect_2c 29 climb_notes u8
+# 3714 "ld (ix+$29),$13": the climb's notes
+scoped  channel fm_effect_40 29 climb_notes u8
+# 2E6A-2E73 "ld l,(ix+$34); ld h,(ix+$35); ld (ix+$30),l; ld (ix+$31),h": the pitch each dive and the climb start from
+scoped  channel fm_effect_dive 34 start_pitch u16
+# 2DC7-2DCD "ld hl,$0D00; ld (ix+$34),l; ld (ix+$35),h": the start pitch
+scoped  channel fm_effect_2c 34 start_pitch u16
+# 3718-371E "ld hl,$0C00; ld (ix+$34),l; ld (ix+$35),h": the start pitch
+scoped  channel fm_effect_40 34 start_pitch u16
+
+# ---- FM effect 2D ----
+# 2E84-2EA1 "ld ($8443),hl; ld ($8445),hl; ld hl,$1EEE; call $05F9; ld hl,($8443); call $071D; ld a,$0A; ld ($8441),a; ld a,($8442); call $07A0; call $06B4"
+2E84  func  fm_effect_2d_note
+# 2EB1-2EC4 "bit 0,(hl); ld hl,($8445); ld bc,$FF80; jp z,$2EBF; ld bc,$0100; sbc hl,bc; ld ($8445),hl; jp $071D"; 2EC7-2EF5 "dec (hl); jp z,$05D0 ... cp $1B ... sbc a,$01 ... ld bc,$0080 ... add a,$01 ... ld bc,$FFC0 ... jp $2E84"
+2EAA  func  fm_effect_2d_zigzag
+comment fm_effect_2d 32 zigzag notes: the first 5 two semitones higher each and louder, the rest a semitone lower each and quieter.
+comment fm_effect_2d_note A note at the pitch it is given, keyed on for 10 passes.
+comment fm_effect_2d_zigzag Two semitones up and four down in turn; then the next note: two semitones up and 1 louder for the first 5, then a semitone down and 1 quieter (2 in the second half).
+# 2E96-2E98 "ld a,$0A; ld ($8441),a", 2EAA-2EAE "ld hl,$8441; dec (hl); jp z,$2EC7": passes left of the note
+8441  var  fm_effect_2d_timer  u8
+# 2E7C-2E7E "ld a,$0C; ld ($8442),a", 2ED1-2ED9 "ld a,($8442) ... sbc a,$01; ld ($8442),a": the note's attenuation
+8442  var  fm_effect_2d_attenuation  u8
+# 2E84 "ld ($8443),hl", 2EF1-2EF5 "ld hl,($8443); add hl,bc; jp $2E84": the note's first pitch, which the next note starts from
+8443  var  fm_effect_2d_base_pitch  u16
+# 2E87 "ld ($8445),hl", 2EB3-2EC1 "ld hl,($8445) ... sbc hl,bc; ld ($8445),hl": the zigzag's pitch
+8445  var  fm_effect_2d_pitch  u16
+# 2E77-2E79 "ld a,$20; ld ($8447),a", 2EC7-2ECB "ld hl,$8447; dec (hl); jp z,$05D0": the notes left
+8447  var  fm_effect_2d_notes  u8
+# 2E84-2E87 "ld ($8443),hl; ld ($8445),hl": HL is the note's pitch (2E81 "ld hl,$0600", 2EF1-2EF4 "ld hl,($8443); add hl,bc")
+param fm_effect_2d_note hl pitch
+
+# ---- FM effect 2E ----
+# 2F15-2F33 "ld hl,$2EF8; call $05F9; ld hl,$1200; call $071D; ld hl,$0400; call $2442; ld (ix+$20),$20; ld a,$04; ld (ix+$2e),a; call $07A0; call $06B4"
+2F15  func  fm_effect_2e_note
+# 2F42-2F44 "ld a,$04; jp $2405"; 2F47-2F51 "dec (ix+$29); jp nz,$2F15; ld (ix+$29),$18; ld a,$04"
+2F3C  func  fm_effect_2e_fall
+# 2F53-2F6D "ld (ix+$2c),a; ld (ix+$20),$06; ld (ix+$28),$05; ld hl,$0E00; call $071D; ld hl,$0C00; ld (ix+$30),l ... call $079D"
+2F53  func  fm_effect_2e_trill_start
+# 2F76-2F79 "dec (ix+$20); jp nz,$2419"; 2F86-2F97 "ld bc,$0200; ld hl,$0C00; sbc hl,bc ... ld hl,$0600; jp $2B90"; 2F9A-2FA5 "dec (ix+$29); jp z,$05D0; ld a,(ix+$2c); add a,$06; jp $2F53"
+2F76  func  fm_effect_2e_trill
+comment fm_effect_2e Two falling notes, then 24 trills that fade.
+comment fm_effect_2e_note A note keyed on high, which falls for 32 passes.
+comment fm_effect_2e_fall The fall, two semitones a pass, dying away near its end; after the second note, the trills.
+comment fm_effect_2e_trill_start A trill of 5 steps at the attenuation it is given.
+comment fm_effect_2e_trill The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill, 6 quieter.
+
+# ---- FM effect 2F ----
+# 2FBB-2FC7 "ld (ix+$20),a; ld (ix+$21),a; ld hl,$2CDC; call $05F9; call $2B95"
+2FBB  func  fm_effect_2f_note
+# 2FD6-2FDB "ld a,(ix+$20); cp $28; jp $2BA4"; 2FDE-2FF1 "dec (ix+$28); jp z,$05D0; call $2BB2; add a,$2A ... ld a,(ix+$21); add a,$03; jp $2FBB"
+2FD0  func  fm_effect_2f_swell_and_warble
+comment fm_effect_2f Three notes that swell and warble, each four semitones higher, quieter and longer.
+comment fm_effect_2f_note The note from the base pitch, keyed on for the passes it is given.
+comment fm_effect_2f_swell_and_warble Two louder each pass for the first 4 passes, then a warble; then the next note four semitones up, 42 quieter and 3 passes longer.
+# 2FBB-2FBE "ld (ix+$20),a; ld (ix+$21),a": A is the note's passes (2FB9 "ld a,$2C", 2FEC-2FEF "ld a,(ix+$21); add a,$03")
+param fm_effect_2f_note a length
+
+# ---- FM effect 30 ----
+# 300D-3025 "ld ($8448),a; ld hl,$2FF4; call $05F9; ld hl,$0400; ld ($844A),hl; call $071D; ld a,($844C); call $07A0; jp $06B4"
+300D  func  fm_effect_30_note
+# 3028-302F "ld hl,($844A); add hl,bc; ld ($844A),hl; jp $071D"
+3028  func  fm_effect_30_raise
+# 3042-3052 "ld hl,$8448; dec (hl); jp z,$305A; ld a,(hl); cp $04; jp z,$3055; ld bc,$0100; jp $3028"; 305A-305F "ld a,$05; ld ($8449),a; ld a,$02"
+3042  func  fm_effect_30_sweep
+# 3061-3069 "ld ($844C),a; ld a,$30; call $300D; ld hl,$306F"
+3061  func  fm_effect_30_slow_sweep_start
+# 306F-3079 "ld hl,$8448; dec (hl); jp z,$307C; ld bc,$0080; jp $3028"; 307C-3088 "ld hl,$8449; dec (hl); jp z,$05D0; ld a,($844C); add a,$10; jp $3061"
+306F  func  fm_effect_30_slow_sweep
+comment fm_effect_30 A low note that sweeps up fast, then 5 slower sweeps up, each 16 quieter.
+comment fm_effect_30_note A low note keyed on for the passes it is given.
+comment fm_effect_30_raise The note's pitch up by the step it is given.
+comment fm_effect_30_sweep Four semitones up each pass for 20 passes, quiet for the last 4; then the slower sweeps.
+comment fm_effect_30_slow_sweep_start A slow sweep of 48 passes at the attenuation it is given.
+comment fm_effect_30_slow_sweep Two semitones up each pass; then the next sweep, 16 quieter, 5 in all.
+# 300D "ld ($8448),a", 3042-3046 "ld hl,$8448; dec (hl); jp z,$305A": passes left of the sweep
+8448  var  fm_effect_30_timer  u8
+# 305A-305C "ld a,$05; ld ($8449),a", 307C-3080 "ld hl,$8449; dec (hl); jp z,$05D0": the slow sweeps left
+8449  var  fm_effect_30_repeats  u8
+# 3016-3019 "ld hl,$0400; ld ($844A),hl", 3028-302C "ld hl,($844A); add hl,bc; ld ($844A),hl": the note's pitch
+844A  var  fm_effect_30_pitch  u16
+# 3032-3034 "ld a,$02; ld ($844C),a", 3061 "ld ($844C),a", 301F "ld a,($844C)" into set_fm_volume, 3083-3086 "add a,$10": the sweep's attenuation (only effect 30 uses it)
+844C  var  fm_effect_30_attenuation  u8
+# 300D "ld ($8448),a": A is the note's passes (3037 "ld a,$14", 3064 "ld a,$30")
+param fm_effect_30_note a length
+# 302B "add hl,bc": BC is the step (304F "ld bc,$0100", 3076 "ld bc,$0080")
+param fm_effect_30_raise bc step
+# 3061 "ld ($844C),a": A is the sweep's attenuation (305F "ld a,$02", 3083-3086 "ld a,($844C); add a,$10")
+param fm_effect_30_slow_sweep_start a attenuation
+
+# ---- FM effect 31 ----
+# 30A8-30C6 "ld hl,$308B; call $05F9; ld hl,$1000; call $071D; ld hl,$0400; call $2442; ld (ix+$20),$18; ld a,$07; ld (ix+$2e),a; call $07A0; call $06B4"
+30A8  func  fm_effect_31_note
+# 30D5-30D7 "ld a,$04; jp $2405"; 30DA-30E4 "dec (ix+$29); jp nz,$30A8; ld (ix+$29),$10; ld a,$07"
+30CF  func  fm_effect_31_fall
+# 30E6-3100 "ld (ix+$2c),a; ld (ix+$20),$06; ld (ix+$28),$05; ld hl,$0C00; call $071D; ld hl,$0A00; ld (ix+$30),l ... call $079D"
+30E6  func  fm_effect_31_trill_start
+# 3109-310C "dec (ix+$20); jp nz,$2419"; 3119-312A "ld bc,$0200; ld hl,$0A00; sbc hl,bc ... ld hl,$0400; jp $2B90"; 312D-3138 "dec (ix+$29); jp z,$05D0; ld a,(ix+$2c); add a,$08; jp $30E6"
+3109  func  fm_effect_31_trill
+comment fm_effect_31 Two falling notes, then 16 trills that fade.
+comment fm_effect_31_note A note keyed on high, which falls for 24 passes.
+comment fm_effect_31_fall The fall, two semitones a pass, dying away near its end; after the second note, the trills.
+comment fm_effect_31_trill_start A trill of 5 steps at the attenuation it is given.
+comment fm_effect_31_trill The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill, 8 quieter.
+
+# ---- FM effect 32 ----
+# 3161-3179 "ld ($844E),a; ld hl,$0F00; ld ($844F),hl; call $071D; ld a,($844E); call $07A0; call $06B4; ld hl,$844D; ld (hl),$30"
+3161  func  fm_effect_32_note
+# 3181-319E "ld hl,$844D; dec (hl); jp z,$31A1; ld a,(hl); cp $08; ret c; cp $2C; ld hl,($844F); ld bc,$FFF8; jp c,$319A; ld bc,$0004; add hl,bc"; 31A1-31AA "ld hl,$8451; dec (hl); jp z,$05D0; ld a,$27; jp $3161"
+3181  func  fm_effect_32_bend
+comment fm_effect_32 A note that bends up a little and then down, twice (the second quieter).
+comment fm_effect_32_note The note keyed on at the attenuation it is given, for 48 passes.
+comment fm_effect_32_bend A sixteenth of a semitone up each pass for 4 passes, then an eighth down for 36, then held 8; then the second note, at attenuation 39.
+# 3176-3179 "ld hl,$844D; ld (hl),$30", 3181-3185 "ld hl,$844D; dec (hl); jp z,$31A1": passes left of the note
+844D  var  fm_effect_32_timer  u8
+# 3161 "ld ($844E),a", 316D "ld a,($844E)" into set_fm_volume: the note's attenuation
+844E  var  fm_effect_32_attenuation  u8
+# 3164-3167 "ld hl,$0F00; ld ($844F),hl", 318E-319B "ld hl,($844F) ... add hl,bc; ld ($844F),hl": the note's pitch
+844F  var  fm_effect_32_pitch  u16
+# 3154-3156 "ld a,$02; ld ($8451),a", 31A1-31A5 "ld hl,$8451; dec (hl); jp z,$05D0": the notes left
+8451  var  fm_effect_32_repeats  u8
+# 3161 "ld ($844E),a": A is the note's attenuation (315F "ld a,$0B", 31A8 "ld a,$27")
+param fm_effect_32_note a attenuation
+
+# ---- FM effect 33 ----
+# (its names: with effect 0A, where its code is)
+
+# ---- FM effects 34 and 35 ----
+# 3213-321E "ld a,$08; cp (ix+$20); jp z,$3221; ld bc,$FF80; jp $2B80"; 3221-3223 "ld a,$0C; jp $07A0"
+320D  func  fm_effect_34_fall
+# 3226-324E "ld hl,$31B5; call $05F9; ld hl,$0E80; call $071D; ld hl,$0A00; ld (ix+$30),l ... ld a,($83DB); add a,b; ld (ix+$2c),a ... ld (ix+$28),$05"
+3226  func  fm_effect_34_trill_start
+# 3258-325C "ld a,($8458); or a; jp z,$05D0"; 325F-3262 "dec (ix+$20); jp nz,$2419"; 3269-3280 "dec (ix+$28); jp z,$3226; call $2B73; ld hl,$0A00; sbc hl,bc ... ld hl,$0400; jp $2B90"
+3258  func  fm_effect_34_trill
+# 329C-32A6 "ld a,$06; ld ($8456),a; ld a,$08; ld ($8457),a; ld a,$20" (the handler effect 34 puts in 8342)
+329C  func  fm_effect_34_warbles
+# 32A8-32CB "ld ($8454),a; ld ($8455),a; ld hl,$3283; call $05F9; ld hl,$1100; call $071D; ld hl,$0700; ld ($8452),hl; ld a,($8457); ld b,a; ld a,($83DB); add a,b; call $07A0; call $06B4"
+32A8  func  fm_effect_34_warble_note
+# 32D4-32D8 "ld a,($8458); or a; jp z,$05D0"; 32E2-32F8 "bit 0,(hl); ld bc,$0080 ... ld bc,$FF00; ld hl,($8452); add hl,bc; ld ($8452),hl; ld a,h; and $07; ld h,a; jp $071D"; 32FB-3313 "dec (hl); jp z,$329C; call $087C ... add a,b; jp $32A8"
+32D4  func  fm_effect_34_warble
+comment fm_effect_34 A sound that goes on until effect 35 stops it: here a falling note and then trills over and over; on the channel the FM effects take from the music's channel 6, warbling notes whose length moves with the random bytes' place; no song starts while it plays.
+comment fm_effect_34_fall Two semitones down each pass for 24 passes, at attenuation 12 for the last 8; then the trills.
+comment fm_effect_34_trill_start A trill of 5 steps at 6 over the music's attenuation.
+comment fm_effect_34_trill The two notes in turn, sliding down; every 6 passes a warble step and the pair again lower; after 5 steps the trill again from its start; it stops when its flag is cleared.
+comment fm_effect_34_warbles The second channel's part: 6 warbling notes from 32 passes, at 8 over the music's attenuation.
+comment fm_effect_34_warble_note A low note keyed on for the passes it is given, at the music's attenuation plus the note's.
+comment fm_effect_34_warble Two semitones up and four down in turn (wrapping within the lowest 32 semitones); then the next note, 0 to 7 passes longer by the random bytes' place and 4 to 11 over the music's attenuation; after 6 notes, again from the first; it stops when its flag is cleared.
+comment fm_effect_35 Stops effect 34 (clears its flag); its own channel stops at once.
+# 32B7-32BD "ld hl,$0700; ld ($8452),hl", 32ED-32F1 "ld hl,($8452); add hl,bc; ld ($8452),hl": the warbling note's pitch
+8452  var  fm_effect_34_pitch  u16
+# 32A8 "ld ($8454),a", 32DB-32DF "ld hl,$8454; dec (hl); jp z,$32FB": passes left of the warbling note
+8454  var  fm_effect_34_timer  u8
+# 32AB "ld ($8455),a", 330F-3312 "ld a,($8455); add a,b": the passes the next note adds to
+8455  var  fm_effect_34_length  u8
+# 329C-329E "ld a,$06; ld ($8456),a", 32FB-32FF "ld hl,$8456; dec (hl); jp z,$329C": the warbling notes left
+8456  var  fm_effect_34_notes  u8
+# 32A1-32A3 "ld a,$08; ld ($8457),a", 330C "ld ($8457),a"; 32C0-32C7 "ld a,($8457); ld b,a; ld a,($83DB); add a,b": the note's attenuation over the music's
+8457  var  fm_effect_34_attenuation  u8
+# set by effect 34 (31CE-31D0 "ld a,$01; ld ($8458),a"), cleared by effect 35 (3316-3317 "xor a; ld ($8458),a") and reset_sound (0359);
+# 3258 and 32D4 "ld a,($8458); or a; jp z,$05D0": effect 34's two channels go on while it is set; start_music 01C9-01CE
+# "ld hl,$8458; bit 0,(hl); ret nz": no song starts; the main loop 0545-0549 "ld a,($8458); or a; jp nz,$054F": the fade's end leaves
+# the music's channels 6 and 7 alone; effect 26 at its end 2AF5-2AFE "ld a,($8458); or a; ret z ... ld a,$34; call $026E"
+8458  var  fm_effect_34_on  u8
+# 32A8-32AB "ld ($8454),a; ld ($8455),a": A is the note's passes (32A6 "ld a,$20", 330F-3312 "ld a,($8455); add a,b")
+param fm_effect_34_warble_note a length
+
+# ---- FM effect 36 ----
+# 3353-3363 "ld hl,($845B); ld bc,$0040; add hl,bc; ld a,h; cp $0D; jp z,$3366; ld ($845B),hl; jp $071D"; 3366-337F "ld hl,$331D; call $05F9; ld hl,$0D10; ld ($845B),hl; call $071D; ld a,$A0; ld ($8459),a ... call $06B4"
+3353  func  fm_effect_36_rise
+# 3388-338F "ld hl,$8459; dec (hl); ret nz; ld (hl),$30; ld hl,$3395"
+3388  func  fm_effect_36_hold
+# 3395-3399 "ld hl,$8459; dec (hl); jp z,$05D0", 339C-33A6 "ld hl,($845B); ld bc,$FFC0; add hl,bc; ld ($845B),hl; jp $071D"
+3395  func  fm_effect_36_fall
+comment fm_effect_36 A note that rises a semitone a pass, is held, then falls.
+comment fm_effect_36_rise Rises for 24 passes; then the high note, keyed on again.
+comment fm_effect_36_hold Holds it 160 passes.
+comment fm_effect_36_fall A semitone down each pass for 48 passes, then the channel stops.
+# 3375-3377 "ld a,$A0; ld ($8459),a", 338D "ld (hl),$30"; 3388-338C "ld hl,$8459; dec (hl); ret nz": passes left
+8459  var  fm_effect_36_timer  u8
+# 333C-333F "ld hl,$0700; ld ($845B),hl", 3353-3360 "ld hl,($845B); ld bc,$0040; add hl,bc ... ld ($845B),hl": the note's pitch
+845B  var  fm_effect_36_pitch  u16
+
+# ---- FM effect 38 ----
+# 33F0-33FB "bit 0,(hl); ld hl,$0600; jp nz,$071D; ld hl,$1000; jp $071D"; 33FE-3416 "ld (hl),$0C; ld hl,$8460; dec (hl); jp z,$05D0; ld a,(hl); cp $29 ... add a,$02; dec a; ld ($845F),a; jp $07A0"
+33E9  func  fm_effect_38_trill
+comment fm_effect_38 A fast trill between two notes, swelling then fading: 48 steps of 12 passes.
+comment fm_effect_38_trill The two notes in turn, a pass each; every 12 passes 1 louder for the first 7 steps, then 1 quieter.
+# 33D3-33D5 "ld a,$0C; ld ($845E),a", 33E9-33ED "ld hl,$845E; dec (hl); jp z,$33FE", 33FE "ld (hl),$0C": passes left of the step
+845E  var  fm_effect_38_timer  u8
+# 33D8-33DA "ld a,$12; ld ($845F),a", 340A-3413 "ld a,($845F) ... add a,$02; dec a; ld ($845F),a": the trill's attenuation
+845F  var  fm_effect_38_attenuation  u8
+# 33C2-33C4 "ld a,$30; ld ($8460),a", 3400-3404 "ld hl,$8460; dec (hl); jp z,$05D0": the steps left
+8460  var  fm_effect_38_steps  u8
+
+# ---- FM effect 39 ----
+# 3448-3456 "call $071D; ld a,$10; ld ($8461),a; ld a,($8462); call $07A0; call $06B4"
+3448  func  fm_effect_39_note
+# 345F-3468 "ld hl,$8461; dec (hl); ret nz; ld hl,$8465; dec (hl); jp z,$05D0"; 346B-3488 "add a,$06 ... call $087C ... ld bc,$0080; add hl,bc ... and $03; ld b,a; add hl,bc; jp $3448"
+345F  func  fm_effect_39_next_note
+comment fm_effect_39 Six notes climbing two semitones a step, plus 2 to 14 more by the random bytes' place, each 6 quieter.
+comment fm_effect_39_note A note at the pitch it is given, keyed on for 16 passes.
+comment fm_effect_39_next_note After the 16 passes the next note: two semitones higher plus 2 to 14 more by the random bytes' place, 6 quieter.
+# 344B-344D "ld a,$10; ld ($8461),a", 345F-3463 "ld hl,$8461; dec (hl); ret nz": passes left of the note
+8461  var  fm_effect_39_timer  u8
+# 3432-3434 "ld a,$02; ld ($8462),a", 346B-3470 "ld a,($8462); add a,$06; ld ($8462),a": the notes' attenuation
+8462  var  fm_effect_39_attenuation  u8
+# 3442-3445 "ld hl,$0A00; ld ($8463),hl", 3478-347F "ld hl,($8463); ld bc,$0080; add hl,bc; ld ($8463),hl": the climb's pitch, without the offset
+8463  var  fm_effect_39_pitch  u16
+# 3437-3439 "ld a,$06; ld ($8465),a", 3464-3468 "ld hl,$8465; dec (hl); jp z,$05D0": the notes left
+8465  var  fm_effect_39_notes  u8
+# 3448 "call $071D": HL is the note's pitch (3442 "ld hl,$0A00", 3487 "add hl,bc")
+param fm_effect_39_note hl pitch
+
+# ---- FM effect 3A ----
+# 34A5-34BA "call $2442; ld hl,$1EEE; call $05F9; ld l,(ix+$32); ld h,(ix+$33); call $071D; call $079D; call $06B4"
+34A5  func  fm_effect_3a_note
+# 34C3-34C6 "dec (ix+$20); jp nz,$2B73"; 34C9-34DF "dec (ix+$28); jp z,$05D0 ... cp $42 ... dec (ix+$2c); ld bc,$0040; ld a,$05"; 34E2-3508 "bit 6,(ix+$28) ... inc (ix+$2c) ... ld bc,$FFF0; ld a,$0C ... add hl,bc; jp $34A5"
+34C3  func  fm_effect_3a_warble
+comment fm_effect_3a PCM effect 8C and a warbling note that steps up 8 times getting louder, holds two steps, then sinks slowly as it fades: 74 steps.
+comment fm_effect_3a_note Keys the warbling note on at the pitch it is given.
+comment fm_effect_3a_warble Warbles; each step the note again: a semitone up and 1 louder for the first 8 (5 passes each), the same for the next 2, then a quarter of a semitone down and 1 or 2 quieter (12 passes each).
+# 34A5 "call $2442": HL is the note's pitch (34A2 "ld hl,$0500", 3501-3507 "ld l,(ix+$32); ld h,(ix+$33); add hl,bc")
+param fm_effect_3a_note hl pitch
+
+# ---- FM effect 3B ----
+# 353D-3543 "ld (ix+$20),a; ld (ix+$21),a; call $2B95"
+353D  func  fm_effect_3b_note
+# 3552-3557 "ld a,(ix+$20); cp $22; jp $2BA4"; 355A-356D "dec (ix+$28); jp z,$05D0; call $2BB2; add a,$1A ... ld a,(ix+$21); add a,$03; jp $353D"
+354C  func  fm_effect_3b_swell_and_warble
+comment fm_effect_3b Four notes that swell and warble, each four semitones higher, quieter and longer.
+comment fm_effect_3b_note The note from the base pitch, keyed on for the passes it is given.
+comment fm_effect_3b_swell_and_warble Two louder each pass for the first 2 passes, then a warble; then the next note four semitones up, 26 quieter and 3 passes longer.
+# 353D-3540 "ld (ix+$20),a; ld (ix+$21),a": A is the note's passes (353B "ld a,$24", 3568-356B "ld a,(ix+$21); add a,$03")
+param fm_effect_3b_note a length
+
+# ---- FM effect 3C ----
+# 3584-359D "call $2442; ld hl,$1EEE; call $05F9; ld l,(ix+$32); ld h,(ix+$33); call $071D; ld (ix+$20),$0C; call $079D; call $06B4"
+3584  func  fm_effect_3c_note
+# 35A6-35A9 "dec (ix+$20); jp nz,$2B73"; 35AC-35D0 "dec (ix+$28); jp z,$05D0 ... cp $1B ... dec (ix+$2c); ld bc,$0080 ... inc (ix+$2c); ld bc,$FF90 ... add hl,bc; jp $3584"
+35A6  func  fm_effect_3c_warble
+comment fm_effect_3c PCM effect 83 and a warbling note that steps up 5 times getting louder, then sinks as it fades: 32 steps.
+comment fm_effect_3c_note Keys the warbling note on at the pitch it is given, for 12 passes.
+comment fm_effect_3c_warble Warbles; each step the note again: two semitones up and 1 louder for the first 5, then a little under two semitones down and 1 quieter.
+# 3584 "call $2442": HL is the note's pitch (3581 "ld hl,$0500", 35C9-35CF "ld l,(ix+$32); ld h,(ix+$33); add hl,bc")
+param fm_effect_3c_note hl pitch
+
+# ---- FM effect 3D ----
+# 35F3-35FA "ld (ix+$34),$10; ld hl,$0140; jp $2175"
+35F3  func  fm_effect_3d_rise
+# 35FD-3601 "ld a,$80; ld b,$14; jp $3608" (the handler effect 3D puts in 8342)
+35FD  func  fm_effect_3d_on_channel_6
+# 3604-3606 "ld a,$FF; ld b,$20" (in 8382)
+3604  func  fm_effect_3d_on_channel_7
+# 3608-3611 "ld (ix+$20),a; ld (ix+$2c),b; call $06C2; call $06CE"
+3608  func  fm_effect_3d_delay
+# 361A-361E "dec (ix+$20); ret nz; jp $35F3"
+361A  func  fm_effect_3d_wait
+comment fm_effect_3d A slow rise on three channels: here at once, and on the FM effects' channels 6 and 7 after 128 and 255 passes, quieter.
+comment fm_effect_3d_rise The slow rise: 320 passes, a quarter of a semitone a pass.
+comment fm_effect_3d_on_channel_6 The part on channel 6: the rise after 128 passes, at attenuation 20.
+comment fm_effect_3d_on_channel_7 The part on channel 7: the rise after 255 passes, at attenuation 32.
+comment fm_effect_3d_delay Keys the channel off and waits the passes it is given, then plays at the attenuation it is given.
+comment fm_effect_3d_wait Counts the wait down; then the rise.
+# 3608 "ld (ix+$20),a": A is the passes to wait (35FD "ld a,$80", 3604 "ld a,$FF")
+param fm_effect_3d_delay a wait
+
+# ---- FM effects 3E and 3F: a falling note, then trills (3E plays 3F's 16 passes late) ----
+# 363A-3641 "ld (ix+$20),$10; ld hl,$3644; jp $05E1" (also the handler effect 3E puts in 8342)
+363A  func  fm_effect_3e_delay
+# 3644-3648 "dec (ix+$20); ret nz; jp $366D"
+3644  func  fm_effect_3e_wait
+# 366D-368B "ld hl,$364B; call $05F9; ld hl,$1000; call $071D; ld hl,$0400; call $2442; ld (ix+$20),$16; ld a,$00; ld (ix+$2e),a; call $07A0; call $06B4"
+366D  func  fm_effect_fall_and_trills_start
+# 369A-369C "ld a,$06; jp $2405"; 369F-36A3 "ld (ix+$29),$10; ld a,$00"
+3694  func  fm_effect_fall_and_trills_fall
+# 36A5-36BF "ld (ix+$2c),a; ld (ix+$20),$06; ld (ix+$28),$05; ld hl,$0C00; call $071D; ld hl,$0A00; ld (ix+$30),l ... call $079D"
+36A5  func  fm_effect_fall_and_trills_round
+# 36C8-36CB "dec (ix+$20); jp nz,$2419"; 36D8-36E9 "ld bc,$0200; ld hl,$0A00; sbc hl,bc ... ld hl,$0400; jp $2B90"; 36EC-3700 "dec (ix+$29); jp z,$05D0; bit 3,(ix+$29); ld a,(ix+$2c); add a,$03; jp z,$36A5; add a,$07; jp $36A5"
+36C8  func  fm_effect_fall_and_trills
+comment fm_effect_3e Starts effect 3F and plays its falling note and trills 16 passes later, here and on the channel the FM effects take from the music's channel 6.
+comment fm_effect_3e_delay Waits 16 passes.
+comment fm_effect_3e_wait Then effect 3F's falling note and trills.
+comment fm_effect_3f PCM effect 85 and a falling note, then 16 trills that fade.
+comment fm_effect_fall_and_trills_start A note keyed on high at full, which falls for 22 passes.
+comment fm_effect_fall_and_trills_fall The fall, two semitones a pass, dying away when 6 passes are left; then the trills.
+comment fm_effect_fall_and_trills_round A trill of 5 steps at the attenuation it is given.
+comment fm_effect_fall_and_trills The two notes in turn, sliding down; every 6 passes the pair starts again lower; then the next trill, 10 quieter (the round's bit 3 it tests first decides nothing: the add after it sets the flag the jump reads).
+
+# ---- FM effect 40 ----
+# (its names: with effect 2C's dives)
+
+# ---- FM effect 41 ----
+# 3769-376D "ld hl,$8468; dec (hl); jp z,$377D", 3770-377A "ld hl,($8466); ld bc,$0100; add hl,bc; ld ($8466),hl; jp $071D"; 377D-3791 "ld (hl),$03; inc hl; dec (hl); ret nz ... add a,$02"
+3769  func  fm_effect_41_rise
+comment fm_effect_41 A long rise from a high note, four semitones a pass, quieter step by step, 20 times.
+comment fm_effect_41_rise Four semitones up each pass (two passes of every three after the first 8); every 12 passes 2 quieter; it stops the twentieth time.
+# 3745-3748 "ld hl,$1200; ld ($8466),hl", 3770-3777 "ld hl,($8466); ld bc,$0100; add hl,bc; ld ($8466),hl": the note's pitch
+8466  var  fm_effect_41_pitch  u16
+# 374E-3751 "ld hl,$8468; ld (hl),$08", 3769-376D "ld hl,$8468; dec (hl); jp z,$377D", 377D "ld (hl),$03": passes left to the next count
+8468  var  fm_effect_41_timer  u8
+# 3753-3754 "inc hl; ld (hl),$04", 377F-3782 "inc hl; dec (hl); ret nz; ld (hl),$04": counts left to the next attenuation step
+8469  var  fm_effect_41_steps  u8
+# 3756-3757 "inc hl; ld (hl),$14", 3784-3786 "inc hl; dec (hl); jp z,$05D0": the attenuation steps left
+846A  var  fm_effect_41_rounds  u8
+# 3759-375C "inc hl; ld a,$04; ld (hl),a", 3789-378E "ld a,($846B); add a,$02; ld ($846B),a": the note's attenuation
+846B  var  fm_effect_41_attenuation  u8
+
+# ======== shared: the fm_effect family's bytes, the helpers ========
+# 1D3A "dec (ix+$29)", 1E88 "ld (ix+$29),$11", 1ED9 "dec (ix+$29); jp z,$05D0", 2F47 "dec (ix+$29); jp nz,$2F15": the rounds left (bursts, trills, notes)
+scoped  channel fm_effect 29 rounds u8
+# 1E8F-1E92 "ld (ix+$2c),a; ld (ix+$2d),a", 1EE6-1EE9 "ld a,(ix+$2d); add a,$03": the attenuation the round started at, which the next one
+# starts from (effects 0C and 18, 1C13-1C16 "ld a,($83DB); add a,(ix+$2d)": over the music's)
+scoped  channel fm_effect 2D round_attenuation u8
+# 216A "ld (ix+$34),$08", 284D "ld (ix+$34),$05", 35F3 "ld (ix+$34),$10"; 21BE-21C3 "ld b,$00; ld c,(ix+$34); jp $2B80": how much the long rise's note rises each pass
+scoped  channel fm_effect 34 rise_step u8
+comment fm_effect_fall A pass of a falling note: two semitones down, except on the pass of the timer it is given, when the note dies away (32 over the base attenuation).
+comment fm_effect_trill_slide_down A pass of a trill whose two notes slide two semitones down each time.
+comment fm_effect_trill_slide Two notes in turn, both sliding: on odd passes the note's pitch moves by the step, on even ones the base pitch moves by it and sounds.
+comment fm_effect_quieter_pool_offset The note 1 quieter, and an offset for the next pitches from the random bytes' place (24 to 28 semitones: the place is taken for the byte).
+comment fm_effect_keep_pitch Keeps the pitch it is given as both the note's pitch and the base pitch.
+comment fm_effect_warble A step of a warble: two semitones up on even passes, four down on odd ones.
+comment fm_effect_move_pitch The note's pitch moved by the step it is given.
+comment fm_effect_set_pitch_plus The note's pitch set to the pitch it is given plus the step.
+comment fm_effect_set_pitch The note's pitch set to the pitch it is given, kept in the record and on the chip.
+comment fm_effect_set_pitch_minus The note's pitch set to the pitch it is given less the step.
+comment fm_effect_restart_note The note again from its base pitch at the record's attenuation, keyed on.
+comment fm_effect_swell_or_warble With the carry its caller leaves (the timer below the swell's end), a warble step; without it, the note 2 louder.
+comment fm_effect_raise_base_pitch The base pitch four semitones higher; gives back the note's attenuation.
+# 2405-2408 "cp (ix+$20); jp z,$2411": A is the pass of the timer the note dies away on (1783 "ld a,$08", 18AF "ld a,$0C", 1E83 "ld a,$10")
+param fm_effect_fall a die_away_pass
+# 241C-2429 "bit 0,(ix+$20); jp nz,$2B80; ld l,(ix+$32); ld h,(ix+$33); add hl,bc": BC is how much the pitches move (17B3 "ld bc,$FFA0", 2419 "ld bc,$FF80")
+param fm_effect_trill_slide bc step
+# 2442-244B "ld (ix+$30),l; ld (ix+$31),h; ld (ix+$32),l; ld (ix+$33),h": HL is the pitch
+param fm_effect_keep_pitch hl pitch
+# 2B80-2B86 "ld l,(ix+$30); ld h,(ix+$31); add hl,bc": BC is how much the pitch moves (240B "ld bc,$FF80", 1A07 "ld bc,$0040")
+param fm_effect_move_pitch bc step
+# 2B86 "add hl,bc" then 2B87 "ld (ix+$30),l": HL is the pitch (2DD9 "call $2E64" leaves the start pitch)
+param fm_effect_set_pitch_plus hl pitch
+# 2B86 "add hl,bc": BC is the step (2DDC "ld bc,$FE00")
+param fm_effect_set_pitch_plus bc step
+# 2B90 "sbc hl,bc": BC is the step (1EC5 "call $2433": the offset from the random bytes' place; 2115-2117 "ld b,$00; ld c,a")
+param fm_effect_set_pitch_minus bc step
+
+# ---- locals with an obvious name ----
+# 193B "call $087C": HL the place of the random bytes next_random_byte hands back (not the byte, in A, which nothing takes), 193E-1940 "ld a,l; or h; and $07"
+local fm_effect_07_note 193B hl random_place
+# 2439 "call $087C": HL the place of the random bytes, 243C-2440 "ld a,h; and $0F; ld b,a; ld c,l"
+local fm_effect_quieter_pool_offset 2439 hl random_place
+# 2C10 "call $087C": HL the place of the random bytes, 2C13-2C15 "ld b,$00; ld c,l"
+local fm_effect_28_jitter 2C10 hl random_place
+# 2E46 "call $087C": HL the place of the random bytes, 2E49-2E4A "ld d,l; ld e,h"
+local fm_effect_dive_climb 2E46 hl random_place
+# 3302 "call $087C": HL the place of the random bytes, 3305-3308 "ld a,l; and $07; ld b,a"
+local fm_effect_34_warble 3302 hl random_place
+# 3473 "call $087C": HL the place of the random bytes, 3476-3477 "ld d,l; ld e,h"
+local fm_effect_39_next_note 3473 hl random_place
+# 2B66 "call $2BB2": A the attenuation fm_effect_raise_base_pitch hands back (2BC2 "ld a,(ix+$2c)"), 2B69 "add a,$26"
+local fm_effect_27_swell_and_warble 2B66 a attenuation
+# 2FE4 "call $2BB2": A the attenuation it hands back, 2FE7 "add a,$2A"
+local fm_effect_2f_swell_and_warble 2FE4 a attenuation
+# 3560 "call $2BB2": A the attenuation it hands back, 3563 "add a,$1A"
+local fm_effect_3b_swell_and_warble 3560 a attenuation
+
+# ---- locals still named after their register (each by the instruction that writes it) ----
+# the RAM tests: 0000 "ld b,$00", then 0011-0014 "ld a,b; add a,$55; ld b,a": the pattern written and read back; 0002 "ld hl,$8000", 000B "inc hl": where
+local   sound_reset 0000 b pattern
+local   sound_reset 0002 hl place
+# 0017 "ld de,$0000", 0022 "inc de": the byte of the ROM it adds; 001A "ld hl,$0000", 0021 "add hl,bc": the sum; 001D "ld b,$00", 0020 "ld c,a": the byte
+local   check_rom 0017 de place
+local   check_rom 001A hl sum
+local   check_rom 001D bc byte
+# 0039 "ld a,($A000)": the 68000's command
+local   sound_command 0039 a command
+# 01D2 "ld de,$0040", 01E9 "add ix,de": a channel record's size; 01ED-01F6 "ld l,a; ld h,$00; add hl,hl ...": the song's offset in songs (18 x the song)
+local   sound_command 01D2 de record_size
+local   sound_command 01F0 hl song_offset
+# 00CE "ld a,(hl)" from speech_priorities, 00D2 "cp (hl)": the speech's priority
+local   start_speech 00CE a priority
+# 0197 "ld a,(hl)" from speech_music_attenuation, 0198 "ld ($83DB),a": how much the music is turned down
+local   speech_play 0197 a attenuation
+# 0252 "ld d,(hl)", 0256 "ld (ix+$03),d": the handler's high byte from pcm_effect_handlers (02F3 the same from fm_effect_handlers)
+local   start_pcm_effect 0252 d handler_high
+local   start_fm_effect 02F3 d handler_high
+# 02B5 "ld hl,$8000", 02B8 "ld a,($800F)", then lower_priority_channel twice, 02C9 "ld b,a": the channel of the lowest priority and that priority
+local   start_fm_effect 02B5 hl lowest_channel
+local   start_fm_effect 02B8 a lowest_priority
+local   start_fm_effect 02C9 b lowest_priority
+# 0367 "ld c,$00": register 38's value for every channel, no sensitivity; 036F "inc e": the next channel
+local   silence 0367 c no_sensitivity
+local   silence 036F e fm_channel
+# 0435 "ld b,$00", 043A "ld (hl),b": what the RAM is cleared to; 0437 "ld hl,$8000", 043B "inc hl": where
+local   sound_main 0435 b cleared
+local   sound_main 0437 hl place
+# 04CF "ld hl,($83CD)", 04D4-04D5 "add hl,hl; add hl,de": the random number times 3; 04D3 "pop de": the number as it was; 04D6-04D7 "ld a,e; add a,h" then 04DF "add a,(hl)": the random byte written to the pool
+local   sound_main_loop 04CF hl seed
+local   sound_main_loop 04D3 de old_seed
+local   sound_main_loop 04D7 a random_byte
+# 071D-0725 "ld a,h; and $1f; sub $18; jp nc,$0720; add a,$18": the pitch's semitone, within two octaves
+local   set_fm_pitch 071E a semitone
+# 07EA "ld a,c", 07F2 "ld ($B004),a": the sample start's bit 16
+local   set_pcm_start 07EA a bank_bit
+# 0813 "ld a,($83C2)", 0827 "ld ($B00C),a": the volume port's value, both channels'; 081B "sla c" (x4): the volume moved to channel A's nibble
+local   set_pcm_volume 0813 a port_value
+local   set_pcm_volume 080F c volume_bits
+# 0848 and 0864 "ld a,($83C3)", 0853 and 086F "ld ($B00D),a": the loop flags
+local   set_pcm_loop 0848 a loops
+local   clear_pcm_loop 0864 a loops
+# 08A7 "pop hl" (IX) then 08AD "add hl,de" ($12), 08AE "ld (hl),$00": where the record is cleared; 08BA "ld hl,($83C0)", 08BD "add hl,de": the channel's entry in the song
+local   music_track_start 08AD hl place
+local   music_track_start 08BA hl song_entry
+# 08B3 "ld e,(ix+$00)", 08B6 "rlc e": 2 x the channel, the entry's offset
+local   music_track_start 08B3 e entry_offset
+# 0949-095A "ld l,(ix+$26); ld h,(ix+$27) ... sbc hl,de": the target pitch less the pitch reached, then 0964-0968 "sra d; rr e; rr c": halved at each of the portamento's 8 steps
+local   music_track_tick 095A hl distance
+# 09FD "ld a,($83D7); and $0F": the accelerando's rate, 0A08-0A10 "sla a" (x4) "ld (hl),a": the passes to the next step
+local   accelerando_tick 0A00 a rate
+# 0CED "ld c,a; ld b,$00", 0CF0 "ld hl,$0CF8; add hl,bc": the length's code
+local   next_note_length 0CEE bc length_code
+# 0DB2 "ld c,a; ld b,$00" (2 x the instrument), 0DB8 "add hl,bc": the entry's offset in fm_voice_pointers
+local   load_instrument 0DB3 bc offset
+# 0E40 "ld c,a" (the semitones, x 2), 0E50 "ld c,a" (plus 24 x the octaves): the transposition
+local   read_transpose 0E40 c transposition
+# 0E6B "ld a,(de)": the argument; its bit 7 says negative (0E6C "bit 7,a")
+local   read_volume_offset 0E6B a offset
+# 0A4C "ld a,(hl)", 0A4D "ld b,a": the track's command byte
+local   read_track 0A4D b command
+# 0ADB "ld hl,$0000", 0AE9 "add hl,de": the note's length times the gate (x / 256 in H)
+local   read_track 0ADB hl gated_length
+
+# the FM effects' locals
+# 1669-166A "ld a,(hl); cp $05" (HL at fm_effect_01_timer): the note's passes left
+local   fm_effect_01_hold 1669 a timer
+# 1969-196A "ld a,(hl); cp $08" (HL at fm_effect_07_timer)
+local   fm_effect_07_step 1969 a timer
+# 1B80-1B81 "ld a,(hl); cp $0C" (HL at fm_effect_0b_timer)
+local   fm_effect_0b_hold 1B80 a timer
+# 1D9D-1D9E "ld a,(hl); cp $06" (HL at fm_effect_0e_timer)
+local   fm_effect_0e_zigzag_down 1D9D a timer
+# 255D-255E "ld a,(hl); cp $88" (HL at fm_effect_1b_timer)
+local   fm_effect_1b_hold 255D a timer
+# 275B-275C "ld a,(hl); cp $08" (HL at fm_effect_1f_repeats)
+local   fm_effect_1f_hold 275B a repeats
+# 2A3A-2A3B "ld a,(hl); cp $D8" (HL at fm_effect_25_timer)
+local   fm_effect_25_bend 2A3A a timer
+# 2AB2-2AB3 "ld a,(hl); cp $0C" (HL at fm_effect_26_timer)
+local   fm_effect_26_play 2AB2 a timer
+# 3188-3189 "ld a,(hl); cp $08" (HL at fm_effect_32_timer)
+local   fm_effect_32_bend 3188 a timer
+# 2AD4-2AD7 "ld a,($842F); ld c,a; ld b,$00": the note's number, the offset into fm_effect_26_pitches
+local   fm_effect_26_play 2ADA c note_offset
+# 253F-2540 "ld a,h; cp $11": the pitch's semitone
+local   fm_effect_1b_rise 253F a semitone
+# 2C26 "ld a,($8439)": the step's period, two longer each step
+local   fm_effect_28_jitter 2C26 a period
+# 2CA1 "ld a,$10", then into the period and the timer
+local   fm_effect_29_tick 2CA1 a period
+# 2259 and 226D "ld a,($8411)": the note's attenuation (226D-2270 "add a,$08")
+local   fm_effect_17_zigzag 2259,226D a attenuation
+# 2ED1 "ld a,($8442)": the note's attenuation
+local   fm_effect_2d_zigzag 2ED1 a attenuation
+# 340A "ld a,($845F)": the trill's attenuation
+local   fm_effect_38_trill 340A a attenuation
+# 2A41 "ld a,l; cp $68": the pitch's fraction
+local   fm_effect_25_bend 2A41 a pitch_fraction
+# the steps added to the pitch: "ld bc,STEP", then "add hl,bc" or fm_effect_move_pitch
+local   fm_effect_0e_zigzag_down 1DA8,1DAE bc step
+local   fm_effect_0e_zigzag_up 1DF0,1DF6 bc step
+local   fm_effect_17_zigzag 2232,2238,2275 bc step
+local   fm_effect_arpeggio 268E,2694 bc step
+local   fm_effect_warble 2B77,2B7D bc step
+local   fm_effect_28_jitter 2C39,2C3F bc step
+local   fm_effect_2d_zigzag 2EB6,2EBC,2EDC,2EEE bc step
+local   fm_effect_32_bend 3191,3197 bc step
+local   fm_effect_3a_warble 34DA,34E6,34F9 bc step
+local   fm_effect_3c_warble 35BD,35C6 bc step
+# the pitch read from the effect's variable, moved, kept and set: "ld hl,(PITCH)" and the "add hl,bc" that moves it
+local   fm_effect_1b_rise 253E hl pitch
+local   fm_effect_1f_rise 2719 hl pitch
+local   fm_effect_21_rise 27AD hl pitch
+local   fm_effect_25_bend 2A3E hl pitch
+local   fm_effect_29_fall 2C66 hl pitch
+local   fm_effect_2d_zigzag 2EB3,2EF1 hl pitch
+local   fm_effect_32_bend 318E hl pitch
+local   fm_effect_34_warble 32ED hl pitch
+local   fm_effect_36_rise 3359 hl pitch
+local   fm_effect_39_next_note 3478 hl pitch
+# 27E4 "ld hl,($8420)", "dec hl": the hold's passes left
+local   fm_effect_21_hold 27E7 hl timer
+# 1A71 "call $087C": HL the place of the random bytes (not the byte, in A); 1A75-1A77 "and $03; ld d,a": which of the four pitches
+local   fm_effect_0a_note 1A71 hl random_place
+local   fm_effect_0a_note 1A77 d pitch_choice
+# 2E49/3476 "ld d,l", 2E4A/3477 "ld e,h": the random bytes' place, its low byte and its page
+local   fm_effect_dive_climb 2E49 d place_low
+local   fm_effect_dive_climb 2E4A e place_page
+local   fm_effect_39_next_note 3476 d place_low
+local   fm_effect_39_next_note 3477 e place_page
+# 3306-3308 "and $07; ld b,a": the place's low bits, the note's extra length and attenuation
+local   fm_effect_34_warble 3308 b extra
+# 243C-2440 "ld a,h; and $0F; ld b,a; ld c,l": the offset fm_effect_quieter_pool_offset hands back
+param   fm_effect_quieter_pool_offset bc offset
+# 2E64-2E73 "ld l,(ix+$34); ld h,(ix+$35); ld (ix+$30),l; ld (ix+$31),h": HL the start pitch it hands back
+param   fm_effect_dive_reload hl start_pitch
+
+# (more locals, at the sites decompile_sound --variables gives their webs)
+# 0123 "ld a,$87", 0125 "jp z,$021B": the PCM effect a speech of priority 12 plays instead (0128 "cp $13" then compares it, not the priority)
+local   start_speech 0123 a fallback_effect
+# 02CA "ld a,($83C7)", 02CD "cp b": the starting effect's priority against the lowest
+local   start_fm_effect 02CA a new_priority
+# 04DC "ld hl,($83CF)", 04E4 "ld hl,($83D1)": where the main loop reads the program's bytes and writes the random ones
+local   sound_main_loop 04DC,04E4 hl pool_place
+# 07CD "sla l": the carriers' mask, a bit for each operator in turn; 07DB its rest, handed back
+local   set_fm_operator_level 07CD l carrier_mask
+local   set_fm_operator_level 07DB hl carrier_mask_left
+# 094F "ld c,(ix+$23)", 0959-095C "sub c; ... ld c,a": the fraction of the distance; 095D "ex de,hl", 0964-0966 "sra d; rr e": its semitones, halved each step
+local   music_track_tick 094F c fraction
+local   music_track_tick 095D d distance_high
+local   music_track_tick 095D e distance_low
+# 0DC5 "ld b,$00", 0DCA "ld b,$0A": what track_set_volume adds on an FM channel
+local   read_track 0DC5 b fm_extra
+# 0A9F and 0BF4 "ld c,a": the note's index, into fm_note_pitches or pcm_note_pitches
+local   read_track 0A9F,0BF4 c note_index
+# 0C55: the fade, the music's attenuation and the channel's added up, taken from a PCM note's level
+local   read_track 0C55 de total_attenuation
+# 0BF5-0C0B "ld hl,$0000 ... add hl,de ... sbc hl,de": a PCM note's length times its gate, then counted down by 255
+local   read_track 0BF5 hl gated_length
+# 10B5, 10FE, 11CE "dec hl", then "ld (ix+$31),h": the high byte of the passes left
+local   pcm_effect_countdown 10B5 h ticks_high
+local   pcm_effect_81_next 10FE h ticks_high
+local   pcm_effect_86_countdown 11CE h ticks_high
+# 1128, 116F, 118D, 11DF "ld (ix+$33),c": the pitch's low byte
+local   pcm_effect_play_ducking 1128 c pitch_low
+local   pcm_effect_83_play 116F c pitch_low
+local   pcm_effect_84_play 118D c pitch_low
+local   pcm_effect_86_play 11DF c pitch_low
+# 130E "ld a,(ix+$32)", 131C "add a,$02", 131E "add a,$FB": the play's volume
+local   pcm_effect_8b_next 130E,131C a volume
+# 1700 "inc a": a step's passes, one more each step (16FD "ld a,($83E8)")
+local   fm_effect_02_slide 1700 a period
+# the two bytes of a 16-bit field the code writes one at a time ("ld (ix+N),l; ld (ix+N+1),h")
+local   fm_effect_zigzag_steps 1C95 h pitch_high
+local   fm_effect_zigzag_steps 1C95 l pitch_low
+local   fm_effect_long_rise 219D h timer_high
+local   fm_effect_long_rise 219D l timer_low
+local   fm_effect_ladder 233E h pitch_high
+local   fm_effect_ladder 233B l pitch_low
+local   fm_effect_trill_slide 2429 h pitch_high
+local   fm_effect_trill_slide 2429 l pitch_low
+local   fm_effect_dive_reload 2E6D h pitch_high
+local   fm_effect_dive_reload 2E6A l pitch_low
+# 27F7: the hold's attenuation, one quieter every round (27F4 "ld a,($8422)")
+local   fm_effect_21_hold 27F7 a attenuation
+# 2836 "ld de,$0040", "add ix,de": a channel record's size, to the next
+local   fm_effect_22 2836 de record_size
+# 2DD9 and 2E1B "call $2E64": HL the start pitch fm_effect_dive_reload hands back
+local   fm_effect_dive_start 2DD9 hl start_pitch
+local   fm_effect_dive 2E1B hl start_pitch
+# 32E4 "ld bc,$0080", 32EA "ld bc,$FF00": the pitch's step
+local   fm_effect_34_warble 32E4,32EA bc step
+local   fm_effect_34_warble 32E4,32EA b step_high
+# 360B "ld (ix+$2c),b": B the attenuation the effect plays at after the delay (35FF "ld b,$14", 3606 "ld b,$20")
+param   fm_effect_3d_delay bc attenuation
+# 072D-0730 "call write_fm_channel_register; ld c,h", then register 28: what it leaves in BC, the last write
+param   set_fm_pitch bc fm_write
+
+# 0844 "bit 0,(ix+$00)": nothing calls it, IX a channel record as in clear_pcm_loop (0860)
+param   set_pcm_loop ix channel channel
+# 09A0-09B1 "ld a,(ix+$22) ... and $70; ld c,a": the AMS and PMS bits of register 38 the LFO ramp writes
+local   music_track_tick 09B1 c sensitivity_bits
+# 0A4C "ld a,(hl)" (the track's byte), then the commands' arguments (0C30, 0DC0, 0FA8 "ld a,(de)"): the byte read
+local   read_track 0A4C a byte
+# 0A50 "ld d,a", 0A61 "ld e,a": the note (length code, pitch), then 0D06 "ex de,hl", 0D2C "inc hl ... ex de,hl": where the track's next byte is
+local   read_track 0A50 de place
+# 0E3D-0E4A "and $0F; rlca ... and $70; rrca x4": the argument's semitone and octave bits
+local   read_transpose 0E3D a bits
+# 2B8D "jp set_fm_pitch": BC what set_fm_pitch hands back (its last register write)
+param   fm_effect_set_pitch bc fm_write
+
+# 0020 "ld c,a" (the ROM's byte), 0021 "add hl,bc"
+local   check_rom 0020 bc byte
+# the rest of A in read_track: the command byte's nibbles, the commands' arguments and what read_transpose and read_volume_offset hand back (0E33, 0E62, 0E99, 0EA3)
+local   read_track 0A4E,0C30,0C7C,0C82,0D2F,0D35,0D3F,0DC0,0E33,0E62,0E99,0EA3,0FA8,0FE6,0FEC a value
+# the rest of DE in read_track: where the track's next byte is (0D2C "inc hl ... ex de,hl", 0F4D "inc de"), and the note's length to the gate (0AE1-0AEC)
+local   read_track 0AE1,0AEA,0AEC,0C03,0C28,0C35,0C88,0D06,0D21,0D2C,0DE9,0DFF,0E98,0EA2,0EAC,0EB9,0EC4,0F0B,0F13,0F26,0F30,0F43,0F4D,0F4E,0F6B,0F71,0F7E,0F8D,0F93,0FA2,0FF7,0FF8 de place
+# 0E42-0E56: the octave bits, then the semitones x 2 plus 24 x the octaves
+local   read_transpose 0E42,0E44,0E45,0E46,0E49,0E4A,0E54,0E56 a bits
+# 2B86 "add hl,bc" then fm_effect_set_pitch, 2B8D "jp set_fm_pitch": BC what set_fm_pitch hands back
+local   fm_effect_set_pitch_plus 2B86 bc fm_write
+local   fm_effect_set_pitch 2B8D bc fm_write
 
 # ======== tables ========
 0D4D  jumps  track_commands_e0 16       # E0-EF's handlers: track_command 0D37 "ld hl,$0D4D", 0D48-0D4C "ld a,(hl); inc hl; ld h,(hl); ld l,a; jp (hl)"
 0D6D  jumps  track_commands_f0 16       # F0-FF's: 0D41 "ld hl,$0D6D" (FC, FD and FE share one handler)
 106C  jumps  pcm_effect_handlers 20     # commands 80-93's: start_pcm_effect 024C "ld hl,$106C" + 2 x (command - 80), 0250/0252 into the record's handler; entry 0 is 0 (command 80 returns at 021D)
-13D9  jumps  fm_effect_handlers 66 first=1   # commands 01-41's: assign_fm_effect 02ED "ld hl,$13D9" + 2 x command, 02F1/02F3; command 00 never comes here (sound_command: reset_sound), and the entry's bytes are the address of the jump at 13D8
+13D9  jumps  fm_effect_handlers 66 first=1   # commands 01-41's: assign_fm_effect 02ED "ld hl,$13D9" + 2 x command, 02F1/02F3; command 00 never comes here (sound_command: reset_sound), and the entry's bytes are the address of the jump at 13D8: the table (its table line, its piece of the assets) starts at command 01's, 13DB
 3794  jumps  unused_note_hooks 15       # 15 x unused_note_hook: no code names it (the music's hook is set directly: clear_note_hook)
 37B2  func  unused_note_hook            # JP clear_note_hook: only unused_note_hooks points here
 
@@ -348,21 +2003,152 @@ F000  io   speech_busy           u8     # bit 0: 1 while the uPD7759 stands idle
 0C96  table  pcm_note_pitches       u8
 0CF9  table  note_lengths           u8
 2B04  table  fm_effect_26_pitches   u16
-37B5  table  fm_voice_pointers      u16
+37B5  table  fm_voice_pointers[112] u16
 0D4D  table  track_commands_e0      u16
 0D6D  table  track_commands_f0      u16
 106C  table  pcm_effect_handlers    u16
+13DB  table  fm_effect_handlers     u16
 
 # The 15 channel records (8000-83BF, 40h bytes each): 8000 the FM effects' first channel, 8040-81C0 the music's
 # FM channels 1-7, 8200 and 8240 its PCM channels, 8280 and 82C0 the PCM effects', 8300 the speech's, 8340 and
-# 8380 the FM effects' on the music's channels 6 and 7. Every handler runs on one in IX; the fields past +3
-# mean one thing to the music and others to each effect (named in the naming rounds)
+# 8380 the FM effects' on the music's channels 6 and 7 (the C names each by what plays on it: game_profile's
+# SOUND_NAMED_BASES, CHANNEL(SPEECH)->sound). Every handler runs on one in IX; the fields past +F mean one thing to
+# the music (the record's own fields) and others to the effects (their families' scoped lines)
 struct  channel 40
 array   channel 8000 15
 field   channel 0  chip_channel u8      # the YM2151's channel, or bit 3 the K007232 (bit 0 its channel B)
 field   channel 1  sound u8             # the sound it plays (0: free)
 field   channel 2  handler u16          # the routine that runs it on the next pass (run_channel_handler)
+# the YM2151 channel's voice as load_fm_voice loads it, and what set_fm_volume makes of it
+# 07A0 set_fm_volume "ld (ix+$04),a"; 07D2 "add a,(ix+$04)": what it adds to each carrier's total level (0 the voice's own, 7F silence)
+field   channel 4  fm_attenuation u8
+# 0600 load_fm_voice "ld (ix+$05),c": the voice's register 20; 07A3 set_fm_volume "ld a,(ix+$05)", its algorithm (and 7) picks the carriers
+field   channel 5  connection u8
+# 0611 load_fm_voice "ld (ix+$06),c", 07B0 set_fm_volume "ld a,(ix+$06)": the operator's total level in the voice, which the attenuation adds to (register 60)
+field   channel 6  m1_total_level u8
+# 063C load_fm_voice "ld (ix+$07),c", 07C0 set_fm_volume "ld a,(ix+$07)" (register 70)
+field   channel 7  c1_total_level u8
+# 0667 load_fm_voice "ld (ix+$08),c", 07B8 set_fm_volume "ld a,(ix+$08)" (register 68)
+field   channel 8  m2_total_level u8
+# 0692 load_fm_voice "ld (ix+$09),c", 07C8 set_fm_volume "ld a,(ix+$09)" (register 78)
+field   channel 9  c2_total_level u8
+# 062B load_fm_voice "ld (ix+$0a),c": the operator's register E0 in the voice; fm_fast_release 06D4 sets it with the fastest release, fm_restore_release 06FD "ld c,(ix+$0a)" puts it back
+field   channel A  m1_release u8
+# 0656 load_fm_voice "ld (ix+$0b),c", 06DC, 0705 (register F0)
+field   channel B  c1_release u8
+# 0681 load_fm_voice "ld (ix+$0c),c", 06E4, 070D (register E8)
+field   channel C  m2_release u8
+# 06AC load_fm_voice "ld (ix+$0d),c", 06EC, 0715 (register F8)
+field   channel D  c2_release u8
 field   channel F  priority u8          # the priority of what it plays
+# What the music keeps past +10 (music_track_start clears 12-3F, 08A8 "ld b,$2E"); the effects use those bytes their
+# own way (the scoped lines below)
+# 08BF/08C4 music_track_start "ld (ix+$10),a; ld (ix+$11),a" from the song's entry; 0A46/0A49 read_track "ld l,(ix+$10); ld h,(ix+$11)": the place of the track's next command
+field   channel 10 track u16
+# 08EC/08EF music_track_tick "add a,(ix+$12); ld (ix+$12),a": the tempo added up every pass, a tick at each carry
+field   channel 12 tempo_count u8
+# 08F5 music_track_tick "dec (ix+$13)": the note's ticks left (next_note_length 0CF5 sets them, at 0 read_track reads on)
+field   channel 13 ticks_left u8
+# 08E9 music_track_tick "ld (ix+$14),a": the tempo of the last pass (nothing reads it)
+field   channel 14 last_tempo u8
+# 0E26 track_set_detune "ld (ix+$15),a" (E6); 0AAA read_track "ld c,(ix+$15)": added to the note's pitch
+field   channel 15 detune u8
+# 0EE0 track_set_lfo_ramp "ld (ix+$16),a" (EE); 0994 music_track_tick "ld a,(ix+$16)": ticks between the steps of the LFO sensitivity after a note starts (0: none)
+field   channel 16 lfo_ramp u8
+# 0E2D track_set_portamento "ld (ix+$17),a" (E7); 096A music_track_tick "rlc (ix+$17)": the bits say which of the 8 steps move the pitch toward the note's
+field   channel 17 portamento u8
+# 0D8E track_set_mode "ld (ix+$18),a" (E0); 0A85/0C18 "bit 0,(ix+$18)": a PCM channel's drum mode, an FM one's notes with no hook
+field   channel 18 mode u8
+# 0E5C track_set_transpose "ld (ix+$19),a" (E9); 0A94 read_track "add a,(ix+$19)": semitones added to the note
+field   channel 19 transpose u8
+# 0E77 track_set_volume_offset "ld (ix+$1a),a" (EB); 0925 music_track_tick "add a,(ix+$1a)": added to the note's attenuation
+field   channel 1A volume_offset u8
+# 0F10 track_loop_start "ld (ix+$1b),a" (F2), 0F1D track_loop_end "dec (ix+$1b)" (F3): the times the loop plays
+field   channel 1B loop_count u8
+# 0F2D track_loop_2_start "ld (ix+$1c),a" (F4), 0F3A track_loop_2_end "dec (ix+$1c)" (F5)
+field   channel 1C loop_2_count u8
+# 0AF2 read_track "ld (ix+$1d),a" from the note's length and the gate; 093C music_track_tick "cp (ix+$1d)": the note is keyed off when its ticks left come down to it
+field   channel 1D key_off_ticks u8
+# 0D1B track_set_octave "ld (ix+$1e),a" (0x); 0A91 read_track "add a,(ix+$1e)": the octave as steps of the note (0D11-0D1A: x 24 on FM, whose notes go two steps a semitone; as it is on PCM)
+field   channel 1E octave u8
+# 0DCD track_set_volume "ld (ix+$1f),a" (E3); 092E music_track_tick "add a,(ix+$1f)": the channel's attenuation
+field   channel 1F volume u8
+# 0DD8 track_set_gate "ld (ix+$20),a" (E4); 0AD4 read_track "ld a,(ix+$20)": the part of a note's length (x / 256) it is keyed on
+field   channel 20 gate u8
+# 0999 music_track_tick "dec (ix+$21)": passes to the next step of the LFO sensitivity's ramp (FM, then lfo_ramp again: 099D) or of a PCM note's decay (09CE, 3 again at 09D4)
+field   channel 21 ramp_wait u8
+# 09A0-09AC music_track_tick "ld a,(ix+$22); add a,$11 ... ld (ix+$22),a": register 38's sensitivities, a step up each time (read_track 0AD1 clears them)
+field   channel 22 lfo_sensitivity u8
+# 094F/0982 music_track_tick "ld c,(ix+$23) ... ld (ix+$23),a": the pitch's fraction below portamento_pitch
+field   channel 23 portamento_fraction u8
+# 0952-0988 music_track_tick "ld e,(ix+$24); ld d,(ix+$25) ... ld (ix+$24),l; ld (ix+$25),h", then set_fm_pitch: the pitch the portamento has reached
+field   channel 24 portamento_pitch u16
+# 0AAE/0AB1 read_track "ld (ix+$26),l; ld (ix+$27),h": the note's pitch, which the portamento moves to (0949/094C)
+field   channel 26 target_pitch u16
+# 09F6 run_note_hook "ld l,(ix+$28); ld h,(ix+$29); jp (hl)"; clear_note_hook 09EF/09F2 puts note_hook_none there
+field   channel 28 note_hook u16
+# 0F51 track_call_repeat "ld (ix+$2a),e" (F6), 0F68 track_return_repeat "ld e,(ix+$2a)" (F7): where the track goes on after the part
+field   channel 2A repeat_return u16
+# 0F14 track_loop_start "ld (ix+$2c),e" (F2), 0F23 track_loop_end "ld e,(ix+$2c)" (F3)
+field   channel 2C loop_start u16
+# 0F31 track_loop_2_start "ld (ix+$2e),e" (F4), 0F40 track_loop_2_end "ld e,(ix+$2e)" (F5)
+field   channel 2E loop_2_start u16
+# 0EF5 track_loop_exit "dec (ix+$30)" (F1): the times left before the jump
+field   channel 30 loop_exit_count u8
+# 0E7D track_loop_transposed "dec (ix+$31)" (EC): the times left
+field   channel 31 transposed_loop_count u8
+# 0E9C/0E9F track_loop_transposed "add a,(ix+$32); ld (ix+$32),a"; 0A9C read_track "add a,(ix+$32)": semitones the loop adds each time
+field   channel 32 loop_transpose u8
+# 0EA6/0EA9 track_loop_transposed "add a,(ix+$33); ld (ix+$33),a"; 0928 music_track_tick "add a,(ix+$33)": attenuation the loop adds each time
+field   channel 33 loop_volume_offset u8
+# 0F4A track_call_repeat "ld (ix+$35),a" (F6), 0F65 track_return_repeat "dec (ix+$35)" (F7)
+field   channel 35 repeat_count u8
+# 0F81 track_call "ld (ix+$36),e" (F8), 0F8A track_return "ld e,(ix+$36)" (F9)
+field   channel 36 call_return u16
+# 0D9C track_set_instrument "ld (ix+$38),a" (E2); 0A7B read_track "ld a,(ix+$38)" into load_instrument, 0C1F a PCM channel's of pcm_instruments
+field   channel 38 instrument u8
+# 0D25 track_set_attenuation "ld (ix+$39),a" (7x); 092B music_track_tick "add a,(ix+$39)"
+field   channel 39 attenuation u8
+# 0F96 track_call_2 "ld (ix+$3a),e" (FA), 0F9F track_return_2 "ld e,(ix+$3a)" (FB)
+field   channel 3A call_2_return u16
+# 0C5D read_track "ld (ix+$3c),a": a PCM note's volume, its instrument's level less the attenuations; 09DE-09E5 music_track_tick takes it down by one each step of the decay
+field   channel 3C pcm_level u8
+# bit 0, 0A31 check_fm_effect_override "set 0,(ix+$3f)": an FM effect plays on the channel, the music keeps it keyed off; bit 7, 0A35 "set 7,(ix+$3f)": its instrument to load again (read_track 0A74)
+field   channel 3F flags u8
+# What the PCM effects keep there: play_pcm_sample starts a sample with them, their handlers count them down
+# 1094/1097 play_pcm_sample "ld (ix+$30),l; ld (ix+$31),h"; pcm_effect_countdown 10AF-10BC "dec hl": passes left of the sample
+scoped  channel pcm_effect 30 ticks u16
+# 1250 "ld (ix+$30),$02", 125A "dec (ix+$30)": the same bytes' first counting a few passes
+scoped  channel pcm_effect 30 short_ticks u8
+# 109D play_pcm_sample "ld c,(ix+$32)" into set_pcm_volume: the K007232 channel's volume (0-F)
+scoped  channel pcm_effect 32 volume u8
+# 10A3/10A6 play_pcm_sample "ld e,(ix+$33); ld d,(ix+$34)" into set_pcm_pitch
+scoped  channel pcm_effect 33 pitch u16
+# 1114 "ld (ix+$35),$20", 111E "dec (ix+$35)": passes before the effect goes on
+scoped  channel pcm_effect 35 wait u8
+# 10D6 "ld (ix+$36),$02", 1108 "dec (ix+$36)": times the sample plays
+scoped  channel pcm_effect 36 repeats u8
+param   play_pcm_sample ix channel channel.pcm_effect
+# What the FM effects keep there: their handlers count a timer down, play steps, and move the pitch and the
+# attenuation (the helpers below; each effect's own use of the other bytes, in its family)
+# 1C40 "dec (ix+$20)", 2B52 "dec (ix+$20)": passes left of the effect's step, in every handler; 1C46/2B73 "bit 0,(ix+$20)": odd and even passes
+scoped  channel fm_effect 20 timer u8
+# 1C34/1C37 "ld a,(ix+$21); ld (ix+$20),a": the timer a step starts with
+scoped  channel fm_effect 21 period u8
+# 1C56 "dec (ix+$28); jp z,stop_channel", 2B60 the same: the steps left
+scoped  channel fm_effect 28 count u8
+# 079D set_fm_volume_from_record "ld a,(ix+$2c)"; 1C19 "ld (ix+$2c),a"; 2BA7-2BAF "ld a,(ix+$2c); add a,$fe; ld (ix+$2c),a; jp set_fm_volume": the note's attenuation
+scoped  channel fm_effect 2C attenuation u8
+# 2411/2414 "ld a,(ix+$2e); add a,$20; jp set_fm_volume": the attenuation the effect's notes fall quiet from
+scoped  channel fm_effect 2E base_attenuation u8
+# 2B87/2B8A "ld (ix+$30),l; ld (ix+$31),h; jp set_fm_pitch"; 2B80/2B83 "ld l,(ix+$30); ld h,(ix+$31)" then "add hl,bc": the note's pitch as it moves
+scoped  channel fm_effect 30 pitch u16
+# 2B95/2B98 "ld l,(ix+$32); ld h,(ix+$33); call 2B87": the pitch a step's note starts at; 2BB2-2BBF "ld bc,$0100; add hl,bc" moves it on
+scoped  channel fm_effect 32 base_pitch u16
+# 1C1C/1C1F "ld l,(ix+$38); ld h,(ix+$39); call load_fm_voice": the voice the effect loads again at each step
+scoped  channel fm_effect 38 voice u16
+# its only callers are the FM effects' handlers (build/sound/index.txt): the attenuation it reads is theirs
+param   set_fm_volume_from_record ix channel channel.fm_effect
 
 # ======== records ========
 struct  fm_voice 19 rom                 # a YM2151 voice: load_fm_voice 05F9-06B1 writes it a byte at a time ("inc hl; ld c,(hl)"), operators M1, C1, M2, C2
@@ -403,10 +2189,18 @@ field   pcm_drum 0 start u16
 field   pcm_drum 2 bank u8
 field   pcm_drum 3 level u8
 field   pcm_drum 4 pitch u16
+# 0C3A "add hl,de": HL at the note's record, a drum's of pcm_drums by the pitch (0C37 "ld hl,$100C") or the
+# instrument's of pcm_instruments by +38 (0C29 "ld hl,$1002"); 0C3B-0C40 read its start and bank, 0C56 its level,
+# 0C6B-0C6D a drum's pitch. The code reads both kinds as one: an instrument's record is a drum's without the pitch
+local   read_track 0C3A hl pcm_sound pcm_drum
 
 struct  song 12 rom                     # a song: the tracks of its 9 channels
 field   song 0 tracks u16[9] music_track    # FM channels 1-7, then the K007232's A and B (music_track_start 08BE/08C3 into +10)
 elements music_track u8                 # a track's commands, which read_track_command reads a byte at a time (tools/sound_data_walk.py walks them)
+elements track_command_handler u16      # an entry of track_commands_e0 or track_commands_f0: a command's handler
+# 0D47 "add hl,bc": HL at the command's entry, of track_commands_e0 (0D37 "ld hl,$0D4D") or of track_commands_f0
+# (0D41 "ld hl,$0D6D"), the two ways meeting here; 0D48-0D4B read it, 0D4C "jp (hl)" goes there
+local   read_track 0D47 hl command_entry track_command_handler
 
 # ======== source files: the files of src/sound/ and the stretches of the program each takes ========
 0000  file  commands       # the 68000's sound commands: the reset and its tests, the command's dispatch, the title music, the speech, the starts of the music and the effects, the fade, silence, the channels' stops

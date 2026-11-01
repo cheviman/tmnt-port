@@ -3,7 +3,7 @@
  *    Description: the fire's tiles redrawn in the first two areas
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -11,13 +11,15 @@
  */
 #include "game.h"
 
-void animate_fire_tiles(uint32_t *p_d5, uint32_t *p_d6)
+/* areas 0 and 1, in play or the apartment's exit: the fire's tiles redrawn, a spot a frame, a new frame
+   every four */
+void animate_fire_tiles(uint32_t *p_third_row_offset, uint32_t *p_second_row_offset)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d6 = *p_d6;
-	uint8_t d0 = 0, d1 = 0;
-	uint16_t d0_2 = 0, d7 = 0;
-	uint32_t a0 = 0, a1 = 0, a2 = 0, d5_2 = 0, d6_2 = 0;
+	uint32_t third_row_offset = *p_third_row_offset;
+	uint32_t second_row_offset = *p_second_row_offset;
+	uint8_t frame = 0, tile_attribute = 0;
+	uint16_t block_offset = 0, count = 0, spot_offset = 0;
+	uint32_t frame_blocks = 0, spot_record = 0, tile_place = 0;
 	uint16_t t1 = 0;
 
 	if (game_state != 2u)
@@ -40,10 +42,10 @@ void animate_fire_tiles(uint32_t *p_d5, uint32_t *p_d6)
 		return;
 	LAYER(LAYER_A)->x = LAYER(LAYER_B)->x;
 	LAYER(LAYER_A)->y = LAYER(LAYER_B)->y;
-	d0 = (uint8_t)frame_count;
-	if (d0 == fire_last_frame)
+	frame = (uint8_t)frame_count;
+	if (frame == fire_last_frame)
 		return;
-	fire_last_frame = d0;
+	fire_last_frame = frame;
 	building_fire_spot++;
 	if (building_fire_spot >= 4u)
 	{
@@ -62,119 +64,117 @@ void animate_fire_tiles(uint32_t *p_d5, uint32_t *p_d6)
 			if (apartment_fire_frame >= 8u)
 				apartment_fire_frame = 0u;
 		}
-		d0_2 = (uint16_t)((uint32_t)apartment_fire_spot << 2);
-		a0 = fire_tiles[d0_2 / 4u];
-		a2 = mem_read32(a0);
-		a0 = mem_read32(a0 + 4u + (uint16_t)(IN_PAGE(d0_2, apartment_fire_frame) << 2));
-		a1 = fire_blocks_ADDRESS;
-		d7 = 7u;
-		d6_2 = 0x10u;
-		d5_2 = 0x20u;
+		spot_offset = (uint16_t)((uint32_t)apartment_fire_spot << 2);
+		spot_record = fire_tiles[spot_offset / 4u];
+		tile_place = FIRE_SPOT_LONG(spot_record);
+		frame_blocks = FIRE_SPOT_LONG(spot_record + ((IN_PAGE(spot_offset, apartment_fire_frame) & 0x3FFFu) + 1u) * 0x4u);
+		count = 7u;
+		second_row_offset = 0x10u;
+		third_row_offset = 0x20u;
 	}
 	else
 	{
-		d0_2 = (uint16_t)((uint32_t)building_fire_spot << 2);
-		a0 = fire_tiles_area_0[d0_2 / 4u];
-		a2 = mem_read32(a0);
-		a0 = mem_read32(a0 + 4u + (uint16_t)(IN_PAGE(d0_2, building_fire_frame) << 2));
-		a1 = fire_blocks_ADDRESS;
-		d7 = 3u;
-		d6_2 = 8u;
-		d5_2 = 0x10u;
+		spot_offset = (uint16_t)((uint32_t)building_fire_spot << 2);
+		spot_record = fire_tiles_area_0[spot_offset / 4u];
+		tile_place = FIRE_SPOT_LONG(spot_record);
+		frame_blocks = FIRE_SPOT_LONG(spot_record + ((IN_PAGE(spot_offset, building_fire_frame) & 0x3FFFu) + 1u) * 0x4u);
+		count = 3u;
+		second_row_offset = 8u;
+		third_row_offset = 0x10u;
 	}
 	do
 	{
-		d0_2 = mem_read16(a0);
-		d1 = mem_read8(a1 + (int16_t)d0_2);
-		mem_write8(a2, d1);
-		mem_write8(a2 + 2u, d1);
-		mem_write8(a2 + 4u, d1);
-		mem_write8(a2 + 6u, d1);
-		mem_write8(a2 + 0x80u, d1);
-		mem_write8(a2 + 0x82u, d1);
-		mem_write8(a2 + 0x84u, d1);
-		mem_write8(a2 + 0x86u, d1);
-		mem_write8(a2 + 0x100u, d1);
-		mem_write8(a2 + 0x102u, d1);
-		mem_write8(a2 + 0x104u, d1);
-		mem_write8(a2 + 0x106u, d1);
-		mem_write8(a2 + 0x180u, d1);
-		mem_write8(a2 + 0x182u, d1);
-		mem_write8(a2 + 0x184u, d1);
-		mem_write8(a2 + 0x186u, d1);
-		mem_write8(a2 + 1u, mem_read8(a1 + 1u + (int16_t)d0_2));
-		mem_write8(a2 + 3u, mem_read8(a1 + 2u + (int16_t)d0_2));
-		mem_write8(a2 + 5u, mem_read8(a1 + 3u + (int16_t)d0_2));
-		mem_write8(a2 + 7u, mem_read8(a1 + 4u + (int16_t)d0_2));
-		mem_write8(a2 + 0x81u, mem_read8(a1 + 5u + (int16_t)d0_2));
-		mem_write8(a2 + 0x83u, mem_read8(a1 + 6u + (int16_t)d0_2));
-		mem_write8(a2 + 0x85u, mem_read8(a1 + 7u + (int16_t)d0_2));
-		mem_write8(a2 + 0x87u, mem_read8(a1 + 8u + (int16_t)d0_2));
-		mem_write8(a2 + 0x101u, mem_read8(a1 + 9u + (int16_t)d0_2));
-		mem_write8(a2 + 0x103u, mem_read8(a1 + 0xAu + (int16_t)d0_2));
-		mem_write8(a2 + 0x105u, mem_read8(a1 + 0xBu + (int16_t)d0_2));
-		mem_write8(a2 + 0x107u, mem_read8(a1 + 0xCu + (int16_t)d0_2));
-		mem_write8(a2 + 0x181u, mem_read8(a1 + 0xDu + (int16_t)d0_2));
-		mem_write8(a2 + 0x183u, mem_read8(a1 + 0xEu + (int16_t)d0_2));
-		mem_write8(a2 + 0x185u, mem_read8(a1 + 0xFu + (int16_t)d0_2));
-		mem_write8(a2 + 0x187u, mem_read8(a1 + 0x10u + (int16_t)d0_2));
-		d0_2 = mem_read16(a0 + d6_2);
-		d1 = mem_read8(a1 + (int16_t)d0_2);
-		mem_write8(a2 + 0x200u, d1);
-		mem_write8(a2 + 0x202u, d1);
-		mem_write8(a2 + 0x204u, d1);
-		mem_write8(a2 + 0x206u, d1);
-		mem_write8(a2 + 0x280u, d1);
-		mem_write8(a2 + 0x282u, d1);
-		mem_write8(a2 + 0x284u, d1);
-		mem_write8(a2 + 0x286u, d1);
-		mem_write8(a2 + 0x300u, d1);
-		mem_write8(a2 + 0x302u, d1);
-		mem_write8(a2 + 0x304u, d1);
-		mem_write8(a2 + 0x306u, d1);
-		mem_write8(a2 + 0x380u, d1);
-		mem_write8(a2 + 0x382u, d1);
-		mem_write8(a2 + 0x384u, d1);
-		mem_write8(a2 + 0x386u, d1);
-		mem_write8(a2 + 0x201u, mem_read8(a1 + 1u + (int16_t)d0_2));
-		mem_write8(a2 + 0x203u, mem_read8(a1 + 2u + (int16_t)d0_2));
-		mem_write8(a2 + 0x205u, mem_read8(a1 + 3u + (int16_t)d0_2));
-		mem_write8(a2 + 0x207u, mem_read8(a1 + 4u + (int16_t)d0_2));
-		mem_write8(a2 + 0x281u, mem_read8(a1 + 5u + (int16_t)d0_2));
-		mem_write8(a2 + 0x283u, mem_read8(a1 + 6u + (int16_t)d0_2));
-		mem_write8(a2 + 0x285u, mem_read8(a1 + 7u + (int16_t)d0_2));
-		mem_write8(a2 + 0x287u, mem_read8(a1 + 8u + (int16_t)d0_2));
-		mem_write8(a2 + 0x301u, mem_read8(a1 + 9u + (int16_t)d0_2));
-		mem_write8(a2 + 0x303u, mem_read8(a1 + 0xAu + (int16_t)d0_2));
-		mem_write8(a2 + 0x305u, mem_read8(a1 + 0xBu + (int16_t)d0_2));
-		mem_write8(a2 + 0x307u, mem_read8(a1 + 0xCu + (int16_t)d0_2));
-		mem_write8(a2 + 0x381u, mem_read8(a1 + 0xDu + (int16_t)d0_2));
-		mem_write8(a2 + 0x383u, mem_read8(a1 + 0xEu + (int16_t)d0_2));
-		mem_write8(a2 + 0x385u, mem_read8(a1 + 0xFu + (int16_t)d0_2));
-		mem_write8(a2 + 0x387u, mem_read8(a1 + 0x10u + (int16_t)d0_2));
-		d0_2 = mem_read16(a0 + d5_2);
-		d1 = mem_read8(a1 + (int16_t)d0_2);
-		mem_write8(a2 + 0x400u, d1);
-		mem_write8(a2 + 0x402u, d1);
-		mem_write8(a2 + 0x404u, d1);
-		mem_write8(a2 + 0x406u, d1);
-		mem_write8(a2 + 0x480u, d1);
-		mem_write8(a2 + 0x482u, d1);
-		mem_write8(a2 + 0x484u, d1);
-		mem_write8(a2 + 0x486u, d1);
-		mem_write8(a2 + 0x401u, mem_read8(a1 + 1u + (int16_t)d0_2));
-		mem_write8(a2 + 0x403u, mem_read8(a1 + 2u + (int16_t)d0_2));
-		mem_write8(a2 + 0x405u, mem_read8(a1 + 3u + (int16_t)d0_2));
-		mem_write8(a2 + 0x407u, mem_read8(a1 + 4u + (int16_t)d0_2));
-		mem_write8(a2 + 0x481u, mem_read8(a1 + 5u + (int16_t)d0_2));
-		mem_write8(a2 + 0x483u, mem_read8(a1 + 6u + (int16_t)d0_2));
-		mem_write8(a2 + 0x485u, mem_read8(a1 + 7u + (int16_t)d0_2));
-		mem_write8(a2 + 0x487u, mem_read8(a1 + 8u + (int16_t)d0_2));
-		t1 = d7 - 1u;
-		d7 = t1;
-		a2 += 8u;
-		a0 += 2u;
+		block_offset = FIRE_BLOCK_OFFSET(frame_blocks);
+		tile_attribute = TABLE8(fire_blocks, (uint32_t)(int16_t)block_offset);
+		mem_write8(tile_place, tile_attribute);
+		mem_write8(tile_place + 2u, tile_attribute);
+		mem_write8(tile_place + 4u, tile_attribute);
+		mem_write8(tile_place + 6u, tile_attribute);
+		mem_write8(tile_place + 0x80u, tile_attribute);
+		mem_write8(tile_place + 0x82u, tile_attribute);
+		mem_write8(tile_place + 0x84u, tile_attribute);
+		mem_write8(tile_place + 0x86u, tile_attribute);
+		mem_write8(tile_place + 0x100u, tile_attribute);
+		mem_write8(tile_place + 0x102u, tile_attribute);
+		mem_write8(tile_place + 0x104u, tile_attribute);
+		mem_write8(tile_place + 0x106u, tile_attribute);
+		mem_write8(tile_place + 0x180u, tile_attribute);
+		mem_write8(tile_place + 0x182u, tile_attribute);
+		mem_write8(tile_place + 0x184u, tile_attribute);
+		mem_write8(tile_place + 0x186u, tile_attribute);
+		mem_write8(tile_place + 1u, TABLE8(fire_blocks, 0x1u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 3u, TABLE8(fire_blocks, 0x2u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 5u, TABLE8(fire_blocks, 0x3u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 7u, TABLE8(fire_blocks, 0x4u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x81u, TABLE8(fire_blocks, 0x5u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x83u, TABLE8(fire_blocks, 0x6u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x85u, TABLE8(fire_blocks, 0x7u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x87u, TABLE8(fire_blocks, 0x8u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x101u, TABLE8(fire_blocks, 0x9u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x103u, TABLE8(fire_blocks, 0xAu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x105u, TABLE8(fire_blocks, 0xBu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x107u, TABLE8(fire_blocks, 0xCu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x181u, TABLE8(fire_blocks, 0xDu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x183u, TABLE8(fire_blocks, 0xEu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x185u, TABLE8(fire_blocks, 0xFu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x187u, TABLE8(fire_blocks, 0x10u + (uint32_t)(int16_t)block_offset));
+		block_offset = FIRE_BLOCK_OFFSET(frame_blocks + second_row_offset);
+		tile_attribute = TABLE8(fire_blocks, (uint32_t)(int16_t)block_offset);
+		mem_write8(tile_place + 0x200u, tile_attribute);
+		mem_write8(tile_place + 0x202u, tile_attribute);
+		mem_write8(tile_place + 0x204u, tile_attribute);
+		mem_write8(tile_place + 0x206u, tile_attribute);
+		mem_write8(tile_place + 0x280u, tile_attribute);
+		mem_write8(tile_place + 0x282u, tile_attribute);
+		mem_write8(tile_place + 0x284u, tile_attribute);
+		mem_write8(tile_place + 0x286u, tile_attribute);
+		mem_write8(tile_place + 0x300u, tile_attribute);
+		mem_write8(tile_place + 0x302u, tile_attribute);
+		mem_write8(tile_place + 0x304u, tile_attribute);
+		mem_write8(tile_place + 0x306u, tile_attribute);
+		mem_write8(tile_place + 0x380u, tile_attribute);
+		mem_write8(tile_place + 0x382u, tile_attribute);
+		mem_write8(tile_place + 0x384u, tile_attribute);
+		mem_write8(tile_place + 0x386u, tile_attribute);
+		mem_write8(tile_place + 0x201u, TABLE8(fire_blocks, 0x1u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x203u, TABLE8(fire_blocks, 0x2u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x205u, TABLE8(fire_blocks, 0x3u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x207u, TABLE8(fire_blocks, 0x4u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x281u, TABLE8(fire_blocks, 0x5u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x283u, TABLE8(fire_blocks, 0x6u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x285u, TABLE8(fire_blocks, 0x7u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x287u, TABLE8(fire_blocks, 0x8u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x301u, TABLE8(fire_blocks, 0x9u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x303u, TABLE8(fire_blocks, 0xAu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x305u, TABLE8(fire_blocks, 0xBu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x307u, TABLE8(fire_blocks, 0xCu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x381u, TABLE8(fire_blocks, 0xDu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x383u, TABLE8(fire_blocks, 0xEu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x385u, TABLE8(fire_blocks, 0xFu + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x387u, TABLE8(fire_blocks, 0x10u + (uint32_t)(int16_t)block_offset));
+		block_offset = FIRE_BLOCK_OFFSET(frame_blocks + third_row_offset);
+		tile_attribute = TABLE8(fire_blocks, (uint32_t)(int16_t)block_offset);
+		mem_write8(tile_place + 0x400u, tile_attribute);
+		mem_write8(tile_place + 0x402u, tile_attribute);
+		mem_write8(tile_place + 0x404u, tile_attribute);
+		mem_write8(tile_place + 0x406u, tile_attribute);
+		mem_write8(tile_place + 0x480u, tile_attribute);
+		mem_write8(tile_place + 0x482u, tile_attribute);
+		mem_write8(tile_place + 0x484u, tile_attribute);
+		mem_write8(tile_place + 0x486u, tile_attribute);
+		mem_write8(tile_place + 0x401u, TABLE8(fire_blocks, 0x1u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x403u, TABLE8(fire_blocks, 0x2u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x405u, TABLE8(fire_blocks, 0x3u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x407u, TABLE8(fire_blocks, 0x4u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x481u, TABLE8(fire_blocks, 0x5u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x483u, TABLE8(fire_blocks, 0x6u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x485u, TABLE8(fire_blocks, 0x7u + (uint32_t)(int16_t)block_offset));
+		mem_write8(tile_place + 0x487u, TABLE8(fire_blocks, 0x8u + (uint32_t)(int16_t)block_offset));
+		t1 = count - 1u;
+		count = t1;
+		tile_place += 8u;
+		frame_blocks += 2u;
 	} while (t1 != 0xFFFFu);
-	*p_d5 = d5_2;
-	*p_d6 = d6_2;
+	*p_third_row_offset = third_row_offset;
+	*p_second_row_offset = second_row_offset;
 }

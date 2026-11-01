@@ -4,7 +4,7 @@ Description: what the shared decompiler core (tools/core) needs to know of TMNT:
              and its settings
 Version:     0.1.0
 Created:     29-10-2026
-Modified:    29-10-2026
+Modified:    01-11-2026
 Author:      Sebastian Toyos
 
 The core (arcade-decomp: the decompiler, the CPU frontends, the analysis, the checks) is the same for every
@@ -32,6 +32,9 @@ DISASSEMBLER = "m68000.disassembler"
 CODE_START = 0x1000                             # 000400-000FFF, after the vectors, is all zeros
 DATA_WALK = "data_walk"                         # the data the engines read, walked (tools/data_walk.py)
 OBJECT_REGISTER = "A0"                          # the object a handler runs on: its fields, for the analysis
+# a table of states stops at a place the code names as data even where that place holds a zero (the arcs right after
+# four enemies' tables of states, 049BD8...: the analysis took their words for two more states; core/m68000/analysis.py)
+TABLE_ENDS_BEFORE_UNUSED = True
 # a family of objects whose name starts with another's (enemy_walk, enemy) reads the fields that one names too,
 # besides its own (symbols.txt scoped lines; decompiler/pointers.py)
 NESTED_FAMILIES = True
@@ -62,6 +65,13 @@ EFFECT_READ_AREAS = [(0x140000, 0x140800)]
 STRUCT_ARRAYS = {"object": (0x062000, 50), "player": (0x060100, 4), "coin_slot": (0x060300, 4),
                  "palette_effect": (0x060480, 64), "palette_request": (0x060B00, 40), "player_slot": (0x062FA0, 4),
                  "layer": (0x063300, 3), "typed_pass": (0x063430, 8)}
+# the objects at a fixed address that are always of one family: objects 0-3 are the players' turtles (turtle_join
+# starts them, 019B3A "lea $62000.l, A0" to 019B88 "cmpa.l #$62140, A0"), whose fields an access by their address reads
+INSTANCE_FAMILIES = {0x062000 + 0x50 * number: "turtle" for number in range(4)}
+# and the ones of a family in some functions only: object 12 is the profile's picture in the attract's profiles
+# (profile_start_picture: 00501A "lea $623c0.l, A0"), object 40 the van in the car street's exit
+# (turtle_exit_car_street_board: 02C10E "lea $62c80.l, A6")
+INSTANCE_FAMILIES_BY_FUNCTION = {(0x0623C0, "profile"): "profile", (0x062C80, "turtle_exit_car_street"): "car_street_van"}
 # the structures at a fixed address the code reaches by their own names: the layer the code works on, a copy of
 # layer A's or B's (the K052109's two scrolling layers; load_layer_a copies one in, save_layer_a back)
 NAMED_BASES = {0x063300: "WORKING_LAYER", 0x063340: "LAYER_A", 0x063380: "LAYER_B"}
@@ -86,7 +96,47 @@ MEMORY_ROUTINES = {
     "unreached_00464A": "unreached: zeroes 8 blocks of 96 bytes below 062140 (00464A), whatever is there",
     "unreached_004658": "unreached: zeroes 8 blocks of 96 bytes below 062A00 (004658), whatever is there",
 }
-NOISE_REGISTERS = r"[da][0-7]"                  # the 68000's: what tools/noise_report.py counts as named after a register
+# a constant stored into a field symbols.txt types as a number (an object's or a layer's x and y: positions, 1/256
+# of a pixel a unit), or compared with what one holds, is a number, not the address of what the program has there
+# (0x13C00 is where the street's exit is, not a table at 013C00)
+NUMBERS_BY_FIELD = True
+# a load through a register that holds a table's address on every way to it ("lea table, A6" before the loop that
+# reads "(A6,D7.w)") reads that table by its name, wherever the register was set (decompiler/expressions.py)
+CONSTANT_TABLE_BASES = True
+# a table read with a signed index from a few bytes into a table or piece of data with a name ("(1,A1,D0.w)") reads as
+# those bytes into it, by its name: TABLE8(fire_blocks, 0x1u + index) (core/m68000/emit.py)
+NAMED_TABLE_OFFSETS = True
+# tables of records (symbols.txt "ADDRESS table NAME STRUCT"): the loader turns each record to the host's order as a
+# whole, as the structures run, and the C reads name[i].field (core/m68000/decompile.py's registry)
+RECORD_TABLES = True
+# the values a pointer walks one at a time (symbols.txt elements lines: the texts' bytes, the layers' blocks' tiles)
+# read at their address by their name, TEXT_BYTE(p), as the structures' copies run (core/decompiler/pointers.py)
+ELEMENT_READS = True
+# a parameter or result symbols.txt does not name is called for what the function does with it, as a local is: the
+# structure read through it (the object a handler runs on, a player's slot), or, for a value the function only passes
+# on, the name the functions it hands it to agree on (core/decompiler/emit.py entry_hints)
+PARAMS_BY_USE = True
+# a variable or parameter nothing else names, whose values go into one field of a structure only, is called like that
+# field (OBJECT(object)->move_time = move_time; core/decompiler/emit.py stored_names)
+NAMES_BY_STORES = True
+# a parameter nothing else names takes the name of what every caller passes in it, when they agree (a handler run from
+# run_object_state's switch gets its slot)
+PARAMS_FROM_CALLERS = True
+# a variable nothing else names, compared with one field of a structure only, is called like it (if (OBJECT(object)->
+# screen_x <= screen_x)); and the one a dbcc counts down is the loop's count (core/decompiler/emit.py)
+NAMES_BY_COMPARISONS = True
+LOOP_COUNTERS = True
+# what a function reads to hand back a register is known part by part: enemy_face_object works out D7's low byte
+# (the facing) and hands back its high word as it found it; a state handler that reads only the byte does not carry
+# the word from the handler before it (core/decompiler/dataflow.py)
+PASSES_BY_PART = True
+# and a register written whole with a constant or'ed, and'ed or xor'ed writes only the parts the constant changes:
+# "bset #7, D7" (enemy_facing_bits) writes D7's low byte, not the high word it leaves (core/decompiler/dataflow.py)
+UNCHANGED_PARTS = True
+# and what a function hands back is what its callers read once every function is known, not what they seemed to read
+# while the outputs grew (queue_sound handed back A6, which no caller reads after it; core/decompiler/dataflow.py)
+NARROW_OUTPUTS = True
+NOISE_REGISTERS = r"[da][0-7]"                 # the 68000's: what tools/noise_report.py counts as named after a register
 NOTES = {
     "variables": ["/* the game's variables in work RAM (060000-063FFF) */"],
     "scoped": ["/* work RAM as one family of functions uses it */"],
@@ -122,4 +172,38 @@ SOUND_INTERRUPT_WINDOWS = True                  # the main loop lets the 68000's
 SOUND_COUNTED_FROM_ONE = True                   # tables read from an element before them: note_lengths[i - 1]
 SOUND_KEEP_HARDWARE_READS = True                # reading the K007232's key (B005, B00B) starts its channel: such a read stays
 SOUND_NAMES_BEFORE_TABLES = 16                  # the base of a table indexed from past its start: pcm_note_pitches_ADDRESS - 0xCu
+SOUND_TABLE_REGISTERS = True                    # a table read through HL ("ld hl,TABLE; add hl,de; ld e,(hl)"), by its name
 SOUND_CREATED = "29-10-2026"                    # when src/sound/ was first written (its files' headers)
+# The 15 channel records (sound_symbols.txt's array line) are structures at a fixed address too: an access by the
+# address of a field of one reads that field, by the name of what plays on the record (sound_main gives each its chip
+# channel, 047B-04C4 "ld hl,$8000; ld (hl),$00" to "ld hl,$8380; ld (hl),$07": 8000 the YM2151's 0, 8040-81C0 1-7,
+# 8200 and 8240 the K007232's A and B (8, 9), 8280 and 82C0 A and B again (A, B), 8300 the speech (C), 8340 and 8380
+# the YM2151's 6 and 7 again): the FM effects' first record (start_fm_effect 0281 "ld ix,$8000"), the music's 9
+# (start_music 01D7 "ld ix,$8040", 01D5 "ld b,$09"), the PCM effects' 2 (start_pcm_effect 022C "ld ix,$8280", 0233
+# "ld ix,$82C0"), the speech's (start_speech 00D7 "ld ix,$8300") and the FM effects' 2 on the music's channels 6 and 7
+# (start_fm_effect 028F "ld ix,$8340", 02A1 "ld ix,$8380")
+SOUND_INSTANCES = True
+SOUND_NAMED_BASES = {0x8000: "FM_EFFECT_0", 0x8040: "MUSIC_FM_1", 0x8080: "MUSIC_FM_2", 0x80C0: "MUSIC_FM_3",
+                     0x8100: "MUSIC_FM_4", 0x8140: "MUSIC_FM_5", 0x8180: "MUSIC_FM_6", 0x81C0: "MUSIC_FM_7",
+                     0x8200: "MUSIC_PCM_A", 0x8240: "MUSIC_PCM_B", 0x8280: "PCM_EFFECT_A", 0x82C0: "PCM_EFFECT_B",
+                     0x8300: "SPEECH", 0x8340: "FM_EFFECT_6", 0x8380: "FM_EFFECT_7"}
+# every channel's handler runs on its record in IX (run_channel_handler 05C9-05CF "ld l,(ix+2); ld h,(ix+3); jp (hl)"):
+# what the music, the FM effects and the PCM effects keep past +10 means one thing to each (sound_symbols.txt's
+# scoped lines, by the families of the handlers' names)
+SOUND_FAMILY_STRUCT = "channel"
+SOUND_OBJECT_REGISTER = "ix"
+SOUND_NESTED_FAMILIES = True
+# the names of what the code does with a value (decompiler/emit.py, as the 68000's PARAMS_BY_USE and the rest): the
+# record a handler runs on is its channel, a value stored into one field only is what that field holds, a loop's DJNZ
+# counts its count
+SOUND_PARAMS_BY_USE = True
+SOUND_NAMES_BY_STORES = True
+SOUND_PARAMS_FROM_CALLERS = True
+SOUND_NAMES_BY_COMPARISONS = True
+SOUND_LOOP_COUNTERS = True
+# a value a function keeps in a variable as it is and hands to a routine is what that routine calls it (fm_effect_02_slide:
+# "ld ($83E4),hl; jp set_fm_pitch", the pitch)
+SOUND_NAMES_PAST_STORES = True
+# an access through HL set to a variable's address on every way to it ("ld hl,$83DF; dec (hl)", then "ld a,(hl)" past
+# the jump) reads that variable, as the C names it: HL is no longer set for it (decompiler/expressions.py)
+SOUND_CONSTANT_ADDRESSES = True

@@ -3,7 +3,7 @@
  *    Description: the game's scenes: a new game, the players' turtles, an area's set-up, its story and title screens, the play, the area's exit
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -29,7 +29,7 @@ void scene_new_game(void)
 /* the players' records and scores, the scroll, the difficulty and the play time reset for a new game */
 void new_game_reset(void)
 {
-	uint8_t d7 = 0;
+	uint8_t players = 0;
 
 	if (jobs_pending == 0u)
 	{
@@ -38,8 +38,8 @@ void new_game_reset(void)
 		reset_player_2();
 		reset_player_3();
 		reset_player_4();
-		d7 = 0xFu;
-		clear_scores(d7);
+		players = 0xFu;
+		clear_scores(players);
 		layer_a_scroll_x = 0u;
 		layer_a_scroll_y = 0u;
 		layer_b_scroll_x = 0u;
@@ -125,13 +125,13 @@ void scene_area_setup(void)
 /* the area's stage and variables set, the play's work and the layers cleared */
 void area_setup_variables(void)
 {
-	uint16_t d1 = 0, d7 = 0;
+	uint16_t area_offset = 0, job = 0;
 
-	d1 = (uint16_t)((uint32_t)area << 1);
-	area_continues_scene = indexed_table_of_8_bit_values_00634C[d1];
-	stage = rom_00634D[d1];
-	unk_060123 = 0u;
-	unk_060124 = 0u;
+	area_offset = (uint16_t)((uint32_t)area << 1);
+	area_continues_scene = area_continue_scenes[area_offset];
+	stage = area_stages[area_offset];
+	unused_area_setup_bytes(0) = 0u;
+	unused_area_setup_bytes(1) = 0u;
 	exit_cutscene = 0u;
 	clear_play();
 	area_cleared = 0u;
@@ -139,8 +139,8 @@ void area_setup_variables(void)
 	hide_press_start = 0u;
 	scene_step++;
 	jobs_pending++;
-	d7 = 7u;
-	queue_job(d7);
+	job = 7u;
+	queue_job(job);
 }
 
 /* the objects cleared once the layers are */
@@ -213,8 +213,8 @@ void area_title_intro_start(void)
 /* the intro played until it ends or a button skips it */
 void area_title_intro_run(void)
 {
-	uint8_t d7 = 0;
-	uint32_t ignored = 0, ignored_3 = 0, ignored_4 = 0;
+	uint8_t sound = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 	uint8_t t1 = 0;
 
 	if (intro_over != 0u)
@@ -229,12 +229,12 @@ void area_title_intro_run(void)
 	if (palettes_busy != 0u || game_scene_timer != 0u || ((player_presses(0) | player_presses(1) | player_presses(2) | player_presses(3)) & 0x30u) == 0u)
 	{
 		run_intro();
-		build_draw_list(&ignored, &ignored_3);
-		draw_sprites(&ignored_4, &ignored_3);
+		build_draw_list(&ignored, &ignored_2);
+		draw_sprites(&ignored_3, &ignored_2);
 		return;
 	}
-	d7 = 0x7Eu;
-	queue_sound(d7, 0u);
+	sound = 0x7Eu;
+	queue_sound(sound);
 	area_title_intro_end();
 }
 
@@ -275,16 +275,16 @@ void area_title_screen(uint32_t d1)
 /* the layers cleared and the area's palettes requested */
 void area_title_clear(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0;
+	uint16_t job = 0, kind = 0;
+	uint32_t data = 0;
 
 	scene_substep++;
 	jobs_pending++;
-	d7 = 7u;
-	queue_job(d7);
-	a6 = area_palettes_ADDRESS;
-	d7 = 0x10Fu;
-	post_palette_request(d7, a6);
+	job = 7u;
+	queue_job(job);
+	data = area_palettes_ADDRESS;
+	kind = 0x10Fu;
+	post_palette_request(kind, data);
 }
 
 /* the objects cleared and the scroll reset */
@@ -301,51 +301,51 @@ void area_title_reset(void)
 /* the area's SCENE text started and the boxes drawn, in a game and for the areas that have one */
 void area_title_start_text(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0, d7_2 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0;
+	uint16_t job = 0;
+	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, text = 0;
 
 	scene_substep++;
-	d7 = 0x200u;
-	queue_job(d7);
+	job = 0x200u;
+	queue_job(job);
 	if (game_on == 0u || (int8_t)area_continues_scene < 0)
 	{
 		scene_step++;
 		scene_substep = 0u;
 		return;
 	}
-	a6 = rom_019866[stage];
-	ignored = start_typed_text_at_once(a6);
+	text = area_title_texts[stage];
+	ignored = start_typed_text_at_once(text);
 	game_scene_timer = 0xB4u;
-	d7_2 = 0xB7Fu;
-	draw_player_boxes(d7_2, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
+	box_flags = 0xB7Fu;
+	draw_player_boxes(box_flags, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
 }
 
 /* the text typed and the health bars filled until the time runs out or a button */
 void area_title_wait(uint32_t d1)
 {
-	uint16_t d7_2 = 0;
-	uint32_t d7 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, player = 0;
+	uint16_t count = 0;
+	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, player = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0;
 
 	refill_health_bars();
-	d7 = players_in_play;
-	d7 = (uint16_t)(d7 + 0xB20u);
-	draw_player_boxes(d7, &d1, &ignored, &ignored_2, &ignored_3);
-	update_players_in_game(d1, &ignored_2, &d7, &ignored_4);
+	box_flags = players_in_play;
+	box_flags = (uint16_t)(box_flags + 0xB20u);
+	draw_player_boxes(box_flags, &d1, &ignored, &ignored_2, &ignored_3);
+	update_players_in_game(d1, &ignored_2, &box_flags, &ignored_4);
 	type_next_character();
 	t1 = game_scene_timer;
 	game_scene_timer = t1 - 1u;
 	if (t1 != 1u && (game_scene_timer >= 0x8Cu || ((player_presses(0) | player_presses(1) | player_presses(2) | player_presses(3)) & 0x30u) == 0u))
 		return;
-	d7_2 = 3u;
+	count = 3u;
 	player = PLAYER_ADDRESS(3);
 	do
 	{
-		if ((players_in_play & shl32(1u, (int)(d7_2 & 7u))) != 0u)
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
 			PLAYER(player)->health_bars = 0xAu;
-		t2 = d7_2 - 1u;
-		d7_2 = t2;
+		t2 = count - 1u;
+		count = t2;
 		player -= 8u;
 	} while (t2 != 0xFFFFu);
 	scene_step++;
@@ -355,31 +355,31 @@ void area_title_wait(uint32_t d1)
 /* a bar more of health every 8 frames for the players in play, with a tick */
 void refill_health_bars(void)
 {
-	uint8_t d6 = 0, d7_2 = 0;
-	uint16_t d7 = 0;
+	uint8_t refilled = 0, sound = 0;
+	uint16_t count = 0;
 	uint32_t player = 0;
 	uint16_t t1 = 0;
 
 	if (game_scene_timer >= 0xAAu || (frame_count & 7u) != 0u)
 		return;
-	d6 = 0u;
-	d7 = 3u;
+	refilled = 0u;
+	count = 3u;
 	player = PLAYER_ADDRESS(3);
 	do
 	{
-		if ((players_in_play & shl32(1u, (int)(d7 & 7u))) != 0u && PLAYER(player)->health_bars < 0xAu)
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && PLAYER(player)->health_bars < 0xAu)
 		{
 			PLAYER(player)->health_bars++;
-			d6 = 1u;
+			refilled = 1u;
 		}
-		t1 = d7 - 1u;
-		d7 = t1;
+		t1 = count - 1u;
+		count = t1;
 		player -= 8u;
 	} while (t1 != 0xFFFFu);
-	if (d6 != 0u)
+	if (refilled != 0u)
 	{
-		d7_2 = 1u;
-		queue_sound(d7_2, player);
+		sound = 1u;
+		queue_sound(sound);
 	}
 }
 
@@ -393,33 +393,33 @@ void area_title_done(void)
 }
 
 /* the play, by its steps: the area's entry, then the play's frames */
-void scene_play(uint32_t d1, uint16_t d5, uint32_t d7)
+void scene_play(uint32_t d1, uint8_t d5, uint32_t d7)
 {
-	uint32_t d7_2 = 0;
+	uint32_t step_offset = 0;
 
-	d7_2 = (d7 & ~0xFFu) | scene_step;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(int8_t)d7_2;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(d7_2 << 2);
-	switch ((uint32_t)(int16_t)d7_2)
+	step_offset = (d7 & ~0xFFu) | scene_step;
+	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(int8_t)step_offset;
+	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(step_offset << 2);
+	switch ((uint32_t)(int16_t)step_offset)
 	{
 	case 0:
-		play_entry(d1, d5, d7_2);
+		play_entry(d1, d5, step_offset);
 		return;
 	case 4:
-		play_main(d1, d5, d7_2);
+		play_main(d1, d5, step_offset);
 		return;
 	}
 }
 
 /* the area's entry, by its steps */
-void play_entry(uint32_t d1, uint16_t d5, uint32_t d7)
+void play_entry(uint32_t d1, uint8_t d5, uint32_t step_offset)
 {
-	uint32_t d7_2 = 0;
+	uint32_t substep_offset = 0;
 
-	d7_2 = (d7 & ~0xFFu) | scene_substep;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(int8_t)d7_2;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(d7_2 << 2);
-	switch ((uint32_t)(int16_t)d7_2)
+	substep_offset = (step_offset & ~0xFFu) | scene_substep;
+	substep_offset = (substep_offset & ~0xFFFFu) | (uint16_t)(int8_t)substep_offset;
+	substep_offset = (substep_offset & ~0xFFFFu) | (uint16_t)(substep_offset << 2);
+	switch ((uint32_t)(int16_t)substep_offset)
 	{
 	case 0:
 		play_entry_palettes();
@@ -431,10 +431,10 @@ void play_entry(uint32_t d1, uint16_t d5, uint32_t d7)
 		play_entry_show_game_over();
 		return;
 	case 12:
-		play_entry_start(d1, d5, (uint16_t)d7_2);
+		play_entry_start(d1, d5, (uint16_t)substep_offset);
 		return;
 	case 16:
-		play_entry_run(d1, d7_2);
+		play_entry_run(d1, substep_offset);
 		return;
 	}
 }
@@ -442,15 +442,15 @@ void play_entry(uint32_t d1, uint16_t d5, uint32_t d7)
 /* the layers cleared, the area's palettes and palette effects requested */
 void play_entry_palettes(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0;
+	uint16_t job = 0, kind = 0;
+	uint32_t data = 0;
 
 	jobs_pending++;
-	d7 = 7u;
-	queue_job(d7);
-	a6 = area_palettes_ADDRESS;
-	d7 = 0x10Fu;
-	post_palette_request(d7, a6);
+	job = 7u;
+	queue_job(job);
+	data = area_palettes_ADDRESS;
+	kind = 0x10Fu;
+	post_palette_request(kind, data);
 	start_area_palette_effects();
 	scene_substep++;
 }
@@ -458,23 +458,23 @@ void play_entry_palettes(void)
 /* the scroll, the objects, the boxes, and the stage's layer priority and tile banks */
 void play_entry_layers(void)
 {
-	uint16_t d7 = 0;
+	uint16_t job = 0, stage_number = 0;
 
 	if (jobs_pending == 0u && palettes_busy == 0u)
 	{
 		reset_layers_scroll();
 		clear_objects();
-		d7 = 0xB7Fu;
-		queue_job(d7);
-		d7 = stage;
-		layer_priority = area_layer_priorities[d7];
+		job = 0xB7Fu;
+		queue_job(job);
+		stage_number = stage;
+		layer_priority = area_layer_priorities[stage_number];
 		io_write8(PRIORITY_0C0001, layer_priority);
-		entry_without_blink = area_settings_060127[d7];
-		d7 = (uint16_t)((uint32_t)d7 << 1);
-		io_write8(TILES_106B00, area_tile_banks[d7]);
-		tile_banks_0_1 = area_tile_banks[d7];
-		io_write8(TILES_106E00, rom_00676F[d7]);
-		tile_banks_2_3 = rom_00676F[d7];
+		entry_without_blink = area_entry_without_blink[stage_number];
+		stage_number = (uint16_t)((uint32_t)stage_number << 1);
+		io_write8(TILES_106B00, area_tile_banks_table[stage_number]);
+		tile_banks_0_1 = area_tile_banks_table[stage_number];
+		io_write8(TILES_106E00, area_tile_banks_table[1 + stage_number]);
+		tile_banks_2_3 = area_tile_banks_table[1 + stage_number];
 		scene_substep++;
 	}
 }
@@ -482,24 +482,24 @@ void play_entry_layers(void)
 /* the GAME OVER box when a demo plays */
 void play_entry_show_game_over(void)
 {
-	uint16_t d7 = 0;
+	uint16_t text_number = 0;
 
 	if (jobs_pending != 0u)
 		return;
 	if (game_on == 0u)
 	{
-		d7 = 1u;
-		print_colour_text(d7);
+		text_number = 1u;
+		print_colour_text(text_number);
 	}
 	scene_substep++;
 }
 
 /* the turtles, the spawns, the players' slots and the music started for the area */
-void play_entry_start(uint32_t d1, uint32_t d5, uint16_t d7)
+void play_entry_start(uint32_t d1, uint32_t d5, uint16_t substep_offset)
 {
-	uint8_t d4 = 0;
-	uint16_t d7_2 = 0;
-	uint32_t a1 = 0, d7_3 = 0, player = 0;
+	uint8_t score_players = 0;
+	uint16_t count = 0;
+	uint32_t a1 = 0, player = 0, starting_players = 0;
 	uint16_t t1 = 0;
 
 	if (jobs_pending != 0u)
@@ -507,13 +507,13 @@ void play_entry_start(uint32_t d1, uint32_t d5, uint16_t d7)
 	if (game_on == 0u)
 	{
 		player = PLAYER_ADDRESS(3);
-		d7_2 = (uint16_t)((d7 & ~0xFFu) | 3u);
+		count = (uint16_t)((substep_offset & ~0xFFu) | 3u);
 		do
 		{
-			if ((players_in_play & shl32(1u, (int)(d7_2 & 7u))) != 0u)
+			if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
 				PLAYER(player)->lives = 1u;
-			t1 = d7_2 - 1u;
-			d7_2 = t1;
+			t1 = count - 1u;
+			count = t1;
 			player -= 8u;
 		} while (t1 != 0xFFFFu);
 	}
@@ -523,18 +523,18 @@ void play_entry_start(uint32_t d1, uint32_t d5, uint16_t d7)
 		difficulty = 0u;
 	}
 	area_entry_done = 0u;
-	d7_3 = players_in_play;
-	d7_3 = d7_3 & ~players_joining;
-	turtle_start_area((uint8_t)d7_3, &d1, &a1);
-	update_players_in_game(d1, &d5, &d7_3, &a1);
+	starting_players = players_in_play;
+	starting_players = starting_players & ~players_joining;
+	turtle_start_area((uint8_t)starting_players, &d1, &a1);
+	update_players_in_game(d1, &d5, &starting_players, &a1);
 	entry_without_blink = 0u;
-	d4 = 0xFu;
-	draw_scores(d4);
+	score_players = 0xFu;
+	draw_scores(score_players);
 	start_area_spawns();
 	start_player_slots();
 	hide_all_sprites();
-	run_objects(&d5, &d7_3, &a1);
-	run_objects(&d5, &d7_3, &a1);
+	run_objects(&d5, &starting_players, &a1);
+	run_objects(&d5, &starting_players, &a1);
 	music = 0u;
 	start_area_music();
 	scene_substep++;
@@ -542,12 +542,12 @@ void play_entry_start(uint32_t d1, uint32_t d5, uint16_t d7)
 }
 
 /* the turtles walk in until the entry is done */
-void play_entry_run(uint32_t d1, uint32_t d7)
+void play_entry_run(uint32_t d1, uint32_t substep_offset)
 {
-	uint16_t d7_2 = 0;
+	uint16_t job = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0;
 
-	update_players_in_game(d1, &ignored, &d7, &ignored_2);
+	update_players_in_game(d1, &ignored, &substep_offset, &ignored_2);
 	do_nothing();
 	if (area_entry_done == 0u)
 	{
@@ -557,8 +557,8 @@ void play_entry_run(uint32_t d1, uint32_t d7)
 		draw_sprites(&ignored_5, &ignored_4);
 		return;
 	}
-	d7_2 = 0xB7Fu;
-	queue_job(d7_2);
+	job = 0xB7Fu;
+	queue_job(job);
 	if (game_on == 0u)
 	{
 		frame_count = 0u;
@@ -570,42 +570,42 @@ void play_entry_run(uint32_t d1, uint32_t d7)
 }
 
 /* the play's frame with the inputs and the players who join */
-void play_main(uint32_t d1, uint16_t d5, uint32_t d7)
+void play_main(uint32_t d1, uint8_t d5, uint32_t step_offset)
 {
-	d7 = update_game_inputs(d7);
-	play_frame(d1, d5, d7);
+	step_offset = update_game_inputs(step_offset);
+	play_frame(d1, d5, step_offset);
 	check_joins(d1);
 }
 
 /* the play's frame work, then the continue when no one plays or the exit when the area is cleared */
-void play_frame(uint32_t d1, uint32_t d5, uint32_t d7)
+void play_frame(uint32_t d1, uint32_t d5, uint32_t step_offset)
 {
-	uint8_t d6 = 0;
-	uint32_t a0 = 0, a1 = 0, d1_2 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint8_t frame_phase = 0;
+	uint32_t a1 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, object = 0;
 
 	if (game_on == 0u)
 	{
-		d7 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-		d6 = (uint8_t)d7;
-		if ((d7 & 0xFu) == 0u)
+		step_offset = (step_offset & ~0xFFu) | (uint8_t)frame_count;
+		frame_phase = (uint8_t)step_offset;
+		if ((step_offset & 0xFu) == 0u)
 		{
-			d7 = (d7 & ~0xFFFFu) | 1u;
-			if ((d6 & 0x30u) == 0u)
-				d7 = d7 | 0x80u;
-			print_colour_text((uint16_t)d7);
+			step_offset = (step_offset & ~0xFFFFu) | 1u;
+			if ((frame_phase & 0x30u) == 0u)
+				step_offset = step_offset | 0x80u;
+			print_colour_text((uint16_t)step_offset);
 		}
 	}
-	update_players_in_game(d1, &d5, &d7, &ignored);
+	update_players_in_game(d1, &d5, &step_offset, &ignored);
 	do_nothing();
-	d7 = update_difficulty(d7);
-	update_time_without_knockout(d6, &d1_2, &d5, &d7);
-	update_players(d1_2, &d5, &d7, &a1);
-	update_area_layers(&d5, &d7, &a1);
-	run_objects(&d5, &d7, &a1);
+	update_difficulty();
+	update_time_without_knockout(&d5, &step_offset);
+	update_players(&d5, &step_offset, &a1);
+	update_area_layers(&d5, &step_offset, &a1);
+	run_objects(&d5, &step_offset, &a1);
 	check_attacks();
-	build_draw_list(&ignored_2, &a0);
-	draw_sprites(&ignored_3, &a0);
-	sound_flying_drones(a0);
+	build_draw_list(&ignored_2, &object);
+	draw_sprites(&ignored_3, &object);
+	sound_flying_drones(object);
 	if (stage < 2u)
 		flicker_fire_priority();
 	if ((players_out_of_lives | players_joining | players_in_play) == 0u)
@@ -627,13 +627,13 @@ void play_frame(uint32_t d1, uint32_t d5, uint32_t d7)
 /* the fire flickering over the sprites in the first two stages */
 void flicker_fire_priority(void)
 {
-	uint8_t d7 = 0;
+	uint8_t priority = 0;
 
 	if ((uint8_t)drill_arrival == 0u || (uint8_t)drill_arrival == 0xFFu)
 	{
-		d7 = indexed_table_of_8_bit_values_006A18[(uint8_t)frame_count & 7u];
-		layer_priority = d7;
-		io_write8(PRIORITY_0C0001, d7);
+		priority = fire_priority_flicker[(uint8_t)frame_count & 7u];
+		layer_priority = priority;
+		io_write8(PRIORITY_0C0001, priority);
 		return;
 	}
 	io_write8(PRIORITY_0C0001, 4u);
@@ -641,79 +641,77 @@ void flicker_fire_priority(void)
 }
 
 /* the enemies' level from the settings, the players in play and the play time */
-uint32_t update_difficulty(uint32_t d7)
+void update_difficulty(void)
 {
-	uint32_t d7_2 = 0;
+	uint16_t count = 0;
 	uint16_t t1 = 0;
 
 	difficulty = 2u;
 	if (game_on == 0u)
-		return d7;
+		return;
 	difficulty = difficulty_setting;
-	d7_2 = (d7 & ~0xFFFFu) | 3u;
+	count = 3u;
 	do
 	{
-		if ((players_in_play & shl32(1u, (int)(d7_2 & 7u))) != 0u)
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
 			difficulty++;
-		t1 = d7_2 - 1u;
-		d7_2 = (d7_2 & ~0xFFFFu) | t1;
+		t1 = count - 1u;
+		count = t1;
 	} while (t1 != 0xFFFFu);
-	d7 = (d7_2 & ~0xFFu) | difficulty_from_time;
-	difficulty += d7;
+	difficulty += difficulty_from_time;
 	if (difficulty >= 7u)
 		difficulty = 7u;
-	return d7;
 }
 
 /* the area's music or a boss's in a game */
 void start_area_music(void)
 {
-	uint8_t d7 = 0;
+	uint8_t sound = 0;
 	uint8_t t1 = 0;
 
 	if (game_on == 0u)
 		return;
 	if (drill_rumbling != 0u)
 	{
-		d7 = 0x34u;
-		queue_sound(d7, 0u);
+		sound = 0x34u;
+		queue_sound(sound);
 		if (stage == 6u && helicopter_count != 0u)
 		{
-			d7 = 0xAu;
-			queue_sound(d7, 0u);
+			sound = 0xAu;
+			queue_sound(sound);
 		}
 		return;
 	}
 	t1 = music;
-	d7 = t1;
+	sound = t1;
 	if (t1 == 0u)
 	{
-		d7 = TABLE8(indexed_table_of_8_bit_values_006B0C, (uint32_t)(int16_t)(int8_t)stage);
-		music = d7;
+		sound = TABLE8(area_music, (uint32_t)(int16_t)(int8_t)stage);
+		music = sound;
 	}
-	queue_sound(d7, 0u);
+	queue_sound(sound);
 	if (stage == 6u && helicopter_count != 0u)
 	{
-		d7 = 0xAu;
-		queue_sound(d7, 0u);
+		sound = 0xAu;
+		queue_sound(sound);
 	}
 }
 
 /* the area's exit, by its steps */
 void scene_area_exit(uint32_t d1, uint32_t d7)
 {
-	uint32_t d7_2 = 0, ignored = 0, ignored_2 = 0;
+	uint32_t ignored = 0, ignored_2 = 0, step_offset = 0;
 
-	d7_2 = (d7 & ~0xFFu) | scene_step;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(int8_t)d7_2;
-	d7_2 = (d7_2 & ~0xFFFFu) | (uint16_t)(d7_2 << 2);
-	switch ((uint32_t)(int16_t)d7_2)
+	step_offset = (d7 & ~0xFFu) | scene_step;
+	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(int8_t)step_offset;
+	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(step_offset << 2);
+	switch ((uint32_t)(int16_t)step_offset)
 	{
 	case 0:
-		area_exit_begin(&d1, &d7_2);
+		area_exit_begin(&d1, &step_offset);
 		break;
 	case 4:
-		area_exit_play(&d1, &d7_2);
+		area_exit_play(&d1, &step_offset);
 		break;
 	case 8:
 		area_exit_next_area();
@@ -722,7 +720,7 @@ void scene_area_exit(uint32_t d1, uint32_t d7)
 	do_nothing();
 	if (exit_cutscene != 0u)
 		return;
-	update_players_in_game(d1, &ignored, &d7_2, &ignored_2);
+	update_players_in_game(d1, &ignored, &step_offset, &ignored_2);
 }
 
 /* the turtles start walking out of the cleared area */
@@ -734,21 +732,21 @@ void area_exit_begin(uint32_t *p_d1, uint32_t *p_d7)
 	if (stage != 0u)
 	{
 		d7 = (d7 & ~0xFFFFu) | 0xFEu;
-		queue_sound((uint8_t)d7, 0u);
+		queue_sound((uint8_t)d7);
 	}
 	turtle_start_area_exit(p_d1, &d7);
 	hide_press_start = 1u;
-	unk_060081 = 0x78u;
+	unused_exit_wait = 0x78u;
 	*p_d7 = d7;
 }
 
 /* the exit's frame */
-void area_exit_play(uint32_t *p_d1, uint32_t *p_d7)
+void area_exit_play(uint32_t *p_d1, uint32_t *p_count)
 {
 	uint32_t ignored = 0;
 
 	*p_d1 = run_area_exit(*p_d1);
-	build_draw_list(p_d7, &ignored);
+	build_draw_list(p_count, &ignored);
 	draw_sprites(p_d1, &ignored);
 	if (stage < 2u)
 		flicker_fire_priority();
@@ -757,10 +755,10 @@ void area_exit_play(uint32_t *p_d1, uint32_t *p_d7)
 /* on to the next area, or to the ending after the last one */
 void area_exit_next_area(void)
 {
-	uint8_t d7 = 0;
+	uint8_t sound = 0;
 
-	d7 = 0u;
-	queue_sound(d7, 0u);
+	sound = 0u;
+	queue_sound(sound);
 	if (stage == 9u)
 	{
 		scene++;

@@ -134,12 +134,72 @@ tools verify it, extract the assets and build your own executable.
       the working one and layers A and B by name, the typed texts); the objects' stats are records of the
       program's data read by their fields. The uses of variables named after their address went from 3,510 to
       549, the memory reached through an address the code works out from 2,185 to 1,735
-- [ ] The C readable: names for the rest of the variables, the data tables, the parameters and the locals (today
-      549 uses of variables are named after their address, 1,018 uses of the structures' fields after their
-      offset, 8,518 parameters and locals after a register: `python tools/noise_report.py`), and the sound
-      program's functions
-- [ ] The program's data read by name everywhere: 248 reads still go through an address the code works out,
-      and 378 addresses of the program are written as numbers
+- [x] The 68000 program's data read by name (31-10-2026): every table it reads has a name and a type
+      (`krang_animations[3]`, `turtle_throw_moves[i]`, the tables of records `ending_palette_fades[2].banks`),
+      every record it reaches through a pointer a structure (the enemies' definitions and attacks, the arcs of
+      their jumps, the shots and the objects one object starts, the scroll segments, the spawn records), the
+      bytes a pointer walks one at a time read by what they are (`TEXT(p)`, `BLOCK_BYTE(p)`, `MAP_ENTRY(p)`),
+      and every address of the program the C holds as a value by its name (217 animations, the shadows, the
+      tile blocks, the layers' pictures); a constant stored into a position or compared with one is a number,
+      not an address. No read of the 68000 program's C goes through an address it works out (248 before), no
+      table is named after its address (276 uses before), no address of the program is written as a number
+      (378 before)
+- [x] The sound program's data read by name too (31-10-2026): the tables it reads through HL by their names
+      (`fm_effect_handlers`, `fm_voice_pointers[i]`, `pcm_note_pitches`, those it indexes from before their
+      start, `TABLE16(fm_note_pitches, i - 2u)`), the instruments' and drums' records by their fields
+      (`PCM_DRUM(pcm_sound)->pitch`), the track commands' handlers by what they are: no read of the whole C
+      goes through an address any more (27 in the sound program before)
+- [x] The 68000 program's C named (01-11-2026): every function with a name and a comment (the jobs 7, 8 and 0xA
+      and the enemies' attacks 6 and 7 are lone returns named for what they are and where they sit), every variable
+      of the work RAM (the 12 nothing reads are `unused_...`), every field of the objects, and the parameters and
+      locals by what they hold: the object a handler runs on is `object`, a player's slot `slot`, a value stored into
+      a field or compared with one takes its name, a loop's counter is `count`, and what a function only hands on
+      takes the name the functions it calls give it (the decompiler works these out, `tools/game_profile.py`; about
+      2,400 more are named in `symbols.txt`, each with the instruction that shows it). The pointers into the
+      program's data are typed (the texts, the tile blocks, the palettes' colours, the fire's records, the demos'
+      recorded inputs, the turtles' walking speeds...), and the tables the C still read through an address it
+      wrote as a number (`mem_read32(0x53D2Au + move)`) are read by name (`TABLE32(enemy_attacks, move)`). In the
+      68000's C: parameters and locals named after a register 7,297 → 2,299, variables after their address 16 → 0,
+      fields after their offset 106 → 0, functions after their address 5 → 0, functions without a comment 713 → 0,
+      memory reached through an address the code works out 1,437 → 1,123; still 17 of 17 scenarios identical in
+      state, picture and sound
+- [x] The sound program's C named (01-11-2026): every function with a name and a comment (each effect's handlers
+      `fm_effect_XX_...` and `pcm_effect_XX_...`, the routines the FM effects share: `fm_effect_fall`,
+      `fm_effect_trill_slide`, `fm_effect_set_pitch`...), the channel records by what plays on each
+      (`CHANNEL(SPEECH)->sound`, `CHANNEL(MUSIC_FM_6)`), their fields as the music uses them (`track`, `ticks_left`,
+      `gate`, `note_hook`, `loop_start`...) and as the FM and PCM effects use the same bytes (`->fm_effect.timer`,
+      `->pcm_effect.ticks`, and an effect's own where it differs), every variable of the RAM, and the parameters and
+      locals by what they hold (the record a handler runs on is `channel`; the rest by the rules the 68000's C uses,
+      two more of the sound program's own, and `sound_symbols.txt`, each name with the instruction that shows it). In the
+      sound program's C: functions named after their address 225 → 0, variables after their address 533 → 0, fields
+      after their offset 912 → 0, parameters and locals after a register 1,039 → 0, functions without a comment
+      381 → 0; still 17 of 17 scenarios identical in state, picture and sound
+- [x] What the 68000's routines leave in registers for the next one, part by part (01-11-2026): the decompiler
+      now knows what a function reads to hand back each part of a register (byte, byte, high word), not the whole
+      register, and that "bset #7, D7" or an or/and with a constant writes only the parts it changes; what a function
+      hands back is what its callers read once everything is known (it had kept what they seemed to read while the
+      summaries grew: `queue_sound` took A6 for no caller); four enemies' tables of states were read past their end
+      into the arcs after them, two phantom states each that made every state handler read D7. A function hands back
+      only the parts some routine reads before writing them again, and the values a function works out itself have
+      names (the facing bits, the walks' animation tables, the speeds, the damages, the records an enemy throws, the
+      stick's directions, the fill routines' zeroes). In the 68000's C: parameters and locals named after a register
+      2,299 → 1,599, functions with a parameter named after one 910 → 639, faithful functions 57.0 % → 67.9 %, partial
+      writes that put a part of one value into another 321 → 185; still 17 of 17 scenarios identical in state, picture
+      and sound
+- [ ] What is left of the names: the 1,599 parameters and locals still named after a register (D7 557, D5 517, A5
+      337, D1 92, the rest 96) are what one routine leaves in a register and a later one reads before setting it,
+      carried through the whole frame from the VBLANK handler down: D7's high word, which `hydrant_spray`,
+      `billboard_wait` and `rock_soldier_site_fire` add to a position (a `move.w` then an `add.l D7`) after
+      `enemy_landed` left FFFF there (`moveq #-1`) or `enemy_start_arc` the sign of a step (`ext.l`); D5's low byte,
+      which `helicopter_fly` reads as its in-line flag when the first turtle it finds is past x 0x1FF on the screen;
+      A5, which `enemy_nearest_turtles` and `enemy_nearest_slots` keep as the second nearest when no turtle answers;
+      the turtles' D1, D5, D6 and D7. A function that only carries such a value holds nothing of its own there (1,303
+      of them); in the other 296 the register holds several things in turn. The C carries them to stay 1:1 (the
+      game reads them, if rarely). 16 reads of the program's data still go through the bus
+      in 9 functions (the elevators' stops, the palette effects' lists, the window soldiers' records, the enemies'
+      reactions by side...). In the sound program, the handlers it stores are written as numbers (the 68000's are
+      named), a few numbers that happen to be an address of its data come out with that name (pitches, lengths),
+      and the 16-bit fields it writes a byte at a time show their two bytes
 
 ## Getting started
 

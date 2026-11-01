@@ -3,7 +3,7 @@
  *    Description: an unused colour editor for the palette RAM, worked with the first player's joystick
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -28,10 +28,10 @@ void palette_editor(void)
 /* Unused: the colour editor's page, its numbers cleared */
 void palette_editor_start(void)
 {
-	uint32_t a5 = 0;
+	uint32_t jobs = 0;
 
-	a5 = table_loaded_by_lea_009C5C_ADDRESS;
-	queue_jobs(a5);
+	jobs = table_loaded_by_lea_009C5C_ADDRESS;
+	queue_jobs(jobs);
 	palette_editor_numbers(0) = 0u;
 	palette_editor_numbers(1) = 0u;
 	palette_editor_numbers(2) = 0u;
@@ -44,24 +44,24 @@ void palette_editor_start(void)
 /* Unused: the joystick picks one of the colour editor's numbers and changes it */
 void palette_editor_frame(void)
 {
-	uint8_t d0 = 0, d6 = 0;
-	uint16_t d1 = 0, d2 = 0, d3 = 0, d7 = 0;
-	uint32_t a0 = 0, a4 = 0, a6 = 0;
+	uint8_t joystick = 0, limit = 0;
+	uint16_t colour = 0, limit_choice = 0, number_offset = 0, part_offset = 0, pick = 0, stepped_colour = 0;
+	uint32_t colour_place = 0, numbers = 0;
 	uint8_t t1 = 0, t4 = 0;
 	uint32_t t2 = 0, t3 = 0;
 
 	if ((frame_count & 3u) != 0u)
 		return;
-	a0 = palette_editor_numbers_ADDRESS;
-	palette_editor_draw(a0);
-	palette_editor_show_colour(a0);
+	numbers = palette_editor_numbers_ADDRESS;
+	palette_editor_draw(numbers);
+	palette_editor_show_colour(numbers);
 	palette_editor_last_pick = palette_editor_pick;
 	mem_write8(6u, io_read8(IO_0A0003));
 	mem_write8(6u, ~mem_read8(6u));
-	d0 = mem_read8(6u) & 0xFu;
-	if ((d0 & 2u) == 0u)
+	joystick = mem_read8(6u) & 0xFu;
+	if ((joystick & 2u) == 0u)
 	{
-		if ((d0 & 1u) != 0u)
+		if ((joystick & 1u) != 0u)
 		{
 			t1 = palette_editor_pick;
 			palette_editor_pick = t1 - 1u;
@@ -77,132 +77,130 @@ void palette_editor_frame(void)
 	}
 	if (palette_editor_pick >= 3u)
 	{
-		d7 = palette_editor_pick;
-		palette_editor_part = rom_009F16[(uint8_t)(d7 - 3u)];
-		a6 = palette_editor_entry(a0);
-		d1 = (uint16_t)((uint32_t)mem_read8(a6 + 1u) << 8);
-		d1 |= (uint8_t)(d1 + mem_read8(a6 + 3u));
-		a4 = 0x9F0Au;
-		d2 = palette_editor_part;
-		d2 = (uint8_t)((uint32_t)d2 << 2);
-		d3 = (uint16_t)d1;
-		if ((d0 & 4u) != 0u)
-			d3 += DATA16(a4 + 2u + d2);
-		if ((d0 & 8u) != 0u)
-			d3 -= DATA16(a4 + 2u + d2);
-		d1 = (uint16_t)((d1 & ~DATA16(a4 + d2)) + (d3 & DATA16(a4 + d2)));
-		mem_write8(a6 + 3u, (uint8_t)d1);
-		io_write8(PALETTE_08000F, (uint8_t)d1);
-		d1 = d1 >> 8;
-		mem_write8(a6 + 1u, (uint8_t)d1);
-		io_write8(PALETTE_08000D, (uint8_t)d1);
+		pick = palette_editor_pick;
+		palette_editor_part = palette_editor_parts[(uint8_t)(pick - 3u)];
+		colour_place = palette_editor_entry(numbers);
+		colour = (uint16_t)((uint32_t)io_read8(colour_place + 1u) << 8);
+		colour |= (uint8_t)(colour + io_read8(colour_place + 3u));
+		part_offset = palette_editor_part;
+		part_offset = (uint8_t)((uint32_t)part_offset << 2);
+		stepped_colour = (uint16_t)colour;
+		if ((joystick & 4u) != 0u)
+			stepped_colour += TABLE16(palette_editor_steps, part_offset);
+		if ((joystick & 8u) != 0u)
+			stepped_colour -= TABLE16(palette_editor_steps, part_offset);
+		colour = (uint16_t)((colour & ~TABLE16(palette_editor_masks, part_offset)) + (stepped_colour & TABLE16(palette_editor_masks, part_offset)));
+		io_write8(colour_place + 3u, (uint8_t)colour);
+		io_write8(PALETTE_08000F, (uint8_t)colour);
+		colour = colour >> 8;
+		io_write8(colour_place + 1u, (uint8_t)colour);
+		io_write8(PALETTE_08000D, (uint8_t)colour);
 		return;
 	}
-	a6 = indexed_table_of_8_bit_values_009D40_ADDRESS;
-	d7 = palette_editor_pick;
+	limit_choice = palette_editor_pick;
 	if (palette_editor_numbers(1) != 3u)
 	{
-		d7 = (uint8_t)(d7 + 3u);
+		limit_choice = (uint8_t)(limit_choice + 3u);
 		if (palette_editor_numbers(2) >= 8u)
 			palette_editor_numbers(2) = 7u;
 	}
-	d6 = DATA8(a6 + d7);
-	d7 = palette_editor_pick;
-	d7 = (uint8_t)(d7 + 1u);
-	if ((d0 & 8u) == 0u)
+	limit = palette_editor_limits[limit_choice];
+	number_offset = palette_editor_pick;
+	number_offset = (uint8_t)(number_offset + 1u);
+	if ((joystick & 8u) == 0u)
 	{
-		if ((d0 & 4u) != 0u)
+		if ((joystick & 4u) != 0u)
 		{
-			t2 = a0 + d7;
+			t2 = numbers + number_offset;
 			mem_write8(t2, mem_read8(t2) + 1u);
-			if (d6 < palette_editor_numbers(d7))
-				palette_editor_numbers(d7) = 0u;
+			if (limit < palette_editor_numbers(number_offset))
+				palette_editor_numbers(number_offset) = 0u;
 		}
 	}
 	else
 	{
-		t3 = a0 + d7;
+		t3 = numbers + number_offset;
 		t4 = mem_read8(t3);
 		mem_write8(t3, t4 - 1u);
 		if (t4 == 0u)
-			palette_editor_numbers(d7) = d6;
+			palette_editor_numbers(number_offset) = limit;
 	}
 }
 
 /* Unused: the colour picked is shown */
-void palette_editor_show_colour(uint32_t a0)
+void palette_editor_show_colour(uint32_t numbers)
 {
-	uint32_t a6 = 0;
+	uint32_t colour_place = 0;
 
-	a6 = palette_editor_entry(a0);
-	io_write8(PALETTE_08000D, mem_read8(a6 + 1u));
-	io_write8(PALETTE_08000F, mem_read8(a6 + 3u));
+	colour_place = palette_editor_entry(numbers);
+	io_write8(PALETTE_08000D, io_read8(colour_place + 1u));
+	io_write8(PALETTE_08000F, io_read8(colour_place + 3u));
 }
 
 /* Unused: the colour editor's numbers drawn, the one picked in another colour */
-void palette_editor_draw(uint32_t a0)
+void palette_editor_draw(uint32_t numbers)
 {
-	uint8_t d3 = 0;
-	uint16_t d1 = 0, d7 = 0;
-	uint32_t a6 = 0;
+	uint8_t part = 0;
+	uint16_t bank_number = 0, colour = 0, colour_number = 0, palette_number = 0, pick = 0;
+	uint32_t tile_place = 0;
 
-	a6 = rom_009F1A;
-	d7 = palette_editor_numbers(1);
-	mem_write8(a6, 0u);
-	mem_write8(a6 + 1u, rom_009F1E[d7]);
-	a6 = rom_009F22;
-	d7 = palette_editor_numbers(2);
-	mem_write8(a6, 0u);
-	mem_write8(a6 + 1u, rom_009F46[d7]);
-	a6 = rom_009F26;
-	d7 = palette_editor_numbers(3);
-	mem_write8(a6, 0u);
-	mem_write8(a6 + 1u, rom_009F46[d7]);
-	a6 = rom_009F2A;
-	d1 = (uint16_t)((uint32_t)io_read8(PALETTE_08000D) << 8);
-	d1 |= (uint8_t)(d1 + io_read8(PALETTE_08000F));
-	d3 = (uint8_t)d1;
-	palette_editor_draw_part(d3, a6);
-	d1 = d1 >> 5;
-	d3 = (uint8_t)d1;
-	a6 += 6u;
-	palette_editor_draw_part(d3, a6);
-	d3 = (uint8_t)(d1 >> 5);
-	a6 += 6u;
-	palette_editor_draw_part(d3, a6);
-	d7 = palette_editor_pick;
-	if (d7 != palette_editor_last_pick)
+	tile_place = palette_editor_place;
+	bank_number = palette_editor_numbers(1);
+	io_write8(tile_place, 0u);
+	io_write8(tile_place + 1u, palette_editor_title[bank_number]);
+	tile_place = palette_editor_number_places[0];
+	palette_number = palette_editor_numbers(2);
+	io_write8(tile_place, 0u);
+	io_write8(tile_place + 1u, hex_digit_tiles[palette_number]);
+	tile_place = palette_editor_number_places[1];
+	colour_number = palette_editor_numbers(3);
+	mem_write8(tile_place, 0u);
+	mem_write8(tile_place + 1u, hex_digit_tiles[colour_number]);
+	tile_place = palette_editor_number_places[2];
+	colour = (uint16_t)((uint32_t)io_read8(PALETTE_08000D) << 8);
+	colour |= (uint8_t)(colour + io_read8(PALETTE_08000F));
+	part = (uint8_t)colour;
+	palette_editor_draw_part(part, tile_place);
+	colour = colour >> 5;
+	part = (uint8_t)colour;
+	tile_place += 6u;
+	palette_editor_draw_part(part, tile_place);
+	part = (uint8_t)(colour >> 5);
+	tile_place += 6u;
+	palette_editor_draw_part(part, tile_place);
+	pick = palette_editor_pick;
+	if (pick != palette_editor_last_pick)
 	{
-		a6 = rom_009F2E[d7 & 0x3FFFu];
-		mem_write8(a6, 0u);
-		mem_write8(a6 + 1u, 0x1Fu);
-		a6 = rom_009F2E[palette_editor_last_pick];
-		mem_write8(a6, 0u);
-		mem_write8(a6 + 1u, 0x10u);
+		tile_place = palette_editor_colour_places[pick & 0x3FFFu];
+		io_write8(tile_place, 0u);
+		io_write8(tile_place + 1u, 0x1Fu);
+		tile_place = palette_editor_colour_places[palette_editor_last_pick];
+		io_write8(tile_place, 0u);
+		io_write8(tile_place + 1u, 0x10u);
 	}
 }
 
 /* Unused: a part of a colour drawn as two digits */
-void palette_editor_draw_part(uint8_t d3, uint32_t a6)
+void palette_editor_draw_part(uint8_t part, uint32_t tile_place)
 {
-	uint8_t d2 = 0, d3_2 = 0;
+	uint8_t high_digit = 0, low_digit_tile = 0;
 
-	d2 = 0u;
-	d3 &= 0x1Fu;
-	if ((d3 & 0x10u) != 0u)
-		d2++;
-	mem_write8(a6, 0u);
-	mem_write8(a6 + 1u, d2);
-	d3_2 = rom_009F46[d3 & 0xFu];
-	mem_write8(a6 + 2u, 0u);
-	mem_write8(a6 + 3u, d3_2);
+	high_digit = 0u;
+	part &= 0x1Fu;
+	if ((part & 0x10u) != 0u)
+		high_digit++;
+	mem_write8(tile_place, 0u);
+	mem_write8(tile_place + 1u, high_digit);
+	low_digit_tile = hex_digit_tiles[part & 0xFu];
+	mem_write8(tile_place + 2u, 0u);
+	mem_write8(tile_place + 3u, low_digit_tile);
 }
 
 /* Unused: the palette entry the colour editor's numbers pick */
-uint32_t palette_editor_entry(uint32_t a0)
+uint32_t palette_editor_entry(uint32_t numbers)
 {
-	uint32_t a6 = 0;
+	uint32_t colour_place = 0;
 
-	a6 = indexed_table_of_32_bit_values_009EFA[palette_editor_numbers(1)] + (uint16_t)((uint32_t)palette_editor_numbers(2) << 6) + (uint16_t)((uint32_t)palette_editor_numbers(3) << 2);
-	return a6;
+	colour_place = palette_editor_banks[palette_editor_numbers(1)] + (uint16_t)((uint32_t)palette_editor_numbers(2) << 6) + (uint16_t)((uint32_t)palette_editor_numbers(3) << 2);
+	return colour_place;
 }

@@ -3,7 +3,7 @@
  *    Description: the 68000's sound commands: the reset and its tests, the command's dispatch, the title music, the speech, the starts of the music and the effects, the fade, silence, the channels' stops
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -11,36 +11,37 @@
  */
 #include "sound.h"
 
+/* The reset: tests the RAM with four patterns and then the ROM; a failure beeps and starts again. */
 void sound_reset(void)
 {
-	uint8_t b = 0;
-	uint16_t hl = 0;
+	uint8_t pattern = 0;
+	uint16_t place = 0;
 	uint8_t t1 = 0;
 
 	z80_block(7);
-	b = 0u;
+	pattern = 0u;
 	for (;;)
 	{
 		z80_block(10);
-		hl = CHANNEL_ADDRESS(0);
+		place = RAM_START;
 		for (;;)
 		{
 			z80_block(28);
-			z80_write8(hl, b);
-			if (z80_read8(hl) != b)
+			z80_write8(place, pattern);
+			if (z80_read8(place) != pattern)
 			{
 				self_test_failed();
 				return;
 			}
 			z80_block(24);
-			hl++;
-			if (hl >> 8 == 0x88u)
+			place++;
+			if (place >> 8 == 0x88u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(22);
-		t1 = b;
-		b = t1 + 0x55u;
+		t1 = pattern;
+		pattern = t1 + 0x55u;
 		if ((uint8_t)(t1 + 0x55u) < t1)
 			break;
 		z80_cycles(5);
@@ -48,32 +49,34 @@ void sound_reset(void)
 	check_rom();
 }
 
+/* Adds up the program ROM and compares the sum with the one it should have, then starts the program (the
+   game's board puts its own in place of it: there is no ROM to add up). */
 void BOARD_ORIGINAL(check_rom)(void)
 {
-	uint16_t bc = 0, de = 0, hl = 0;
+	uint16_t byte = 0, place = 0, sum = 0;
 
 	z80_block(27);
-	de = 0u;
-	hl = 0u;
-	bc = 0u;
+	place = 0u;
+	sum = 0u;
+	byte = 0u;
 	for (;;)
 	{
 		z80_block(46);
-		bc = z80_read8(de);
-		hl += bc;
-		de++;
-		if (de >> 8 == 0x80u)
+		byte = z80_read8(place);
+		sum += byte;
+		place++;
+		if (place >> 8 == 0x80u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(21);
-	if (hl >> 8 != 0x78u)
+	if (sum >> 8 != 0x78u)
 	{
 		self_test_failed();
 		return;
 	}
 	z80_block(18);
-	if ((uint8_t)hl == 0x3Cu)
+	if ((uint8_t)sum == 0x3Cu)
 	{
 		z80_block(10);
 		sound_main();
@@ -83,38 +86,40 @@ void BOARD_ORIGINAL(check_rom)(void)
 	self_test_failed();
 }
 
+/* The interrupt: takes the 68000's command and starts what it asks for: a reset, silence, the music's
+   fade-out, the title music, an FM effect, a song, a PCM effect or a speech. */
 void sound_command(void)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0, b = 0;
-	uint16_t channel = 0, de = 0, hl = 0;
-	uint16_t saved_hl = 0;
+	uint8_t command = 0, count = 0;
+	uint16_t channel = 0, handler = 0, record_size = 0, song_offset = 0;
+	uint16_t saved_song_offset = 0;
 	uint8_t t1 = 0;
 
 	z80_block(31);
 	interrupts_off();
 	t1 = z80_read8(sound_latch);
-	a = t1;
-	if (a == 0u)
+	command = t1;
+	if (command == 0u)
 	{
 		reset_sound();
 		return;
 	}
 	z80_block(17);
-	if (a == 0xFFu)
+	if (command == 0xFFu)
 	{
 		silence();
 		return;
 	}
 	z80_block(17);
-	if (a == 0xFEu)
+	if (command == 0xFEu)
 	{
 		z80_block(30);
 		fade_timer = 0x16u;
 		return;
 	}
 	z80_block(17);
-	if (a == 0x7Du)
+	if (command == 0x7Du)
 	{
 		z80_block(95);
 		title_music_on = 1u;
@@ -124,55 +129,55 @@ void sound_command(void)
 		return;
 	}
 	z80_block(17);
-	if (a == 0x7Eu)
+	if (command == 0x7Eu)
 	{
 		stop_title_music();
 		return;
 	}
 	z80_block(17);
-	if (a < 0x60u)
+	if (command < 0x60u)
 	{
-		carry = start_fm_effect(a);
+		carry = start_fm_effect(command);
 		return;
 	}
 	z80_block(17);
-	if (a < 0x80u)
+	if (command < 0x80u)
 	{
 		z80_block(19);
-		a -= 0x60u;
-		if (a >= 0x19u)
+		command -= 0x60u;
+		if (command >= 0x19u)
 		{
 			z80_cycles(6);
 			return;
 		}
 		z80_block(27);
-		if ((unk_8458 & 1u) != 0u)
+		if ((fm_effect_34_on & 1u) != 0u)
 		{
 			z80_cycles(6);
 			return;
 		}
 		z80_block(41);
-		hl = 0x885u;
-		de = 0x40u;
-		b = 9u;
-		channel = CHANNEL_ADDRESS(1);
+		handler = 0x885u;
+		record_size = 0x40u;
+		count = 9u;
+		channel = MUSIC_FM_1;
 		for (;;)
 		{
 			z80_block(99);
 			CHANNEL(channel)->sound = 0xFFu;
-			CHANNEL(channel)->handler = hl;
+			CHANNEL(channel)->handler = handler;
 			CHANNEL(channel)->priority = 0xFFu;
-			channel += de;
-			b--;
-			if (b == 0u)
+			channel += record_size;
+			count--;
+			if (count == 0u)
 				break;
 			z80_cycles(5);
 		}
 		z80_block(255);
-		hl = a * 2u;
-		saved_hl = hl;
-		song_header = hl * 2u * 2u * 2u + saved_hl + (songs_ADDRESS - 0x2u);
-		unk_83CC = 0u;
+		song_offset = command * 2u;
+		saved_song_offset = song_offset;
+		song_header = song_offset * 2u * 2u * 2u + saved_song_offset + (songs_ADDRESS - 0x2u);
+		music_attenuation_changed = 0u;
 		fade_timer = 0u;
 		fade_step = 0u;
 		fade_attenuation = 0u;
@@ -184,20 +189,21 @@ void sound_command(void)
 		return;
 	}
 	z80_block(17);
-	if (a < 0xA0u)
+	if (command < 0xA0u)
 	{
-		start_pcm_effect(a);
+		start_pcm_effect(command);
 		return;
 	}
 	z80_block(17);
-	if (a < 0xE0u)
+	if (command < 0xE0u)
 	{
-		start_speech(a);
+		start_speech(command);
 		return;
 	}
 	z80_block(10);
 }
 
+/* A failed test: a beep on the K007232, then the reset again. */
 void self_test_failed(void)
 {
 	uint8_t t1 = 0;
@@ -212,6 +218,7 @@ void self_test_failed(void)
 	sound_reset();
 }
 
+/* Stops the title music, and with it a speech (they share the line that resets the speech chip). */
 void stop_title_music(void)
 {
 	z80_block(53);
@@ -221,13 +228,12 @@ void stop_title_music(void)
 	stop_speech();
 }
 
+/* Counts the main loop's passes while the title music plays: after 13 rounds of 250 it stops it. */
 void title_music_timer(void)
 {
-	uint16_t hl = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	z80_block(26);
-	hl = title_music_passes_ADDRESS;
 	t1 = title_music_passes;
 	title_music_passes = t1 - 1u;
 	if (t1 != 1u)
@@ -248,38 +254,39 @@ void title_music_timer(void)
 	stop_title_music();
 }
 
-void start_speech(uint8_t a)
+/* Starts a speech on the speech channel when its priority is not below the one speaking (the speech chip
+   reset first); one of priority 12 that cannot plays PCM effect 87 instead (the test meant for 13
+   compares the effect's number, so it never holds). Command DF stops the speech. */
+void start_speech(uint8_t command)
 {
-	uint8_t a_2 = 0, c = 0;
-	uint16_t hl = 0;
+	uint8_t fallback_effect = 0, priority = 0, sound = 0;
 	uint8_t t1 = 0;
 
 	z80_block(24);
-	a += 0x60u;
-	if (a == 0x3Fu)
+	command += 0x60u;
+	if (command == 0x3Fu)
 	{
 		stop_speech();
 		return;
 	}
 	z80_block(12);
-	if (a >= 0x24u)
+	if (command >= 0x24u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(66);
-	c = a;
-	a_2 = speech_priorities[c];
-	hl = speech_priority_ADDRESS;
-	if (speech_priority <= a_2)
+	sound = command;
+	priority = speech_priorities[sound];
+	if (speech_priority <= priority)
 	{
 		z80_block(134);
-		speech_priority = a_2;
-		unk_8301 = c;
+		speech_priority = priority;
+		CHANNEL(SPEECH)->sound = sound;
 		z80_write8(sound_control, z80_read8(sound_control) & ~2u);
-		unk_8302 = 0x78u;
-		unk_8303 = 1u;
-		if (c == 9u)
+		AS8(CHANNEL(SPEECH)->handler) = 0x78u;
+		AT8(CHANNEL(SPEECH)->handler, 1) = 1u;
+		if (sound == 9u)
 		{
 			z80_block(35);
 			z80_write8(sound_control, z80_read8(sound_control) | 2u);
@@ -290,78 +297,83 @@ void start_speech(uint8_t a)
 		return;
 	}
 	z80_block(24);
-	t1 = a_2;
-	a_2 = 0x87u;
+	t1 = priority;
+	fallback_effect = 0x87u;
 	if (t1 == 0x12u)
 	{
-		start_pcm_effect(a_2);
+		start_pcm_effect(fallback_effect);
 		return;
 	}
 	z80_block(12);
-	if (a_2 != 0x13u)
+	if (fallback_effect != 0x13u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(17);
-	a_2 = 0x8Au;
-	start_pcm_effect(a_2);
+	command = 0x8Au;
+	start_pcm_effect(command);
 }
 
+/* Stops the speech: the speech chip reset, the title music off, the speech channel free, the music back
+   to its attenuation. */
 void stop_speech(void)
 {
 	z80_block(161);
 	z80_write8(sound_control, 0u);
 	speech_priority = 0u;
-	unk_8301 = 0u;
-	unk_830F = 0u;
+	CHANNEL(SPEECH)->sound = 0u;
+	CHANNEL(SPEECH)->priority = 0u;
 	music_attenuation = 0u;
-	unk_8302 = 0xE7u;
-	unk_8303 = 5u;
+	AS8(CHANNEL(SPEECH)->handler) = 0xE7u;
+	AT8(CHANNEL(SPEECH)->handler, 1) = 5u;
 	z80_write8(sound_control, 2u);
 }
 
-uint32_t speech_play(uint16_t ix)
+/* The speech channel's first pass: the speech's number to the speech chip and a pulse on its start line;
+   the music turned down while it speaks. */
+uint32_t speech_play(uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t a = 0, b = 0, sound = 0;
-	uint16_t hl = 0;
+	uint8_t attenuation = 0, count = 0, sound = 0;
+	uint16_t handler = 0;
 
 	z80_block(39);
-	z80_write8(speech_sample, CHANNEL(ix)->sound);
-	b = 3u;
+	z80_write8(speech_sample, CHANNEL(channel)->sound);
+	count = 3u;
 	for (;;)
 	{
 		z80_block(8);
-		b--;
-		if (b == 0u)
+		count--;
+		if (count == 0u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(27);
 	z80_write8(speech_start, 1u);
-	b = 6u;
+	count = 6u;
 	for (;;)
 	{
 		z80_block(8);
-		b--;
-		if (b == 0u)
+		count--;
+		if (count == 0u)
 			break;
 		z80_cycles(5);
 	}
 	z80_block(114);
 	z80_write8(speech_start, 0u);
-	sound = CHANNEL(ix)->sound;
+	sound = CHANNEL(channel)->sound;
 	carry = (uint16_t)(speech_music_attenuation_ADDRESS + sound) < speech_music_attenuation_ADDRESS;
-	a = speech_music_attenuation[sound];
-	music_attenuation = a;
-	unk_83CC = a;
-	hl = 0x1A4u;
-	set_channel_handler(hl, ix);
+	attenuation = speech_music_attenuation[sound];
+	music_attenuation = attenuation;
+	music_attenuation_changed = attenuation;
+	handler = 0x1A4u;
+	set_channel_handler(handler, channel);
 	return carry;
 }
 
-uint32_t speech_wait(uint16_t ix, uint32_t carry)
+/* Waits for the speech chip to finish; then frees the channel and turns the music back up. */
+uint32_t speech_wait(uint16_t channel, uint32_t carry)
 {
 	uint8_t t1 = 0;
 
@@ -374,48 +386,50 @@ uint32_t speech_wait(uint16_t ix, uint32_t carry)
 	}
 	z80_block(139);
 	carry = 0u;
-	CHANNEL(ix)->sound = 0u;
-	CHANNEL(ix)->priority = 0u;
+	CHANNEL(channel)->sound = 0u;
+	CHANNEL(channel)->priority = 0u;
 	speech_priority = 0u;
 	music_attenuation = 0u;
-	unk_83CC = 0u;
-	AS8(CHANNEL(ix)->handler) = 0xE7u;
-	AT8(CHANNEL(ix)->handler, 1) = 5u;
+	music_attenuation_changed = 0u;
+	AS8(CHANNEL(channel)->handler) = 0xE7u;
+	AT8(CHANNEL(channel)->handler, 1) = 5u;
 	return carry;
 }
 
-void start_pcm_effect(uint8_t a)
+/* Starts a PCM effect on the PCM effects' channel B (effect 86 on channel A) when its priority is not
+   below the one playing there; an effect that plays already starts again. */
+void start_pcm_effect(uint8_t command)
 {
-	uint8_t a_2 = 0, d = 0, e = 0;
-	uint16_t channel = 0, hl = 0;
+	uint8_t handler_high = 0, priority = 0, sound = 0, sound_2 = 0;
+	uint16_t channel = 0;
 	uint8_t t1 = 0;
 
 	z80_block(12);
-	t1 = a;
-	a_2 = t1 + 0x80u;
+	t1 = command;
+	sound = t1 + 0x80u;
 	if (t1 == 0x80u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(12);
-	if (a_2 >= 0x14u)
+	if (sound >= 0x14u)
 	{
 		z80_cycles(6);
 		return;
 	}
 	z80_block(74);
-	e = a_2;
-	d = pcm_effect_priorities[a_2];
-	channel = CHANNEL_ADDRESS(10);
-	if (a_2 != 6u)
+	sound_2 = sound;
+	priority = pcm_effect_priorities[sound];
+	channel = PCM_EFFECT_A;
+	if (sound != 6u)
 	{
 		z80_block(43);
-		channel = CHANNEL_ADDRESS(11);
-		if (a_2 != unk_82C1)
+		channel = PCM_EFFECT_B;
+		if (sound != CHANNEL(PCM_EFFECT_B)->sound)
 		{
 			z80_block(28);
-			if (d < CHANNEL(channel)->priority)
+			if (priority < CHANNEL(PCM_EFFECT_B)->priority)
 			{
 				z80_cycles(6);
 				return;
@@ -423,224 +437,225 @@ void start_pcm_effect(uint8_t a)
 		}
 	}
 	z80_block(142);
-	CHANNEL(channel)->priority = d;
-	CHANNEL(channel)->sound = e;
-	hl = pcm_effect_handlers_ADDRESS + (uint8_t)((uint32_t)e << 1);
-	d = SOUND_ROM8(hl + 1u);
-	AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-	AT8(CHANNEL(channel)->handler, 1) = d;
+	CHANNEL(channel)->priority = priority;
+	CHANNEL(channel)->sound = sound_2;
+	sound_2 = (uint32_t)sound_2 << 1;
+	handler_high = TABLE8(pcm_effect_handlers, 0x1u + sound_2);
+	AS8(CHANNEL(channel)->handler) = TABLE8(pcm_effect_handlers, sound_2);
+	AT8(CHANNEL(channel)->handler, 1) = handler_high;
 }
 
-uint32_t start_fm_effect(uint8_t a)
+/* Starts an FM effect: one of priority 20 or more on the first FM effects' channel; effects 0A and 21 on
+   the music's channel 6, and one that plays already on its own channel; the others on whichever of the
+   three has the lowest priority, when theirs is not below it. */
+uint32_t start_fm_effect(uint8_t command)
 {
 	uint32_t carry = 0;
-	uint8_t a_2 = 0, b = 0, c = 0, d = 0;
-	uint16_t channel = 0, hl = 0, ix = 0;
-	uint16_t saved_hl = 0;
-	uint8_t t1 = 0;
+	uint8_t handler_high = 0, lowest_priority = 0, lowest_priority_2 = 0, new_priority = 0, priority = 0, sound = 0, sound_2 = 0;
+	uint16_t channel = 0, lowest_channel = 0;
+	uint16_t saved_lowest_channel = 0;
+	uint8_t priority_2 = 0;
 
 	z80_block(12);
-	carry = a < 0x42u;
-	if (a >= 0x42u)
+	carry = command < 0x42u;
+	if (command >= 0x42u)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(69);
-	c = a;
-	a_2 = fm_effect_priorities[c];
-	unk_83C7 = a_2;
-	if (a_2 >= 0x20u)
+	sound = command;
+	priority = fm_effect_priorities[sound];
+	new_effect_priority = priority;
+	if (priority >= 0x20u)
 	{
 		z80_block(38);
-		channel = CHANNEL_ADDRESS(0);
-		t1 = unk_800F;
-		carry = a_2 < t1;
-		if (a_2 < t1)
+		channel = FM_EFFECT_0;
+		priority_2 = CHANNEL(FM_EFFECT_0)->priority;
+		carry = priority < priority_2;
+		if (priority < priority_2)
 		{
 			z80_cycles(6);
 			return carry;
 		}
 		z80_block(10);
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(35);
-	a_2 = c;
-	channel = CHANNEL_ADDRESS(13);
-	if (a_2 == 0x21u)
+	sound_2 = sound;
+	channel = FM_EFFECT_6;
+	if (sound_2 == 0x21u)
 	{
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(17);
-	if (a_2 == 0xAu)
+	if (sound_2 == 0xAu)
 	{
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(29);
-	if (a_2 == CHANNEL(channel)->sound)
+	if (sound_2 == CHANNEL(FM_EFFECT_6)->sound)
 	{
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(43);
-	channel = CHANNEL_ADDRESS(14);
-	if (a_2 == unk_8381)
+	channel = FM_EFFECT_7;
+	if (sound_2 == CHANNEL(FM_EFFECT_7)->sound)
 	{
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(43);
-	channel = CHANNEL_ADDRESS(0);
-	if (a_2 == unk_8001)
+	channel = FM_EFFECT_0;
+	if (sound_2 == CHANNEL(FM_EFFECT_0)->sound)
 	{
 		z80_block(155);
-		a_2 = unk_83C7;
-		CHANNEL(channel)->sound = c;
-		CHANNEL(channel)->priority = a_2;
-		c = (uint32_t)c << 1;
-		carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-		hl = fm_effect_handlers_ADDRESS + c;
-		d = SOUND_ROM8(hl + 1u);
-		AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-		AT8(CHANNEL(channel)->handler, 1) = d;
+		priority = new_effect_priority;
+		CHANNEL(channel)->sound = sound;
+		CHANNEL(channel)->priority = priority;
+		sound = (uint32_t)sound << 1;
+		carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+		handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+		AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+		AT8(CHANNEL(channel)->handler, 1) = handler_high;
 		return carry;
 	}
 	z80_block(54);
-	hl = CHANNEL_ADDRESS(0);
-	a_2 = unk_800F;
-	ix = CHANNEL_ADDRESS(13);
-	lower_priority_channel(ix, &hl, &a_2);
+	lowest_channel = FM_EFFECT_0;
+	lowest_priority = CHANNEL(FM_EFFECT_0)->priority;
+	channel = FM_EFFECT_6;
+	lower_priority_channel(channel, &lowest_channel, &lowest_priority);
 	z80_block(31);
-	ix = CHANNEL_ADDRESS(14);
-	lower_priority_channel(ix, &hl, &a_2);
+	channel = FM_EFFECT_7;
+	lower_priority_channel(channel, &lowest_channel, &lowest_priority);
 	z80_block(26);
-	b = a_2;
-	a_2 = unk_83C7;
-	carry = a_2 < b;
-	if (a_2 < b)
+	lowest_priority_2 = lowest_priority;
+	new_priority = new_effect_priority;
+	carry = new_priority < lowest_priority_2;
+	if (new_priority < lowest_priority_2)
 	{
 		z80_cycles(6);
 		return carry;
 	}
 	z80_block(35);
-	saved_hl = hl;
-	channel = saved_hl;
+	saved_lowest_channel = lowest_channel;
+	channel = saved_lowest_channel;
 	z80_block(155);
-	a_2 = unk_83C7;
-	CHANNEL(channel)->sound = c;
-	CHANNEL(channel)->priority = a_2;
-	c = (uint32_t)c << 1;
-	carry = (uint16_t)(fm_effect_handlers_ADDRESS + c) < fm_effect_handlers_ADDRESS;
-	hl = fm_effect_handlers_ADDRESS + c;
-	d = SOUND_ROM8(hl + 1u);
-	AS8(CHANNEL(channel)->handler) = SOUND_ROM8(hl);
-	AT8(CHANNEL(channel)->handler, 1) = d;
+	priority = new_effect_priority;
+	CHANNEL(channel)->sound = sound;
+	CHANNEL(channel)->priority = priority;
+	sound = (uint32_t)sound << 1;
+	carry = (uint16_t)(fm_effect_handlers_ADDRESS - 0x2u + sound) < fm_effect_handlers_ADDRESS - 0x2u;
+	handler_high = TABLE8(fm_effect_handlers, (uint16_t)(sound - 1u));
+	AS8(CHANNEL(channel)->handler) = TABLE8(fm_effect_handlers, (uint16_t)(sound - 2u));
+	AT8(CHANNEL(channel)->handler, 1) = handler_high;
 	return carry;
 }
 
-void lower_priority_channel(uint16_t ix, uint16_t *p_hl, uint8_t *p_a)
+/* Of the channel found so far and this one, the one with the lower priority. */
+void lower_priority_channel(uint16_t channel, uint16_t *p_lowest_channel, uint8_t *p_lowest_priority)
 {
-	uint16_t hl = (uint16_t)*p_hl;
-	uint8_t a = (uint8_t)*p_a;
-	uint16_t saved_ix = 0;
+	uint16_t lowest_channel = (uint16_t)*p_lowest_channel;
+	uint8_t lowest_priority = (uint8_t)*p_lowest_priority;
+	uint16_t saved_channel = 0;
 
 	z80_block(24);
-	if (a < CHANNEL(ix)->priority)
+	if (lowest_priority < CHANNEL(channel)->priority)
 		z80_cycles(6);
 	else
 	{
 		z80_block(54);
-		saved_ix = ix;
-		hl = saved_ix;
-		a = CHANNEL(ix)->priority;
+		saved_channel = channel;
+		lowest_channel = saved_channel;
+		lowest_priority = CHANNEL(channel)->priority;
 	}
-	*p_hl = hl;
-	*p_a = a;
+	*p_lowest_channel = lowest_channel;
+	*p_lowest_priority = lowest_priority;
 }
 
+/* Command 00 and the start: the speech, the music's fade and attenuation and the FM effects' flags
+   cleared, then silence. */
 void reset_sound(void)
 {
 	z80_block(154);
 	z80_write8(sound_control, 0u);
 	speech_priority = 0u;
-	unk_83CC = 0u;
+	music_attenuation_changed = 0u;
 	fade_timer = 0u;
 	fade_step = 0u;
 	fade_attenuation = 0u;
 	music_attenuation = 0u;
-	unk_8458 = 0u;
-	unk_83F3 = 0u;
-	unk_841F = 0u;
+	fm_effect_34_on = 0u;
+	fm_effect_0a_on = 0u;
+	fm_effect_21_on = 0u;
 	z80_write8(sound_control, 2u);
 	silence();
 }
 
+/* Command FF: no LFO on the 8 FM channels and every channel stopped (the music's PCM channels only freed
+   while an effect holds them). */
 void silence(void)
 {
-	uint8_t bc = 0, c = 0, e = 0;
-	uint16_t de = 0;
+	uint8_t fm_channel = 0, no_sensitivity = 0, value = 0;
+	uint16_t fm_register = 0;
 
 	z80_block(17);
-	c = 0u;
-	de = 0x3800u;
-	e = 0u;
+	no_sensitivity = 0u;
+	fm_register = 0x3800u;
+	fm_channel = 0u;
 	do
 	{
 		z80_block(17);
-		bc = c;
-		de = (de & ~0xFFu) | e;
-		write_fm_register_de(bc, de);
+		value = no_sensitivity;
+		fm_register = (fm_register & ~0xFFu) | fm_channel;
+		write_fm_register_de(value, fm_register);
 		z80_block(22);
-		e++;
-	} while (((e >> 3) & 1u) == 0u);
+		fm_channel++;
+	} while (((fm_channel >> 3) & 1u) == 0u);
 	z80_block(27);
 	if (music_pcm_hold == 0u)
 	{
@@ -671,76 +686,87 @@ void silence(void)
 	free_speech_channel();
 }
 
+/* Stops the three FM effects' channels at their next pass. */
 void stop_fm_effect_channels(void)
 {
 	z80_block(68);
-	unk_8002 = 0x5D0u;
-	unk_8342 = 0x5D0u;
-	unk_8382 = 0x5D0u;
+	CHANNEL(FM_EFFECT_0)->handler = 0x5D0u;
+	CHANNEL(FM_EFFECT_6)->handler = 0x5D0u;
+	CHANNEL(FM_EFFECT_7)->handler = 0x5D0u;
 }
 
+/* Stops the music's FM channels 6 and 7 at their next pass. */
 void stop_music_fm_6_7(void)
 {
 	z80_block(52);
-	unk_8182 = 0x5D0u;
-	unk_81C2 = 0x5D0u;
+	CHANNEL(MUSIC_FM_6)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_7)->handler = 0x5D0u;
 }
 
+/* Stops the music's FM channels 1 to 5 at their next pass. */
 void stop_music_fm_1_5(void)
 {
 	z80_block(100);
-	unk_8042 = 0x5D0u;
-	unk_8082 = 0x5D0u;
-	unk_80C2 = 0x5D0u;
-	unk_8102 = 0x5D0u;
-	unk_8142 = 0x5D0u;
+	CHANNEL(MUSIC_FM_1)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_2)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_3)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_4)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_5)->handler = 0x5D0u;
 }
 
+/* Frees the music's FM channels 6 and 7 at their next pass, without keying them off. */
 void free_music_fm_6_7(void)
 {
 	z80_block(52);
-	unk_8182 = 0x5D6u;
-	unk_81C2 = 0x5D6u;
+	CHANNEL(MUSIC_FM_6)->handler = 0x5D6u;
+	CHANNEL(MUSIC_FM_7)->handler = 0x5D6u;
 }
 
+/* Stops the music's PCM channel A at its next pass. */
 void stop_music_pcm_a(void)
 {
 	z80_block(36);
-	unk_8202 = 0x5E8u;
+	CHANNEL(MUSIC_PCM_A)->handler = 0x5E8u;
 }
 
+/* Frees the music's PCM channel A at its next pass, without stopping the sample. */
 void free_music_pcm_a(void)
 {
 	z80_block(36);
-	unk_8202 = 0x5D6u;
+	CHANNEL(MUSIC_PCM_A)->handler = 0x5D6u;
 }
 
+/* Stops the PCM effects' channel B at its next pass. */
 void stop_pcm_effect_b(void)
 {
 	z80_block(36);
-	unk_82C2 = 0x5E8u;
+	CHANNEL(PCM_EFFECT_B)->handler = 0x5E8u;
 }
 
+/* Frees the music's PCM channel B at its next pass, without stopping the sample. */
 void free_music_pcm_b(void)
 {
 	z80_block(36);
-	unk_8242 = 0x5D6u;
+	CHANNEL(MUSIC_PCM_B)->handler = 0x5D6u;
 }
 
+/* Stops the music's PCM channel B at its next pass. */
 void stop_music_pcm_b(void)
 {
 	z80_block(36);
-	unk_8242 = 0x5E8u;
+	CHANNEL(MUSIC_PCM_B)->handler = 0x5E8u;
 }
 
+/* Stops the PCM effects' channel A at its next pass. */
 void stop_pcm_effect_a(void)
 {
 	z80_block(36);
-	unk_8282 = 0x5E8u;
+	CHANNEL(PCM_EFFECT_A)->handler = 0x5E8u;
 }
 
+/* Frees the speech channel at its next pass. */
 void free_speech_channel(void)
 {
 	z80_block(36);
-	AS16(unk_8302) = 0x5D6u;
+	CHANNEL(SPEECH)->handler = 0x5D6u;
 }

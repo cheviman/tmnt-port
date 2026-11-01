@@ -3,7 +3,7 @@
  *    Description: the story before area 0: the rooftop, "Fire!!", the climb, the burning roof
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    30-10-2026
+ *    Modified:    01-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -14,8 +14,8 @@
 /* the story before the first area starts */
 void start_intro(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0;
+	uint16_t kind = 0;
+	uint32_t data = 0;
 
 	time_without_knockout = 0u;
 	difficulty_from_time = 0u;
@@ -36,16 +36,16 @@ void start_intro(void)
 	LAYER(LAYER_B)->y = 0x10000u;
 	set_layers_scroll();
 	start_box_opening();
-	a6 = 0xA0EEu;
-	d7 = 0x20Fu;
-	post_palette_request(d7, a6);
+	data = 0xA0EEu;
+	kind = 0x20Fu;
+	post_palette_request(kind, data);
 }
 
 /* every frame of the story: its balloon, its step, the layers' scroll */
 void run_intro(void)
 {
-	uint16_t d0 = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint16_t step_offset = 0;
+	uint32_t ignored = 0, ignored_2 = 0;
 	uint8_t t1 = 0;
 
 	if (balloon_time != 0u)
@@ -53,16 +53,16 @@ void run_intro(void)
 		t1 = balloon_time;
 		balloon_time = t1 - 1u;
 		if (t1 == 1u)
-			erase_balloon(&ignored, &ignored_2, &ignored_3);
+			erase_balloon(&ignored, &ignored_2);
 	}
-	d0 = (uint16_t)((uint32_t)cutscene_step << 2);
-	switch (d0)
+	step_offset = (uint16_t)((uint32_t)cutscene_step << 2);
+	switch (step_offset)
 	{
 	case 0:
 		intro_rooftop_start();
 		break;
 	case 4:
-		intro_rooftop(d0);
+		intro_rooftop(step_offset);
 		break;
 	case 8:
 		intro_climb_start();
@@ -84,81 +84,81 @@ void run_intro(void)
 void intro_rooftop_start(void)
 {
 	uint32_t carry = 0;
-	uint8_t d0 = 0;
-	uint16_t d6 = 0, d7 = 0;
-	uint32_t a0 = 0, a5 = 0, a6 = 0, animation = 0, d1 = 0, object = 0;
+	uint8_t colour = 0, leap_wait = 0, tile_attribute = 0;
+	uint16_t count = 0, count_2 = 0;
+	uint32_t animation = 0, animation_entry = 0, animations = 0, object = 0, tile_code = 0, tile_place = 0, tiles = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
 	if (palettes_busy != 0u)
 		return;
 	cutscene_time = 0x100u;
-	a0 = TILE_RAM + 0x4008u;
-	d0 = 0x24u;
-	d1 = 0u;
-	d7 = 0x1Fu;
+	tile_place = TILE_RAM + 0x4008u;
+	tile_attribute = 0x24u;
+	tile_code = 0u;
+	count = 0x1Fu;
 	do
 	{
-		d6 = 0x1Fu;
+		count_2 = 0x1Fu;
 		do
 		{
-			io_write8(a0, d0);
-			a0++;
-			io_write8(a0, d1);
-			carry = (uint8_t)(d1 + 1u) < d1;
-			d1 = (uint8_t)(d1 + 1u);
-			a0++;
+			io_write8(tile_place, tile_attribute);
+			tile_place++;
+			io_write8(tile_place, tile_code);
+			carry = (uint8_t)(tile_code + 1u) < tile_code;
+			tile_code = (uint8_t)(tile_code + 1u);
+			tile_place++;
 			if (carry)
-				d0++;
-			t1 = d6 - 1u;
-			d6 = t1;
+				tile_attribute++;
+			t1 = count_2 - 1u;
+			count_2 = t1;
 		} while (t1 != 0xFFFFu);
-		t2 = d7 - 1u;
-		d7 = t2;
-		a0 += 0x40u;
+		t2 = count - 1u;
+		count = t2;
+		tile_place += 0x40u;
 	} while (t2 != 0xFFFFu);
-	a0 = TILE_RAM + 0x4038u;
-	d0 = 4u;
-	colour_tiles_8x8(d0, a0);
-	a0 = TILE_RAM + 0x4438u;
-	d0 = 5u;
-	colour_tiles_8x8(d0, a0);
-	a0 = TILE_RAM + 0x4838u;
-	d0 = 6u;
-	colour_tiles_8x8(d0, a0);
-	a0 = TILE_RAM + 0x4C40u;
-	d0 = 7u;
-	colour_tiles_4x4(d0, a0);
-	a0 = TILE_RAM + 0x4630u;
-	d0 = 5u;
-	colour_tiles_4x4(d0, a0);
-	a0 = TILE_RAM + 0x4828u;
-	d0 = 6u;
-	colour_tiles_8x4(d0, a0);
-	a0 = TILE_RAM + 0x4A28u;
-	d0 = 0x46u;
-	colour_tiles_4x4(d0, a0);
-	a0 = TILE_RAM + 0x4A30u;
-	d0 = 6u;
-	colour_tiles_4x4(d0, a0);
-	a0 = TILE_RAM + 0x4C30u;
-	d0 = 0x47u;
-	colour_tiles_8x4(d0, a0);
+	tile_place = TILE_RAM + 0x4038u;
+	colour = 4u;
+	colour_tiles_8x8(colour, tile_place);
+	tile_place = TILE_RAM + 0x4438u;
+	colour = 5u;
+	colour_tiles_8x8(colour, tile_place);
+	tile_place = TILE_RAM + 0x4838u;
+	colour = 6u;
+	colour_tiles_8x8(colour, tile_place);
+	tile_place = TILE_RAM + 0x4C40u;
+	colour = 7u;
+	colour_tiles_4x4(colour, tile_place);
+	tile_place = TILE_RAM + 0x4630u;
+	colour = 5u;
+	colour_tiles_4x4(colour, tile_place);
+	tile_place = TILE_RAM + 0x4828u;
+	colour = 6u;
+	colour_tiles_8x4(colour, tile_place);
+	tile_place = TILE_RAM + 0x4A28u;
+	colour = 0x46u;
+	colour_tiles_4x4(colour, tile_place);
+	tile_place = TILE_RAM + 0x4A30u;
+	colour = 6u;
+	colour_tiles_4x4(colour, tile_place);
+	tile_place = TILE_RAM + 0x4C30u;
+	colour = 0x47u;
+	colour_tiles_8x4(colour, tile_place);
 	io_write8(TILES_106B00, 0xF0u);
 	tile_banks_0_1 = 0xF0u;
 	io_write8(TILES_106E00, 0x21u);
 	tile_banks_2_3 = 0x21u;
-	a0 = OBJECT_ADDRESS(44);
+	object = OBJECT_ADDRESS(44);
 	OBJECT(OBJECT_ADDRESS(44))->flags = 0x81u;
 	OBJECT(OBJECT_ADDRESS(44))->height = 0u;
 	OBJECT(OBJECT_ADDRESS(44))->colour = 0xFFu;
 	OBJECT(OBJECT_ADDRESS(44))->animation_delay = 0u;
 	OBJECT(OBJECT_ADDRESS(44))->screen_x = 0xA0u;
 	OBJECT(OBJECT_ADDRESS(44))->screen_y = 0x58u;
-	animation = 0x2DB4Cu;
-	set_animation(d1, a0, animation);
+	animation = april_on_rooftop_animation_ADDRESS;
+	set_animation(tile_code, object, animation);
 	object = OBJECT_ADDRESS(45);
-	a5 = table_loaded_by_lea_030B16_ADDRESS;
-	d0 = 0x70u;
+	animations = intro_rooftop_animations_ADDRESS;
+	leap_wait = 0x70u;
 	do
 	{
 		OBJECT(object)->flags = 0x81u;
@@ -169,126 +169,126 @@ void intro_rooftop_start(void)
 		OBJECT(object)->screen_y = 0x70u;
 		OBJECT(object)->x_speed = 0x500;
 		OBJECT(object)->y_speed &= 0xFFu;
-		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (d0 & 0xFFu);
-		animation = DATA32(a5);
-		set_animation(d1, object, animation);
-		d0 += 0x14u;
-		a5 += 4u;
+		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (leap_wait & 0xFFu);
+		animation_entry = ANIMATION_ENTRY(animations);
+		set_animation(tile_code, object, animation_entry);
+		leap_wait += 0x14u;
+		animations += 4u;
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(49));
-	a0 = TILE_RAM + 0x2B28u;
-	a6 = table_loaded_by_lea_030B26_ADDRESS;
-	d0 = 0x3Bu;
-	d7 = 9u;
+	tile_place = TILE_RAM + 0x2B28u;
+	tiles = rooftop_picture_tiles_ADDRESS;
+	tile_attribute = 0x3Bu;
+	count = 9u;
 	do
 	{
-		d6 = 0xFu;
+		count_2 = 0xFu;
 		do
 		{
-			io_write8(a0, d0);
-			a0++;
-			io_write8(a0, DATA8(a6));
-			t3 = d6 - 1u;
-			d6 = t3;
-			a0++;
-			a6++;
+			io_write8(tile_place, tile_attribute);
+			tile_place++;
+			io_write8(tile_place, PICTURE_TILE(tiles));
+			t3 = count_2 - 1u;
+			count_2 = t3;
+			tile_place++;
+			tiles++;
 		} while (t3 != 0xFFFFu);
-		t4 = d7 - 1u;
-		d7 = t4;
-		a0 += 0x60u;
+		t4 = count - 1u;
+		count = t4;
+		tile_place += 0x60u;
 	} while (t4 != 0xFFFFu);
 	cutscene_step++;
 }
 
 /* a square of 8 by 8 tiles given one colour */
-void colour_tiles_8x8(uint8_t d0, uint32_t a0)
+void colour_tiles_8x8(uint8_t colour, uint32_t tile_place)
 {
-	uint16_t d4 = 0, d5 = 0, d6 = 0, d7 = 0;
+	uint16_t count = 0, count_2 = 0, row_skip = 0, width = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	d4 = 0x70u;
-	d7 = 7u;
-	d5 = 7u;
+	row_skip = 0x70u;
+	count = 7u;
+	width = 7u;
 	do
 	{
-		d6 = (uint16_t)d5;
+		count_2 = (uint16_t)width;
 		do
 		{
-			io_write8(a0, d0);
-			t1 = d6 - 1u;
-			d6 = t1;
-			a0 += 2u;
+			io_write8(tile_place, colour);
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			tile_place += 2u;
 		} while (t1 != 0xFFFFu);
-		a0 += d4;
-		t2 = d7 - 1u;
-		d7 = t2;
+		tile_place += row_skip;
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
 }
 
 /* a square of 4 by 4 tiles given one colour */
-void colour_tiles_4x4(uint8_t d0, uint32_t a0)
+void colour_tiles_4x4(uint8_t colour, uint32_t tile_place)
 {
-	uint16_t d4 = 0, d5 = 0, d6 = 0, d7 = 0;
+	uint16_t count = 0, count_2 = 0, row_skip = 0, width = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	d4 = 0x78u;
-	d7 = 3u;
-	d5 = 3u;
+	row_skip = 0x78u;
+	count = 3u;
+	width = 3u;
 	do
 	{
-		d6 = (uint16_t)d5;
+		count_2 = (uint16_t)width;
 		do
 		{
-			io_write8(a0, d0);
-			t1 = d6 - 1u;
-			d6 = t1;
-			a0 += 2u;
+			io_write8(tile_place, colour);
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			tile_place += 2u;
 		} while (t1 != 0xFFFFu);
-		a0 += d4;
-		t2 = d7 - 1u;
-		d7 = t2;
+		tile_place += row_skip;
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
 }
 
 /* four rows of eight tiles given one colour */
-void colour_tiles_8x4(uint8_t d0, uint32_t a0)
+void colour_tiles_8x4(uint8_t colour, uint32_t tile_place)
 {
-	uint16_t d4 = 0, d5 = 0, d6 = 0, d7 = 0;
+	uint16_t count = 0, count_2 = 0, row_skip = 0, width = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	d4 = 0x70u;
-	d7 = 3u;
-	d5 = 7u;
+	row_skip = 0x70u;
+	count = 3u;
+	width = 7u;
 	do
 	{
-		d6 = (uint16_t)d5;
+		count_2 = (uint16_t)width;
 		do
 		{
-			io_write8(a0, d0);
-			t1 = d6 - 1u;
-			d6 = t1;
-			a0 += 2u;
+			io_write8(tile_place, colour);
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			tile_place += 2u;
 		} while (t1 != 0xFFFFu);
-		a0 += d4;
-		t2 = d7 - 1u;
-		d7 = t2;
+		tile_place += row_skip;
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
 }
 
 /* "Fire!!": the turtles leap off the rooftop one after another, "Hang on, April" */
-void intro_rooftop(uint32_t d0)
+void intro_rooftop(uint32_t height)
 {
-	uint8_t d0_2 = 0, d1_2 = 0, d7 = 0;
-	uint16_t d2 = 0, d3 = 0, d6 = 0, d7_2 = 0;
-	uint32_t a0 = 0, a5 = 0, a6 = 0, animation = 0, d1 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, ignored_6 = 0, object = 0;
+	uint8_t sound = 0, tile_attribute = 0, tile_code = 0;
+	uint16_t count = 0, count_2 = 0, kind = 0, line = 0, screen_y = 0;
+	uint32_t animation_entry = 0, animations = 0, data = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, ignored_6 = 0, object = 0, screen_x = 0, tile_place = 0;
 	uint8_t t1 = 0;
-	uint16_t height = 0, x_speed = 0, t2 = 0, t3 = 0, t4 = 0;
+	uint16_t height_2 = 0, x_speed = 0, t2 = 0, t3 = 0, t4 = 0;
 
 	grow_tile_box();
-	d0 = intro_animate_fire(d0);
+	height = intro_animate_fire(height);
 	turtles_on_the_way = 0u;
 	object = OBJECT_ADDRESS(45);
-	a5 = animations_030D7E_ADDRESS;
+	animations = intro_rooftop_turtle_animations_ADDRESS;
 	do
 	{
 		if ((uint8_t)OBJECT(object)->y_speed == 0u)
@@ -299,10 +299,10 @@ void intro_rooftop(uint32_t d0)
 				if ((uint8_t)(OBJECT(object)->y_speed >> 8u) != 0u)
 				{
 					OBJECT(object)->height += 0x100u;
-					d0 = (uint16_t)OBJECT(object)->x_speed;
-					height = OBJECT(object)->height;
-					OBJECT(object)->height = height - d0;
-					if (height < d0)
+					height = (uint16_t)OBJECT(object)->x_speed;
+					height_2 = OBJECT(object)->height;
+					OBJECT(object)->height = height_2 - height;
+					if (height_2 < height)
 						OBJECT(object)->flags &= 0x7Fu;
 					OBJECT(object)->screen_x++;
 					OBJECT(object)->screen_y--;
@@ -318,8 +318,8 @@ void intro_rooftop(uint32_t d0)
 						layer_priority = 4u;
 					}
 					OBJECT(object)->height += 0x100u;
-					d0 = (uint16_t)OBJECT(object)->x_speed;
-					OBJECT(object)->height += d0;
+					height = (uint16_t)OBJECT(object)->x_speed;
+					OBJECT(object)->height += height;
 					OBJECT(object)->screen_x++;
 					OBJECT(object)->screen_y--;
 					x_speed = OBJECT(object)->x_speed;
@@ -339,39 +339,39 @@ void intro_rooftop(uint32_t d0)
 			OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (t1 - 1u & 0xFFu);
 			if (t1 == 1u)
 			{
-				animation = DATA32(a5);
-				set_animation(ignored_6, object, animation);
+				animation_entry = ANIMATION_ENTRY(animations);
+				set_animation(ignored_6, object, animation_entry);
 			}
 		}
 		object += 0x50u;
-		a5 += 4u;
+		animations += 4u;
 	} while (object < OBJECT_ADDRESS(49));
 	if (turtles_on_the_way == 0u)
 	{
 		start_box_opening();
-		a0 = TILE_RAM + 0x2B28u;
-		d0_2 = 0x3Bu;
-		d1_2 = 0x41u;
-		d7_2 = 9u;
+		tile_place = TILE_RAM + 0x2B28u;
+		tile_attribute = 0x3Bu;
+		tile_code = 0x41u;
+		count = 9u;
 		do
 		{
-			d6 = 0xFu;
+			count_2 = 0xFu;
 			do
 			{
-				io_write8(a0, d0_2);
-				a0++;
-				io_write8(a0, d1_2);
-				t2 = d6 - 1u;
-				d6 = t2;
-				a0++;
+				io_write8(tile_place, tile_attribute);
+				tile_place++;
+				io_write8(tile_place, tile_code);
+				t2 = count_2 - 1u;
+				count_2 = t2;
+				tile_place++;
 			} while (t2 != 0xFFFFu);
-			t3 = d7_2 - 1u;
-			d7_2 = t3;
-			a0 += 0x60u;
+			t3 = count - 1u;
+			count = t3;
+			tile_place += 0x60u;
 		} while (t3 != 0xFFFFu);
-		a6 = 0xA0FEu;
-		d7_2 = 0x20Fu;
-		post_palette_request(d7_2, a6);
+		data = 0xA0FEu;
+		kind = 0x20Fu;
+		post_palette_request(kind, data);
 		cutscene_step++;
 		return;
 	}
@@ -381,27 +381,27 @@ void intro_rooftop(uint32_t d0)
 		cutscene_time++;
 	if (cutscene_time == 0xD0u)
 	{
-		d0 &= ~0xFFu;
-		d1 = 0x108u;
-		d2 = 0x28u;
-		d3 = 0x41u;
-		show_balloon_beside(d2, d3, &d0, &d1, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
+		height &= ~0xFFu;
+		screen_x = 0x108u;
+		screen_y = 0x28u;
+		line = 0x41u;
+		show_balloon_beside(screen_y, line, &height, &screen_x, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
 		draw_balloon_pointer(ignored_5);
 		return;
 	}
 	if (cutscene_time == 0x90u)
 	{
-		d7 = 0x7Du;
-		queue_sound(d7, animation);
+		sound = 0x7Du;
+		queue_sound(sound);
 		return;
 	}
 	if (cutscene_time != 0x70u)
 		return;
-	d0 &= ~0xFFu;
-	d1 = 0xA8u;
-	d2 = 0x28u;
-	d3 = 0u;
-	show_balloon_beside(d2, d3, &d0, &d1, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
+	height &= ~0xFFu;
+	screen_x = 0xA8u;
+	screen_y = 0x28u;
+	line = 0u;
+	show_balloon_beside(screen_y, line, &height, &screen_x, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
 	draw_balloon_pointer(ignored_5);
 }
 
@@ -409,40 +409,40 @@ void intro_rooftop(uint32_t d0)
 void intro_climb_start(void)
 {
 	uint32_t carry = 0;
-	uint8_t d0 = 0;
-	uint16_t d6 = 0, d7 = 0;
-	uint32_t a0 = 0, a5 = 0, animation = 0, d1 = 0, object = 0;
+	uint8_t tile_attribute = 0;
+	uint16_t count = 0, count_2 = 0;
+	uint32_t animation = 0, object = 0, object_2 = 0, tile_code = 0, tile_place = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	if (palettes_busy != 0u)
 		return;
-	a0 = TILE_RAM + 0x4008u;
-	d0 = 0x14u;
-	d1 = 0u;
-	d7 = 0x1Fu;
+	tile_place = TILE_RAM + 0x4008u;
+	tile_attribute = 0x14u;
+	tile_code = 0u;
+	count = 0x1Fu;
 	do
 	{
-		d6 = 0x1Fu;
+		count_2 = 0x1Fu;
 		do
 		{
-			io_write8(a0, d0);
-			a0++;
-			io_write8(a0, d1);
-			carry = (uint8_t)(d1 + 1u) < d1;
-			d1 = (uint8_t)(d1 + 1u);
-			a0++;
+			io_write8(tile_place, tile_attribute);
+			tile_place++;
+			io_write8(tile_place, tile_code);
+			carry = (uint8_t)(tile_code + 1u) < tile_code;
+			tile_code = (uint8_t)(tile_code + 1u);
+			tile_place++;
 			if (carry)
-				d0++;
-			t1 = d6 - 1u;
-			d6 = t1;
+				tile_attribute++;
+			t1 = count_2 - 1u;
+			count_2 = t1;
 		} while (t1 != 0xFFFFu);
-		t2 = d7 - 1u;
-		d7 = t2;
-		a0 += 0x40u;
+		t2 = count - 1u;
+		count = t2;
+		tile_place += 0x40u;
 	} while (t2 != 0xFFFFu);
 	object = OBJECT_ADDRESS(44);
-	a5 = intro_object_animations_ADDRESS;
-	d7 = 3u;
+	object_2 = intro_object_animations_ADDRESS;
+	count = 3u;
 	do
 	{
 		OBJECT(object)->flags = 0x81u;
@@ -452,13 +452,13 @@ void intro_climb_start(void)
 		OBJECT(object)->animation_delay = 0u;
 		OBJECT(object)->screen_x = 0xF8u;
 		OBJECT(object)->screen_y = 0xB8u;
-		animation = DATA32(a5);
-		a5 += 4u;
-		OBJECT(object)->y_speed = DATA16(a5);
-		a5 += 2u;
-		set_animation(d1, object, animation);
-		t3 = d7 - 1u;
-		d7 = t3;
+		animation = INTRO_OBJECT(object_2)->animation;
+		object_2 += 4u;
+		OBJECT(object)->y_speed = INTRO_OBJECT(object_2 - 0x4u)->y_speed;
+		object_2 += 2u;
+		set_animation(tile_code, object, animation);
+		t3 = count - 1u;
+		count = t3;
 		object += 0x50u;
 	} while (t3 != 0xFFFFu);
 	cutscene_step++;
@@ -467,8 +467,8 @@ void intro_climb_start(void)
 /* the turtles leap up the building out of sight */
 void intro_climb(void)
 {
-	uint16_t d7 = 0;
-	uint32_t a6 = 0, object = 0;
+	uint16_t kind = 0;
+	uint32_t data = 0, object = 0;
 
 	grow_tile_box();
 	object = OBJECT_ADDRESS(44);
@@ -489,50 +489,50 @@ void intro_climb(void)
 	LAYER(WORKING_LAYER)->x = 0u;
 	LAYER(LAYER_A)->x = 0u;
 	LAYER(LAYER_B)->x = 0u;
-	a6 = 0xA10Eu;
-	d7 = 0x20Fu;
-	post_palette_request(d7, a6);
+	data = 0xA10Eu;
+	kind = 0x20Fu;
+	post_palette_request(kind, data);
 	cutscene_step++;
 }
 
 /* the burning roof with the four turtles dropping onto it */
 void intro_roof_start(void)
 {
-	uint16_t d0 = 0;
-	uint32_t a0 = 0, d4 = 0, d5 = 0, d6 = 0, ignored = 0, ignored_2 = 0, object = 0;
+	uint16_t routine_state = 0;
+	uint32_t drop_wait = 0, effect_lists = 0, ignored = 0, ignored_2 = 0, kind = 0, object = 0, screen_x = 0, tile_place = 0;
 
 	if (palettes_busy != 0u)
 		return;
 	io_write8(TILES_106B00, 0x30u);
 	tile_banks_0_1 = 0x30u;
 	LAYER(WORKING_LAYER)->map = layers_04618C_ADDRESS;
-	LAYER(WORKING_LAYER)->blocks = 0x4628Cu;
+	LAYER(WORKING_LAYER)->blocks = intro_roof_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->map_width = 0x20u;
-	a0 = TILE_RAM + 0x4000u;
-	draw_whole_layer(a0);
-	a0 = 0x9C08u;
-	start_palette_effect_lists(a0);
+	tile_place = TILE_RAM + 0x4000u;
+	draw_whole_layer(tile_place);
+	effect_lists = 0x9C08u;
+	start_palette_effect_lists(effect_lists);
 	object = OBJECT_ADDRESS(44);
-	d4 = 0u;
-	d5 = 0xB0u;
-	d6 = 0x20u;
+	kind = 0u;
+	screen_x = 0xB0u;
+	drop_wait = 0x20u;
 	do
 	{
 		OBJECT(object)->flags = 0x81u;
 		OBJECT(object)->contacts = 0u;
-		OBJECT(object)->kind = d4;
+		OBJECT(object)->kind = kind;
 		OBJECT(object)->height = 0xB000u;
-		OBJECT(object)->screen_x = d5;
+		OBJECT(object)->screen_x = screen_x;
 		OBJECT(object)->screen_y = 0x50u;
-		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (d6 & 0xFFu);
-		OBJECT(object)->shadow = 0x2E928u;
+		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (drop_wait & 0xFFu);
+		OBJECT(object)->shadow = common_shadow_ADDRESS;
 		OBJECT(object)->colour = 0xFFu;
 		OBJECT(object)->animation_delay = 0u;
-		d0 = 0x203u;
-		turtle_set_state(d0, object, &ignored, &d4, &d5, &d6, &ignored_2);
-		d4 = (uint8_t)(d4 + 1u);
-		d5 = (uint16_t)(d5 - 0xCu);
-		d6 = (uint8_t)(d6 + 0x10u);
+		routine_state = 0x203u;
+		turtle_set_state(routine_state, object, &ignored, &kind, &screen_x, &drop_wait, &ignored_2);
+		kind = (uint8_t)(kind + 1u);
+		screen_x = (uint16_t)(screen_x - 0xCu);
+		drop_wait = (uint8_t)(drop_wait + 0x10u);
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(48));
 	cutscene_step++;
@@ -541,7 +541,7 @@ void intro_roof_start(void)
 /* the turtles land on the roof, Michelangelo trips, and they walk off into the fire */
 void intro_roof_land(void)
 {
-	uint16_t d0 = 0;
+	uint16_t routine_state = 0;
 	uint32_t animation = 0, ignored = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, ignored_6 = 0, object = 0;
 	uint8_t t1 = 0;
 	uint16_t height = 0;
@@ -578,14 +578,14 @@ void intro_roof_land(void)
 						if (OBJECT(object)->kind == 1u)
 						{
 							OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | 0x40u;
-							animation = 0x2DF32u;
+							animation = intro_turtle_lands_animation_ADDRESS;
 							set_animation(ignored, object, animation);
 						}
 						else
 						{
 							OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | 0xCu;
-							d0 = 0x200u;
-							turtle_set_state(d0, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
+							routine_state = 0x200u;
+							turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
 						}
 					}
 				}
@@ -596,8 +596,8 @@ void intro_roof_land(void)
 				OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (t1 - 1u & 0xFFu);
 				if (t1 == 1u && OBJECT(object)->height == 0u)
 				{
-					d0 = 0x100u;
-					turtle_set_state(d0, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
+					routine_state = 0x100u;
+					turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
 				}
 			}
 		}
@@ -611,200 +611,200 @@ void intro_roof_land(void)
 /* the fire and its smoke in the story's pictures, a new picture every eight frames */
 uint32_t intro_animate_fire(uint32_t d0)
 {
-	uint8_t d1 = 0, d2 = 0;
-	uint16_t d1_2 = 0, d5 = 0, d6 = 0, d7 = 0;
-	uint32_t a0 = 0, a6 = 0, d0_2 = 0;
+	uint8_t next_part_code = 0, picture_tile = 0, tile_code = 0;
+	uint16_t count_2 = 0, count_3 = 0, count_4 = 0, count_5 = 0;
+	uint32_t count = 0, fire_frame = 0, frame = 0, tile_attribute = 0, tile_place = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0;
 
-	d0_2 = (d0 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d0_2 & 7u;
-	d0_2 = (d0_2 & ~0xFFu) | t1;
+	frame = (d0 & ~0xFFu) | (uint8_t)frame_count;
+	t1 = frame & 7u;
+	frame = (frame & ~0xFFu) | t1;
 	if (t1 != 0u)
-		return d0_2;
+		return frame;
 	cutscene_counter += 4u;
 	if (cutscene_counter >= 0xCu)
 		cutscene_counter = 0u;
 	if (cutscene_step != 1u)
 	{
-		a6 = TABLE32(indexed_table_of_32_bit_values_031152, cutscene_counter);
-		a6 = draw_tile_square_8x8(a6);
-		a6 = draw_tile_square_8x8(a6);
-		a6 = draw_tile_square_4x4(a6);
-		a6 = draw_tile_square_4x4(a6);
-		a0 = mem_read32(a6);
-		a6 += 4u;
-		d2 = mem_read8(a6);
-		d0_2 = 3u;
-		a6++;
+		fire_frame = TABLE32(intro_fire_frames, cutscene_counter);
+		fire_frame = draw_tile_square_8x8(fire_frame);
+		fire_frame = draw_tile_square_8x8(fire_frame);
+		fire_frame = draw_tile_square_4x4(fire_frame);
+		fire_frame = draw_tile_square_4x4(fire_frame);
+		tile_place = PICTURE_TILE_32(fire_frame);
+		fire_frame += 4u;
+		picture_tile = PICTURE_TILE(fire_frame);
+		count = 3u;
+		fire_frame++;
 		do
 		{
-			d1_2 = 3u;
+			count_2 = 3u;
 			do
 			{
-				mem_write8(a0, d2);
-				a0++;
-				mem_write8(a0, mem_read8(a6));
-				t2 = d1_2 - 1u;
-				d1_2 = t2;
-				a0++;
-				a6++;
+				mem_write8(tile_place, picture_tile);
+				tile_place++;
+				mem_write8(tile_place, PICTURE_TILE(fire_frame));
+				t2 = count_2 - 1u;
+				count_2 = t2;
+				tile_place++;
+				fire_frame++;
 			} while (t2 != 0xFFFFu);
-			t3 = d0_2 - 1u;
-			d0_2 = t3;
-			a0 += 0x78u;
+			t3 = count - 1u;
+			count = t3;
+			tile_place += 0x78u;
 		} while (t3 != 0xFFFFu);
-		return d0_2;
+		return count;
 	}
 	if (cutscene_counter == 0u)
 	{
-		a0 = TILE_RAM + 0x4038u;
-		d0_2 = 4u;
-		d1 = 0x18u;
-		d7 = 2u;
+		tile_place = TILE_RAM + 0x4038u;
+		tile_attribute = 4u;
+		tile_code = 0x18u;
+		count_3 = 2u;
 		do
 		{
-			d6 = 7u;
+			count_4 = 7u;
 			for (;;)
 			{
-				d5 = 7u;
+				count_5 = 7u;
 				do
 				{
-					io_write8(a0, d0_2);
-					a0++;
-					io_write8(a0, d1);
-					d1++;
-					t4 = d5 - 1u;
-					d5 = t4;
-					a0++;
+					io_write8(tile_place, tile_attribute);
+					tile_place++;
+					io_write8(tile_place, tile_code);
+					tile_code++;
+					t4 = count_5 - 1u;
+					count_5 = t4;
+					tile_place++;
 				} while (t4 != 0xFFFFu);
-				d1 += 0x18u;
-				t5 = d6 - 1u;
-				d6 = t5;
-				a0 += 0x70u;
+				tile_code += 0x18u;
+				t5 = count_4 - 1u;
+				count_4 = t5;
+				tile_place += 0x70u;
 				if (t5 != 0xFFFFu)
 					continue;
-				d0_2 = (uint8_t)(d0_2 + 1u);
-				if ((uint8_t)d7 != 1u)
+				tile_attribute = (uint8_t)(tile_attribute + 1u);
+				if ((uint8_t)count_3 != 1u)
 					break;
-				d7 = (uint16_t)((d7 & ~0xFFu) | (uint8_t)(d7 - 1u));
-				d6 = 3u;
+				count_3 = (uint16_t)((count_3 & ~0xFFu) | (uint8_t)(count_3 - 1u));
+				count_4 = 3u;
 			}
-			t6 = d7 - 1u;
-			d7 = t6;
+			t6 = count_3 - 1u;
+			count_3 = t6;
 		} while (t6 != 0xFFFFu);
-		return d0_2;
+		return tile_attribute;
 	}
-	d1 = 0u;
-	d2 = 0u;
+	tile_code = 0u;
+	next_part_code = 0u;
 	if (cutscene_counter != 4u)
 	{
-		d1 = 0x80u;
-		d2 = 0x20u;
+		tile_code = 0x80u;
+		next_part_code = 0x20u;
 	}
-	d0_2 = 0x1Au;
-	a0 = TILE_RAM + 0x4038u;
-	d7 = 1u;
-	d6 = 0xFu;
+	tile_attribute = 0x1Au;
+	tile_place = TILE_RAM + 0x4038u;
+	count_3 = 1u;
+	count_4 = 0xFu;
 	for (;;)
 	{
-		d5 = 7u;
+		count_5 = 7u;
 		do
 		{
-			io_write8(a0, d0_2);
-			a0++;
-			io_write8(a0, d1);
-			d1++;
-			t7 = d5 - 1u;
-			d5 = t7;
-			a0++;
+			io_write8(tile_place, tile_attribute);
+			tile_place++;
+			io_write8(tile_place, tile_code);
+			tile_code++;
+			t7 = count_5 - 1u;
+			count_5 = t7;
+			tile_place++;
 		} while (t7 != 0xFFFFu);
-		t8 = d6 - 1u;
-		d6 = t8;
-		a0 += 0x70u;
+		t8 = count_4 - 1u;
+		count_4 = t8;
+		tile_place += 0x70u;
 		if (t8 == 0xFFFFu)
 		{
-			d6 = 3u;
-			d0_2 = 0x1Bu;
-			d1 = (uint8_t)d2;
-			t9 = d7 - 1u;
-			d7 = t9;
+			count_4 = 3u;
+			tile_attribute = 0x1Bu;
+			tile_code = (uint8_t)next_part_code;
+			t9 = count_3 - 1u;
+			count_3 = t9;
 			if (t9 != 0xFFFFu)
 				continue;
 			break;
 		}
 	}
-	return d0_2;
+	return tile_attribute;
 }
 
 /* a square of 8 by 8 tiles drawn, each row on from its first tile */
-uint32_t draw_tile_square_8x8(uint32_t a6)
+uint32_t draw_tile_square_8x8(uint32_t square)
 {
-	uint8_t d2 = 0, d3 = 0;
-	uint16_t d0 = 0, d1 = 0;
-	uint32_t a0 = 0;
+	uint8_t picture_tile = 0, tile_code = 0;
+	uint16_t count = 0, count_2 = 0;
+	uint32_t tile_place = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	a0 = mem_read32(a6);
-	a6 += 4u;
-	d2 = mem_read8(a6);
-	d0 = 7u;
-	a6++;
+	tile_place = PICTURE_TILE_32(square);
+	square += 4u;
+	picture_tile = PICTURE_TILE(square);
+	count = 7u;
+	square++;
 	do
 	{
-		d1 = 7u;
-		d3 = mem_read8(a6);
-		a6++;
+		count_2 = 7u;
+		tile_code = PICTURE_TILE(square);
+		square++;
 		do
 		{
-			mem_write8(a0, d2);
-			a0++;
-			mem_write8(a0, d3);
-			d3++;
-			t1 = d1 - 1u;
-			d1 = t1;
-			a0++;
+			mem_write8(tile_place, picture_tile);
+			tile_place++;
+			mem_write8(tile_place, tile_code);
+			tile_code++;
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			tile_place++;
 		} while (t1 != 0xFFFFu);
-		t2 = d0 - 1u;
-		d0 = t2;
-		a0 += 0x70u;
+		t2 = count - 1u;
+		count = t2;
+		tile_place += 0x70u;
 	} while (t2 != 0xFFFFu);
-	a6++;
-	return a6;
+	square++;
+	return square;
 }
 
 /* a square of 4 by 4 tiles drawn, each row on from its first tile */
-uint32_t draw_tile_square_4x4(uint32_t a6)
+uint32_t draw_tile_square_4x4(uint32_t square)
 {
-	uint8_t d2 = 0, d3 = 0;
-	uint16_t d0 = 0, d1 = 0;
-	uint32_t a0 = 0;
+	uint8_t picture_tile = 0, tile_code = 0;
+	uint16_t count = 0, count_2 = 0;
+	uint32_t tile_place = 0;
 	uint16_t t1 = 0, t2 = 0;
 
-	a0 = mem_read32(a6);
-	a6 += 4u;
-	d2 = mem_read8(a6);
-	d0 = 3u;
-	a6++;
+	tile_place = PICTURE_TILE_32(square);
+	square += 4u;
+	picture_tile = PICTURE_TILE(square);
+	count = 3u;
+	square++;
 	do
 	{
-		d1 = 3u;
-		d3 = mem_read8(a6);
-		a6++;
+		count_2 = 3u;
+		tile_code = PICTURE_TILE(square);
+		square++;
 		do
 		{
-			mem_write8(a0, d2);
-			a0++;
-			mem_write8(a0, d3);
-			d3++;
-			t1 = d1 - 1u;
-			d1 = t1;
-			a0++;
+			mem_write8(tile_place, picture_tile);
+			tile_place++;
+			mem_write8(tile_place, tile_code);
+			tile_code++;
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			tile_place++;
 		} while (t1 != 0xFFFFu);
-		t2 = d0 - 1u;
-		d0 = t2;
-		a0 += 0x78u;
+		t2 = count - 1u;
+		count = t2;
+		tile_place += 0x78u;
 	} while (t2 != 0xFFFFu);
-	a6++;
-	return a6;
+	square++;
+	return square;
 }
