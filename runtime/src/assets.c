@@ -25,6 +25,8 @@
  *                                                 sound program's pieces sound_data.txt has not
  *                                                 (tools/sound_music.py; runtime/src/music.c reads them)
  *    Every name a piece gives for an address is a piece's or a function's, maybe with +0xNN.
+ *    The assets pack (assets_pack.c) is what this loads, as it is in memory: assets_pack_put writes it and
+ *    assets_pack_get loads it back in place of the files.
  */
 #include "game/assets.h"
 
@@ -929,6 +931,174 @@ static int read_samples(const char *folder)
 		(void)samples;
 	}
 	return 1;
+}
+
+/* ---- the pack's part (assets_pack.c) ---- */
+
+static int put32(FILE *output, uint32_t value)
+{
+	const uint8_t bytes[4] = { (uint8_t)value, (uint8_t)(value >> 8), (uint8_t)(value >> 16), (uint8_t)(value >> 24) };
+
+	return fwrite(bytes, 1, 4, output) == 4;
+}
+
+/* 'size' bytes and zeros up to the next 4 */
+static int put_bytes(FILE *output, const void *bytes, size_t size)
+{
+	static const uint8_t zeros[4] = { 0 };
+	const size_t padding = (4u - size % 4u) % 4u;
+
+	return (size == 0 || fwrite(bytes, 1, size, output) == size) && fwrite(zeros, 1, padding, output) == padding;
+}
+
+static int put_string(FILE *output, const char *text)
+{
+	const size_t length = text ? strlen(text) : 0;
+
+	return put32(output, (uint32_t)length) && put_bytes(output, text ? text : "", length);
+}
+
+static int put_region(FILE *output, const data_region *region)
+{
+	int ok = put32(output, (uint32_t)region->count) && put32(output, (uint32_t)region->name_count);
+
+	for (size_t index = 0; index < region->count && ok; index++)
+	{
+		const piece *each = &region->pieces[index];
+
+		ok = put_string(output, each->name) && put32(output, each->address) && put_string(output, each->group)
+			&& put32(output, (uint32_t)each->texted) && put32(output, (uint32_t)each->size) && put_bytes(output, each->data, each->size);
+	}
+	for (size_t index = 0; index < region->name_count && ok; index++)
+		ok = put_string(output, region->names[index].name) && put32(output, region->names[index].address);
+	return ok;
+}
+
+int assets_pack_put(FILE *output)
+{
+	const struct
+	{
+		const uint8_t *memory;
+		uint32_t size;
+	} memories[] = { { game_tiles, GAME_TILES_SIZE }, { game_sprites, GAME_SPRITES_SIZE }, { game_title, GAME_TITLE_SIZE },
+		{ game_pcm, GAME_PCM_SIZE }, { game_speech, GAME_SPEECH_SIZE } };
+	int ok = 1;
+
+	for (size_t index = 0; index < sizeof(memories) / sizeof(memories[0]) && ok; index++)
+		ok = put32(output, memories[index].size) && put_bytes(output, memories[index].memory, memories[index].size);
+	return ok && put_region(output, &g_program) && put_region(output, &g_sound);
+}
+
+typedef struct
+{
+	const uint8_t *at, *end;
+} pack_reader;
+
+static int get32(pack_reader *reader, uint32_t *value)
+{
+	if (reader->end - reader->at < 4)
+		return 0;
+	*value = reader->at[0] | (uint32_t)reader->at[1] << 8 | (uint32_t)reader->at[2] << 16 | (uint32_t)reader->at[3] << 24;
+	reader->at += 4;
+	return 1;
+}
+
+static const uint8_t *get_bytes(pack_reader *reader, size_t size)
+{
+	const uint8_t *bytes = reader->at;
+	const size_t aligned = size + (4u - size % 4u) % 4u;
+
+	if ((size_t)(reader->end - reader->at) < aligned)
+		return NULL;
+	reader->at += aligned;
+	return bytes;
+}
+
+/* a string of the pack, copied (NULL when it is cut short; 'empty_is_null' gives NULL for one of no letters) */
+static char *get_string(pack_reader *reader, int *ok, int empty_is_null)
+{
+	uint32_t length;
+	const uint8_t *bytes;
+	char *copy;
+
+	if (!*ok || !get32(reader, &length) || !(bytes = get_bytes(reader, length)) || !(copy = malloc(length + 1u)))
+	{
+		*ok = 0;
+		return NULL;
+	}
+	memcpy(copy, bytes, length);
+	copy[length] = 0;
+	if (empty_is_null && length == 0)
+	{
+		free(copy);
+		return NULL;
+	}
+	return copy;
+}
+
+static int get_region(pack_reader *reader, data_region *region, int little_endian)
+{
+	uint32_t count, names;
+	int ok = get32(reader, &count) && get32(reader, &names);
+
+	region->little_endian = little_endian;
+	if (!ok || !(region->pieces = calloc(count + 1u, sizeof(*region->pieces)))
+		|| !(region->names = calloc(names + 1u, sizeof(*region->names))))
+		return 0;
+	for (uint32_t index = 0; index < count && ok; index++)
+	{
+		piece *each = &region->pieces[index];
+		uint32_t value, size;
+		const uint8_t *bytes;
+
+		each->name = get_string(reader, &ok, 0);
+		ok = ok && get32(reader, &each->address);
+		each->group = get_string(reader, &ok, 1);
+		ok = ok && get32(reader, &value) && get32(reader, &size) && (bytes = get_bytes(reader, size)) != NULL
+			&& (each->data = malloc(size + 1u)) != NULL;
+		if (!ok)
+			break;
+		each->texted = (int)value;
+		each->size = size;
+		memcpy(each->data, bytes, size);
+		if (!little_endian)
+		{
+			/* (the program's: its bytes the other way round, as read_program_data has them) */
+			if (!(each->reversed = malloc(size + 1u)))
+				return 0;
+			for (size_t at = 0; at < size; at++)
+				each->reversed[size - 1u - at] = each->data[at];
+		}
+		region->count++;
+	}
+	for (uint32_t index = 0; index < names && ok; index++)
+	{
+		region->names[index].name = get_string(reader, &ok, 0);
+		ok = ok && get32(reader, &region->names[index].address);
+		if (ok)
+			region->name_count++;
+	}
+	return ok;
+}
+
+const char *assets_pack_get(const uint8_t *bytes, size_t size)
+{
+	uint8_t *const memories[] = { game_tiles, game_sprites, game_title, game_pcm, game_speech };
+	const uint32_t sizes[] = { GAME_TILES_SIZE, GAME_SPRITES_SIZE, GAME_TITLE_SIZE, GAME_PCM_SIZE, GAME_SPEECH_SIZE };
+	pack_reader reader = { bytes, bytes + size };
+
+	for (size_t index = 0; index < sizeof(memories) / sizeof(memories[0]); index++)
+	{
+		uint32_t length;
+		const uint8_t *memory;
+
+		if (!get32(&reader, &length) || length != sizes[index] || !(memory = get_bytes(&reader, length)))
+			return "the assets pack is cut short";
+		memcpy(memories[index], memory, length);
+	}
+	if (!get_region(&reader, &g_program, 0) || !get_region(&reader, &g_sound, 1))
+		return "the assets pack is cut short";
+	return NULL;
 }
 
 /* ---- all of them ---- */

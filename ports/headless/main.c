@@ -2,16 +2,18 @@
  *    Name:        main.c
  *    Description: runs the game with no screen or sound, with the controls a script drives, and writes hashes
  *                 of every frame in the formats tools/core/konami/reference/kref writes
- *    Version:     0.1.0
+ *    Version:     0.1.1
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
  *    Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE] [--script FILE]
- *                         [--service] [--assets FOLDER] [--dump FRAME --dump-dir DIR]
+ *                         [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]
  *    The game's data is its assets (game/assets.h), the files tools/extract_assets.py writes from the
- *    player's ROM set: --assets, or the folder 'assets'. The game opens no ROM.
+ *    player's ROM set (or the game's first run, runtime/src/extract.c): --assets (a folder, or a pack: a file
+ *    whose name ends in .assets), or the folder 'assets', or where there is none the pack tmnt.assets, in the
+ *    current folder. The game opens no ROM. --write-pack writes the pack of the assets loaded and stops.
  *
  *    --dump writes the board's memories at the end of frame FRAME into DIR as kref --dump does (FRAME_work_ram.bin,
  *    in the order of the addresses, and the palette, the tile RAM and the sprite RAM), to compare them.
@@ -20,6 +22,7 @@
  *    VBLANK starts, and the hashes are kref's ("FRAME HASH": tmnt_state_hash, the frame's pixels with
  *    --video-hashes, the sound board's samples and RAM with --sound-hashes), so the two compare line by line. --service turns the test mode's DIP switch on.
  */
+#include "game/assets.h"
 #include "game/game.h"
 #include "tmnt/machine.h"
 #include "tmnt/program.h"
@@ -34,7 +37,7 @@
 #include <string.h>
 
 #define USAGE "Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
-	" [--script FILE] [--service] [--assets FOLDER] [--dump FRAME --dump-dir DIR]\n"
+	" [--script FILE] [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]\n"
 
 static uint64_t frames_wanted = 600;
 static FILE *hashes;
@@ -108,7 +111,8 @@ int main(int argc, char **argv)
 {
 	const char *hashes_path = NULL, *video_hashes_path = NULL, *sound_hashes_path = NULL;
 	const char *script_path = NULL;
-	const char *assets = "assets";
+	const char *assets = NULL;
+	const char *pack_path = NULL;
 	bool frames_given = false;
 	bool service = false;
 
@@ -135,10 +139,26 @@ int main(int argc, char **argv)
 			dump_frame = strtoull(argv[++index], NULL, 10);
 		else if (strcmp(argv[index], "--dump-dir") == 0 && index + 1 < argc)
 			dump_dir = argv[++index];
+		else if (strcmp(argv[index], "--write-pack") == 0 && index + 1 < argc)
+			pack_path = argv[++index];
 		else
 		{
 			fprintf(stderr, USAGE);
 			return 1;
+		}
+	}
+	if (!assets)
+	{
+		/* (the folder 'assets', or where there is none the pack) */
+		FILE *probe = fopen("assets/data/layout.txt", "rb");
+
+		assets = "assets";
+		if (probe)
+			fclose(probe);
+		else if ((probe = fopen(GAME_PACK_FILE, "rb")) != NULL)
+		{
+			fclose(probe);
+			assets = GAME_PACK_FILE;
 		}
 	}
 	{
@@ -149,6 +169,18 @@ int main(int argc, char **argv)
 			fprintf(stderr, "The game's assets in %s cannot be read: %s\n", assets, problem);
 			return 1;
 		}
+	}
+	if (pack_path)
+	{
+		const char *problem = assets_pack_write(pack_path);
+
+		if (problem)
+		{
+			fprintf(stderr, "%s: %s\n", pack_path, problem);
+			return 1;
+		}
+		printf("the assets in %s packed into %s\n", assets, pack_path);
+		return 0;
 	}
 	{
 		const char *problem = game_reset(service, video_hashes_path != NULL);

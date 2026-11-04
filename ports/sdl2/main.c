@@ -2,14 +2,14 @@
  *    Name:        main.c
  *    Description: the game in a window: SDL2 shows its screen, reads the controls and keeps the pace, around
  *                 the same game and board the headless runs check
- *    Version:     0.1.0
+ *    Version:     0.1.1
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
  *    Usage: tmnt [--script FILE [--fast]] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE] [--service]
- *                [--assets FOLDER]
+ *                [--assets FOLDER or PACK] [--write-pack FILE]
  *
  *    The game (runtime/src/game.c and the program) runs as it is: this file only wraps it. When each frame is
  *    done the port puts it in the window, queues its sound, reads the keyboard and the game controllers into
@@ -17,7 +17,13 @@
  *    pass.
  *
  *    The game's data is its assets (game/assets.h), the files tools/extract_assets.py writes from the
- *    player's ROM set: --assets, or the folder 'assets' beside the executable, or in the current folder.
+ *    player's ROM set: --assets (a folder, or a pack: tmnt.assets), or the pack or the folder 'assets' beside the
+ *    executable, in the folder of what the game keeps (beside the executable on Windows, the user's own folder for
+ *    it elsewhere: saves_folder), or in the current folder. A folder the first run made for another build of the
+ *    game (its version.txt) is taken out again. Where there is none, the first run takes them out of the ROM set
+ *    itself into the folder of what the game keeps (first_run.c, runtime/src/extract.c): tmnt.zip or rom/ beside
+ *    the game or in that folder, or a set dropped on its window. --write-pack writes the pack of the assets
+ *    loaded (for the devices, which never take them out of a ROM set) and stops.
  *
  *    --script plays a control script (runtime/include/tmnt/script.h) instead of the keyboard, to its end;
  *    --fast runs it without waiting for the frames' time. --hashes, --video-hashes and --sound-hashes write
@@ -34,6 +40,10 @@
  *    Game controllers, players 1 to 4 in the order they are plugged: the pad or the left stick moves, A
  *    attacks, B jumps, Back is the coin.
  */
+#include "first_run.h"
+
+#include "game/assets.h"
+#include "game/extract.h"
 #include "game/game.h"
 #include "tmnt/machine.h"
 #include "tmnt/program.h"
@@ -59,7 +69,7 @@
 #define FRAME_RATE_DENOMINATOR  (384u * 264u)
 
 #define USAGE "Usage: tmnt [--script FILE [--fast]] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
-	" [--service] [--assets FOLDER]"
+	" [--service] [--assets FOLDER or PACK] [--write-pack FILE]"
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -120,7 +130,7 @@ static void open_audio(void)
 static void queue_sound(void)
 {
 	size_t count;
-	const int16_t *samples = game_sound(&count);
+	const int16_t *samples = game_sound_samples(&count);
 
 	if (!audio || !count || fast)
 		return;
@@ -277,26 +287,87 @@ static void on_frame_done(void)
 
 /* ---- the start ---- */
 
-/* 'assets' beside the executable, else in the current folder */
-static const char *find_assets(char *path, size_t size)
+/* Where the game keeps what it writes (the first run's assets): beside the executable on Windows; elsewhere the
+   user's own folder for the game (SDL_GetPrefPath: ~/.local/share/TMNT, ~/Library/Application Support/TMNT), as
+   the executable's may not be written. The caller frees it (SDL_free) */
+static char *saves_folder(void)
 {
-	char *base = SDL_GetBasePath();
+#ifdef _WIN32
+	return SDL_GetBasePath();
+#else
+	return SDL_GetPrefPath("", "TMNT");
+#endif
+}
 
-	if (base)
+static bool exists(const char *path)
+{
+	FILE *probe = fopen(path, "rb");
+
+	if (!probe)
+		return false;
+	fclose(probe);
+	return true;
+}
+
+/* A folder of assets the first run made for another build of the game (its version file; extract_assets.py's
+   have none) */
+static bool assets_of_another_version(const char *folder)
+{
+	char path[1200];
+	unsigned version = 0;
+	FILE *file;
+	bool other;
+
+	snprintf(path, sizeof(path), "%s/" GAME_ASSETS_VERSION_FILE, folder);
+	if ((file = fopen(path, "rb")) == NULL)
+		return false;
+	other = fscanf(file, "%x", &version) != 1 || version != game_assets_version();
+	fclose(file);
+	return other;
+}
+
+/* The game's assets into 'found': the pack or the folder 'assets' beside the executable, in the folder of what the
+   game keeps or in the current folder; with none (or a folder of another version), the first run's, in the folder
+   of what the game keeps. false when the first run's window was closed before a ROM set came */
+static bool find_assets(char *found, size_t size)
+{
+	char *base = SDL_GetBasePath(), *saves = saves_folder();
+	const char *places[3];
+	size_t count = 0;
+	bool stale = false, ready = false;
+	char layout[1300];
+
+	places[count++] = base ? base : "";
+	if (saves && (!base || strcmp(base, saves) != 0))
+		places[count++] = saves;
+	places[count++] = "";
+	for (size_t place = 0; place < count && !ready && !stale; place++)
 	{
-		FILE *probe;
-
-		snprintf(path, size, "%sassets/data/layout.txt", base);
-		probe = fopen(path, "rb");
-		snprintf(path, size, "%sassets", base);
-		SDL_free(base);
-		if (probe)
+		snprintf(found, size, "%s" GAME_PACK_FILE, places[place]);
+		if (exists(found))
 		{
-			fclose(probe);
-			return path;
+			ready = true;
+			break;
+		}
+		snprintf(found, size, "%sassets", places[place]);
+		snprintf(layout, sizeof(layout), "%s/data/layout.txt", found);
+		if (exists(layout))
+		{
+			if (assets_of_another_version(found))
+				stale = true;    /* (the first run's, before an update: taken out again there) */
+			else
+				ready = true;
 		}
 	}
-	return "assets";
+	if (!ready)
+	{
+		if (!stale)
+			snprintf(found, size, "%sassets", saves ? saves : (base ? base : ""));
+		ready = first_run(TITLE, base, saves, found) != 0;
+	}
+	SDL_free(base);
+	SDL_free(saves);
+	return ready;
 }
 
 static FILE *open_output(const char *path)
@@ -320,8 +391,9 @@ static void fail(const char *message)
 
 int main(int argc, char **argv)
 {
-	char assets_path[1024];
+	char assets_path[1100];
 	const char *assets = NULL;
+	const char *pack_path = NULL;
 	const char *script_path = NULL;
 	bool service = false;
 	char message[1200];
@@ -342,6 +414,8 @@ int main(int argc, char **argv)
 			service = true;
 		else if (strcmp(argv[index], "--assets") == 0 && index + 1 < argc)
 			assets = argv[++index];
+		else if (strcmp(argv[index], "--write-pack") == 0 && index + 1 < argc)
+			pack_path = argv[++index];
 		else
 			fail(USAGE);
 	}
@@ -351,7 +425,15 @@ int main(int argc, char **argv)
 		fail(message);
 	}
 	if (!assets)
-		assets = find_assets(assets_path, sizeof(assets_path));
+	{
+		if (!find_assets(assets_path, sizeof(assets_path)))
+		{
+			/* (the first run's window closed before a ROM set came) */
+			SDL_Quit();
+			return 0;
+		}
+		assets = assets_path;
+	}
 	{
 		const char *problem = game_load(assets);
 
@@ -360,6 +442,18 @@ int main(int argc, char **argv)
 			snprintf(message, sizeof(message), "The game's assets in %s cannot be read: %s", assets, problem);
 			fail(message);
 		}
+	}
+	if (pack_path)
+	{
+		const char *problem = assets_pack_write(pack_path);
+
+		if (problem)
+		{
+			snprintf(message, sizeof(message), "%s: %s", pack_path, problem);
+			fail(message);
+		}
+		SDL_Quit();
+		return 0;
 	}
 	if (script_path)
 	{

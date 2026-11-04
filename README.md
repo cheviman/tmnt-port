@@ -43,6 +43,8 @@ As of 04-11-2026:
       Files; the game loads them, and they build back into the ROM set byte for byte
 - [x] A window port (`ports/sdl2/`, SDL2): the game with its sound, the keyboard and four game controllers.
       Built and played on Windows; SDL2's packages should build it on Linux and macOS (not tried yet)
+- [x] The port's first run in C: the game takes the assets out of your ROM set itself, the same files
+      `extract_assets.py` writes, byte for byte; and the pack the devices load
 - [ ] Ports beyond the window one
 
 ## Getting started
@@ -106,9 +108,9 @@ are made.
    ```
 
    The game reads its assets from `--assets FOLDER`, or from an `assets` folder beside the executable or in the
-   current folder; it opens no ROM. The executable can be copied anywhere with SDL2's library beside it
-   (`SDL2.dll` on Windows, which the build puts next to it) and the assets: they come from your ROM set, so
-   they are yours, not to share.
+   current folder; with none, it takes them out of your ROM set itself, once (see "The port's first run"). The
+   executable can be copied anywhere with SDL2's library and `font.bmp` beside it (the build puts them next to
+   it): the assets come from your ROM set, so they are yours, not to share.
 
    Or run the game without a window, here with the controls of the attract mode, writing a hash of every
    frame:
@@ -139,8 +141,38 @@ Options of `tmnt` and `tmnt_game_headless`: `--script FILE` plays a control scri
 `runtime/include/tmnt/script.h`) instead of the controls (`tmnt --fast` runs it without waiting for each
 frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a hash of every frame's state,
 picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
-says where the assets are. `tmnt_game_headless` also takes `--frames N` and `--dump FRAME --dump-dir DIR` (the
-board's memories at the end of a frame).
+says where the assets are (a folder, or a pack: a file whose name ends in `.assets`); `--write-pack FILE` writes
+the pack of the assets loaded and stops. `tmnt_game_headless` also takes `--frames N` and `--dump FRAME --dump-dir
+DIR` (the board's memories at the end of a frame).
+
+## The port's first run
+
+A player of the port has no Python: with no assets, `tmnt` takes them out of the ROM set itself, once.
+
+- **Where.** It loads the pack `tmnt.assets` or the folder `assets` beside the executable, in the folder where
+  the game keeps its files (beside the executable on Windows; `~/.local/share/TMNT` on Linux,
+  `~/Library/Application Support/TMNT` on macOS) or in the current folder; `--assets` picks one. With none, it
+  looks for the ROM set, `tmnt.zip` or a folder `rom/` with its files (or its .zip), beside the executable or in
+  the game's folder; with none there, a window asks for it to be dropped on it and says what it is doing and
+  what failed. The assets go into `assets/` in the game's folder, and the game plays.
+- **The same files.** The first run (`runtime/src/extract.c` and the files beside it) writes the folder
+  `tools/extract_assets.py` writes, every file byte for byte: the sheets' PNGs packed as zlib's level 9 packs them
+  (`deflate.c`), the WAVs, the data as text, the songs' MIDI files (`extract_music.c`, `tools/sound_music.py`'s
+  writer in C). What the Python tools work out from the static analysis (which bytes are which piece, their names
+  and formats, the sheets' codes and palettes) it takes from `runtime/src/extract_layout.c`, which
+  `tools/extract_layout.py` writes with positions, names and codes only, no byte of the ROM; run it again when
+  `symbols.txt`, `sound_symbols.txt`, `graphics_subjects.txt` or the extractor change. `tmnt_assets_check ROM_SET
+  PYTHON_ASSETS [OUT]` (built with the reference tools) runs the first run into OUT and compares every file with
+  the folder `extract_assets.py --out PYTHON_ASSETS` wrote.
+- **Versions.** The first run writes `version.txt` last (the version of its tables and writers); a folder of
+  another version is taken out again, and one with no `data/layout.txt` (a first run that did not finish) is not
+  taken. `extract_assets.py`'s folders have no `version.txt` and are taken as they are.
+- **The pack.** `tmnt.assets` is one file with what the game loads (the video and sound chips' memories and the
+  programs' data, as the assets give them), for the devices, which never take the assets out of a ROM set:
+  `tmnt --write-pack tmnt.assets` makes it from the assets. It holds the version of the tables the game's C reads
+  by name: a pack of another build says so instead of loading.
+- **The window** writes with Kenney Mini (CC0, `ports/sdl2/font/`, `font.bmp` beside the executable): none of the
+  game's letters are there before its assets.
 
 ## Changing the decompilation
 
@@ -229,11 +261,13 @@ graphics_subjects.txt     the subject of each tile and sprite the scenarios show
 runtime/                  the board in C: its memory map, inputs and interrupts (machine.c), the video
                           (video.c), the sound board and its chips (sound_board.c, sound_cpu.c, ym2151.c,
                           sound_chips.c), the assets into the board's memories and the programs' data by name
-                          (assets.c, music.c), and the decompiled programs' runtime (game_program.c, the frame,
-                          the interrupts, the tables); part of the game
+                          (assets.c, music.c; the pack, assets_pack.c), the first run's assets out of the ROM set
+                          (extract.c and the extract_*.c, deflate.c), and the decompiled programs' runtime
+                          (game_program.c, the frame, the interrupts, the tables); part of the game
 runtime/replaced.txt      the functions the board puts its own in place of (the boot's ROM test)
 ports/headless/           the game with no screen or sound, for the checks
-ports/sdl2/               the game in a window, on SDL2: picture, sound, keyboard and game controllers
+ports/sdl2/               the game in a window, on SDL2: picture, sound, keyboard and game controllers; its first
+                          run (first_run.c), whose window writes with Kenney Mini (font/)
 tests/controls/           the control scripts: coins, buttons, moves and pokes by frame
 tools/core/               arcade-decomp, the shared core (git submodule): the decompiler, the 68000 and Z80
                           frontends, the analyses, the checks; its konami/reference/ holds kref and the copies
@@ -243,6 +277,7 @@ tools/tmnt_rom.py         the ROM set: its files by hash, and the regions as the
 tools/verify_rom.py       the ROM set's check
 tools/extract_assets.py   the assets from the ROM set, and --check back (tmnt_graphics, sound_assets,
                           data_assets, sound_data_assets, sound_music)
+tools/extract_layout.py   runtime/src/extract_layout.c: what the port's first run takes from the analysis
 tools/sound_music.py      the songs as Standard MIDI Files, and back to the driver's bytes
 tools/data_walk.py        the data the engines read, walked from the code
 tools/sound_data_walk.py  the music's tracks, walked from the song table
@@ -406,6 +441,9 @@ results before each of its two returns (`print_tall_text`).
 - The C in `src/` is the game's programs decompiled into a new form: logic only, with names and comments written
   for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
   project; they come from your own ROM set.
+- The first run's window writes with Kenney Mini by Kenney (www.kenney.nl), CC0: `ports/sdl2/font/License.txt`.
+  `runtime/src/deflate.c` makes the streams zlib's deflate makes at level 9, following its algorithm (zlib, by
+  Jean-loup Gailly and Mark Adler, zlib License); none of its code is copied.
 - `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
   `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause); the ROM set's layout comes
   from MAME's `tmnt.cpp`. Copies of MAME's and ymfm's code are in arcade-decomp's reference tools only, under

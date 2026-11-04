@@ -39,10 +39,23 @@ add_library(tmnt_runtime STATIC
 )
 target_include_directories(tmnt_runtime PUBLIC runtime/include PRIVATE runtime/src)
 
-# The reader of the player's ROM set: for the tools that run the original code, never for the game
+# The reader of the player's ROM set: for the tools that run the original code, and for the game's first run,
+# which takes the assets out of it once (the game never runs on it)
 add_library(tmnt_rom_set STATIC runtime/src/rom_set.c)
 target_link_libraries(tmnt_rom_set PUBLIC tmnt_runtime)
 target_include_directories(tmnt_rom_set PRIVATE runtime/src)
+
+# The game's first run: its assets out of the player's ROM set in C (runtime/src/extract.c), the files
+# tools/extract_assets.py writes, byte for byte; what the analysis works out (the pieces, their names and formats,
+# the sheets' codes and palettes) as runtime/src/extract_layout.c has it, which tools/extract_layout.py writes with
+# positions, names and codes only, no byte of the ROM. The PNGs packed as zlib's level 9 packs them (deflate.c)
+add_library(tmnt_extract STATIC runtime/src/extract.c runtime/src/extract_graphics.c runtime/src/extract_samples.c
+	runtime/src/extract_music.c runtime/src/extract_layout.c runtime/src/deflate.c)
+target_include_directories(tmnt_extract PUBLIC runtime/include PRIVATE runtime/src)
+target_link_libraries(tmnt_extract PUBLIC tmnt_rom_set)
+if(NOT MSVC)
+	target_link_libraries(tmnt_extract PUBLIC m)
+endif()
 
 # The game's own sound board: the decompiled sound program (src/sound/, tools/decompile_sound.py) on the Z80's
 # timing model, with the board's own chips and the program's data from the assets (runtime/src/sound_cpu.c,
@@ -67,7 +80,7 @@ file(GLOB TMNT_DECOMPILED CONFIGURE_DEPENDS ${TMNT_DECOMPILED_DIR}/*.c ${TMNT_DE
 list(FILTER TMNT_DECOMPILED EXCLUDE REGEX "/sound/[^/]*\.c$")    # (the sound program's: tmnt_sound)
 if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 	add_library(tmnt_game STATIC runtime/src/game_program.c runtime/src/tasks.c runtime/src/board_game.c
-		runtime/src/game.c ${TMNT_DECOMPILED})
+		runtime/src/game.c runtime/src/assets_pack.c ${TMNT_DECOMPILED})
 	target_include_directories(tmnt_game PUBLIC runtime/include ${TMNT_DECOMPILED_DIR})
 	target_link_libraries(tmnt_game PUBLIC tmnt_runtime tmnt_sound)
 	if(MSVC)
@@ -88,7 +101,8 @@ option(TMNT_SCAFFOLD "Build the 68000 translation scaffold (tmnt_headless)" OFF)
 file(GLOB TMNT_GENERATED CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/build/generated/*.c)
 if(TMNT_SCAFFOLD AND TMNT_GENERATED AND TMNT_SOUND_PROGRAM)
 	add_library(tmnt_program STATIC runtime/src/m68000.c runtime/src/tasks.c runtime/src/board_code.c
-		runtime/src/game.c ${TMNT_GENERATED})
+		runtime/src/game.c runtime/src/assets_pack.c ${TMNT_GENERATED})
+	target_compile_definitions(tmnt_program PRIVATE TMNT_TRANSLATION_SCAFFOLD)
 	target_include_directories(tmnt_program PUBLIC runtime/include ${CMAKE_SOURCE_DIR}/build/generated)
 	target_link_libraries(tmnt_program PUBLIC tmnt_runtime tmnt_sound)
 	if(MSVC)
@@ -118,8 +132,12 @@ if(TMNT_WINDOW_PROGRAM)
 		if(TARGET SDL2::SDL2main)
 			list(APPEND TMNT_SDL2 SDL2::SDL2main)
 		endif()
-		add_executable(tmnt WIN32 ports/sdl2/main.c)
-		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} ${TMNT_SDL2})
+		# its first run takes the assets out of the player's ROM set (ports/sdl2/first_run.c, tmnt_extract), its
+		# window written with Kenney Mini (CC0, ports/sdl2/font), a picture beside the executable
+		add_executable(tmnt WIN32 ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c)
+		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2})
+		add_custom_command(TARGET tmnt POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp $<TARGET_FILE_DIR:tmnt>)
 		if(WIN32)
 			add_custom_command(TARGET tmnt POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:tmnt>)
@@ -140,4 +158,9 @@ if(TMNT_REFERENCE_TOOLS)
 	endif()
 	set(K_GAME_RUNTIME tmnt_rom_set)
 	include(${CMAKE_SOURCE_DIR}/tools/core/konami/reference/reference.cmake)
+
+	# the first run's check (ports/headless/assets_check.c): the assets the C takes out of a ROM set compared file
+	# by file with extract_assets.py's. A development tool, as the reference: the game's executables do not carry it
+	add_executable(tmnt_assets_check ports/headless/assets_check.c)
+	target_link_libraries(tmnt_assets_check PRIVATE tmnt_extract)
 endif()

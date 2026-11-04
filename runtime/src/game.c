@@ -2,9 +2,9 @@
  *    Name:        game.c
  *    Description: the game as the ports run it: the board with the assets in place of the ROM, the program on
  *                 it, its frames drawn
- *    Version:     0.1.0
+ *    Version:     0.1.1
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static tmnt_frame g_frame;
 static bool g_draw;
@@ -43,9 +44,14 @@ static void vblank_start(void)
 		tmnt_video_vblank_start(&g_frame);
 }
 
-const char *game_load(const char *folder)
+const char *game_load(const char *place)
 {
-	return assets_load(folder);
+	const size_t length = strlen(place), tail = sizeof(GAME_PACK_EXTENSION) - 1;
+
+	/* (a pack, tmnt.assets, or a folder of assets) */
+	if (length > tail && !strcmp(place + length - tail, GAME_PACK_EXTENSION))
+		return assets_load_pack(place);
+	return assets_load(place);
 }
 
 const char *game_reset(bool service, bool draw)
@@ -78,7 +84,7 @@ const tmnt_frame *game_frame(void)
 	return &g_frame;
 }
 
-const int16_t *game_sound(size_t *count)
+const int16_t *game_sound_samples(size_t *count)
 {
 	return tmnt_sound_mix(count);
 }

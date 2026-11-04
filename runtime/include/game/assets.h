@@ -19,6 +19,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +27,16 @@ extern "C" {
 
 /* Loads every asset under 'folder' (assets/): NULL, or what is wrong */
 const char *assets_load(const char *folder);
+
+/* The assets pack (tmnt.assets): one file with what the assets load into, for the devices, which never take
+   them out of a ROM set. assets_pack_write writes it from the assets loaded, assets_load_pack loads one in their
+   place, if it was made for this build's tables (runtime/src/assets_pack.c). NULL, or what failed */
+const char *assets_pack_write(const char *path);
+const char *assets_load_pack(const char *path);
+
+/* the pack's body, after its header: the memories and the programs' data as they are loaded, and back */
+int assets_pack_put(FILE *output);
+const char *assets_pack_get(const uint8_t *bytes, size_t size);
 
 /* A piece of the 68000 program's data by its name (NULL if there is none), and its size */
 const uint8_t *assets_piece(const char *name, size_t *size);
