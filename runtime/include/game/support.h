@@ -169,6 +169,12 @@ extern const game_code_entry game_code[];      /* sorted by address */
 extern const size_t game_code_count;
 void game_entry(void);                          /* the code at the reset vector */
 
+/* What the code leaves in its registers for later code to read, global variables of the C (src/game.h): an
+   interrupt's handler finds them as the code it interrupts left them, and the runtime puts them back when it
+   returns, as the VBLANK handler puts back the registers it saves (src/table.c) */
+extern uint32_t *const game_context[];
+extern const size_t game_context_count;
+
 /* The default of a switch on a jump's target, with decompile.py --checks: the original would jump to 'address',
    which no case handles */
 GAME_NORETURN void invalid_jump(uint32_t address);

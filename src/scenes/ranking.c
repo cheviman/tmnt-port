@@ -3,7 +3,7 @@
  *    Description: the ranking after a game: the players' places, their columns, the name entry, and the ranking's defaults
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by

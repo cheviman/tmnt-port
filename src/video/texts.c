@@ -3,7 +3,7 @@
  *    Description: the texts: from the program's tables of texts into the fixed layer, big characters, numbers
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -103,13 +103,13 @@ void set_spare_text_colour(uint16_t colour_number)
 }
 
 /* an enemy defeated: a point to the players' scores, the top score kept */
-uint32_t add_point(uint32_t d4, uint32_t players)
+uint32_t add_point(uint32_t d4, uint16_t players)
 {
 	uint32_t score_end = 0, scored_players = 0;
 
 	if (game_on == 0u)
 		return d4;
-	scored_players = players;
+	scored_players = players | (offset_high_word & ~0xFFFFu);
 	if ((scored_players & 1u) != 0u)
 	{
 		score_end = unk_060106_ADDRESS;
@@ -484,17 +484,18 @@ void job_none_after_draw_tile_picture(void)
 }
 
 /* the chosen players' boxes, and their scores */
-void draw_player_boxes(uint32_t box_flags, uint32_t *p_d1, uint32_t *p_players, uint32_t *p_box_offset, uint32_t *p_player)
+void draw_player_boxes(uint16_t box_flags, uint32_t *p_players, uint32_t *p_box_offset, uint32_t *p_player)
 {
 	uint32_t players = *p_players;
 	uint32_t box_offset = *p_box_offset;
 	uint32_t player = 0;
 
 	player = 0u;
+	fade_banks = 0u;
 	do
 	{
-		if ((box_flags & shl32(1u, (int)(player & 0x1Fu))) != 0u)
-			draw_player_box((uint16_t)player, (uint8_t)box_flags, p_d1, &players, &box_offset);
+		if (((box_flags | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(player & 0x1Fu))) != 0u)
+			draw_player_box((uint8_t)player, (uint8_t)box_flags, &players, &box_offset);
 		player = (uint8_t)(player + 1u);
 	} while (player < 4u);
 	if ((box_flags & 0x80u) == 0u && (box_flags & 0x40u) != 0u)
@@ -509,47 +510,48 @@ void draw_player_boxes(uint32_t box_flags, uint32_t *p_d1, uint32_t *p_players, 
 }
 
 /* a player's box: its frame and label, its lives, its health bar */
-void draw_player_box(uint16_t player, uint8_t box_flags, uint32_t *p_d1, uint32_t *p_d4, uint32_t *p_box_offset)
+void draw_player_box(uint8_t player, uint8_t box_flags, uint32_t *p_d4, uint32_t *p_box_offset)
 {
 	uint32_t d4 = *p_d4;
 	uint16_t box_offset = 0;
 	uint32_t box_places = 0, part_place = 0;
 
 	box_places = player_box_places_ADDRESS;
-	box_offset = (uint16_t)((uint32_t)player << 4);
+	box_offset = (uint16_t)((player | (fade_banks & 0xFF00u)) << 4);
 	if ((box_flags & 0x40u) != 0u)
 	{
-		part_place = TABLE32(player_box_places, box_offset);
-		draw_box_frame_and_label(box_offset, player, box_flags, part_place, box_places, p_d1, &d4);
+		part_place = TABLE32(player_box_places, (uint32_t)(int16_t)box_offset);
+		distance_low_byte = box_offset;
+		d4 = draw_box_frame_and_label(d4, box_offset, player, box_flags, part_place, box_places);
 	}
 	if ((box_flags & 0x10u) != 0u)
 	{
-		part_place = TABLE32(player_box_places, 0x8u + box_offset);
+		part_place = TABLE32(player_box_places, 0x8u + (uint32_t)(int16_t)box_offset);
 		d4 = draw_lives(d4, player, box_flags, part_place);
 	}
 	if ((box_flags & 0x20u) != 0u)
 	{
-		part_place = TABLE32(player_box_places, 0xCu + box_offset);
+		part_place = TABLE32(player_box_places, 0xCu + (uint32_t)(int16_t)box_offset);
 		d4 = draw_health_bar(player, box_flags, part_place);
 	}
+	distance_low_byte = box_offset;
 	*p_d4 = d4;
 	*p_box_offset = (*p_box_offset & 0xFFFF0000u) | box_offset;
 }
 
 /* a player's box frame and label in his colour */
-void draw_box_frame_and_label(uint16_t box_offset, uint16_t player, uint8_t box_flags, uint32_t part_place, uint32_t box_places, uint32_t *p_d1, uint32_t *p_label_offset)
+uint32_t draw_box_frame_and_label(uint32_t label_offset, uint16_t box_offset, uint8_t player, uint8_t box_flags, uint32_t part_place, uint32_t box_places)
 {
-	uint32_t label_offset = *p_label_offset;
 	uint32_t colour = 0;
 
 	colour = player_box_colour(0u, player);
-	*p_d1 = draw_box_frame((uint8_t)colour, box_flags, part_place);
+	draw_box_frame((uint8_t)colour, box_flags, part_place);
 	label_offset = draw_box_label((uint8_t)colour, label_offset, box_offset, player, box_flags, box_places);
-	*p_label_offset = (*p_label_offset & 0xFFFF0000u) | (label_offset & 0xFFFFu);
+	return label_offset;
 }
 
 /* a player's lives in his box */
-uint32_t draw_lives(uint32_t lives, uint16_t player, uint8_t box_flags, uint32_t part_place)
+uint32_t draw_lives(uint32_t lives, uint8_t player, uint8_t box_flags, uint32_t part_place)
 {
 	uint16_t hundreds_offset = 0, tens_offset = 0, units_offset = 0;
 	uint32_t colour = 0, player_offset = 0, tiles = 0;
@@ -558,9 +560,9 @@ uint32_t draw_lives(uint32_t lives, uint16_t player, uint8_t box_flags, uint32_t
 	clear_lives_digits((uint8_t)colour, part_place);
 	if ((box_flags & 0x80u) != 0u)
 		return lives;
-	player_offset = (lives & ~0xFFFFu) | player;
+	player_offset = (lives & ~0xFFFFu) | player | (fade_banks & 0xFF00u);
 	player_offset = (player_offset & ~0xFFFFu) | (uint16_t)(player_offset << 3);
-	lives = (player_offset & ~0xFFFFu) | RAM16(unk_060100_ADDRESS + (uint16_t)player_offset);
+	lives = (player_offset & ~0xFFFFu) | mem_read16(PLAYER_ADDRESS(0) + (int16_t)player_offset);
 	units_offset = (uint8_t)lives;
 	units_offset = (uint16_t)((units_offset & 0xFu) << 1);
 	mem_write8(part_place + 4u, colour);
@@ -589,7 +591,7 @@ uint32_t draw_lives(uint32_t lives, uint16_t player, uint8_t box_flags, uint32_t
 }
 
 /* a player's health bar in his box */
-uint32_t draw_health_bar(uint16_t player, uint8_t box_flags, uint32_t part_place)
+uint32_t draw_health_bar(uint8_t player, uint8_t box_flags, uint32_t part_place)
 {
 	uint32_t colour = 0, count = 0, tiles = 0;
 	uint16_t t1 = 0;
@@ -598,7 +600,7 @@ uint32_t draw_health_bar(uint16_t player, uint8_t box_flags, uint32_t part_place
 	count = clear_health_bar((uint8_t)colour, part_place);
 	if ((box_flags & 0x80u) != 0u)
 		return count;
-	tiles = health_bar_tiles_ADDRESS + PLAYER(PLAYER_ADDRESS(0) + (player & 0x1FFFu) * 0x8u)->health_bars * 8u;
+	tiles = health_bar_tiles_ADDRESS + mem_read8(unk_060106_ADDRESS + (int16_t)((player | (fade_banks & 0xFF00u)) << 3)) * 8u;
 	count = 3u;
 	do
 	{
@@ -615,9 +617,9 @@ uint32_t draw_health_bar(uint16_t player, uint8_t box_flags, uint32_t part_place
 }
 
 /* a player's colour in the boxes */
-uint32_t player_box_colour(uint32_t colour, uint16_t player)
+uint32_t player_box_colour(uint32_t colour, uint8_t player)
 {
-	colour = (colour & ~0xFFu) | text_colours[1 + player];
+	colour = (colour & ~0xFFu) | TABLE8(text_colours, 0x1u + (uint32_t)(int16_t)(player | (fade_banks & 0xFF00u)));
 	colour = colour | 1u;
 	return colour;
 }
@@ -668,7 +670,7 @@ uint32_t clear_health_bar(uint8_t colour, uint32_t part_place)
 }
 
 /* a player's box frame */
-uint32_t draw_box_frame(uint8_t colour, uint8_t box_flags, uint32_t part_place)
+void draw_box_frame(uint8_t colour, uint8_t box_flags, uint32_t part_place)
 {
 	uint8_t tile_code = 0;
 	uint32_t tile_offset = 0, tiles = 0;
@@ -693,20 +695,20 @@ uint32_t draw_box_frame(uint8_t colour, uint8_t box_flags, uint32_t part_place)
 		tile_offset = 0u;
 		part_place += 0x80u;
 	}
-	return tile_offset;
+	screen_x_high = tile_offset;
 }
 
 /* a player's box label 1UP to 4UP */
-uint32_t draw_box_label(uint8_t colour, uint32_t label_offset, uint16_t box_offset, uint16_t player, uint8_t box_flags, uint32_t box_places)
+uint32_t draw_box_label(uint8_t colour, uint32_t label_offset, uint16_t box_offset, uint8_t player, uint8_t box_flags, uint32_t box_places)
 {
 	uint32_t label = 0, label_place = 0;
 
 	if ((box_flags & 0x80u) == 0u)
 	{
-		label_place = mem_read32(box_places + 4u + box_offset);
-		label_offset = LINKED(label_offset, player);
-		label_offset = LINKED(label_offset, (uint16_t)(label_offset << 2));
-		label = box_labels[(uint16_t)label_offset / 4u];
+		label_place = mem_read32(box_places + 4u + (int16_t)((box_offset & ~0xFFu) | (distance_low_byte & 0xFFu)));
+		label_offset = (label_offset & ~0xFFFFu) | player | (fade_banks & 0xFF00u);
+		label_offset = (label_offset & ~0xFFFFu) | (uint16_t)(label_offset << 2);
+		label = TABLE32(box_labels, (uint32_t)(int16_t)label_offset);
 		mem_write8(label_place, colour);
 		mem_write8(label_place + 2u, colour);
 		mem_write8(label_place + 0x80u, colour);
@@ -777,10 +779,9 @@ void print_stage_title(void)
 }
 
 /* the message under a player's box */
-void draw_player_message(uint8_t player_message, uint32_t *p_colour, uint32_t *p_d5, uint32_t *p_message_offset)
+void draw_player_message(uint8_t player_message, uint32_t *p_d4, uint32_t *p_message_offset)
 {
-	uint32_t colour = *p_colour;
-	uint32_t d5 = *p_d5;
+	uint32_t d4 = *p_d4;
 	uint16_t player_number = 0;
 	uint32_t message_offset = 0, player = 0;
 
@@ -788,46 +789,44 @@ void draw_player_message(uint8_t player_message, uint32_t *p_colour, uint32_t *p
 	text_colour = text_colours[1 + player_number];
 	text_colour |= 1u;
 	player = PLAYER_ADDRESS(0) + (uint16_t)((uint32_t)player_number << 3);
+	fade_banks = 0u;
 	message_offset = (uint8_t)player_message;
 	message_offset = message_offset & 0x3Cu;
 	switch (message_offset)
 	{
 	case 0:
-		message_insert_coin(player_message, player, &colour, &d5, &message_offset);
+		message_insert_coin(player_message, player, &d4, &message_offset);
 		break;
 	case 4:
-		message_press_start(player_message, player, &colour, &d5, &message_offset);
+		message_press_start(player_message, player, &d4, &message_offset);
 		break;
 	case 8:
-		message_out_of_lives(player_message, player, &colour, &d5, &message_offset);
+		message_out_of_lives(player_message, player, &d4, &message_offset);
 		break;
 	case 12:
-		message_clear(player_message, player, &colour, &d5, &message_offset);
+		message_clear(player_message, player, &d4, &message_offset);
 		break;
 	}
-	*p_colour = (*p_colour & 0xFFFF0000u) | (colour & 0xFFFFu);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	*p_d4 = (*p_d4 & 0xFFFF0000u) | (d4 & 0xFFFFu);
 	*p_message_offset = message_offset;
 }
 
 /* INSERT COIN(S) in a player's box */
-void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_character, uint32_t *p_d6)
+void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6)
 {
-	uint32_t character = 0, colour = 0;
+	uint32_t d4 = 0;
 
 	if ((PLAYER(player)->message & 1u) == 0u)
 		PLAYER(player)->message = 1u;
 	*p_d6 = 0u;
-	print_text_at(player_message, &colour, &character, p_d6);
-	*p_colour = (*p_colour & 0xFFFF0000u) | (colour & 0xFFFFu);
-	*p_character = (*p_character & 0xFFFFFF00u) | (character & 0xFFu);
+	d4 = print_text_at(d4, (uint16_t)*p_d6, player_message);
+	*p_d4 = (*p_d4 & 0xFFFF0000u) | (d4 & 0xFFFFu);
 }
 
 /* PRESS START blinking under a player's box */
-void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_character, uint32_t *p_blink_phase)
+void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6)
 {
-	uint32_t colour = *p_colour;
-	uint32_t character = *p_character;
+	uint32_t d4 = *p_d4;
 	uint32_t blink_phase = 0;
 	uint8_t t1 = 0;
 
@@ -843,7 +842,7 @@ void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_co
 				blink_phase = 8u;
 			if ((frame_count & 0x10u) != 0u)
 				blink_phase = (uint8_t)(blink_phase + 1u);
-			print_text_at(player_message, &colour, &character, &blink_phase);
+			d4 = print_text_at(d4, (uint16_t)blink_phase, player_message);
 		}
 	}
 	else
@@ -854,19 +853,17 @@ void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_co
 			blink_phase = 8u;
 		if ((frame_count & 0x10u) != 0u)
 			blink_phase = (uint8_t)(blink_phase + 1u);
-		print_text_at(player_message, &colour, &character, &blink_phase);
+		d4 = print_text_at(d4, (uint16_t)blink_phase, player_message);
 	}
-	*p_colour = (*p_colour & 0xFFFF0000u) | (colour & 0xFFFFu);
-	*p_character = (*p_character & 0xFFFFFF00u) | (character & 0xFFu);
-	*p_blink_phase = blink_phase;
+	*p_d4 = (*p_d4 & 0xFFFF0000u) | (d4 & 0xFFFFu);
+	*p_d6 = blink_phase;
 }
 
 /* the knocked-out head of a player who lost his last life */
-void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_frame_phase, uint32_t *p_blink_phase)
+void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6)
 {
-	uint32_t colour = *p_colour;
-	uint8_t frame_phase = (uint8_t)*p_frame_phase;
-	uint32_t blink_phase = 0, ignored = 0;
+	uint32_t d4 = *p_d4;
+	uint32_t blink_phase = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	if ((PLAYER(player)->message & 4u) != 0u)
@@ -877,9 +874,9 @@ void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_c
 		if (t1 == 0u)
 		{
 			blink_phase = (uint8_t)(4u + (((uint8_t)frame_count & 0x18u) >> 3));
-			print_text_at(player_message, &colour, &ignored, &blink_phase);
+			d4 = print_text_at(d4, (uint16_t)blink_phase, player_message);
 			t2 = (uint8_t)frame_count & 0x18u;
-			frame_phase = t2;
+			distance_low_byte = t2;
 			if (t2 == 0u)
 			{
 				PLAYER(player)->message += 0x20u;
@@ -895,9 +892,9 @@ void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_c
 	{
 		PLAYER(player)->message = 4u;
 		blink_phase = (uint8_t)(4u + (((uint8_t)frame_count & 0x18u) >> 3));
-		print_text_at(player_message, &colour, &ignored, &blink_phase);
+		d4 = print_text_at(d4, (uint16_t)blink_phase, player_message);
 		t2 = (uint8_t)frame_count & 0x18u;
-		frame_phase = t2;
+		distance_low_byte = t2;
 		if (t2 == 0u)
 		{
 			PLAYER(player)->message += 0x20u;
@@ -908,39 +905,36 @@ void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_c
 			}
 		}
 	}
-	*p_colour = (*p_colour & 0xFFFF0000u) | (colour & 0xFFFFu);
-	*p_frame_phase = (*p_frame_phase & 0xFFFFFF00u) | frame_phase;
-	*p_blink_phase = blink_phase;
+	*p_d4 = (*p_d4 & 0xFFFF0000u) | (d4 & 0xFFFFu);
+	*p_d6 = blink_phase;
 }
 
 /* the line under a player's box cleared */
-void message_clear(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_character, uint32_t *p_d6)
+void message_clear(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6)
 {
-	uint16_t colour = (uint16_t)*p_colour;
-	uint8_t character = (uint8_t)*p_character;
-	uint32_t d4 = 0, d5 = 0;
+	uint32_t d4 = *p_d4;
 
 	if ((PLAYER(player)->message & 8u) != 0u)
 		return;
 	PLAYER(player)->message = 2u;
 	*p_d6 = 1u;
-	print_text_at(player_message, &d4, &d5, p_d6);
-	*p_colour = (*p_colour & 0xFFFF0000u) | (d4 & 0xFFFFu);
-	*p_character = (*p_character & 0xFFFFFF00u) | (d5 & 0xFFu);
+	d4 = print_text_at(d4, (uint16_t)*p_d6, player_message);
+	*p_d4 = (*p_d4 & 0xFFFF0000u) | (d4 & 0xFFFFu);
 }
 
 /* a positioned text into the layer and place picked, in the text colour; '/' a new place, '?' the end */
-void print_text_at(uint8_t player_message, uint32_t *p_colour, uint32_t *p_character, uint32_t *p_text_number)
+uint32_t print_text_at(uint32_t d4, uint16_t text_number, uint8_t player_message)
 {
-	uint16_t text_number = (uint16_t)*p_text_number;
 	uint8_t character = 0;
-	uint16_t colour = 0, place_offset = 0, text_place = 0;
-	uint32_t layer_place = 0, text = 0;
+	uint16_t text_place = 0;
+	uint32_t colour = 0, layer_place = 0, place_offset = 0, text = 0;
 
 	text = positioned_texts[text_number & 0x3FFFu];
-	place_offset = (uint16_t)(((uint8_t)player_message & 3u) << 2);
-	layer_place = text_layer_places[place_offset / 4u];
-	colour = text_colour;
+	place_offset = (d4 & ~0xFFu) | (uint8_t)player_message;
+	place_offset = LINKED(place_offset, place_offset & 3u);
+	place_offset = LINKED(place_offset, (uint16_t)(place_offset << 2));
+	layer_place = text_layer_places[(uint16_t)place_offset / 4u];
+	colour = IN_PAGE(place_offset, text_colour);
 	for (;;)
 	{
 		text_place = TEXT_16(text);
@@ -951,24 +945,24 @@ void print_text_at(uint8_t player_message, uint32_t *p_colour, uint32_t *p_chara
 			text++;
 			if (character == 0x3Fu)
 			{
-				*p_colour = (*p_colour & 0xFFFF0000u) | colour;
-				*p_character = (*p_character & 0xFFFFFF00u) | character;
-				*p_text_number = (*p_text_number & 0xFFFF0000u) | text_place;
-				return;
+				distance_low_byte = character;
+				fade_banks = text_place & 0xFF00u;
+				return colour;
 			}
 			if (character == 0x2Fu)
 				break;
-			mem_write8(layer_place + (int16_t)text_place, (uint8_t)colour);
+			mem_write8(layer_place + (int16_t)text_place, colour);
 			mem_write8(layer_place + 1u + (int16_t)text_place, character);
 			text_place += 2u;
 		}
 	}
+	unreachable();
 }
 
 /* a big character of the continue's countdown drawn in tiles, nine rows of eight, in its colour */
-uint32_t draw_big_character(uint16_t pattern_bits, uint8_t character)
+uint32_t draw_big_character(uint8_t character)
 {
-	uint16_t count = 0, count_2 = 0;
+	uint16_t count = 0, count_2 = 0, pattern_bits = 0;
 	uint32_t colour_number = 0, pattern = 0, tile_place = 0;
 	uint16_t t1 = 0, t2 = 0;
 
@@ -982,11 +976,12 @@ uint32_t draw_big_character(uint16_t pattern_bits, uint8_t character)
 		colour_number = big_character_colour(colour_number);
 		do
 		{
-			pattern_bits = ((uint16_t)IN_PAGE(pattern_bits, PICTURE_TILE(pattern)) >> 4) & 0xFu;
+			pattern_bits = ((PICTURE_TILE(pattern) | (fade_banks & 0xFF00u)) >> 4) & 0xFu;
 			mem_write8(tile_place, colour_number);
 			tile_place++;
 			mem_write8(tile_place, big_font_tiles[pattern_bits]);
 			pattern_bits = PICTURE_TILE(pattern) & 0xFu;
+			fade_banks = pattern_bits;
 			tile_place++;
 			mem_write8(tile_place, colour_number);
 			tile_place++;
@@ -1052,6 +1047,7 @@ void print_tall_text(uint8_t text_number, uint32_t *p_colour, uint32_t *p_charac
 		colour_number = tall_text_colour(colour_number);
 		for (;;)
 		{
+			fade_banks = 0u;
 			character = TEXT(text);
 			text++;
 			if (character == 0x3Fu)

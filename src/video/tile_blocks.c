@@ -3,7 +3,7 @@
  *    Description: blocks of tiles drawn into the layers, and texts typed a character at a time
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,20 +12,17 @@
 #include "game.h"
 
 /* a text to type, its first character at once */
-uint32_t start_typed_text_at_once(uint32_t text)
+void start_typed_text_at_once(uint32_t text)
 {
-	uint32_t colour_number = 0;
-
-	start_typed_text(&colour_number, &text);
+	start_typed_text(text);
 	typed_text_wait = 0u;
-	return colour_number;
 }
 
 /* the typed text's next character, a new line, or its end */
 void type_next_character(void)
 {
 	uint8_t text = 0;
-	uint32_t ignored = 0, text_record = 0, tile_place = 0;
+	uint32_t text_record = 0, tile_place = 0;
 	uint8_t t1 = 0;
 
 	if (typed_text == 0u)
@@ -50,7 +47,7 @@ void type_next_character(void)
 	}
 	if (text == 0x2Fu)
 	{
-		start_typed_text(&ignored, &text_record);
+		text_record = start_typed_text(text_record);
 		text = TEXT(text_record);
 		tile_place = typed_text_place;
 		text_record++;
@@ -64,14 +61,14 @@ void type_next_character(void)
 }
 
 /* a text typed a character at a time: its place, the frames between characters and its colour */
-void start_typed_text(uint32_t *p_colour_number, uint32_t *p_text)
+uint32_t start_typed_text(uint32_t text)
 {
-	uint32_t text = *p_text;
-	uint32_t colour_number = 0;
+	uint16_t colour_number = 0;
 
 	typed_text_place = TEXT_32(text);
 	text += 4u;
 	typed_text_delay = TEXT(text);
+	offset_high_word = 0u;
 	text++;
 	colour_number = TEXT(text);
 	typed_text = text + 1u;
@@ -83,8 +80,7 @@ void start_typed_text(uint32_t *p_colour_number, uint32_t *p_text)
 	}
 	typed_text_colour = text_colours[colour_number];
 	text = typed_text;
-	*p_colour_number = colour_number;
-	*p_text = text;
+	return text;
 }
 
 /* a block of tiles into the tile RAM at the place picked, wrapping round the layer */

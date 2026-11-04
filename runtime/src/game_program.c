@@ -250,6 +250,27 @@ void return_from_exception(void)
 		status = saved[depth - 1];
 }
 
+/* An interrupt's handler, with what the code carries in its registers (game_context) put back when it returns: the
+   VBLANK handler saves D0-D7/A0-A6 (003DC4 "movem.l D0-D7/A0-A6, $60440.l") and puts them back before it goes back
+   to the code it interrupted (003E44 "movem.l $60440.l, D0-D7/A0-A6"), which finds its registers as it left them */
+#define MAX_CONTEXT 16
+
+static void run_handler(void (*handler)(void))
+{
+	uint32_t kept[MAX_CONTEXT];
+
+	if (game_context_count > MAX_CONTEXT)
+	{
+		fprintf(stderr, "68000 stopped: the program carries more values in its registers than the runtime keeps\n");
+		exit(3);
+	}
+	for (size_t index = 0; index < game_context_count; index++)
+		kept[index] = *game_context[index];
+	handler();
+	for (size_t index = 0; index < game_context_count; index++)
+		*game_context[index] = kept[index];
+}
+
 void take_interrupts(void)
 {
 	for (;;)
@@ -269,7 +290,7 @@ void take_interrupts(void)
 		saved[depth++] = status;
 		status = (status & ~0x8700u) | SR_S | (uint32_t)level << 8;
 		interrupts++;
-		handler();
+		run_handler(handler);
 		depth--;
 	}
 }

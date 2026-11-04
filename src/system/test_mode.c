@@ -3,7 +3,7 @@
  *    Description: the exceptions' handler and the test mode's pages: the RAM and ROM check, the mask ROM check, the inputs, the sounds, the DIP switches
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -173,7 +173,7 @@ void sum_mask_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byt
 	sums = ranking_scores_ADDRESS;
 	job_parameter = sum_sprite_roms_low(first_byte, second_byte, third_byte, job_parameter, sums);
 	job_parameter = sum_sprite_roms_high(first_byte, second_byte, third_byte, job_parameter, sums);
-	sum_tile_roms(first_byte, second_byte, third_byte, job_parameter, sums);
+	sum_tile_roms(first_byte, second_byte, third_byte, (uint16_t)job_parameter, sums);
 	jobs_pending--;
 }
 
@@ -188,7 +188,7 @@ uint32_t sum_sprite_roms_low(uint32_t first_byte, uint32_t second_byte, uint32_t
 	mask_rom_part_sums(3) = 0u;
 	mask_rom_first_bank = 0u;
 	mask_rom_last_bank = 3u;
-	sum_sprite_rom_banks(first_byte, second_byte, third_byte, last_bank);
+	sum_sprite_rom_banks(first_byte, second_byte, third_byte, (uint16_t)last_bank);
 	sum = mask_rom_part_sums(0);
 	sum = (uint16_t)(sum + ranking_scores(9));
 	ranking_scores(0) = sum;
@@ -209,7 +209,7 @@ uint32_t sum_sprite_roms_high(uint32_t first_byte, uint32_t second_byte, uint32_
 	mask_rom_part_sums(3) = 0u;
 	mask_rom_first_bank = 0x40u;
 	mask_rom_last_bank = 0x43u;
-	sum_sprite_rom_banks(first_byte, second_byte, third_byte, job_parameter);
+	sum_sprite_rom_banks(first_byte, second_byte, third_byte, (uint16_t)job_parameter);
 	sum = (job_parameter & ~0xFFFFu) | mask_rom_part_sums(0);
 	sum = (sum & ~0xFFFFu) | (uint16_t)(sum + ranking_scores(9));
 	ranking_scores(2) = sum;
@@ -220,12 +220,12 @@ uint32_t sum_sprite_roms_high(uint32_t first_byte, uint32_t second_byte, uint32_
 }
 
 /* the sprite ROMs' banks read through the sprite chip and summed */
-void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t last_bank)
+void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t last_bank)
 {
 	uint32_t carry = 0;
 	uint8_t page = 0;
-	uint16_t offset = 0;
-	uint32_t bank = 0, read_base = 0, read_place = 0;
+	uint16_t bank = 0, offset = 0;
+	uint32_t read_base = 0, read_place = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0;
 
 	sprite_control |= 0x20u;
@@ -238,8 +238,8 @@ void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t th
 	do
 	{
 		page = 0u;
-		bank = (last_bank & ~0xFFu) | mask_rom_bank;
-		io_write8(SPRITE_CONTROL_140003, bank);
+		bank = (uint16_t)((last_bank & ~0xFFu) | mask_rom_bank);
+		io_write8(SPRITE_CONTROL_140003, (uint8_t)bank);
 		do
 		{
 			read_base = SPRITE_RAM;
@@ -261,7 +261,7 @@ void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t th
 				third_byte = (third_byte & ~0xFFu) | t6;
 				t7 = io_read8(SPRITE_CONTROL_140007);
 				t8 = io_read8(SPRITE_CONTROL_140007);
-				bank = (bank & ~0xFFu) | t8;
+				bank = (uint16_t)((bank & ~0xFFu) | t8);
 				add_to_rom_sums(first_byte, second_byte, third_byte, bank);
 				offset += 4u;
 			} while (offset < 0x400u);
@@ -269,18 +269,18 @@ void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t th
 			page++;
 		} while (carry == 0u);
 		mask_rom_bank++;
-		last_bank = (bank & ~0xFFu) | mask_rom_last_bank;
+		last_bank = (uint16_t)((bank & ~0xFFu) | mask_rom_last_bank);
 	} while (mask_rom_bank <= (uint8_t)last_bank);
 	sprite_control &= 0xDFu;
 	io_write8(0x140000u, sprite_control);
 }
 
 /* the tile ROMs read through the tile chip and summed */
-void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t job_parameter, uint32_t a0)
+void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t job_parameter, uint32_t a0)
 {
 	uint8_t page = 0;
 	uint16_t offset = 0;
-	uint32_t gap_bit = 0, read_base = 0, read_place = 0;
+	uint32_t read_base = 0, read_place = 0;
 	uint16_t t1 = 0;
 
 	mask_rom_bank = 0u;
@@ -291,10 +291,10 @@ void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byt
 	do
 	{
 		page = 0u;
-		job_parameter = (job_parameter & ~0xFFu) | mask_rom_bank;
-		tile_banks_0_1 = job_parameter;
+		job_parameter = (uint16_t)((job_parameter & ~0xFFu) | mask_rom_bank);
+		tile_banks_0_1 = (uint8_t)job_parameter;
 		io_write8(TILES_106B00, tile_banks_0_1);
-		tile_banks_2_3 = job_parameter;
+		tile_banks_2_3 = (uint8_t)job_parameter;
 		io_write8(TILES_106E00, tile_banks_2_3);
 		do
 		{
@@ -322,15 +322,14 @@ void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byt
 				} while ((uint8_t)third_byte != mem_read8(read_place + 4u));
 				do
 				{
-					job_parameter = (job_parameter & ~0xFFu) | mem_read8(read_place + 6u);
+					job_parameter = (uint16_t)((job_parameter & ~0xFFu) | mem_read8(read_place + 6u));
 				} while ((uint8_t)job_parameter != mem_read8(read_place + 6u));
 				add_to_rom_sums(first_byte, second_byte, third_byte, job_parameter);
 				offset += 8u;
 				if (offset >= 0x7000u)
 					break;
-				gap_bit = (job_parameter & ~0xFFFFu) | offset;
-				t1 = gap_bit & 0x1000u;
-				job_parameter = (gap_bit & ~0xFFFFu) | t1;
+				t1 = offset & 0x1000u;
+				job_parameter = t1;
 				if (t1 == 0u)
 					continue;
 				offset += 0x1000u;
@@ -350,7 +349,7 @@ void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byt
 }
 
 /* four bytes of a graphics ROM added to its sums */
-void add_to_rom_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t fourth_byte)
+void add_to_rom_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t fourth_byte)
 {
 	uint8_t next_bit = 0;
 	uint16_t bit = 0;
@@ -366,17 +365,17 @@ void add_to_rom_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_b
 			mask_rom_bits |= 1u;
 		if ((second_byte & shl32(1u, (int)(bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 2u;
-		if ((third_byte & shl32(1u, (int)(bit & 0x1Fu))) != 0u)
+		if ((((third_byte & ~0xFF00u) | (fade_banks & 0xFF00u)) & shl32(1u, (int)(bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 4u;
-		if ((fourth_byte & shl32(1u, (int)(bit & 0x1Fu))) != 0u)
+		if ((((fourth_byte & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 8u;
 		if ((first_byte & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 0x10u;
 		if ((second_byte & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 0x20u;
-		if ((third_byte & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
+		if ((((third_byte & ~0xFF00u) | (fade_banks & 0xFF00u)) & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 0x40u;
-		if ((fourth_byte & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
+		if ((((fourth_byte & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(next_bit & 0x1Fu))) != 0u)
 			mask_rom_bits |= 0x80u;
 		mem_write16(part_sum, mem_read16(part_sum) + mask_rom_bits);
 		bit += 2u;

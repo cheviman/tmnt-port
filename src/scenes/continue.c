@@ -3,7 +3,7 @@
  *    Description: the continue's countdown and the GAME OVER after it
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* the continue with its countdown, then GAME OVER, by its steps */
-void scene_continue(uint32_t d1, uint16_t d6, uint32_t a5)
+void scene_continue(void)
 {
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -20,10 +20,10 @@ void scene_continue(uint32_t d1, uint16_t d6, uint32_t a5)
 		continue_setup();
 		break;
 	case 1:
-		continue_run(d1, d6);
+		continue_run();
 		break;
 	case 2:
-		game_over(d6, a5);
+		game_over();
 		break;
 	}
 	do_nothing();
@@ -41,7 +41,7 @@ void continue_setup(void)
 		continue_start();
 		break;
 	}
-	check_joins(0u);
+	check_joins();
 }
 
 /* the texts cleared for the continue */
@@ -78,25 +78,24 @@ void continue_start(void)
 }
 
 /* the countdown, the messages under the boxes and the boxes of the players with lives */
-void continue_run(uint32_t d1, uint16_t pattern_bits)
+void continue_run(void)
 {
 	uint16_t job = 0, substep_offset = 0;
-	uint32_t ignored = 0, ignored_2 = 0;
 
 	substep_offset = (uint16_t)((uint32_t)(int8_t)scene_substep << 2);
 	switch ((uint32_t)(int16_t)substep_offset)
 	{
 	case 0:
-		d1 = continue_countdown(d1, pattern_bits, substep_offset);
+		continue_countdown(substep_offset);
 		break;
 	}
-	update_player_messages(d1, &ignored, &ignored_2);
+	update_player_messages();
 	job = (uint16_t)(0xB00u | 0x10u | players_with_lives);
 	queue_job(job);
 }
 
 /* the countdown: a count less every so often, the play back when a player joins, GAME OVER at zero */
-uint32_t continue_countdown(uint32_t d1, uint16_t pattern_bits, uint32_t count_left)
+void continue_countdown(uint32_t count_left)
 {
 	uint8_t player_inputs_now = 0;
 	uint16_t count = 0, job = 0;
@@ -105,7 +104,10 @@ uint32_t continue_countdown(uint32_t d1, uint16_t pattern_bits, uint32_t count_l
 	uint16_t t2 = 0, t3 = 0;
 
 	if (jobs_pending != 0u)
-		return check_joins(d1);
+	{
+		check_joins();
+		return;
+	}
 	t1 = continue_count_time;
 	continue_count_time = t1 - 1u;
 	if (t1 == 1u)
@@ -118,12 +120,12 @@ uint32_t continue_countdown(uint32_t d1, uint16_t pattern_bits, uint32_t count_l
 			continue_count_time = 0u;
 			job = 0x200u;
 			queue_job(job);
-			return d1;
+			return;
 		}
 		continue_count_time = 0x48u;
 		continue_count--;
 		count_left = continue_count;
-		count_left = draw_big_character(pattern_bits, (uint8_t)count_left);
+		count_left = draw_big_character((uint8_t)count_left);
 	}
 	if ((players_joining | players_in_play) != 0u)
 	{
@@ -136,10 +138,13 @@ uint32_t continue_countdown(uint32_t d1, uint16_t pattern_bits, uint32_t count_l
 		scene = 4u;
 		scene_step = 1u;
 		scene_substep = 0u;
-		return d1;
+		return;
 	}
 	if (continue_count > 0x10u)
-		return check_joins(d1);
+	{
+		check_joins();
+		return;
+	}
 	count = (uint16_t)((count_left & ~0xFFu) | 3u);
 	inputs = player_inputs_ADDRESS;
 	player = PLAYER_ADDRESS(0);
@@ -158,14 +163,17 @@ uint32_t continue_countdown(uint32_t d1, uint16_t pattern_bits, uint32_t count_l
 		count = t3;
 		player += 8u;
 		if (t3 == 0xFFFFu)
-			return check_joins(d1);
+		{
+			check_joins();
+			return;
+		}
 	}
 	continue_count_time = 1u;
-	return check_joins(d1);
+	check_joins();
 }
 
 /* the GAME OVER after the continue, by its steps */
-void game_over(uint16_t fade, uint32_t target_palettes)
+void game_over(void)
 {
 	switch ((uint32_t)(int8_t)scene_substep)
 	{
@@ -176,7 +184,7 @@ void game_over(uint16_t fade, uint32_t target_palettes)
 		game_over_start();
 		return;
 	case 2:
-		game_over_wait(fade, target_palettes);
+		game_over_wait();
 		return;
 	}
 }
@@ -216,14 +224,14 @@ void game_over_start(void)
 }
 
 /* GAME OVER held over the darkened play until the time runs out or a button, then the ranking */
-void game_over_wait(uint16_t fade, uint32_t target_palettes)
+void game_over_wait(void)
 {
 	uint8_t t1 = 0;
 
 	if (jobs_pending == 0u)
 	{
 		game_over_skip();
-		game_over_dim(fade, target_palettes);
+		game_over_dim();
 		t1 = continue_count;
 		continue_count = t1 - 1u;
 		if (t1 == 1u)
@@ -236,15 +244,15 @@ void game_over_wait(uint16_t fade, uint32_t target_palettes)
 }
 
 /* the play darkened behind the GAME OVER box */
-void game_over_dim(uint16_t fade, uint32_t target_palettes)
+void game_over_dim(void)
 {
 	if (fading == 0u)
 	{
-		target_palettes = 0xA08Eu;
-		fade = 0x1E02u;
+		palette_place = 0xA08Eu;
+		fade_banks = 0x1E02u;
 		fade_state = 0u;
 	}
-	copy_palette_sets(fade, target_palettes);
+	copy_palette_sets();
 }
 
 /* a button ends GAME OVER early */

@@ -3,7 +3,7 @@
  *    Description: the players' inputs, the demos' recorded ones, and the demo game
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,10 +12,10 @@
 #include "game.h"
 
 /* the players' inputs for the turtles, or a demo's recorded ones */
-uint32_t update_game_inputs(uint32_t step_offset)
+void update_game_inputs(void)
 {
 	uint8_t record_byte = 0;
-	uint16_t channel_offset = 0;
+	uint16_t channel_offset = 0, count = 0;
 	uint32_t channels = 0, held_inputs = 0, hold_time = 0, inputs_place = 0, join_routine = 0, record = 0, record_place = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0;
@@ -25,12 +25,13 @@ uint32_t update_game_inputs(uint32_t step_offset)
 		turtle_inputs_3_frames_ago = turtle_inputs_2_frames_ago;
 		turtle_inputs_2_frames_ago = turtle_inputs_last_frame;
 		turtle_inputs_last_frame = (((uint32_t)demo_held_inputs(0) << 24u) | ((uint32_t)demo_held_inputs(1) << 16u) | ((uint32_t)demo_held_inputs(2) << 8u) | demo_held_inputs(3));
-		step_offset = 3u;
+		count = 3u;
+		offset_high_word = 3u;
 		channels = channel_records_ADDRESS;
 		held_inputs = demo_held_inputs_ADDRESS;
 		do
 		{
-			channel_offset = (uint16_t)(step_offset << 4);
+			channel_offset = (uint16_t)((uint32_t)count << 4);
 			record_place = mem_read32(channels + (int16_t)channel_offset);
 			hold_time = mem_read32(channels + 4u + (int16_t)channel_offset);
 			inputs_place = mem_read32(channels + 8u + (int16_t)channel_offset);
@@ -39,7 +40,7 @@ uint32_t update_game_inputs(uint32_t step_offset)
 			t1 = mem_read8(hold_time);
 			mem_write8(hold_time, t1 - 1u);
 			if (t1 != 1u)
-				mem_write8(inputs_place, demo_held_inputs((uint32_t)(int16_t)step_offset));
+				mem_write8(inputs_place, demo_held_inputs((uint32_t)(int16_t)count));
 			else
 			{
 				record_byte = DEMO_INPUT(record);
@@ -48,7 +49,7 @@ uint32_t update_game_inputs(uint32_t step_offset)
 				scratch_byte = record_byte;
 				record_byte &= 0x7Fu;
 				mem_write8(inputs_place, record_byte);
-				demo_held_inputs((uint32_t)(int16_t)step_offset) = record_byte;
+				demo_held_inputs((uint32_t)(int16_t)count) = record_byte;
 				mem_write32(record_place, record + 1u);
 				switch (join_routine)
 				{
@@ -66,14 +67,14 @@ uint32_t update_game_inputs(uint32_t step_offset)
 					break;
 				}
 			}
-			t2 = step_offset - 1u;
-			step_offset = t2;
+			t2 = count - 1u;
+			count = t2;
 		} while (t2 != 0xFFFFu);
 		turtle_presses(0) = turtle_inputs(0) & ~(uint8_t)(turtle_inputs_last_frame >> 24u);
 		turtle_presses(1) = turtle_inputs(1) & ~(uint8_t)(turtle_inputs_last_frame >> 16u);
 		turtle_presses(2) = turtle_inputs(2) & ~(uint8_t)(turtle_inputs_last_frame >> 8u);
 		turtle_presses(3) = turtle_inputs(3) & ~(uint8_t)turtle_inputs_last_frame;
-		return step_offset;
+		return;
 	}
 	turtle_inputs_3_frames_ago = turtle_inputs_2_frames_ago;
 	turtle_inputs_2_frames_ago = turtle_inputs_last_frame;
@@ -86,7 +87,6 @@ uint32_t update_game_inputs(uint32_t step_offset)
 	turtle_presses(1) = player_presses(1);
 	turtle_presses(2) = player_presses(2);
 	turtle_presses(3) = player_presses(3);
-	return step_offset;
 }
 
 /* in a demo, the first player joins */
@@ -142,47 +142,42 @@ uint32_t demo_join_player_4(uint32_t channels)
 }
 
 /* the demo game */
-void attract_demo(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
+void attract_demo(void)
 {
-	uint32_t scene_offset = 0;
-
 	if (new_credit != 0u)
 	{
 		frame_count = saved_frame_count;
 		go_to_coin_screen();
 		return;
 	}
-	scene_offset = (d7 & ~0xFFu) | scene;
-	scene_offset = (scene_offset & ~0xFFFFu) | (uint16_t)(int8_t)scene_offset;
-	scene_offset = (scene_offset & ~0xFFFFu) | (uint16_t)(scene_offset << 2);
-	switch ((uint32_t)(int16_t)scene_offset)
+	switch ((uint32_t)(int8_t)scene)
 	{
 	case 0:
 		begin_demo();
 		return;
-	case 16:
-		demo_play(d1, d5, scene_offset);
-		return;
-	case 32:
-		end_demo();
-		return;
 	case 4:
-		scene_choose_turtles();
+		demo_play();
 		return;
 	case 8:
+		end_demo();
+		return;
+	case 1:
+		scene_choose_turtles();
+		return;
+	case 2:
 		scene_area_setup();
 		return;
-	case 12:
-		scene_area_title(d1);
+	case 3:
+		scene_area_title();
 		return;
-	case 20:
-		scene_area_exit(d1, scene_offset);
+	case 5:
+		scene_area_exit();
 		return;
-	case 24:
-		scene_ending(d6, a5);
+	case 6:
+		scene_ending();
 		return;
-	case 28:
-		scene_continue(d1, d6, a5);
+	case 7:
+		scene_continue();
 		return;
 	}
 }
@@ -233,14 +228,14 @@ void start_demo(void)
 }
 
 /* the demo plays for a while */
-void demo_play(uint32_t d1, uint8_t d5, uint32_t scene_offset)
+void demo_play(void)
 {
 	if (players_in_play != 0u)
 	{
 		demo_frames++;
 		if (demo_frames < 0x384u)
 		{
-			scene_play(d1, d5, scene_offset);
+			scene_play();
 			return;
 		}
 	}

@@ -3,7 +3,7 @@
  *    Description: the explosions other objects start
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* a small explosion, harmless */
-uint32_t start_small_explosion(uint16_t x_offset, uint32_t height_offset, uint32_t object, uint32_t object_2)
+void start_small_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2)
 {
 	OBJECT(object_2)->flags = 1u;
 	OBJECT(object_2)->contacts = 0u;
@@ -20,29 +20,30 @@ uint32_t start_small_explosion(uint16_t x_offset, uint32_t height_offset, uint32
 	OBJECT(object_2)->parameter = 0u;
 	OBJECT(object_2)->colour = 0xFFu;
 	OBJECT(object_2)->animation_delay = 0u;
-	height_offset = place_explosion(x_offset, (uint16_t)height_offset, object, object_2);
-	return height_offset;
+	place_explosion(x_offset, height_offset, object, object_2);
 }
 
 /* one of the explosions of a defeated boss, with its sound */
-void boss_start_explosion(uint32_t object, uint32_t explosion, uint32_t *p_sound, uint32_t *p_sounds)
+uint32_t boss_start_explosion(uint32_t object, uint32_t explosion)
 {
-	uint16_t explosion_offset = 0, height_offset = 0, x_offset = 0;
-	uint32_t sound_choice = 0;
+	uint8_t sound = 0;
+	uint16_t explosion_offset = 0, height_offset = 0, sound_choice = 0, x_offset = 0;
+	uint32_t a5 = 0;
 
 	explosion_offset = (uint16_t)((uint32_t)OBJECT(object)->boss.explosions << 2);
 	x_offset = (uint16_t)boss_explosion_x[explosion_offset / 2u];
 	height_offset = (uint16_t)boss_explosion_height[explosion_offset / 2u];
 	start_big_explosion(x_offset, height_offset, object, explosion);
-	*p_sounds = explosion_sounds_ADDRESS;
+	a5 = explosion_sounds_ADDRESS;
+	offset_high_word = 0u;
 	sound_choice = OBJECT(object)->boss.explosions;
-	sound_choice = sound_choice & 1u;
-	*p_sound = explosion_sounds[sound_choice];
-	queue_sound((uint8_t)*p_sound);
+	sound = explosion_sounds[sound_choice & 1u];
+	queue_sound(sound);
+	return a5;
 }
 
 /* a big explosion, harmless */
-void start_big_explosion(uint16_t x_offset, uint32_t height_offset, uint32_t object, uint32_t object_2)
+void start_big_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2)
 {
 	OBJECT(object_2)->flags = 1u;
 	OBJECT(object_2)->contacts = 0u;
@@ -50,7 +51,7 @@ void start_big_explosion(uint16_t x_offset, uint32_t height_offset, uint32_t obj
 	OBJECT(object_2)->parameter = 0u;
 	OBJECT(object_2)->colour = 0xFFu;
 	OBJECT(object_2)->animation_delay = 0u;
-	place_explosion(x_offset, (uint16_t)height_offset, object, object_2);
+	place_explosion(x_offset, height_offset, object, object_2);
 }
 
 /* Unused: an attacking small explosion where the object is, with its sound */
@@ -67,7 +68,7 @@ void explode_small(uint32_t object, uint32_t explosion)
 }
 
 /* Unused: a small explosion that knocks flying what it hits */
-void start_small_blast(uint16_t x_offset, uint32_t height_offset, uint32_t object, uint32_t blast)
+void start_small_blast(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t blast)
 {
 	OBJECT(blast)->flags = 5u;
 	OBJECT(blast)->contacts = 0u;
@@ -75,11 +76,11 @@ void start_small_blast(uint16_t x_offset, uint32_t height_offset, uint32_t objec
 	OBJECT(blast)->parameter = 0u;
 	OBJECT(blast)->colour = 0xFFu;
 	OBJECT(blast)->animation_delay = 0u;
-	place_explosion(x_offset, (uint16_t)height_offset, object, blast);
+	place_explosion(x_offset, height_offset, object, blast);
 }
 
 /* the explosion where the object is, moved across and up */
-uint32_t place_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2)
+void place_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2)
 {
 	uint32_t depth_offset = 0;
 
@@ -95,7 +96,7 @@ uint32_t place_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t obj
 	OBJECT(object_2)->count = 0u;
 	OBJECT(object_2)->routine = 0u;
 	OBJECT(object_2)->state = 0u;
-	return depth_offset;
+	offset_high_word = depth_offset;
 }
 
 /* a small explosion */

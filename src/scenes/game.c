@@ -3,7 +3,7 @@
  *    Description: the game's scenes: a new game, the players' turtles, an area's set-up, its story and title screens, the play, the area's exit
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -23,7 +23,7 @@ void scene_new_game(void)
 		new_game_first_area();
 		break;
 	}
-	check_joins(0u);
+	check_joins();
 }
 
 /* the players' records and scores, the scroll, the difficulty and the play time reset for a new game */
@@ -74,7 +74,7 @@ void scene_choose_turtles(void)
 		choose_turtles_done();
 		break;
 	}
-	check_joins(0u);
+	check_joins();
 }
 
 /* every player on the first turtle */
@@ -119,7 +119,7 @@ void scene_area_setup(void)
 		area_setup_done();
 		break;
 	}
-	check_joins(0u);
+	check_joins();
 }
 
 /* the area's stage and variables set, the play's work and the layers cleared */
@@ -161,7 +161,7 @@ void area_setup_done(void)
 }
 
 /* the area's story and title screens, by their steps */
-void scene_area_title(uint32_t d1)
+void scene_area_title(void)
 {
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -169,13 +169,13 @@ void scene_area_title(uint32_t d1)
 		area_title_intro();
 		break;
 	case 1:
-		area_title_screen(d1);
+		area_title_screen();
 		break;
 	case 2:
 		area_title_done();
 		break;
 	}
-	check_joins(d1);
+	check_joins();
 }
 
 /* in a game's first area the intro, by its steps; else straight to its end */
@@ -214,7 +214,7 @@ void area_title_intro_start(void)
 void area_title_intro_run(void)
 {
 	uint8_t sound = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t ignored = 0;
 	uint8_t t1 = 0;
 
 	if (intro_over != 0u)
@@ -229,8 +229,8 @@ void area_title_intro_run(void)
 	if (palettes_busy != 0u || game_scene_timer != 0u || ((player_presses(0) | player_presses(1) | player_presses(2) | player_presses(3)) & 0x30u) == 0u)
 	{
 		run_intro();
-		build_draw_list(&ignored, &ignored_2);
-		draw_sprites(&ignored_3, &ignored_2);
+		build_draw_list();
+		draw_sprites(ignored);
 		return;
 	}
 	sound = 0x7Eu;
@@ -241,19 +241,17 @@ void area_title_intro_run(void)
 /* the screen cleared after the intro */
 void area_title_intro_end(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0;
-
 	clear_palette_effects();
 	clear_objects();
 	clear_sprite_ram();
-	clear_layers(&ignored, &ignored_2);
+	clear_layers();
 	scene_step++;
 	scene_substep = 0u;
 	scene_subsubstep = 0u;
 }
 
 /* the area's title screen, by its steps */
-void area_title_screen(uint32_t d1)
+void area_title_screen(void)
 {
 	switch ((uint32_t)(int8_t)scene_substep)
 	{
@@ -267,7 +265,7 @@ void area_title_screen(uint32_t d1)
 		area_title_start_text();
 		return;
 	case 3:
-		area_title_wait(d1);
+		area_title_wait();
 		return;
 	}
 }
@@ -301,8 +299,8 @@ void area_title_reset(void)
 /* the area's SCENE text started and the boxes drawn, in a game and for the areas that have one */
 void area_title_start_text(void)
 {
-	uint16_t job = 0;
-	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, text = 0;
+	uint16_t box_flags = 0, job = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, text = 0;
 
 	scene_substep++;
 	job = 0x200u;
@@ -314,25 +312,25 @@ void area_title_start_text(void)
 		return;
 	}
 	text = area_title_texts[stage];
-	ignored = start_typed_text_at_once(text);
+	start_typed_text_at_once(text);
 	game_scene_timer = 0xB4u;
 	box_flags = 0xB7Fu;
-	draw_player_boxes(box_flags, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
+	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 }
 
 /* the text typed and the health bars filled until the time runs out or a button */
-void area_title_wait(uint32_t d1)
+void area_title_wait(void)
 {
-	uint16_t count = 0;
-	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, player = 0;
+	uint16_t box_flags = 0, count = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, player = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0;
 
 	refill_health_bars();
-	box_flags = players_in_play;
-	box_flags = (uint16_t)(box_flags + 0xB20u);
-	draw_player_boxes(box_flags, &d1, &ignored, &ignored_2, &ignored_3);
-	update_players_in_game(d1, &ignored_2, &box_flags, &ignored_4);
+	offset_high_word = 0u;
+	box_flags = (uint16_t)(players_in_play + 0xB20u);
+	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
+	update_players_in_game(0u);
 	type_next_character();
 	t1 = game_scene_timer;
 	game_scene_timer = t1 - 1u;
@@ -393,32 +391,25 @@ void area_title_done(void)
 }
 
 /* the play, by its steps: the area's entry, then the play's frames */
-void scene_play(uint32_t d1, uint8_t d5, uint32_t d7)
+void scene_play(void)
 {
-	uint32_t step_offset = 0;
-
-	step_offset = (d7 & ~0xFFu) | scene_step;
-	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(int8_t)step_offset;
-	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(step_offset << 2);
-	switch ((uint32_t)(int16_t)step_offset)
+	switch ((uint32_t)(int8_t)scene_step)
 	{
 	case 0:
-		play_entry(d1, d5, step_offset);
+		play_entry();
 		return;
-	case 4:
-		play_main(d1, d5, step_offset);
+	case 1:
+		play_main();
 		return;
 	}
 }
 
 /* the area's entry, by its steps */
-void play_entry(uint32_t d1, uint8_t d5, uint32_t step_offset)
+void play_entry(void)
 {
-	uint32_t substep_offset = 0;
+	uint16_t substep_offset = 0;
 
-	substep_offset = (step_offset & ~0xFFu) | scene_substep;
-	substep_offset = (substep_offset & ~0xFFFFu) | (uint16_t)(int8_t)substep_offset;
-	substep_offset = (substep_offset & ~0xFFFFu) | (uint16_t)(substep_offset << 2);
+	substep_offset = (uint16_t)((uint32_t)(int8_t)scene_substep << 2);
 	switch ((uint32_t)(int16_t)substep_offset)
 	{
 	case 0:
@@ -431,10 +422,10 @@ void play_entry(uint32_t d1, uint8_t d5, uint32_t step_offset)
 		play_entry_show_game_over();
 		return;
 	case 12:
-		play_entry_start(d1, d5, (uint16_t)substep_offset);
+		play_entry_start(substep_offset);
 		return;
 	case 16:
-		play_entry_run(d1, substep_offset);
+		play_entry_run();
 		return;
 	}
 }
@@ -495,11 +486,11 @@ void play_entry_show_game_over(void)
 }
 
 /* the turtles, the spawns, the players' slots and the music started for the area */
-void play_entry_start(uint32_t d1, uint32_t d5, uint16_t substep_offset)
+void play_entry_start(uint16_t substep_offset)
 {
-	uint8_t score_players = 0;
+	uint8_t score_players = 0, starting_players = 0;
 	uint16_t count = 0;
-	uint32_t a1 = 0, player = 0, starting_players = 0;
+	uint32_t a1 = 0, player = 0;
 	uint16_t t1 = 0;
 
 	if (jobs_pending != 0u)
@@ -523,18 +514,18 @@ void play_entry_start(uint32_t d1, uint32_t d5, uint16_t substep_offset)
 		difficulty = 0u;
 	}
 	area_entry_done = 0u;
-	starting_players = players_in_play;
-	starting_players = starting_players & ~players_joining;
-	turtle_start_area((uint8_t)starting_players, &d1, &a1);
-	update_players_in_game(d1, &d5, &starting_players, &a1);
+	offset_high_word = 0u;
+	starting_players = players_in_play & ~players_joining;
+	a1 = turtle_start_area(starting_players);
+	a1 = update_players_in_game(a1);
 	entry_without_blink = 0u;
 	score_players = 0xFu;
 	draw_scores(score_players);
 	start_area_spawns();
 	start_player_slots();
 	hide_all_sprites();
-	run_objects(&d5, &starting_players, &a1);
-	run_objects(&d5, &starting_players, &a1);
+	a1 = run_objects(a1);
+	run_objects(a1);
 	music = 0u;
 	start_area_music();
 	scene_substep++;
@@ -542,19 +533,19 @@ void play_entry_start(uint32_t d1, uint32_t d5, uint16_t substep_offset)
 }
 
 /* the turtles walk in until the entry is done */
-void play_entry_run(uint32_t d1, uint32_t substep_offset)
+void play_entry_run(void)
 {
 	uint16_t job = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0;
+	uint32_t ignored = 0;
 
-	update_players_in_game(d1, &ignored, &substep_offset, &ignored_2);
+	update_players_in_game(0u);
 	do_nothing();
 	if (area_entry_done == 0u)
 	{
 		run_area_entry();
 		check_attacks();
-		build_draw_list(&ignored_3, &ignored_4);
-		draw_sprites(&ignored_5, &ignored_4);
+		build_draw_list();
+		draw_sprites(ignored);
 		return;
 	}
 	job = 0xB7Fu;
@@ -570,41 +561,42 @@ void play_entry_run(uint32_t d1, uint32_t substep_offset)
 }
 
 /* the play's frame with the inputs and the players who join */
-void play_main(uint32_t d1, uint8_t d5, uint32_t step_offset)
+void play_main(void)
 {
-	step_offset = update_game_inputs(step_offset);
-	play_frame(d1, d5, step_offset);
-	check_joins(d1);
+	update_game_inputs();
+	play_frame();
+	check_joins();
 }
 
 /* the play's frame work, then the continue when no one plays or the exit when the area is cleared */
-void play_frame(uint32_t d1, uint32_t d5, uint32_t step_offset)
+void play_frame(void)
 {
-	uint8_t frame_phase = 0;
-	uint32_t a1 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, object = 0;
+	uint8_t frame = 0, frame_phase = 0;
+	uint16_t text_number = 0;
+	uint32_t a1 = 0, object = 0;
 
 	if (game_on == 0u)
 	{
-		step_offset = (step_offset & ~0xFFu) | (uint8_t)frame_count;
-		frame_phase = (uint8_t)step_offset;
-		if ((step_offset & 0xFu) == 0u)
+		frame = (uint8_t)frame_count;
+		frame_phase = (uint8_t)frame;
+		if ((frame & 0xFu) == 0u)
 		{
-			step_offset = (step_offset & ~0xFFFFu) | 1u;
+			text_number = 1u;
 			if ((frame_phase & 0x30u) == 0u)
-				step_offset = step_offset | 0x80u;
-			print_colour_text((uint16_t)step_offset);
+				text_number = text_number | 0x80u;
+			print_colour_text(text_number);
 		}
 	}
-	update_players_in_game(d1, &d5, &step_offset, &ignored);
+	update_players_in_game(0u);
 	do_nothing();
 	update_difficulty();
-	update_time_without_knockout(&d5, &step_offset);
-	update_players(&d5, &step_offset, &a1);
-	update_area_layers(&d5, &step_offset, &a1);
-	run_objects(&d5, &step_offset, &a1);
+	update_time_without_knockout();
+	a1 = update_players();
+	a1 = update_area_layers(a1);
+	run_objects(a1);
 	check_attacks();
-	build_draw_list(&ignored_2, &object);
-	draw_sprites(&ignored_3, &object);
+	object = build_draw_list();
+	object = draw_sprites(object);
 	sound_flying_drones(object);
 	if (stage < 2u)
 		flicker_fire_priority();
@@ -698,56 +690,50 @@ void start_area_music(void)
 }
 
 /* the area's exit, by its steps */
-void scene_area_exit(uint32_t d1, uint32_t d7)
+void scene_area_exit(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0, step_offset = 0;
-
-	step_offset = (d7 & ~0xFFu) | scene_step;
-	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(int8_t)step_offset;
-	step_offset = (step_offset & ~0xFFFFu) | (uint16_t)(step_offset << 2);
-	switch ((uint32_t)(int16_t)step_offset)
+	switch ((uint32_t)(int8_t)scene_step)
 	{
 	case 0:
-		area_exit_begin(&d1, &step_offset);
+		area_exit_begin();
 		break;
-	case 4:
-		area_exit_play(&d1, &step_offset);
+	case 1:
+		area_exit_play();
 		break;
-	case 8:
+	case 2:
 		area_exit_next_area();
 		break;
 	}
 	do_nothing();
 	if (exit_cutscene != 0u)
 		return;
-	update_players_in_game(d1, &ignored, &step_offset, &ignored_2);
+	update_players_in_game(0u);
 }
 
 /* the turtles start walking out of the cleared area */
-void area_exit_begin(uint32_t *p_d1, uint32_t *p_d7)
+void area_exit_begin(void)
 {
-	uint32_t d7 = *p_d7;
+	uint8_t sound = 0;
 
 	scene_step++;
 	if (stage != 0u)
 	{
-		d7 = (d7 & ~0xFFFFu) | 0xFEu;
-		queue_sound((uint8_t)d7);
+		sound = 0xFEu;
+		queue_sound(sound);
 	}
-	turtle_start_area_exit(p_d1, &d7);
+	turtle_start_area_exit();
 	hide_press_start = 1u;
 	unused_exit_wait = 0x78u;
-	*p_d7 = d7;
 }
 
 /* the exit's frame */
-void area_exit_play(uint32_t *p_d1, uint32_t *p_count)
+void area_exit_play(void)
 {
 	uint32_t ignored = 0;
 
-	*p_d1 = run_area_exit(*p_d1);
-	build_draw_list(p_count, &ignored);
-	draw_sprites(p_d1, &ignored);
+	run_area_exit();
+	build_draw_list();
+	draw_sprites(ignored);
 	if (stage < 2u)
 		flicker_fire_priority();
 }

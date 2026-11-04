@@ -3,7 +3,7 @@
  *    Description: the floor map's cells around an object, for the turtles, the enemies and the missiles
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,37 +12,32 @@
 #include "game.h"
 
 /* the floor map's cells around the object, by its place on the screen */
-void read_floor_cells_on_screen(uint32_t object, uint32_t *p_d5, uint32_t *p_a5, uint32_t *p_a6)
+void read_floor_cells_on_screen(uint32_t object, uint32_t *p_a5, uint32_t *p_a6)
 {
 	uint8_t feet_y = 0;
 	uint16_t floor_column = 0;
-	uint32_t d5 = 0;
 
 	floor_column = ((OBJECT(object)->screen_x - 0x60u + ((LAYER(WORKING_LAYER)->x >> 8) & 0x1FFu)) & 0x1FFu) >> 3;
 	feet_y = (uint8_t)OBJECT(object)->screen_y;
-	read_floor_cells_at(feet_y, floor_column, object, &d5, p_a5, p_a6);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	read_floor_cells_at(feet_y, floor_column, object, p_a5, p_a6);
 }
 
 /* the floor map's cells around the object, by its place in the area */
-void read_floor_cells(uint32_t object, uint32_t *p_d5, uint32_t *p_floor_column, uint32_t *p_a6)
+uint32_t read_floor_cells(uint32_t object)
 {
 	uint8_t feet_y = 0;
-	uint32_t d5 = 0, floor_column = 0, ignored = 0;
+	uint32_t a6 = 0, floor_column = 0, ignored = 0;
 
 	floor_column = OBJECT(object)->x >> 8;
-	floor_column = (floor_column & ~0xFFFFu) | (uint16_t)(floor_column - 0x60u);
-	floor_column = (floor_column & ~0xFFFFu) | (uint16_t)(floor_column + ((LAYER(WORKING_LAYER)->x >> 8) & 0x1FFu));
-	floor_column = floor_column & ~0xFE00u;
-	floor_column = (floor_column & ~0xFFFFu) | ((uint16_t)floor_column >> 3);
+	offset_high_word = floor_column;
+	floor_column = ((floor_column - 0x60u + ((LAYER(WORKING_LAYER)->x >> 8) & 0x1FFu)) & 0x1FFu) >> 3;
 	feet_y = (uint8_t)(OBJECT(object)->y >> 8u);
-	read_floor_cells_at(feet_y, (uint16_t)floor_column, object, &d5, &ignored, p_a6);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_floor_column = floor_column;
+	read_floor_cells_at(feet_y, (uint16_t)floor_column, object, &ignored, &a6);
+	return a6;
 }
 
 /* the floor map's cells at the object's feet and at its height, with the ones around them */
-void read_floor_cells_at(uint8_t feet_y, uint16_t floor_column, uint32_t object, uint32_t *p_height_cell_offset, uint32_t *p_height_cell_place, uint32_t *p_floor_cell_place)
+void read_floor_cells_at(uint8_t feet_y, uint16_t floor_column, uint32_t object, uint32_t *p_height_cell_place, uint32_t *p_floor_cell_place)
 {
 	uint16_t height_cell_offset = 0;
 	uint32_t floor_cell_place = 0, height_cell_place = 0, neighbour_place = 0;
@@ -107,7 +102,7 @@ void read_floor_cells_at(uint8_t feet_y, uint16_t floor_column, uint32_t object,
 	height_cell_up_left = mem_read8(neighbour_place - 0x41u);
 	if ((int8_t)(uint8_t)(OBJECT(object)->y >> 24u) < 0)
 		floor_cell = 0u;
-	*p_height_cell_offset = (*p_height_cell_offset & 0xFFFF0000u) | height_cell_offset;
+	distance_low_byte = height_cell_offset;
 	*p_height_cell_place = height_cell_place;
 	*p_floor_cell_place = floor_cell_place;
 }

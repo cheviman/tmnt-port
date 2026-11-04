@@ -3,7 +3,7 @@
  *    Description: Krang's android body (area 9), his fist, his lasers and the curtain he appears behind
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,29 +12,29 @@
 #include "game.h"
 
 /* Krang's appearance, step by step */
-void krang_appear(uint32_t object, uint32_t *p_state_offset, uint32_t *p_a5)
+uint32_t krang_appear(uint32_t object, uint32_t a5)
 {
-	*p_state_offset = OBJECT(object)->state;
-	*p_state_offset = (uint16_t)(*p_state_offset << 2);
-	switch (*p_state_offset)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		*p_state_offset = krang_appear_setup(object);
-		return;
-	case 4:
+		krang_appear_setup(object);
+		return a5;
+	case 1:
 		krang_appear_wait(object);
-		return;
-	case 8:
-		krang_appear_end(object, p_state_offset, p_a5);
-		return;
+		return a5;
+	case 2:
+		return krang_appear_end(object, a5);
 	}
+	unreachable();
 }
 
 /* Krang stands ready, with his hits by the number of players */
-uint32_t krang_appear_setup(uint32_t object)
+void krang_appear_setup(uint32_t object)
 {
+	uint8_t player_count = 0;
 	uint16_t count = 0;
-	uint32_t animation = 0, player_count = 0, stats = 0;
+	uint32_t animation = 0, stats = 0;
 	uint16_t t1 = 0;
 
 	OBJECT(object)->flags |= 0x80u;
@@ -42,16 +42,16 @@ uint32_t krang_appear_setup(uint32_t object)
 	set_object_stats(object, stats);
 	OBJECT(object)->krang.hits_left = OBJECT(object)->health_bars;
 	player_count = 0u;
+	offset_high_word = 0u;
 	count = 3u;
 	do
 	{
 		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
-			player_count = (uint8_t)(player_count + 1u);
+			player_count++;
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
-	player_count = (uint16_t)(player_count << 1);
-	OBJECT(object)->krang.hits_left += player_count;
+	OBJECT(object)->krang.hits_left += (uint32_t)player_count << 1;
 	animation = krang_animations[1];
 	set_animation(0u, object, animation);
 	OBJECT(object)->x_speed = 0;
@@ -60,7 +60,6 @@ uint32_t krang_appear_setup(uint32_t object)
 	OBJECT(object)->krang.laser_angle = 0u;
 	OBJECT(object)->krang.hit_delay = 0u;
 	OBJECT(object)->state++;
-	return player_count;
 }
 
 /* Krang waits for the curtain to go, then raises his arms */
@@ -80,66 +79,57 @@ void krang_appear_wait(uint32_t object)
 }
 
 /* Krang can be hit and starts his first move */
-void krang_appear_end(uint32_t object, uint32_t *p_roll, uint32_t *p_a5)
+uint32_t krang_appear_end(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 
-	if (OBJECT(object)->frame_time != 0u)
-		return;
-	krang_posed_last = 0u;
-	OBJECT(object)->flags |= 6u;
-	last_move = 0u;
-	krang_pick_move(last_move, object, p_roll, p_a5);
+	if (OBJECT(object)->frame_time == 0u)
+	{
+		krang_posed_last = 0u;
+		OBJECT(object)->flags |= 6u;
+		last_move = 0u;
+		a5 = krang_pick_move(last_move, object, a5);
+	}
+	return a5;
 }
 
 /* Krang walks; with a turtle close by, he may kick it, fire steep lasers or pose instead */
-void krang_walk(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_walk(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t close_turtle = 0, range = 0, state_offset = 0;
+	uint32_t close_turtle = 0, range = 0;
 
-	d5 = krang_count_down(d5, object);
+	krang_count_down(object);
 	if (OBJECT(object)->state == 3u)
 	{
-		state_offset = OBJECT(object)->state;
-		state_offset = (uint16_t)(state_offset << 2);
-		switch (state_offset)
+		offset_high_word = 0u;
+		switch (OBJECT(object)->state)
 		{
 		case 0:
-			krang_walk_at_target(object, &d5, &state_offset, p_a5);
-			break;
-		case 4:
-			krang_walk_on(object, &d5, &state_offset, p_a5);
-			break;
-		case 8:
-			krang_charge(object, &d5, &state_offset, p_a5);
-			break;
-		case 12:
-			krang_pose_end(object, &d5, &state_offset, p_a5);
-			break;
+			return krang_walk_at_target(object, a5);
+		case 1:
+			return krang_walk_on(object, a5);
+		case 2:
+			return krang_charge(object, a5);
+		case 3:
+			return krang_pose_end(object, a5);
 		}
 	}
 	else
 	{
-		krang_find_close_turtle(object, &close_turtle, &d5);
+		close_turtle = krang_find_close_turtle(object);
 		if ((uint8_t)close_turtle == 0u)
 		{
-			state_offset = OBJECT(object)->state;
-			state_offset = (uint16_t)(state_offset << 2);
-			switch (state_offset)
+			offset_high_word = 0u;
+			switch (OBJECT(object)->state)
 			{
 			case 0:
-				krang_walk_at_target(object, &d5, &state_offset, p_a5);
-				break;
-			case 4:
-				krang_walk_on(object, &d5, &state_offset, p_a5);
-				break;
-			case 8:
-				krang_charge(object, &d5, &state_offset, p_a5);
-				break;
-			case 12:
-				krang_pose_end(object, &d5, &state_offset, p_a5);
-				break;
+				return krang_walk_at_target(object, a5);
+			case 1:
+				return krang_walk_on(object, a5);
+			case 2:
+				return krang_charge(object, a5);
+			case 3:
+				return krang_pose_end(object, a5);
 			}
 		}
 		else
@@ -148,213 +138,179 @@ void krang_walk(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
 			range = random_below((uint16_t)range, object);
 			if ((uint8_t)range < 7u)
 			{
-				state_offset = OBJECT(object)->state;
-				state_offset = (uint16_t)(state_offset << 2);
-				switch (state_offset)
+				offset_high_word = 0u;
+				switch (OBJECT(object)->state)
 				{
 				case 0:
-					krang_walk_at_target(object, &d5, &state_offset, p_a5);
-					break;
-				case 4:
-					krang_walk_on(object, &d5, &state_offset, p_a5);
-					break;
-				case 8:
-					krang_charge(object, &d5, &state_offset, p_a5);
-					break;
-				case 12:
-					krang_pose_end(object, &d5, &state_offset, p_a5);
-					break;
+					return krang_walk_at_target(object, a5);
+				case 1:
+					return krang_walk_on(object, a5);
+				case 2:
+					return krang_charge(object, a5);
+				case 3:
+					return krang_pose_end(object, a5);
 				}
 			}
 			else
 			{
 				OBJECT(object)->krang.close_turtle = close_turtle;
-				state_offset = 2u;
-				state_offset = random_below((uint16_t)state_offset, object);
-				state_offset = (uint16_t)(state_offset << 2);
-				switch (state_offset)
+				range = 2u;
+				range = random_below((uint16_t)range, object);
+				switch ((uint16_t)(range << 2))
 				{
 				case 8:
 					krang_start_pose(object);
-					break;
+					return a5;
 				case 0:
 					krang_start_kick(object);
-					break;
+					return a5;
 				case 4:
 					krang_start_lasers_steep(object);
-					break;
+					return a5;
 				}
 			}
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = state_offset;
+	unreachable();
 }
 
 /* Krang walks at his target a while */
-void krang_walk_at_target(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_walk_at_target(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t aim_routine = 0, last_move = 0;
 	uint8_t move_time = 0;
 
 	aim_routine = krang_aim_walk_ADDRESS;
-	krang_walk_step(object, aim_routine, p_d7, p_a5);
+	a5 = krang_walk_step(object, a5, aim_routine);
 	move_time = OBJECT(object)->krang.move_time;
 	OBJECT(object)->krang.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 1u;
-		krang_next_move(last_move, object, &d5, p_d7, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	if (move_time != 0u)
+		return a5;
+	last_move = 1u;
+	return krang_next_move(last_move, object, a5);
 }
 
 /* Krang walks on at his target a while */
-void krang_walk_on(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_walk_on(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t aim_routine = 0, last_move = 0;
 	uint8_t move_time = 0;
 
 	aim_routine = krang_aim_walk_ADDRESS;
-	krang_walk_step(object, aim_routine, p_d7, p_a5);
+	a5 = krang_walk_step(object, a5, aim_routine);
 	move_time = OBJECT(object)->krang.move_time;
 	OBJECT(object)->krang.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 2u;
-		krang_next_move(last_move, object, &d5, p_d7, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	if (move_time != 0u)
+		return a5;
+	last_move = 2u;
+	return krang_next_move(last_move, object, a5);
 }
 
 /* Krang runs at his target a while */
-void krang_charge(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_charge(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t aim_routine = 0, last_move = 0;
 	uint8_t move_time = 0;
 
 	aim_routine = krang_aim_charge_ADDRESS;
-	krang_walk_step(object, aim_routine, p_d7, p_a5);
+	a5 = krang_walk_step(object, a5, aim_routine);
 	move_time = OBJECT(object)->krang.move_time;
 	OBJECT(object)->krang.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 3u;
-		krang_next_move(last_move, object, &d5, p_d7, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	if (move_time != 0u)
+		return a5;
+	last_move = 3u;
+	return krang_next_move(last_move, object, a5);
 }
 
 /* Krang's pose ends and he picks his next move */
-void krang_pose_end(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_pose_end(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t last_move = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return;
+		return a5;
 	last_move = 4u;
-	krang_next_move(last_move, object, &d5, p_d7, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	return krang_next_move(last_move, object, a5);
 }
 
 /* every 16 frames Krang aims again, and he moves every other frame */
-void krang_walk_step(uint32_t object, uint32_t aim_routine, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_walk_step(uint32_t object, uint32_t a5, uint32_t aim_routine)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0;
-	uint8_t t1 = 0, t2 = 0;
+	uint32_t d7 = 0;
+	uint8_t t1 = 0;
 
-	d7_2 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d7_2 & 0xFu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
+	t1 = (uint8_t)frame_count & 0xFu;
+	d7 = t1;
 	if (t1 == 0u)
 	{
 		switch (aim_routine)
 		{
 		case 0x00E708u:
-			krang_aim_charge(object, &d7_2, p_a5);
+			krang_aim_charge(object, &d7, &a5);
 			break;
 		case 0x00E718u:
-			krang_aim_walk(object, &d7_2, p_a5);
+			krang_aim_walk(object, &d7, &a5);
 			break;
 		}
 	}
-	t2 = d7_2 & 1u;
-	d7_2 = (d7_2 & ~0xFFu) | t2;
-	if (t2 == 0u)
-		d7_2 = krang_move(object);
-	*p_d7 = d7_2;
+	if ((d7 & 1u) == 0u)
+		krang_move(object);
+	return a5;
 }
 
 /* with a turtle in front of him Krang fires lasers, punches or poses; else he picks another walk */
-void krang_next_move(uint32_t last_move, uint32_t object, uint32_t *p_d5, uint32_t *p_move_offset, uint32_t *p_a5)
+uint32_t krang_next_move(uint32_t last_move, uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t range = 0, turtle_in_front = 0;
 
-	krang_find_turtle_in_front(object, &d5, &turtle_in_front);
-	if ((uint8_t)turtle_in_front != 0u)
+	turtle_in_front = krang_find_turtle_in_front(object);
+	if ((uint8_t)turtle_in_front == 0u)
+		return krang_pick_move(last_move, object, a5);
+	range = 8u;
+	range = random_below((uint16_t)range, object);
+	switch ((uint16_t)(range << 2))
 	{
-		range = 8u;
-		range = random_below((uint16_t)range, object);
-		range = (uint16_t)(range << 2);
-		switch (range)
-		{
-		case 32:
-			krang_start_pose(object);
-			break;
-		case 0:
-		case 12:
-		case 24:
-			krang_start_lasers(object);
-			break;
-		case 4:
-		case 16:
-		case 28:
-			krang_start_lasers_far(object);
-			break;
-		case 8:
-		case 20:
-			krang_start_punch(object);
-			break;
-		}
+	case 32:
+		krang_start_pose(object);
+		return a5;
+	case 0:
+	case 12:
+	case 24:
+		krang_start_lasers(object);
+		return a5;
+	case 4:
+	case 16:
+	case 28:
+		krang_start_lasers_far(object);
+		return a5;
+	case 8:
+	case 20:
+		krang_start_punch(object);
+		return a5;
 	}
-	else
-		krang_pick_move(last_move, object, &range, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_move_offset = range;
+	unreachable();
 }
 
 /* Krang's kick or punch, step by step */
-void krang_melee(uint32_t object, uint32_t *p_d5, uint32_t *p_state_offset, uint32_t *p_a5)
+uint32_t krang_melee(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = 0, state_offset = 0;
-
-	d5 = krang_count_down(d5, object);
-	state_offset = OBJECT(object)->state;
-	state_offset = (uint16_t)(state_offset << 2);
-	switch (state_offset)
+	krang_count_down(object);
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		krang_kick_end(object, &state_offset, p_a5);
-		break;
-	case 4:
-		state_offset = krang_punch_throw(state_offset, object);
-		break;
-	case 8:
-		krang_punch_wait(object, &state_offset, p_a5);
-		break;
+		return krang_kick_end(object, a5);
+	case 1:
+		krang_punch_throw(object);
+		return a5;
+	case 2:
+		return krang_punch_wait(object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_state_offset = state_offset;
+	unreachable();
 }
 
 /* Krang's kick ends and he walks again */
-void krang_kick_end(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_kick_end(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 
@@ -363,12 +319,13 @@ void krang_kick_end(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->state = 0u;
 		last_move = 6u;
-		krang_pick_move(last_move, object, p_d7, p_a5);
+		return krang_pick_move(last_move, object, a5);
 	}
+	return a5;
 }
 
 /* Krang throws his arm out and his fist flies off it */
-uint32_t krang_punch_throw(uint32_t state_offset, uint32_t object)
+void krang_punch_throw(uint32_t object)
 {
 	uint32_t animation = 0;
 
@@ -380,89 +337,84 @@ uint32_t krang_punch_throw(uint32_t state_offset, uint32_t object)
 		animation = krang_animations[14];
 		set_animation(0u, object, animation);
 		krang_fist_flying = 1u;
-		state_offset = krang_start_fist(state_offset, object);
+		krang_start_fist(object);
 	}
-	return state_offset;
 }
 
 /* Krang waits for his fist to fly off the screen */
-void krang_punch_wait(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_punch_wait(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 
 	if (krang_fist_flying != 0u)
-		return;
+		return a5;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 0u;
 	last_move = 6u;
-	krang_pick_move(last_move, object, p_d7, p_a5);
+	return krang_pick_move(last_move, object, a5);
 }
 
 /* Krang's lasers, step by step */
-void krang_fire_lasers(uint32_t object, uint32_t *p_d5, uint32_t *p_state_offset, uint32_t *p_a5)
+uint32_t krang_fire_lasers(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = 0, state_offset = 0;
-
-	d5 = krang_count_down(d5, object);
-	state_offset = OBJECT(object)->state;
-	state_offset = (uint16_t)(state_offset << 2);
-	switch (state_offset)
+	krang_count_down(object);
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		krang_lasers_fire(object, &state_offset, p_a5);
-		break;
-	case 4:
+		return krang_lasers_fire(object, a5);
+	case 1:
 		krang_lasers_wait(object);
-		break;
-	case 8:
-		krang_lasers_end(object, &state_offset, p_a5);
-		break;
+		return a5;
+	case 2:
+		return krang_lasers_end(object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_state_offset = state_offset;
+	unreachable();
 }
 
 /* Krang fires a stream of five lasers */
-void krang_lasers_fire(uint32_t object, uint32_t *p_objects_left, uint32_t *p_a5)
+uint32_t krang_lasers_fire(uint32_t object, uint32_t a5)
 {
-	uint32_t objects_left = *p_objects_left;
+	uint8_t sound = 0;
 	uint16_t count = 0;
-	uint32_t laser = 0;
+	uint32_t delay = 0, laser = 0, objects_left = 0;
 	uint16_t t1 = 0;
 
-	if (OBJECT(object)->frame_time == 0u)
+	if (OBJECT(object)->frame_time != 0u)
+		return a5;
+	OBJECT(object)->flags &= ~2u;
+	OBJECT(object)->state++;
+	count = 4u;
+	do
 	{
-		OBJECT(object)->flags &= ~2u;
-		OBJECT(object)->state++;
-		count = 4u;
-		for (;;)
+		laser = OBJECT_ADDRESS(32);
+		objects_left = 8u;
+		find_free_object(&objects_left, &laser);
+		if ((uint8_t)objects_left == 0u)
 		{
-			laser = OBJECT_ADDRESS(32);
-			objects_left = (objects_left & ~0xFFu) | 8u;
-			objects_left = (objects_left & ~0xFFFFu) | (uint8_t)objects_left;
-			find_free_object(&objects_left, &laser);
-			if ((uint8_t)objects_left == 0u)
-				break;
-			*p_a5 = krang_start_laser(object, laser);
-			objects_left = count * 2u;
-			OBJECT(laser)->krang_laser.delay = objects_left;
-			OBJECT(laser)->krang_laser.last = 0u;
-			t1 = count - 1u;
-			count = t1;
-			if (t1 == 0xFFFFu)
+			if ((uint8_t)count != 4u)
 			{
-				OBJECT(laser)->krang_laser.last |= 0x80u;
-				break;
+				sound = 0x1Bu;
+				queue_sound(sound);
 			}
+			return a5;
 		}
-		if ((uint8_t)count != 4u)
-		{
-			objects_left = (objects_left & ~0xFFFFu) | 0x1Bu;
-			queue_sound((uint8_t)objects_left);
-		}
+		a5 = krang_start_laser(object, laser);
+		delay = count * 2u;
+		offset_high_word = delay;
+		OBJECT(laser)->krang_laser.delay = delay;
+		OBJECT(laser)->krang_laser.last = 0u;
+		t1 = count - 1u;
+		count = t1;
+	} while (t1 != 0xFFFFu);
+	OBJECT(laser)->krang_laser.last |= 0x80u;
+	if ((uint8_t)count != 4u)
+	{
+		sound = 0x1Bu;
+		queue_sound(sound);
 	}
-	*p_objects_left = objects_left;
+	return a5;
 }
 
 /* Krang waits for all his lasers to be on their way */
@@ -477,7 +429,7 @@ void krang_lasers_wait(uint32_t object)
 }
 
 /* after his lasers Krang walks again */
-void krang_lasers_end(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_lasers_end(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 	uint8_t timer = 0;
@@ -489,8 +441,9 @@ void krang_lasers_end(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->state = 0u;
 		last_move = 7u;
-		krang_pick_move(last_move, object, p_d7, p_a5);
+		return krang_pick_move(last_move, object, a5);
 	}
+	return a5;
 }
 
 /* a turtle's attack takes one of Krang's hits; with none left he starts to burst */
@@ -533,42 +486,41 @@ void krang_struck(uint32_t object)
 }
 
 /* Krang recovers from a hit and goes on */
-void krang_recoil(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_recoil(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 
 	if (OBJECT(object)->krang.hits_left < 0x14u)
 		OBJECT(object)->colour = 6u;
 	if (OBJECT(object)->frame_time != 0u)
-		return;
+		return a5;
 	OBJECT(object)->state = 0u;
 	OBJECT(object)->krang.hurt = 0u;
 	OBJECT(object)->krang.hit_delay = 0xCu;
 	OBJECT(object)->colour = 0xFFu;
 	last_move = 6u;
-	krang_pick_move(last_move, object, p_d7, p_a5);
+	return krang_pick_move(last_move, object, a5);
 }
 
 /* Krang's end, step by step */
-void krang_explode(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t krang_explode(uint32_t object, uint32_t a5)
 {
-	*p_d7 = OBJECT(object)->state;
-	*p_d7 = (uint16_t)(*p_d7 << 2);
-	switch (*p_d7)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
 		krang_explode_start(object);
-		return;
-	case 4:
+		return a5;
+	case 1:
 		krang_explode_wait(object);
-		return;
-	case 8:
-		krang_explode_burst(object, p_d7, p_a5);
-		return;
-	case 12:
-		*p_d7 = krang_explode_next(*p_d7, object);
-		return;
+		return a5;
+	case 2:
+		return krang_explode_burst(object, a5);
+	case 3:
+		krang_explode_next(object);
+		return a5;
 	}
+	unreachable();
 }
 
 /* Krang stops, with his shadow, before he bursts */
@@ -596,27 +548,22 @@ void krang_explode_wait(uint32_t object)
 }
 
 /* an explosion bursts on Krang's body as it floats */
-void krang_explode_burst(uint32_t object, uint32_t *p_objects_left, uint32_t *p_a5)
+uint32_t krang_explode_burst(uint32_t object, uint32_t a5)
 {
-	uint32_t objects_left = *p_objects_left;
-	uint32_t explosion = 0;
+	uint32_t explosion = 0, objects_left = 0;
 
 	if (OBJECT(object)->frame_time == 0u)
-		objects_left = krang_hover(object);
+		krang_hover(object);
 	OBJECT(object)->krang_explode.timer = 0xEu;
 	OBJECT(object)->state = 3u;
 	explosion = OBJECT_ADDRESS(24);
-	objects_left = (objects_left & ~0xFFu) | 8u;
-	objects_left = (uint8_t)objects_left;
+	objects_left = 8u;
 	find_free_object(&objects_left, &explosion);
 	if ((uint8_t)objects_left != 0u)
-		boss_start_explosion(object, explosion, &objects_left, p_a5);
-	else
-	{
-		OBJECT(object)->routine++;
-		OBJECT(object)->state = 0u;
-	}
-	*p_objects_left = objects_left;
+		return boss_start_explosion(object, explosion);
+	OBJECT(object)->routine++;
+	OBJECT(object)->state = 0u;
+	return a5;
 }
 
 /* Unused: an empty routine that returns at once */
@@ -625,14 +572,14 @@ void unreached_00E364(void)
 }
 
 /* the next of Krang's ten explosions */
-uint32_t krang_explode_next(uint32_t d7, uint32_t object)
+void krang_explode_next(uint32_t object)
 {
 	uint8_t timer = 0;
 
 	if (OBJECT(object)->frame_time == 0u)
 	{
 		OBJECT(object)->contacts |= 0x80u;
-		d7 = krang_hover(object);
+		krang_hover(object);
 	}
 	timer = OBJECT(object)->krang_explode.timer;
 	OBJECT(object)->krang_explode.timer = timer - 1u;
@@ -646,70 +593,64 @@ uint32_t krang_explode_next(uint32_t d7, uint32_t object)
 			OBJECT(object)->state = 0u;
 		}
 	}
-	return d7;
 }
 
 /* Krang's escape, step by step */
-void krang_escape(uint16_t routine_offset, uint32_t object, uint32_t *p_d5, uint32_t *p_state_offset)
+void krang_escape(uint16_t routine_offset, uint32_t object)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t state_offset = 0;
-
-	state_offset = OBJECT(object)->state;
-	state_offset = (uint16_t)(state_offset << 2);
-	switch (state_offset)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		krang_escape_start(routine_offset, object, &d5, &state_offset);
-		break;
-	case 4:
-		state_offset = krang_escape_wait(state_offset, object);
-		break;
-	case 8:
+		krang_escape_start(routine_offset, object);
+		return;
+	case 1:
+		krang_escape_wait(object);
+		return;
+	case 2:
 		krang_escape_dip(object);
-		break;
-	case 12:
+		return;
+	case 3:
 		krang_escape_fly(object);
-		break;
-	case 16:
+		return;
+	case 4:
 		krang_gone(object);
-		break;
+		return;
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_state_offset = state_offset;
 }
 
 /* Krang's head comes out in his pod, saying he is invincible */
-void krang_escape_start(uint16_t routine_offset, uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
+void krang_escape_start(uint16_t routine_offset, uint32_t object)
 {
-	uint32_t d5 = *p_d5;
+	uint8_t sound = 0;
 	uint16_t on_right = 0, screen_x = 0, screen_y = 0;
 	uint32_t animation = 0;
 
 	animation = krang_animations[10];
 	set_animation(0u, object, animation);
-	*p_d7 = 0xB0u;
-	queue_sound((uint8_t)*p_d7);
+	sound = 0xB0u;
+	queue_sound(sound);
 	on_right = (uint16_t)((routine_offset & ~0xFFu) | 0xFFu);
 	screen_y = OBJECT(object)->screen_y;
 	screen_x = (uint16_t)(OBJECT(object)->screen_x + 0x10u);
-	say_im_invincible(on_right, screen_x, screen_y, &d5, p_d7);
+	say_im_invincible(on_right, screen_x, screen_y);
 	OBJECT(object)->state++;
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
 }
 
 /* the pod floats a while, then takes off */
-uint32_t krang_escape_wait(uint32_t state_offset, uint32_t object)
+void krang_escape_wait(uint32_t object)
 {
 	uint32_t animation = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return krang_hover(object);
+	{
+		krang_hover(object);
+		return;
+	}
 	animation = krang_animations[11];
 	set_animation(0u, object, animation);
 	OBJECT(object)->height_speed = 0x280;
 	OBJECT(object)->state++;
-	return state_offset;
 }
 
 /* the pod dips, slower and slower */
@@ -752,35 +693,29 @@ void krang_gone(uint32_t object)
 }
 
 /* Krang floats up and down */
-uint32_t krang_hover(uint32_t object)
+void krang_hover(uint32_t object)
 {
-	uint32_t height = 0, hover_offset = 0;
-
-	hover_offset = frame_count;
-	hover_offset = hover_offset & 0x3Eu;
-	height = krang_hover_heights[hover_offset / 2u];
-	height = (uint16_t)(height + 0x4000u);
-	OBJECT(object)->height = height;
-	return height;
+	offset_high_word = 0u;
+	OBJECT(object)->height = krang_hover_heights[(frame_count & 0x3Eu) / 2u] + 0x4000u;
 }
 
 /* picks Krang's next walk, charge or pose by its chances */
-void krang_pick_move(uint32_t last_move, uint32_t object, uint32_t *p_roll, uint32_t *p_a5)
+uint32_t krang_pick_move(uint32_t last_move, uint32_t object, uint32_t a5)
 {
 	uint16_t count = 0;
-	uint32_t a5 = 0, chances = 0;
+	uint32_t chances = 0, range = 0;
 	uint8_t move_chance = 0, t1 = 0;
 	uint16_t t2 = 0;
 
-	*p_roll = 0x10u;
-	*p_roll = random_below((uint16_t)*p_roll, object);
+	range = 0x10u;
+	range = random_below((uint16_t)range, object);
 	count = 3u;
 	chances = krang_move_chances_ADDRESS + (uint16_t)(last_move << 2);
 	for (;;)
 	{
 		move_chance = MOVE_CHANCE(chances + (int16_t)count);
-		t1 = *p_roll;
-		*p_roll = (*p_roll & ~0xFFu) | (uint8_t)(t1 - move_chance);
+		t1 = range;
+		range = (uint8_t)(t1 - move_chance);
 		if (t1 < move_chance)
 			break;
 		t2 = count - 1u;
@@ -794,68 +729,67 @@ void krang_pick_move(uint32_t last_move, uint32_t object, uint32_t *p_roll, uint
 	switch ((uint32_t)(int16_t)((uint32_t)count << 2))
 	{
 	case 0:
-		*p_a5 = a5;
-		krang_start_walk(object, p_roll, p_a5);
-		return;
+		return krang_start_walk(object);
 	case 4:
-		*p_roll = krang_start_walk_on(object);
-		return;
+		krang_start_walk_on(object);
+		return a5;
 	case 8:
-		*p_roll = krang_start_charge(object);
-		return;
+		krang_start_charge(object);
+		return a5;
 	case 12:
 		krang_start_pose(object);
-		return;
+		return a5;
 	}
+	unreachable();
 }
 
 /* Krang picks a turtle and walks at it; with none, he poses */
-void krang_start_walk(uint32_t object, uint32_t *p_picked, uint32_t *p_a5)
+uint32_t krang_start_walk(uint32_t object)
 {
-	uint32_t animation = 0, ignored = 0;
+	uint16_t range = 0;
+	uint32_t a5 = 0, animation = 0, ignored = 0, picked = 0;
 
-	boss_pick_target(object, &ignored, p_picked, p_a5);
-	if ((uint8_t)*p_picked == 0u)
+	boss_pick_target(object, &ignored, &picked, &a5);
+	if ((uint8_t)picked == 0u)
 	{
 		krang_start_pose(object);
-		return;
+		return a5;
 	}
 	krang_posed_last = 0u;
-	*p_picked = 8u;
-	*p_picked = krang_set_move_time(*p_picked, object);
+	range = 8u;
+	krang_set_move_time(range, object);
 	OBJECT(object)->krang.laser_angle = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 0u;
 	animation = krang_animations[3];
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* Krang walks on at his target */
-uint32_t krang_start_walk_on(uint32_t object)
+void krang_start_walk_on(uint32_t object)
 {
-	uint32_t range = 0;
+	uint16_t range = 0;
 
 	range = 8u;
-	range = krang_set_move_time(range, object);
+	krang_set_move_time(range, object);
 	krang_posed_last = 0u;
 	OBJECT(object)->krang.laser_angle = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 1u;
-	return range;
 }
 
 /* Krang runs at his target */
-uint32_t krang_start_charge(uint32_t object)
+void krang_start_charge(uint32_t object)
 {
-	uint32_t range = 0;
+	uint16_t range = 0;
 
 	range = 8u;
-	range = krang_set_move_time(range, object);
+	krang_set_move_time(range, object);
 	krang_posed_last = 0u;
 	OBJECT(object)->krang.laser_angle = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 2u;
-	return range;
 }
 
 /* Krang poses, with his cry the first time in a row */
@@ -960,11 +894,10 @@ void krang_start_punch(uint32_t object)
 }
 
 /* how long Krang's walk lasts, at random */
-uint32_t krang_set_move_time(uint32_t range, uint32_t object)
+void krang_set_move_time(uint32_t range, uint32_t object)
 {
 	range = random_below((uint16_t)range, object);
 	OBJECT(object)->krang.move_time = krang_move_times[range];
-	return range;
 }
 
 /* aims Krang's run at his target */
@@ -1007,13 +940,12 @@ uint32_t krang_set_speeds(uint16_t direction, uint32_t d7, uint32_t object, uint
 }
 
 /* Krang can be hit again after a while; weak, he flashes faster and faster */
-uint32_t krang_count_down(uint32_t d5, uint32_t object)
+void krang_count_down(uint32_t object)
 {
-	uint8_t colour_2 = 0, flash_mask = 0;
-	uint32_t colour = 0;
+	uint8_t colour = 0, colour_2 = 0, flash_mask = 0;
 	uint8_t hit_delay = 0;
 
-	colour = (d5 & ~0xFFu) | 6u;
+	colour = 6u;
 	colour_2 = 0xFFu;
 	if (OBJECT(object)->krang.hit_delay != 0u)
 	{
@@ -1023,7 +955,10 @@ uint32_t krang_count_down(uint32_t d5, uint32_t object)
 			OBJECT(object)->flags |= 2u;
 	}
 	if (OBJECT(object)->krang.hits_left >= 0x1Eu)
-		return colour;
+	{
+		distance_low_byte = colour;
+		return;
+	}
 	flash_mask = 0x3Cu;
 	if (OBJECT(object)->krang.hits_left < 0x14u)
 	{
@@ -1034,73 +969,73 @@ uint32_t krang_count_down(uint32_t d5, uint32_t object)
 	OBJECT(object)->colour = colour_2;
 	if ((flash_mask & (uint8_t)frame_count) == 0u)
 		OBJECT(object)->colour = colour;
-	return colour;
+	distance_low_byte = colour;
 }
 
 /* Krang moves, kept on the floor and on the screen */
-uint32_t krang_move(uint32_t object)
+void krang_move(uint32_t object)
 {
-	uint32_t d7 = 0;
-
-	d7 = move_by_speeds(object);
+	move_by_speeds(object);
 	if (OBJECT(object)->y >= 0x8000u)
 		OBJECT(object)->y = 0x8000u;
 	if (OBJECT(object)->y < 0x1000u)
 		OBJECT(object)->y = 0x1000u;
 	if ((int16_t)OBJECT(object)->screen_x < 0)
 		OBJECT(object)->x += 0x800u;
-	return d7;
 }
 
 /* which turtle is close to Krang, and on which side */
-void krang_find_close_turtle(uint32_t object, uint32_t *p_close_turtle, uint32_t *p_d5)
+uint32_t krang_find_close_turtle(uint32_t object)
 {
-	uint16_t d5 = (uint16_t)*p_d5;
-	uint16_t count = 0;
+	uint16_t count = 0, x_distance = 0, y_distance = 0;
 	uint32_t close_turtle = 0, object_2 = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	object_2 = OBJECT_ADDRESS(3);
 	count = 3u;
 	close_turtle = 0u;
-	do
+	for (;;)
 	{
 		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && (players_knocked_out & shl32(1u, (int)(count & 7u))) == 0u && OBJECT(object_2)->routine != 4u)
 		{
 			t1 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
-			d5 = t1;
+			y_distance = t1;
+			distance_low_byte = y_distance;
 			if ((int16_t)t1 < 0)
-				d5 = (uint16_t)~d5;
-			if (d5 < 0xBu)
+			{
+				y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+				distance_low_byte = y_distance;
+			}
+			if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0xBu)
 			{
 				t2 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-				d5 = t2;
+				x_distance = t2;
+				distance_low_byte = x_distance;
 				if ((int16_t)t2 < 0)
 				{
 					close_turtle = close_turtle | 0x80u;
-					d5 = (uint16_t)~d5;
+					x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+					distance_low_byte = x_distance;
 				}
-				if (d5 < 0x3Au)
-				{
-					close_turtle |= shl32(1u, (int)(count & 0x1Fu));
+				if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0x3Au)
 					break;
-				}
 			}
 		}
 		close_turtle = 0u;
 		t3 = count - 1u;
 		count = t3;
 		object_2 -= 0x50u;
-	} while (t3 != 0xFFFFu);
-	*p_close_turtle = close_turtle;
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | d5;
+		if (t3 == 0xFFFFu)
+			return close_turtle;
+	}
+	close_turtle |= shl32(1u, (int)(count & 0x1Fu));
+	return close_turtle;
 }
 
 /* which turtle is level with Krang and in front of him, far enough */
-void krang_find_turtle_in_front(uint32_t object, uint32_t *p_d5, uint32_t *p_turtle_in_front)
+uint32_t krang_find_turtle_in_front(uint32_t object)
 {
-	uint16_t d5 = (uint16_t)*p_d5;
-	uint16_t count = 0;
+	uint16_t count = 0, x_distance = 0, y_distance = 0;
 	uint32_t object_2 = 0, turtle_in_front = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
@@ -1109,63 +1044,49 @@ void krang_find_turtle_in_front(uint32_t object, uint32_t *p_d5, uint32_t *p_tur
 	turtle_in_front = 0u;
 	for (;;)
 	{
-		if ((players_in_play & shl32(1u, (int)(count & 7u))) == 0u || (players_knocked_out & shl32(1u, (int)(count & 7u))) != 0u || OBJECT(object_2)->routine == 4u)
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && (players_knocked_out & shl32(1u, (int)(count & 7u))) == 0u && OBJECT(object_2)->routine != 4u)
 		{
-			t1 = count - 1u;
-			count = t1;
-			object_2 -= 0x50u;
-			if (t1 == 0xFFFFu)
-				break;
-			continue;
-		}
-		t2 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
-		d5 = t2;
-		if ((int16_t)t2 < 0)
-			d5 = (uint16_t)~d5;
-		if (d5 >= 0xBu)
-		{
-			t1 = count - 1u;
-			count = t1;
-			object_2 -= 0x50u;
-			if (t1 == 0xFFFFu)
-				break;
-			continue;
-		}
-		if ((OBJECT(object)->flags & 0x40u) != 0u)
-		{
-			t3 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-			d5 = t3;
-			if ((int16_t)t3 < 0 || d5 < 0x3Eu)
+			t1 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
+			y_distance = t1;
+			distance_low_byte = y_distance;
+			if ((int16_t)t1 < 0)
 			{
-				t1 = count - 1u;
-				count = t1;
-				object_2 -= 0x50u;
-				if (t1 == 0xFFFFu)
-					break;
-				continue;
+				y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+				distance_low_byte = y_distance;
 			}
-			turtle_in_front |= shl32(1u, (int)(count & 0x1Fu));
-			break;
-		}
-		t4 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-		d5 = t4;
-		if ((int16_t)t4 < 0)
-		{
-			d5 = (uint16_t)~d5;
-			if (d5 >= 0x3Eu)
+			if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0xBu)
 			{
-				turtle_in_front |= shl32(1u, (int)(count & 0x1Fu));
-				break;
+				if ((OBJECT(object)->flags & 0x40u) != 0u)
+				{
+					t2 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+					x_distance = t2;
+					distance_low_byte = x_distance;
+					if ((int16_t)t2 >= 0 && ((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 0x3Eu)
+						break;
+				}
+				else
+				{
+					t3 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+					x_distance = t3;
+					distance_low_byte = x_distance;
+					if ((int16_t)t3 < 0)
+					{
+						x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+						distance_low_byte = x_distance;
+						if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 0x3Eu)
+							break;
+					}
+				}
 			}
 		}
-		t1 = count - 1u;
-		count = t1;
+		t4 = count - 1u;
+		count = t4;
 		object_2 -= 0x50u;
-		if (t1 == 0xFFFFu)
-			break;
+		if (t4 == 0xFFFFu)
+			return turtle_in_front;
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | d5;
-	*p_turtle_in_front = turtle_in_front;
+	turtle_in_front |= shl32(1u, (int)(count & 0x1Fu));
+	return turtle_in_front;
 }
 
 /* the curtain where Krang appears shimmers */
@@ -1243,10 +1164,10 @@ uint32_t krang_start_laser(uint32_t object, uint32_t laser)
 }
 
 /* a laser of Krang's stream, at its angle */
-uint32_t krang_laser_start(uint32_t object)
+void krang_laser_start(uint32_t object)
 {
 	uint16_t angle_offset = 0;
-	uint32_t angle = 0, animation = 0, stats = 0;
+	uint32_t animation = 0, stats = 0;
 
 	OBJECT(object)->flags |= 0x84u;
 	stats = krang_laser_stats_ADDRESS;
@@ -1261,12 +1182,10 @@ uint32_t krang_laser_start(uint32_t object)
 		OBJECT(object)->attack |= 0x80u;
 		OBJECT(object)->x_speed = ~OBJECT(object)->x_speed;
 	}
-	angle = OBJECT(object)->parameter;
-	angle = (uint16_t)(angle << 2);
-	animation = krang_laser_animations[angle / 4u];
+	offset_high_word = 0u;
+	animation = krang_laser_animations[OBJECT(object)->parameter];
 	set_animation(0u, object, animation);
 	OBJECT(object)->routine++;
-	return angle;
 }
 
 /* the laser waits its turn in the stream */
@@ -1284,23 +1203,22 @@ void krang_laser_wait(uint32_t object)
 }
 
 /* the laser goes down to the floor; the stream's last one sparks there */
-uint32_t krang_laser_fly(uint32_t object)
+void krang_laser_fly(uint32_t object)
 {
-	uint32_t animation = 0, d7 = 0;
+	uint32_t animation = 0;
 
-	d7 = move_by_speeds(object);
+	move_by_speeds(object);
 	if ((int16_t)OBJECT(object)->height >= 0)
-		return d7;
+		return;
 	if (OBJECT(object)->krang_laser.last != 0u)
 	{
 		OBJECT(object)->height = 0u;
 		OBJECT(object)->routine++;
 		animation = krang_laser_animations[3];
 		set_animation(0u, object, animation);
-		return d7;
+		return;
 	}
 	remove_object(object);
-	return d7;
 }
 
 /* the laser's spark ends and it is gone */
@@ -1312,13 +1230,12 @@ void krang_laser_spark(uint32_t object)
 }
 
 /* Krang's fist flies off his arm */
-uint32_t krang_start_fist(uint32_t state_offset, uint32_t object)
+void krang_start_fist(uint32_t object)
 {
 	uint32_t fist = 0, fist_offset = 0, objects_left = 0;
 
 	fist = OBJECT_ADDRESS(24);
-	objects_left = (state_offset & ~0xFFu) | 8u;
-	objects_left = (uint8_t)objects_left;
+	objects_left = 8u;
 	find_free_object(&objects_left, &fist);
 	OBJECT(fist)->flags = 1u;
 	OBJECT(fist)->contacts = 0u;
@@ -1328,13 +1245,14 @@ uint32_t krang_start_fist(uint32_t state_offset, uint32_t object)
 	OBJECT(fist)->animation_delay = 0u;
 	place_at_object(object, fist);
 	OBJECT(fist)->krang_fist.flipped = 0u;
-	fist_offset = (objects_left & ~0xFFFFu) | 0x4500u;
+	fist_offset = 0x4500u;
 	if ((OBJECT(object)->flags & 0x40u) == 0u)
 	{
 		fist_offset = (int16_t)~fist_offset;
+		offset_high_word = fist_offset;
 		OBJECT(fist)->krang_fist.flipped |= 0x80u;
 	}
-	OBJECT(fist)->x += fist_offset;
+	OBJECT(fist)->x += (fist_offset & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
 	OBJECT(fist)->y -= 0x200u;
 	OBJECT(fist)->height = 0x3200u;
 	OBJECT(fist)->krang_fist.shooter = object;
@@ -1342,7 +1260,6 @@ uint32_t krang_start_fist(uint32_t state_offset, uint32_t object)
 		OBJECT(object)->flags |= 0x40u;
 	OBJECT(fist)->routine = 0u;
 	OBJECT(fist)->state = 0u;
-	return fist_offset;
 }
 
 /* Krang's fist sets off across the screen */
@@ -1385,7 +1302,7 @@ void krang_fist_launch(uint32_t object)
 }
 
 /* the fist flies across; off the screen, Krang's punch is over */
-uint32_t krang_fist_fly(uint32_t d7, uint32_t object)
+void krang_fist_fly(uint32_t object)
 {
 	uint32_t x_speed = 0;
 
@@ -1393,9 +1310,9 @@ uint32_t krang_fist_fly(uint32_t d7, uint32_t object)
 	{
 		krang_fist_flying = 0u;
 		remove_object(object);
-		return d7;
+		return;
 	}
 	x_speed = OBJECT(object)->x_speed;
 	OBJECT(object)->x += x_speed;
-	return x_speed;
+	offset_high_word = x_speed;
 }

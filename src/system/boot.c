@@ -3,7 +3,7 @@
  *    Description: the reset, the RAM and ROM tests, and the main loop that runs the jobs the frames queue
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -17,10 +17,10 @@ void reset(void)
 {
 	uint32_t negative = 0;
 	uint8_t bottom_left_tile = 0, bottom_right_tile = 0, control = 0, d0 = 0, dip_number = 0, flip = 0, priority = 0, tile_attribute = 0, top_left_tile = 0, top_right_tile = 0;
-	uint16_t blocks = 0, coinage_2_offset = 0, coinage_offset = 0, count = 0, count_2 = 0, count_3 = 0, count_4 = 0, delay = 0, job = 0, printed_sum = 0, setting_offset = 0, sum = 0, switches = 0, unused_flag = 0;
-	uint32_t bad_chips = 0, banks = 0, chip_bits = 0, d4 = 0, d5 = 0, d6 = 0, empty_jobs = 0, expected = 0, fill = 0, fill_2 = 0, fill_3 = 0, fill_7 = 0, fill_8 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, job_parameter = 0, job_slot = 0, palettes = 0, place = 0, place_2 = 0, ram_end = 0, ram_start = 0, setting = 0, sum_place = 0, sums = 0, tile_place = 0;
-	uint16_t t1 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t19 = 0, t20 = 0, t21 = 0;
-	uint32_t t2 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0;
+	uint16_t banks = 0, blocks = 0, coinage_2_offset = 0, coinage_offset = 0, count = 0, count_2 = 0, count_3 = 0, count_4 = 0, delay = 0, job = 0, job_offset = 0, job_parameter = 0, printed_sum = 0, sum = 0, switches = 0;
+	uint32_t r41 = 0, bad_chips = 0, chip_bits = 0, d1 = 0, d4 = 0, d5 = 0, d6 = 0, empty_jobs = 0, expected = 0, fill = 0, fill_2 = 0, fill_3 = 0, fill_7 = 0, fill_8 = 0, job_slot = 0, palettes = 0, place = 0, place_2 = 0, ram_end = 0, ram_start = 0, setting = 0, setting_offset = 0, sum_place = 0, sums = 0, tile_place = 0, unused_flag = 0;
+	uint16_t t1 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t21 = 0, t22 = 0, t23 = 0;
+	uint32_t t2 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0;
 
 	write_status(0x2600u);
 	take_interrupts();
@@ -124,12 +124,12 @@ void reset(void)
 		clear_sprite_chip_registers();
 		clear_sprite_ram();
 		clear_objects();
-		ignored = clear_tile_chip_registers();
+		clear_tile_chip_registers();
 		clear_tile_ram();
 		palettes = 0xA01Eu;
 		banks = 1u;
 		palette_second_half = 0u;
-		palette_request_set(palettes, &ignored_2, &banks, &ignored_3);
+		palette_request_set(banks, palettes);
 		tile_place = TILE_RAM;
 		tile_attribute = 0u;
 		bottom_left_tile = 0x2Cu;
@@ -187,27 +187,29 @@ void reset(void)
 			mem_write16(t12 + 2u, fill_7);
 			mem_write16(t12, fill_7 >> 16);
 			t13 = t12 - 4u;
-			mem_write16(t13 + 2u, d6);
-			mem_write16(t13, d6 >> 16);
-			t14 = t13 - 4u;
-			mem_write16(t14 + 2u, d5);
-			mem_write16(t14, d5 >> 16);
-			t15 = t14 - 4u;
-			mem_write16(t15 + 2u, d4);
-			mem_write16(t15, d4 >> 16);
-			t16 = t15 - 4u;
-			mem_write16(t16 + 2u, fill_3);
-			mem_write16(t16, fill_3 >> 16);
-			t17 = t16 - 4u;
-			mem_write16(t17 + 2u, fill_2);
-			mem_write16(t17, fill_2 >> 16);
+			t14 = fade_banks & 0xFFFFu;
+			mem_write16(t13 + 2u, t14);
+			mem_write16(t13, t14 >> 16);
+			t15 = t13 - 4u;
+			t16 = distance_low_byte & 0xFFu;
+			mem_write16(t15 + 2u, t16);
+			mem_write16(t15, t16 >> 16);
+			t17 = t15 - 4u;
+			mem_write16(t17 + 2u, d4);
+			mem_write16(t17, d4 >> 16);
 			t18 = t17 - 4u;
-			mem_write16(t18 + 2u, fill);
-			mem_write16(t18, fill >> 16);
-			ram_end = t18;
-			t19 = count_2 - 1u;
-			count_2 = t19;
-		} while (t19 != 0xFFFFu);
+			mem_write16(t18 + 2u, fill_3);
+			mem_write16(t18, fill_3 >> 16);
+			t19 = t18 - 4u;
+			mem_write16(t19 + 2u, fill_2);
+			mem_write16(t19, fill_2 >> 16);
+			t20 = t19 - 4u;
+			mem_write16(t20 + 2u, fill);
+			mem_write16(t20, fill >> 16);
+			ram_end = t20;
+			t21 = count_2 - 1u;
+			count_2 = t21;
+		} while (t21 != 0xFFFFu);
 		io_write8(IO_0A0011, (uint8_t)count_3);
 		sound_queue_read = sound_queue_ADDRESS;
 		sound_queue_write = sound_queue_ADDRESS;
@@ -226,10 +228,10 @@ void reset(void)
 		do
 		{
 			mem_write32(job_slot, empty_jobs);
-			t20 = count - 1u;
-			count = t20;
+			t22 = count - 1u;
+			count = t22;
 			job_slot += 4u;
-		} while (t20 != 0xFFFFu);
+		} while (t22 != 0xFFFFu);
 		reset_ranking();
 		dip_switches_1 = ~io_read8(IO_0A0011);
 		dip_switches_2 = ~io_read8(IO_0A0013);
@@ -250,11 +252,15 @@ void reset(void)
 		unused_flag = 0u;
 		if ((dip_switches_2 & 4u) == 0u)
 			unused_flag = (uint8_t)(unused_flag + 1u);
-		unused_dip_flag = (uint8_t)unused_flag;
+		unused_dip_flag = unused_flag;
 		version = 0u;
 		setting_offset = dip_switches_2;
 		setting_offset = setting_offset & 0x18u;
-		setting = unused_dip_settings_ADDRESS + (uint16_t)(setting_offset + (setting_offset >> 2));
+		d1 = setting_offset;
+		r41 = d1;
+		d1 = d1 >> 2;
+		screen_x_high = d1;
+		setting = unused_dip_settings_ADDRESS + (uint16_t)(setting_offset + d1);
 		unused_dip_setting_flag = (uint8_t)DIP_SETTING(setting)->flag;
 		setting += 2u;
 		unused_dip_setting_value = DIP_SETTING(setting - 0x2u)->value;
@@ -288,32 +294,35 @@ void reset(void)
 			animate_fire_tiles(&d5, &d6);
 			job_slot = job_queue_read;
 			frame_wait();
-			t21 = mem_read16(job_slot);
-			negative = t21 >> 15;
-			job = t21;
+			t23 = mem_read16(job_slot);
+			negative = t23 >> 15;
+			job = t23;
+			screen_x_high = (screen_x_high & ~0xFFFFu) | job;
 			take_interrupts();
 			if (negative)
 				continue;
+			offset_high_word = 0u;
 			job_parameter = (uint8_t)job;
-			job = (job & 0x3F00u) >> 6;
+			job_offset = (screen_x_high & 0x3F00u) >> 6;
+			screen_x_high = (screen_x_high & ~0xFFFFu) | job_offset;
 			mem_write16(job_slot, 0xFFFFu);
 			job_slot += 2u;
 			if (job_slot > job_queue_ADDRESS + 0x7Fu)
 				job_slot = job_queue_ADDRESS;
 			job_queue_read = job_slot;
-			switch (job)
+			switch (job_offset)
 			{
 			case 0:
 				clear_layers_job((uint8_t)job_parameter);
 				break;
 			case 4:
-				print_game_text((uint16_t)job_parameter);
+				print_game_text(job_parameter);
 				break;
 			case 8:
-				set_text_colour((uint16_t)job_parameter);
+				set_text_colour(job_parameter);
 				break;
 			case 12:
-				set_spare_text_colour((uint16_t)job_parameter);
+				set_spare_text_colour(job_parameter);
 				break;
 			case 16:
 				d4 = add_point(d4, job_parameter);
@@ -331,28 +340,28 @@ void reset(void)
 				job_none_after_print_colour_text();
 				break;
 			case 36:
-				d4 = draw_tile_picture((uint16_t)job_parameter);
+				d4 = draw_tile_picture(job_parameter);
 				break;
 			case 40:
 				job_none_after_draw_tile_picture();
 				break;
 			case 44:
-				draw_player_boxes(job_parameter, &ignored_4, &d4, &d5, &d6);
+				draw_player_boxes(job_parameter, &d4, &d5, &d6);
 				break;
 			case 48:
 				print_stage_title();
 				break;
 			case 52:
-				draw_player_message((uint8_t)job_parameter, &d4, &d5, &d6);
+				draw_player_message((uint8_t)job_parameter, &d4, &d6);
 				break;
 			case 56:
-				print_demo_text((uint16_t)job_parameter);
+				print_demo_text(job_parameter);
 				break;
 			case 60:
 				print_tall_text((uint8_t)job_parameter, &d4, &d6);
 				break;
 			case 64:
-				print_test_text((uint16_t)job_parameter);
+				print_test_text(job_parameter);
 				break;
 			case 68:
 				sum_mask_roms(d4, d5, d6, job_parameter);
@@ -374,16 +383,13 @@ void clear_sprite_chip_registers(void)
 }
 
 /* the tile chip's registers cleared */
-uint32_t clear_tile_chip_registers(void)
+void clear_tile_chip_registers(void)
 {
-	uint32_t cleared = 0;
-
-	cleared = 0u;
+	offset_high_word = 0u;
 	io_write8(TILES_106900, 0u);
 	io_write8(TILES_106B00, 0u);
 	io_write8(TILES_106E00, 0u);
 	io_write8(TILES_106C00, 0u);
-	return cleared;
 }
 
 /* the three tile layers blank and their scroll at 0 */
@@ -436,7 +442,9 @@ void zero_boot_fill_registers(uint32_t *p_fill, uint32_t *p_fill_2, uint32_t *p_
 	*p_fill_3 = 0u;
 	*p_fill_4 = 0u;
 	*p_fill_5 = 0u;
+	distance_low_byte = 0u;
 	*p_fill_6 = 0u;
+	fade_banks = 0u;
 	*p_fill_7 = 0u;
 	*p_fill_8 = 0u;
 }

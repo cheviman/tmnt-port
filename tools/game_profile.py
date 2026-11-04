@@ -136,6 +136,18 @@ UNCHANGED_PARTS = True
 # and what a function hands back is what its callers read once every function is known, not what they seemed to read
 # while the outputs grew (queue_sound handed back A6, which no caller reads after it; core/decompiler/dataflow.py)
 NARROW_OUTPUTS = True
+# what a routine leaves in a register and a later one reads before it sets it, all through the frame from the VBLANK
+# handler down (the handler finds the registers the code it interrupted left: 003DC4 saves them), is the game's state:
+# those parts of the registers are global variables, named by symbols.txt's register lines; what a function works out
+# and uses itself, or hands a routine it calls, stays a local or a parameter (core/decompiler/carried.py)
+CARRIED_REGISTERS = True
+# a function that hands back a value and ends in a switch on a state, each case of which returns (or in the ifs around
+# such switches), says that its end is never reached (unreachable(), game/support.h): the compiler took it for a way out
+# with no value (C4715)
+UNREACHABLE_ENDS = True
+# a web symbols.txt names twice (two "local" lines whose definitions the data flow joins) takes the name of the one first
+# in the program, whatever order the web's definitions were joined in (core/decompiler/variables.py)
+CHOSEN_IN_ORDER = True
 NOISE_REGISTERS = r"[da][0-7]"                 # the 68000's: what tools/noise_report.py counts as named after a register
 NOTES = {
     "variables": ["/* the game's variables in work RAM (060000-063FFF) */"],

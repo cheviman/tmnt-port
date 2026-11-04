@@ -3,7 +3,7 @@
  *    Description: the attract mode's opening: the city at night, the manhole, the turtles leap out, their four pictures
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -57,14 +57,14 @@ void start_opening(void)
 	OBJECT(OBJECT_ADDRESS(0))->colour = 0xFFu;
 	OBJECT(OBJECT_ADDRESS(1))->colour = 0xFFu;
 	animation = opening_smoke_and_turtle_animation_ADDRESS;
-	set_animation(ignored, object, animation);
+	set_animation(0u, object, animation);
 	animation = opening_smoke_animation_ADDRESS;
 	object = OBJECT_ADDRESS(1);
 	set_animation(ignored, object, animation);
 }
 
 /* every frame of the opening: its step, then the layers' scroll */
-void run_opening(uint16_t d6, uint32_t a5)
+void run_opening(void)
 {
 	uint16_t step_number = 0;
 
@@ -72,7 +72,7 @@ void run_opening(uint16_t d6, uint32_t a5)
 	switch ((uint8_t)((uint32_t)step_number << 2))
 	{
 	case 0:
-		opening_city_fade_in(d6, a5);
+		opening_city_fade_in();
 		break;
 	case 4:
 		opening_sweep();
@@ -103,18 +103,18 @@ void run_opening(uint16_t d6, uint32_t a5)
 }
 
 /* the city fades in and the clouds drift apart across the moon */
-void opening_city_fade_in(uint16_t fade, uint32_t target_palettes)
+void opening_city_fade_in(void)
 {
 	uint8_t sound = 0;
 	uint8_t t1 = 0;
 
 	if (fading == 0u)
 	{
-		target_palettes = 0xA0AEu;
-		fade = 0xC02u;
+		palette_place = 0xA0AEu;
+		fade_banks = 0xC02u;
 		fade_state = 0u;
 	}
-	copy_palette_sets(fade, target_palettes);
+	copy_palette_sets();
 	if ((frame_count & 3u) == 0u)
 	{
 		OBJECT(OBJECT_ADDRESS(0))->screen_x++;
@@ -286,7 +286,7 @@ void opening_turtles_leap_out(void)
 {
 	uint8_t tile_attribute = 0, tile_code = 0;
 	uint16_t count = 0, count_2 = 0, routine_state = 0, screen_y = 0;
-	uint32_t animation = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, object = 0, tile_place = 0;
+	uint32_t animation = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, object = 0, tile_place = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0, t3 = 0;
 
@@ -318,7 +318,7 @@ void opening_turtles_leap_out(void)
 				OBJECT(object)->flags = 0x81u;
 				OBJECT(object)->contacts = 0u;
 				routine_state = 0x204u;
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 				object += 0x50u;
 			} while (object < OBJECT_ADDRESS(6));
 			object = OBJECT_ADDRESS(2);

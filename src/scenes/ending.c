@@ -3,7 +3,7 @@
  *    Description: the ending after the last boss: the Technodrome explodes, the epilogue, the staff roll, GAME OVER
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* the ending after the last boss, by its steps */
-void scene_ending(uint16_t d6, uint32_t a5)
+void scene_ending(void)
 {
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -20,7 +20,7 @@ void scene_ending(uint16_t d6, uint32_t a5)
 		ending_setup();
 		return;
 	case 1:
-		ending_epilogue(d6, a5);
+		ending_epilogue();
 		return;
 	}
 }
@@ -88,9 +88,9 @@ void ending_open_box(void)
 }
 
 /* the explosion, the epilogue, the staff roll and GAME OVER, by their steps */
-void ending_epilogue(uint16_t d6, uint32_t a5)
+void ending_epilogue(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t ignored = 0;
 
 	switch ((uint32_t)(int8_t)scene_substep)
 	{
@@ -98,16 +98,16 @@ void ending_epilogue(uint16_t d6, uint32_t a5)
 		ending_pause();
 		break;
 	case 1:
-		ending_technodrome_glows(d6, a5);
+		ending_technodrome_glows();
 		break;
 	case 2:
-		ending_technodrome_explodes(d6, a5);
+		ending_technodrome_explodes();
 		break;
 	case 3:
 		ending_show_wreck();
 		break;
 	case 4:
-		ending_fade_to_wreck(d6, a5);
+		ending_fade_to_wreck();
 		break;
 	case 5:
 		ending_start_epilogue();
@@ -116,7 +116,7 @@ void ending_epilogue(uint16_t d6, uint32_t a5)
 		ending_type_epilogue();
 		break;
 	case 7:
-		ending_dim_epilogue(d6, a5);
+		ending_dim_epilogue();
 		break;
 	case 8:
 		ending_staff_roll();
@@ -125,8 +125,8 @@ void ending_epilogue(uint16_t d6, uint32_t a5)
 		ending_game_over();
 		break;
 	}
-	build_draw_list(&ignored, &ignored_2);
-	draw_sprites(&ignored_3, &ignored_2);
+	build_draw_list();
+	draw_sprites(ignored);
 }
 
 /* a pause, then a sound */
@@ -148,7 +148,7 @@ void ending_pause(void)
 }
 
 /* the Technodrome turns red */
-void ending_technodrome_glows(uint16_t fade, uint32_t target_palettes)
+void ending_technodrome_glows(void)
 {
 	uint8_t t1 = 0;
 
@@ -163,15 +163,15 @@ void ending_technodrome_glows(uint16_t fade, uint32_t target_palettes)
 	}
 	if (fading == 0u)
 	{
-		fade = ending_palette_fades[0].banks;
-		target_palettes = ending_palette_fades[0].palettes;
+		fade_banks = ending_palette_fades[0].banks;
+		palette_place = ending_palette_fades[0].palettes;
 		fade_state = 0u;
 	}
-	copy_palette_sets(fade, target_palettes);
+	copy_palette_sets();
 }
 
 /* explosions over the Technodrome, the screen shaking, the colours going to white */
-void ending_technodrome_explodes(uint16_t fade, uint32_t target_palettes)
+void ending_technodrome_explodes(void)
 {
 	uint8_t sound = 0;
 	uint16_t sound_choice = 0;
@@ -197,17 +197,17 @@ void ending_technodrome_explodes(uint16_t fade, uint32_t target_palettes)
 			objects_left = 0xCu;
 			find_free_object(&objects_left, &object);
 			if ((uint8_t)objects_left != 0u)
-				target_palettes = start_technodrome_explosion(object);
+				start_technodrome_explosion(object);
 			palette_fade = ending_palette_fades_ADDRESS + 0x6u;
 			if (game_scene_timer < 0x78u)
 				palette_fade = ending_palette_fades_ADDRESS + 0xCu;
 			if (fading == 0u)
 			{
-				fade = PALETTE_FADE(palette_fade)->banks;
-				target_palettes = PALETTE_FADE(palette_fade)->palettes;
+				fade_banks = PALETTE_FADE(palette_fade)->banks;
+				palette_place = PALETTE_FADE(palette_fade)->palettes;
 				fade_state = 0u;
 			}
-			copy_palette_sets(fade, target_palettes);
+			copy_palette_sets();
 			return;
 		}
 		shake_technodrome();
@@ -221,7 +221,7 @@ void ending_technodrome_explodes(uint16_t fade, uint32_t target_palettes)
 			objects_left = 0xCu;
 			find_free_object(&objects_left, &object);
 			if ((uint8_t)objects_left != 0u)
-				target_palettes = start_technodrome_explosion(object);
+				start_technodrome_explosion(object);
 		}
 	}
 	palette_fade = ending_palette_fades_ADDRESS + 0x6u;
@@ -229,11 +229,11 @@ void ending_technodrome_explodes(uint16_t fade, uint32_t target_palettes)
 		palette_fade = ending_palette_fades_ADDRESS + 0xCu;
 	if (fading == 0u)
 	{
-		fade = PALETTE_FADE(palette_fade)->banks;
-		target_palettes = PALETTE_FADE(palette_fade)->palettes;
+		fade_banks = PALETTE_FADE(palette_fade)->banks;
+		palette_place = PALETTE_FADE(palette_fade)->palettes;
 		fade_state = 0u;
 	}
-	copy_palette_sets(fade, target_palettes);
+	copy_palette_sets();
 }
 
 /* the Technodrome's wreck drawn */
@@ -247,7 +247,7 @@ void ending_show_wreck(void)
 }
 
 /* the colours back from white to the wreck, then the epilogue's music */
-void ending_fade_to_wreck(uint16_t fade, uint32_t target_palettes)
+void ending_fade_to_wreck(void)
 {
 	uint8_t sound = 0;
 	uint8_t t1 = 0;
@@ -259,11 +259,11 @@ void ending_fade_to_wreck(uint16_t fade, uint32_t target_palettes)
 	{
 		if (fading == 0u)
 		{
-			fade = ending_palette_fades[3].banks;
-			target_palettes = ending_palette_fades[3].palettes;
+			fade_banks = ending_palette_fades[3].banks;
+			palette_place = ending_palette_fades[3].palettes;
 			fade_state = 0u;
 		}
-		copy_palette_sets(fade, target_palettes);
+		copy_palette_sets();
 		return;
 	}
 	fade_state = 0u;
@@ -307,7 +307,7 @@ void ending_type_epilogue(void)
 }
 
 /* the picture darkened before the staff roll */
-void ending_dim_epilogue(uint16_t fade, uint32_t target_palettes)
+void ending_dim_epilogue(void)
 {
 	uint8_t t1 = 0;
 
@@ -323,11 +323,11 @@ void ending_dim_epilogue(uint16_t fade, uint32_t target_palettes)
 	}
 	if (fading == 0u)
 	{
-		fade = ending_palette_fades[4].banks;
-		target_palettes = ending_palette_fades[4].palettes;
+		fade_banks = ending_palette_fades[4].banks;
+		palette_place = ending_palette_fades[4].palettes;
 		fade_state = 0u;
 	}
-	copy_palette_sets(fade, target_palettes);
+	copy_palette_sets();
 }
 
 /* the staff roll, by its steps */
@@ -674,12 +674,11 @@ void draw_technodrome_wreck(void)
 }
 
 /* an explosion started at one of the Technodrome's places */
-uint32_t start_technodrome_explosion(uint32_t object)
+void start_technodrome_explosion(uint32_t object)
 {
 	uint16_t explosion_count = 0;
-	uint32_t animation = 0, explosion_places = 0, object_2 = 0;
+	uint32_t animation = 0, object_2 = 0;
 
-	explosion_places = technodrome_explosion_x_ADDRESS;
 	explosion_count = technodrome_explosions;
 	explosion_count = (uint16_t)((explosion_count & 7u) << 2);
 	OBJECT(object)->screen_x = technodrome_explosion_x[explosion_count / 2u];
@@ -699,7 +698,7 @@ uint32_t start_technodrome_explosion(uint32_t object)
 	animation = explosion_big_animations[0];
 	set_animation(0u, object_2, animation);
 	technodrome_explosions++;
-	return explosion_places;
+	palette_place = technodrome_explosion_x_ADDRESS;
 }
 
 /* the explosions whose animation is over removed */

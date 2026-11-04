@@ -3,7 +3,7 @@
  *    Description: the fire's tiles redrawn in the first two areas
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -175,6 +175,7 @@ void animate_fire_tiles(uint32_t *p_third_row_offset, uint32_t *p_second_row_off
 		tile_place += 8u;
 		frame_blocks += 2u;
 	} while (t1 != 0xFFFFu);
+	fade_banks = 0u;
 	*p_third_row_offset = third_row_offset;
 	*p_second_row_offset = second_row_offset;
 }

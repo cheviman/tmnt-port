@@ -186,20 +186,30 @@ tools verify it, extract the assets and build your own executable.
       2,299 → 1,599, functions with a parameter named after one 910 → 639, faithful functions 57.0 % → 67.9 %, partial
       writes that put a part of one value into another 321 → 185; still 17 of 17 scenarios identical in state, picture
       and sound
-- [ ] What is left of the names: the 1,599 parameters and locals still named after a register (D7 557, D5 517, A5
-      337, D1 92, the rest 96) are what one routine leaves in a register and a later one reads before setting it,
-      carried through the whole frame from the VBLANK handler down: D7's high word, which `hydrant_spray`,
-      `billboard_wait` and `rock_soldier_site_fire` add to a position (a `move.w` then an `add.l D7`) after
-      `enemy_landed` left FFFF there (`moveq #-1`) or `enemy_start_arc` the sign of a step (`ext.l`); D5's low byte,
-      which `helicopter_fly` reads as its in-line flag when the first turtle it finds is past x 0x1FF on the screen;
-      A5, which `enemy_nearest_turtles` and `enemy_nearest_slots` keep as the second nearest when no turtle answers;
-      the turtles' D1, D5, D6 and D7. A function that only carries such a value holds nothing of its own there (1,303
-      of them); in the other 296 the register holds several things in turn. The C carries them to stay 1:1 (the
-      game reads them, if rarely). 16 reads of the program's data still go through the bus
-      in 9 functions (the elevators' stops, the palette effects' lists, the window soldiers' records, the enemies'
-      reactions by side...). In the sound program, the handlers it stores are written as numbers (the 68000's are
-      named), a few numbers that happen to be an address of its data come out with that name (pitches, lengths),
-      and the 16-bit fields it writes a byte at a time show their two bytes
+- [x] What the frame carries in registers, as global variables (01-11-2026): what one routine leaves in a part of a
+      register and a later one reads before setting it, all through the frame from the VBLANK handler down, is the
+      game's state, and the C keeps it in six global variables named for what their readers take them as
+      (`offset_high_word`, D7's high word, which `hydrant_spray`, `billboard_wait` and `rock_soldier_site_fire` add to
+      a position after `enemy_landed` left FFFF there; `distance_low_byte`, D5's low byte, which `helicopter_fly`
+      reads as its in-line flag when the first turtle it finds is past x 0x1FF; `palette_place`, the A5 of the scenes
+      and the palette requests; `screen_x_high`, `distance_high_word`, `fade_banks`). What a function works out and
+      uses itself stays a local, copied into the global where it goes on. The runtime puts them back when an
+      interrupt's handler returns, as the VBLANK handler puts back the registers it saves. A function that hands back
+      a value from a switch whose every case returns says its end is never reached (`unreachable()`): the C builds
+      without a warning. In the 68000's C: parameters and locals named after a register 1,599 → 478, functions with a
+      parameter named after one 639 → 350, faithful functions 67.9 % → 77.9 % (lines 98.2 %), results written back
+      before an early return 66 → 3, partial writes that put a part of one value into another 185 → 83; still 17 of
+      17 scenarios identical in state, picture and sound
+- [ ] What is left of the names and the structure: 478 parameters and locals still named after a register, 348 of
+      them the A5 the object loop hands from one object's handler to the next (some handlers take it as a player's
+      slot or a table of animations of their own, so it cannot be one global without losing those types), the rest
+      locals that hold several things in turn; 157 functions reach memory through an address they work out (the video
+      chips' memories, buffers, and 16 reads of the program's data through the bus in 9 functions: the elevators'
+      stops, the palette effects' lists, the window soldiers' records...), 57 put a part of one value into another,
+      and a few keep a control flag, a flag worked out as the CPU sets it or a switch on a code address. In the sound
+      program, the handlers it stores are written as numbers (the 68000's are named), a few numbers that happen to be
+      an address of its data come out with that name (pitches, lengths), and the 16-bit fields it writes a byte at a
+      time show their two bytes
 
 ## Getting started
 

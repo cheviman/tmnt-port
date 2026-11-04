@@ -3,7 +3,7 @@
  *    Description: the two rock soldier bosses (areas 7 and 8), their shots, bars and rubble
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,40 +12,35 @@
 #include "game.h"
 
 /* the building site's rock soldier comes in, by the state of his way in */
-void rock_soldier_site_enter(uint16_t routine_offset, uint32_t object, uint32_t *p_d5, uint32_t *p_state_offset, uint32_t *p_a5)
+uint32_t rock_soldier_site_enter(uint16_t routine_offset, uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t state_offset = 0;
-
-	state_offset = OBJECT(object)->state;
-	state_offset = (uint16_t)(state_offset << 2);
-	switch (state_offset)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		state_offset = rock_soldier_site_start(object);
-		break;
-	case 4:
+		rock_soldier_site_start(object);
+		return a5;
+	case 1:
 		rock_soldier_site_enter_wait_for_scroll(object);
-		break;
-	case 8:
+		return a5;
+	case 2:
 		rock_soldier_site_enter_wait(object);
-		break;
-	case 12:
-		rock_soldier_site_enter_drop(routine_offset, object, &d5, &state_offset);
-		break;
-	case 16:
-		rock_soldier_site_enter_land(object, &state_offset, p_a5);
-		break;
+		return a5;
+	case 3:
+		rock_soldier_site_enter_drop(routine_offset, object);
+		return a5;
+	case 4:
+		return rock_soldier_site_enter_land(object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_state_offset = state_offset;
+	unreachable();
 }
 
 /* the rock soldier waits high up, his hits set by the players in play; the area is not cleared */
-uint32_t rock_soldier_site_start(uint32_t object)
+void rock_soldier_site_start(uint32_t object)
 {
+	uint8_t players = 0;
 	uint16_t count = 0;
-	uint32_t animation = 0, players = 0, stats = 0;
+	uint32_t animation = 0, stats = 0;
 	uint16_t t1 = 0;
 
 	OBJECT(object)->flags |= 0x80u;
@@ -53,17 +48,17 @@ uint32_t rock_soldier_site_start(uint32_t object)
 	set_object_stats(object, stats);
 	OBJECT(object)->rock_soldier.hits_left = OBJECT(object)->health_bars;
 	players = 0u;
+	offset_high_word = 0u;
 	count = 3u;
 	do
 	{
 		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
-			players = (uint8_t)(players + 1u);
+			players++;
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
 	OBJECT(object)->rock_soldier.players = players;
-	players = (uint16_t)(players << 1);
-	OBJECT(object)->rock_soldier.hits_left += players;
+	OBJECT(object)->rock_soldier.hits_left += (uint32_t)players << 1;
 	animation = rock_soldier_site_animations[0];
 	set_animation(0u, object, animation);
 	OBJECT(object)->x_speed = 0;
@@ -77,7 +72,6 @@ uint32_t rock_soldier_site_start(uint32_t object)
 	enemies_on_screen++;
 	mousers_break_down = 0u;
 	boss_defeated = 0u;
-	return players;
 }
 
 /* once the scroll reaches him the music fades */
@@ -114,33 +108,30 @@ void rock_soldier_site_enter_wait(uint32_t object)
 }
 
 /* he drops to the ground, then the boss music and his balloon "Crash the turtles!" */
-void rock_soldier_site_enter_drop(uint16_t routine_offset, uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
+void rock_soldier_site_enter_drop(uint16_t routine_offset, uint32_t object)
 {
-	uint32_t d5 = *p_d5;
+	uint8_t sound = 0;
 	uint16_t on_right = 0, screen_x = 0, screen_y = 0;
-	uint32_t d7 = 0;
 
-	d7 = rock_soldier_site_move(object);
+	rock_soldier_site_move(object);
 	if (OBJECT(object)->height == 0u)
 	{
-		d7 = (d7 & ~0xFFFFu) | 0x3Eu;
-		queue_sound((uint8_t)d7);
-		d7 = (d7 & ~0xFFFFu) | 0x64u;
-		music = d7;
-		queue_sound((uint8_t)d7);
+		sound = 0x3Eu;
+		queue_sound(sound);
+		sound = 0x64u;
+		music = 0x64u;
+		queue_sound(sound);
 		on_right = (uint16_t)((routine_offset & ~0xFFu) | 0xFFu);
 		screen_x = (uint16_t)(OBJECT(object)->screen_x - 0x20u);
 		screen_y = (uint16_t)(OBJECT(object)->screen_y + 0x20u);
-		say_crash_the_turtles(on_right, screen_x, screen_y, &d5, &d7);
+		say_crash_the_turtles(on_right, screen_x, screen_y);
 		OBJECT(object)->rock_soldier.timer = 0x28u;
 		OBJECT(object)->state++;
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_d7 = d7;
 }
 
 /* the screen shakes from his landing, then he fights */
-void rock_soldier_site_enter_land(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_enter_land(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 	uint8_t timer = 0;
@@ -151,10 +142,10 @@ void rock_soldier_site_enter_land(uint32_t object, uint32_t *p_d7, uint32_t *p_a
 	{
 		OBJECT(object)->flags |= 6u;
 		last_move = 0u;
-		rock_soldier_site_next_move(last_move, object, p_d7, p_a5);
-		return;
+		return rock_soldier_site_next_move(last_move, object, a5);
 	}
 	rock_soldier_site_shake_screen();
+	return a5;
 }
 
 /* Unused: ends the way in, the next routine */
@@ -173,61 +164,50 @@ void rock_soldier_site_shake_screen(void)
 }
 
 /* he strikes a turtle close by at a chance, else goes on with his move */
-void rock_soldier_site_think(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_think(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint8_t sound = 0;
-	uint16_t reach_offset = 0;
-	uint32_t animation = 0, attack_chance = 0, close_turtle = 0, ignored = 0, move_offset = 0, range = 0, state_offset = 0;
+	uint16_t move_offset = 0, reach_offset = 0;
+	uint32_t animation = 0, attack_chance = 0, close_turtle = 0, range = 0;
 
-	rock_soldier_site_weak_flash(object, &d5, &ignored);
+	rock_soldier_site_weak_flash(object);
 	if (OBJECT(object)->state == 3u || OBJECT(object)->state == 4u)
 	{
-		state_offset = OBJECT(object)->state;
-		state_offset = (uint16_t)(state_offset << 2);
-		switch (state_offset)
+		offset_high_word = 0u;
+		switch (OBJECT(object)->state)
 		{
 		case 0:
-			rock_soldier_site_walk(object, &d5, &state_offset, p_a5);
-			break;
-		case 4:
-			rock_soldier_site_walk_on(object, &d5, &state_offset, p_a5);
-			break;
-		case 8:
-			rock_soldier_site_stand(object, &d5, &state_offset, p_a5);
-			break;
-		case 12:
+			return rock_soldier_site_walk(object, a5);
+		case 1:
+			return rock_soldier_site_walk_on(object, a5);
+		case 2:
+			return rock_soldier_site_stand(object, a5);
+		case 3:
 			rock_soldier_site_jump(object);
-			break;
-		case 16:
-			rock_soldier_site_jump_land(object, &d5, &state_offset, p_a5);
-			break;
+			return a5;
+		case 4:
+			return rock_soldier_site_jump_land(object, a5);
 		}
 	}
 	else
 	{
-		rock_soldier_find_close_turtle(object, &close_turtle, &d5);
+		close_turtle = rock_soldier_find_close_turtle(object);
 		if ((uint8_t)close_turtle == 0u)
 		{
-			state_offset = OBJECT(object)->state;
-			state_offset = (uint16_t)(state_offset << 2);
-			switch (state_offset)
+			offset_high_word = 0u;
+			switch (OBJECT(object)->state)
 			{
 			case 0:
-				rock_soldier_site_walk(object, &d5, &state_offset, p_a5);
-				break;
-			case 4:
-				rock_soldier_site_walk_on(object, &d5, &state_offset, p_a5);
-				break;
-			case 8:
-				rock_soldier_site_stand(object, &d5, &state_offset, p_a5);
-				break;
-			case 12:
+				return rock_soldier_site_walk(object, a5);
+			case 1:
+				return rock_soldier_site_walk_on(object, a5);
+			case 2:
+				return rock_soldier_site_stand(object, a5);
+			case 3:
 				rock_soldier_site_jump(object);
-				break;
-			case 16:
-				rock_soldier_site_jump_land(object, &d5, &state_offset, p_a5);
-				break;
+				return a5;
+			case 4:
+				return rock_soldier_site_jump_land(object, a5);
 			}
 		}
 		else
@@ -243,30 +223,7 @@ void rock_soldier_site_think(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, ui
 			attack_chance = rock_soldier_site_attack_reaches[(uint16_t)(reach_offset + ((uint32_t)turtles_in_play << 2))];
 			range = 0x40u;
 			range = random_below((uint16_t)range, object);
-			if (attack_chance <= (uint8_t)range)
-			{
-				state_offset = OBJECT(object)->state;
-				state_offset = (uint16_t)(state_offset << 2);
-				switch (state_offset)
-				{
-				case 0:
-					rock_soldier_site_walk(object, &d5, &state_offset, p_a5);
-					break;
-				case 4:
-					rock_soldier_site_walk_on(object, &d5, &state_offset, p_a5);
-					break;
-				case 8:
-					rock_soldier_site_stand(object, &d5, &state_offset, p_a5);
-					break;
-				case 12:
-					rock_soldier_site_jump(object);
-					break;
-				case 16:
-					rock_soldier_site_jump_land(object, &d5, &state_offset, p_a5);
-					break;
-				}
-			}
-			else
+			if ((uint8_t)range < attack_chance)
 			{
 				OBJECT(object)->rock_soldier.close_turtle = close_turtle;
 				OBJECT(object)->rock_soldier.explosions = 0u;
@@ -282,90 +239,86 @@ void rock_soldier_site_think(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, ui
 				OBJECT(object)->rock_soldier.close_turtle = 0u;
 				sound = 8u;
 				queue_sound(sound);
-				move_offset = turtles_in_play;
-				move_offset = (uint16_t)(move_offset << 2);
-				move_offset = (move_offset & ~0xFFu) | (uint8_t)(move_offset + OBJECT(object)->rock_soldier.blows);
-				state_offset = (move_offset & ~0xFFu) | rock_soldier_site_moves[move_offset];
-				animation = TABLE32(rock_soldier_site_animations, state_offset);
+				offset_high_word = 0u;
+				move_offset = (uint16_t)((uint32_t)turtles_in_play << 2);
+				move_offset = (uint16_t)((move_offset & ~0xFFu) | (uint8_t)(move_offset + OBJECT(object)->rock_soldier.blows));
+				animation = TABLE32(rock_soldier_site_animations, (move_offset & ~0xFFu) | rock_soldier_site_moves[move_offset]);
 				set_animation(attack_chance, object, animation);
 				OBJECT(object)->rock_soldier.blows++;
 				if (OBJECT(object)->rock_soldier.blows >= 4u)
 					OBJECT(object)->rock_soldier.blows = 3u;
+				return a5;
+			}
+			offset_high_word = 0u;
+			switch (OBJECT(object)->state)
+			{
+			case 0:
+				return rock_soldier_site_walk(object, a5);
+			case 1:
+				return rock_soldier_site_walk_on(object, a5);
+			case 2:
+				return rock_soldier_site_stand(object, a5);
+			case 3:
+				rock_soldier_site_jump(object);
+				return a5;
+			case 4:
+				return rock_soldier_site_jump_land(object, a5);
 			}
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = state_offset;
+	unreachable();
 }
 
 /* he walks at his target, aiming at it now and then */
-void rock_soldier_site_walk(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_walk(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0, ignored = 0, last_move = 0;
-	uint8_t t1 = 0, t2 = 0, move_time = 0;
+	uint32_t d7 = 0, ignored = 0, last_move = 0;
+	uint8_t t1 = 0, move_time = 0;
 
-	d7_2 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d7_2 & 0xFu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
+	t1 = (uint8_t)frame_count & 0xFu;
+	d7 = t1;
 	if (t1 == 0u)
-		boss_aim_at_target(object, &ignored, &d7_2, p_a5);
-	t2 = d7_2 & 1u;
-	d7_2 = (d7_2 & ~0xFFu) | t2;
-	if (t2 == 0u)
-		d7_2 = rock_soldier_site_move(object);
+		boss_aim_at_target(object, &ignored, &d7, &a5);
+	if ((d7 & 1u) == 0u)
+		rock_soldier_site_move(object);
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 1u;
-		rock_soldier_site_move_done(last_move, object, &d5, &d7_2, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = d7_2;
+	if (move_time != 0u)
+		return a5;
+	last_move = 1u;
+	return rock_soldier_site_move_done(last_move, object, a5);
 }
 
 /* he walks on at his target */
-void rock_soldier_site_walk_on(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_walk_on(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0, ignored = 0, last_move = 0;
-	uint8_t t1 = 0, move_time = 0;
+	uint32_t ignored = 0, ignored_2 = 0, last_move = 0;
+	uint8_t move_time = 0;
 
-	d7_2 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d7_2 & 0xFu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
-	if (t1 == 0u)
-		boss_aim_at_target(object, &ignored, &d7_2, p_a5);
+	if ((frame_count & 0xFu) == 0u)
+		boss_aim_at_target(object, &ignored, &ignored_2, &a5);
 	if ((frame_count & 2u) == 0u)
-		d7_2 = rock_soldier_site_move(object);
+		rock_soldier_site_move(object);
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 2u;
-		rock_soldier_site_move_done(last_move, object, &d5, &d7_2, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = d7_2;
+	if (move_time != 0u)
+		return a5;
+	last_move = 2u;
+	return rock_soldier_site_move_done(last_move, object, a5);
 }
 
 /* he stands a while */
-void rock_soldier_site_stand(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_stand(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t last_move = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
 	if (move_time != 0u)
-		return;
+		return a5;
 	last_move = 3u;
-	rock_soldier_site_move_done(last_move, object, &d5, p_d7, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	return rock_soldier_site_move_done(last_move, object, a5);
 }
 
 /* he is in the air until he lands */
@@ -391,9 +344,8 @@ void rock_soldier_site_jump(uint32_t object)
 }
 
 /* the screen shakes from his landing, then he can be hit again */
-void rock_soldier_site_jump_land(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_jump_land(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t last_move = 0;
 	uint8_t move_time = 0;
 
@@ -401,47 +353,40 @@ void rock_soldier_site_jump_land(uint32_t object, uint32_t *p_d5, uint32_t *p_d7
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
 	if (move_time != 0u)
-		return;
+		return a5;
 	OBJECT(object)->flags |= 2u;
 	last_move = 4u;
-	rock_soldier_site_move_done(last_move, object, &d5, p_d7, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	return rock_soldier_site_move_done(last_move, object, a5);
 }
 
 /* a move over: a burst at a turtle in front within reach, else the next move */
-void rock_soldier_site_move_done(uint32_t last_move, uint32_t object, uint32_t *p_d5, uint32_t *p_roll, uint32_t *p_a5)
+uint32_t rock_soldier_site_move_done(uint32_t last_move, uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t animation = 0, range = 0, turtle_ahead = 0;
 
-	rock_soldier_find_turtle_ahead(object, &d5, &turtle_ahead);
-	if ((uint8_t)turtle_ahead != 0u)
-	{
-		OBJECT(object)->rock_soldier.explosions = 0u;
-		OBJECT(object)->routine = 2u;
-		OBJECT(object)->state = 0u;
-		OBJECT(object)->rock_soldier.shot_hit = 0u;
-		range = 4u;
-		range = random_below((uint16_t)range, object);
-		OBJECT(object)->rock_soldier.timer = rock_soldier_site_waits[range];
-		OBJECT(object)->rock_soldier.move_time = 0x20u;
-		animation = rock_soldier_site_animations[4];
-		set_animation(0u, object, animation);
-	}
-	else
-		rock_soldier_site_next_move(last_move, object, &range, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_roll = range;
+	turtle_ahead = rock_soldier_find_turtle_ahead(object);
+	if ((uint8_t)turtle_ahead == 0u)
+		return rock_soldier_site_next_move(last_move, object, a5);
+	OBJECT(object)->rock_soldier.explosions = 0u;
+	OBJECT(object)->routine = 2u;
+	OBJECT(object)->state = 0u;
+	OBJECT(object)->rock_soldier.shot_hit = 0u;
+	range = 4u;
+	range = random_below((uint16_t)range, object);
+	OBJECT(object)->rock_soldier.timer = rock_soldier_site_waits[range];
+	OBJECT(object)->rock_soldier.move_time = 0x20u;
+	animation = rock_soldier_site_animations[4];
+	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* he fires gun blasts until the burst is over */
-void rock_soldier_site_fire(uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
+void rock_soldier_site_fire(uint32_t object)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t animation = 0, blast = 0, blast_time = 0, d5 = 0;
-	uint8_t timer = 0, move_time = 0, t1 = 0;
+	uint32_t animation = 0, blast = 0, blast_offset = 0, objects_left = 0;
+	uint8_t timer = 0, move_time = 0;
 
-	rock_soldier_site_weak_flash(object, &d5, &d7);
+	rock_soldier_site_weak_flash(object);
 	timer = OBJECT(object)->rock_soldier.timer;
 	OBJECT(object)->rock_soldier.timer = timer - 1u;
 	if (timer == 0u)
@@ -451,117 +396,69 @@ void rock_soldier_site_fire(uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
 		OBJECT(object)->rock_soldier.shot_hit = 0u;
 		animation = rock_soldier_site_animations[4];
 		set_animation(0u, object, animation);
+		return;
 	}
-	else
+	move_time = OBJECT(object)->rock_soldier.move_time;
+	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
+	if (move_time == 0u)
 	{
-		move_time = OBJECT(object)->rock_soldier.move_time;
-		OBJECT(object)->rock_soldier.move_time = move_time - 1u;
-		if (move_time != 0u)
+		OBJECT(object)->rock_soldier.move_time = 0u;
+		if ((int8_t)OBJECT(object)->rock_soldier.shot_hit < 0)
 		{
-			blast_time = (d7 & ~0xFFu) | OBJECT(object)->rock_soldier.timer;
-			t1 = blast_time & 3u;
-			d7 = (blast_time & ~0xFFu) | t1;
-			if (t1 == 0u)
-			{
-				blast = OBJECT_ADDRESS(24);
-				d7 = (d7 & ~0xFFu) | 8u;
-				d7 = (d7 & ~0xFFFFu) | (uint8_t)d7;
-				find_free_object(&d7, &blast);
-				if ((uint8_t)d7 != 0u)
-				{
-					OBJECT(blast)->flags = 1u;
-					OBJECT(blast)->contacts = 0u;
-					OBJECT(blast)->kind = 0x34u;
-					OBJECT(blast)->parameter = 0u;
-					OBJECT(blast)->colour = 0xFFu;
-					OBJECT(blast)->animation_delay = 0u;
-					place_at_object(object, blast);
-					OBJECT(blast)->gun_blast.flies_left = 0u;
-					d7 = (d7 & ~0xFFFFu) | 0x4800u;
-					if ((OBJECT(object)->flags & 0x40u) == 0u)
-					{
-						d7 = (int16_t)~d7;
-						OBJECT(blast)->gun_blast.flies_left |= 0x80u;
-					}
-					OBJECT(blast)->x += d7;
-					OBJECT(blast)->height = 0x3000u;
-					OBJECT(blast)->gun_blast.shooter = object;
-					if ((OBJECT(object)->flags & 0x40u) == 0u)
-						OBJECT(blast)->flags |= 0x40u;
-					OBJECT(blast)->routine = 0u;
-					OBJECT(blast)->state = 0u;
-				}
-			}
-		}
-		else
-		{
-			OBJECT(object)->rock_soldier.move_time = 0u;
-			if ((int8_t)OBJECT(object)->rock_soldier.shot_hit < 0)
-			{
-				OBJECT(object)->routine++;
-				OBJECT(object)->state = 0u;
-				OBJECT(object)->rock_soldier.shot_hit = 0u;
-				animation = rock_soldier_site_animations[4];
-				set_animation(0u, object, animation);
-			}
-			else
-			{
-				blast_time = (d7 & ~0xFFu) | OBJECT(object)->rock_soldier.timer;
-				t1 = blast_time & 3u;
-				d7 = (blast_time & ~0xFFu) | t1;
-				if (t1 == 0u)
-				{
-					blast = OBJECT_ADDRESS(24);
-					d7 = (d7 & ~0xFFu) | 8u;
-					d7 = (d7 & ~0xFFFFu) | (uint8_t)d7;
-					find_free_object(&d7, &blast);
-					if ((uint8_t)d7 != 0u)
-					{
-						OBJECT(blast)->flags = 1u;
-						OBJECT(blast)->contacts = 0u;
-						OBJECT(blast)->kind = 0x34u;
-						OBJECT(blast)->parameter = 0u;
-						OBJECT(blast)->colour = 0xFFu;
-						OBJECT(blast)->animation_delay = 0u;
-						place_at_object(object, blast);
-						OBJECT(blast)->gun_blast.flies_left = 0u;
-						d7 = (d7 & ~0xFFFFu) | 0x4800u;
-						if ((OBJECT(object)->flags & 0x40u) == 0u)
-						{
-							d7 = (int16_t)~d7;
-							OBJECT(blast)->gun_blast.flies_left |= 0x80u;
-						}
-						OBJECT(blast)->x += d7;
-						OBJECT(blast)->height = 0x3000u;
-						OBJECT(blast)->gun_blast.shooter = object;
-						if ((OBJECT(object)->flags & 0x40u) == 0u)
-							OBJECT(blast)->flags |= 0x40u;
-						OBJECT(blast)->routine = 0u;
-						OBJECT(blast)->state = 0u;
-					}
-				}
-			}
+			OBJECT(object)->routine++;
+			OBJECT(object)->state = 0u;
+			OBJECT(object)->rock_soldier.shot_hit = 0u;
+			animation = rock_soldier_site_animations[4];
+			set_animation(0u, object, animation);
+			return;
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_d7 = d7;
+	if ((OBJECT(object)->rock_soldier.timer & 3u) != 0u)
+		return;
+	blast = OBJECT_ADDRESS(24);
+	objects_left = 8u;
+	find_free_object(&objects_left, &blast);
+	if ((uint8_t)objects_left == 0u)
+		return;
+	OBJECT(blast)->flags = 1u;
+	OBJECT(blast)->contacts = 0u;
+	OBJECT(blast)->kind = 0x34u;
+	OBJECT(blast)->parameter = 0u;
+	OBJECT(blast)->colour = 0xFFu;
+	OBJECT(blast)->animation_delay = 0u;
+	place_at_object(object, blast);
+	OBJECT(blast)->gun_blast.flies_left = 0u;
+	blast_offset = 0x4800u;
+	if ((OBJECT(object)->flags & 0x40u) == 0u)
+	{
+		blast_offset = (int16_t)~blast_offset;
+		offset_high_word = blast_offset;
+		OBJECT(blast)->gun_blast.flies_left |= 0x80u;
+	}
+	OBJECT(blast)->x += (blast_offset & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+	OBJECT(blast)->height = 0x3000u;
+	OBJECT(blast)->gun_blast.shooter = object;
+	if ((OBJECT(object)->flags & 0x40u) == 0u)
+		OBJECT(blast)->flags |= 0x40u;
+	OBJECT(blast)->routine = 0u;
+	OBJECT(blast)->state = 0u;
 }
 
 /* the blow, or the gun held up after the burst, plays out; then the next move */
-void rock_soldier_site_finish_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_flash_phase, uint32_t *p_a5)
+uint32_t rock_soldier_site_finish_attack(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = 0, last_move = 0;
+	uint32_t last_move = 0;
 
-	rock_soldier_site_weak_flash(object, &d5, p_flash_phase);
+	rock_soldier_site_weak_flash(object);
 	if (OBJECT(object)->frame_time == 0u)
 	{
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->state = 0u;
 		OBJECT(object)->rock_soldier.hurt = 0u;
 		last_move = 5u;
-		rock_soldier_site_next_move(last_move, object, p_flash_phase, p_a5);
+		return rock_soldier_site_next_move(last_move, object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	return a5;
 }
 
 /* a hit makes the rock soldier flinch, or the last one defeats him */
@@ -613,7 +510,7 @@ uint32_t rock_soldier_struck(uint32_t object)
 }
 
 /* the rock soldier gets over the hit and moves on */
-void rock_soldier_recover(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_recover(uint32_t object, uint32_t a5)
 {
 	uint32_t last_move = 0;
 	uint8_t timer = 0;
@@ -622,46 +519,42 @@ void rock_soldier_recover(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
 		OBJECT(object)->colour = 8u;
 	timer = OBJECT(object)->rock_soldier.timer;
 	OBJECT(object)->rock_soldier.timer = timer - 1u;
-	if (timer == 1u)
-	{
-		OBJECT(object)->state = 0u;
-		OBJECT(object)->rock_soldier.hurt = 0u;
-		OBJECT(object)->rock_soldier.hit_delay = 8u;
-		OBJECT(object)->colour = 0xFFu;
-		last_move = 6u;
-		if (OBJECT(object)->kind == 0x1Eu)
-			rock_soldier_site_next_move(last_move, object, p_d7, p_a5);
-		else
-			rock_soldier_technodrome_next_move(last_move, object, p_d7, p_a5);
-	}
+	if (timer != 1u)
+		return a5;
+	OBJECT(object)->state = 0u;
+	OBJECT(object)->rock_soldier.hurt = 0u;
+	OBJECT(object)->rock_soldier.hit_delay = 8u;
+	OBJECT(object)->colour = 0xFFu;
+	last_move = 6u;
+	if (OBJECT(object)->kind == 0x1Eu)
+		return rock_soldier_site_next_move(last_move, object, a5);
+	return rock_soldier_technodrome_next_move(last_move, object, a5);
 }
 
 /* the defeated rock soldier, by the state of his defeat */
-void rock_soldier_defeated(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_defeated(uint32_t object, uint32_t a5)
 {
-	*p_d7 = OBJECT(object)->state;
-	*p_d7 = (uint16_t)(*p_d7 << 2);
-	switch (*p_d7)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
 		rock_soldier_defeated_start(object);
-		return;
-	case 4:
+		return a5;
+	case 1:
 		rock_soldier_defeated_wait(object);
-		return;
-	case 8:
-		rock_soldier_defeated_explode(object, p_d7, p_a5);
-		return;
-	case 12:
+		return a5;
+	case 2:
+		return rock_soldier_defeated_explode(object, a5);
+	case 3:
 		rock_soldier_defeated_next_explosion(object);
-		return;
-	case 16:
-		rock_soldier_defeated_crumble(object, p_d7, p_a5);
-		return;
-	case 20:
+		return a5;
+	case 4:
+		return rock_soldier_defeated_crumble(object, a5);
+	case 5:
 		rock_soldier_defeated_stay();
-		return;
+		return a5;
 	}
+	unreachable();
 }
 
 /* the defeated rock soldier stands a while */
@@ -683,22 +576,19 @@ void rock_soldier_defeated_wait(uint32_t object)
 }
 
 /* an explosion on him */
-void rock_soldier_defeated_explode(uint32_t object, uint32_t *p_objects_left, uint32_t *p_a5)
+uint32_t rock_soldier_defeated_explode(uint32_t object, uint32_t a5)
 {
-	uint32_t objects_left = *p_objects_left;
-	uint32_t explosion = 0;
+	uint32_t explosion = 0, objects_left = 0;
 
 	OBJECT(object)->rock_soldier.timer = 0xCu;
 	OBJECT(object)->state = 3u;
 	explosion = OBJECT_ADDRESS(24);
-	objects_left = (objects_left & ~0xFFu) | 8u;
-	objects_left = (uint8_t)objects_left;
+	objects_left = 8u;
 	find_free_object(&objects_left, &explosion);
 	if ((uint8_t)objects_left != 0u)
-		boss_start_explosion(object, explosion, &objects_left, p_a5);
-	else
-		OBJECT(object)->state = 4u;
-	*p_objects_left = objects_left;
+		return boss_start_explosion(object, explosion);
+	OBJECT(object)->state = 4u;
+	return a5;
 }
 
 /* the next explosion, until ten */
@@ -721,11 +611,11 @@ void rock_soldier_defeated_next_explosion(uint32_t object)
 }
 
 /* rubble falls off him; then the boss is down and the area cleared */
-void rock_soldier_defeated_crumble(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_defeated_crumble(uint32_t object, uint32_t a5)
 {
-	uint32_t d7 = *p_d7;
-	uint16_t parameter = 0;
-	uint32_t rubble = 0;
+	uint8_t crumble_time = 0;
+	uint16_t parameter = 0, rubble_offset = 0;
+	uint32_t a5_2 = 0, objects_left = 0, rubble = 0;
 	uint8_t timer = 0;
 	uint16_t t1 = 0;
 
@@ -737,46 +627,39 @@ void rock_soldier_defeated_crumble(uint32_t object, uint32_t *p_d7, uint32_t *p_
 		enemies_on_screen--;
 		mousers_break_down = 1u;
 		boss_defeated = 1u;
+		return a5;
 	}
-	else
+	crumble_time = OBJECT(object)->rock_soldier.timer;
+	parameter = 3u;
+	while (crumble_time != TABLE8(rock_soldier_crumble_times, (uint32_t)(int16_t)parameter))
 	{
-		d7 = IN_PAGE(d7, OBJECT(object)->rock_soldier.timer);
-		parameter = 3u;
-		do
-		{
-			if ((uint8_t)d7 == TABLE8(rock_soldier_crumble_times, (uint32_t)(int16_t)parameter))
-			{
-				rubble = OBJECT_ADDRESS(32);
-				d7 = IN_PAGE(d7, 8u);
-				d7 = (uint8_t)d7;
-				find_free_object(&d7, &rubble);
-				if ((uint8_t)d7 != 0u)
-				{
-					OBJECT(rubble)->flags = 1u;
-					OBJECT(rubble)->contacts = 0u;
-					OBJECT(rubble)->kind = 0x41u;
-					OBJECT(rubble)->parameter = 0u;
-					OBJECT(rubble)->parameter = (uint8_t)parameter;
-					OBJECT(rubble)->colour = 8u;
-					OBJECT(rubble)->animation_delay = 0u;
-					place_at_object(object, rubble);
-					*p_a5 = rubble_place_x_ADDRESS;
-					d7 = OBJECT(rubble)->parameter;
-					d7 = (uint16_t)(d7 << 1);
-					OBJECT(rubble)->x += (uint32_t)(int16_t)rubble_place_x[d7] << 8;
-					OBJECT(rubble)->y += (uint32_t)(int16_t)rubble_place_y[d7] << 8;
-					OBJECT(rubble)->height = 0x8000u;
-					OBJECT(rubble)->routine = 0u;
-					OBJECT(rubble)->state = 0u;
-					break;
-				}
-				break;
-			}
-			t1 = parameter - 1u;
-			parameter = t1;
-		} while (t1 != 0xFFFFu);
+		t1 = parameter - 1u;
+		parameter = t1;
+		if (t1 == 0xFFFFu)
+			return a5;
 	}
-	*p_d7 = d7;
+	rubble = OBJECT_ADDRESS(32);
+	objects_left = 8u;
+	find_free_object(&objects_left, &rubble);
+	if ((uint8_t)objects_left == 0u)
+		return a5;
+	OBJECT(rubble)->flags = 1u;
+	OBJECT(rubble)->contacts = 0u;
+	OBJECT(rubble)->kind = 0x41u;
+	OBJECT(rubble)->parameter = 0u;
+	OBJECT(rubble)->parameter = (uint8_t)parameter;
+	OBJECT(rubble)->colour = 8u;
+	OBJECT(rubble)->animation_delay = 0u;
+	place_at_object(object, rubble);
+	a5_2 = rubble_place_x_ADDRESS;
+	offset_high_word = 0u;
+	rubble_offset = (uint16_t)((uint32_t)OBJECT(rubble)->parameter << 1);
+	OBJECT(rubble)->x += (uint32_t)(int16_t)rubble_place_x[rubble_offset] << 8;
+	OBJECT(rubble)->y += (uint32_t)(int16_t)rubble_place_y[rubble_offset] << 8;
+	OBJECT(rubble)->height = 0x8000u;
+	OBJECT(rubble)->routine = 0u;
+	OBJECT(rubble)->state = 0u;
+	return a5_2;
 }
 
 /* he stays a heap of rocks */
@@ -785,54 +668,57 @@ void rock_soldier_defeated_stay(void)
 }
 
 /* a turtle close enough to strike, and on which side */
-void rock_soldier_find_close_turtle(uint32_t object, uint32_t *p_close_turtle, uint32_t *p_d5)
+uint32_t rock_soldier_find_close_turtle(uint32_t object)
 {
-	uint16_t d5 = (uint16_t)*p_d5;
-	uint16_t count = 0;
+	uint16_t count = 0, x_distance = 0, y_distance = 0;
 	uint32_t close_turtle = 0, object_2 = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	object_2 = OBJECT_ADDRESS(3);
 	count = 3u;
 	close_turtle = 0u;
-	do
+	for (;;)
 	{
 		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && (players_knocked_out & shl32(1u, (int)(count & 7u))) == 0u && OBJECT(object_2)->routine != 4u)
 		{
 			t1 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
-			d5 = t1;
+			y_distance = t1;
+			distance_low_byte = y_distance;
 			if ((int16_t)t1 < 0)
-				d5 = (uint16_t)~d5;
-			if (d5 < 0xCu)
+			{
+				y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+				distance_low_byte = y_distance;
+			}
+			if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0xCu)
 			{
 				t2 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-				d5 = t2;
+				x_distance = t2;
+				distance_low_byte = x_distance;
 				if ((int16_t)t2 < 0)
 				{
 					close_turtle = close_turtle | 0x80u;
-					d5 = (uint16_t)~d5;
+					x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+					distance_low_byte = x_distance;
 				}
-				if (d5 < 0x3Cu)
-				{
-					close_turtle |= shl32(1u, (int)(count & 0x1Fu));
+				if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0x3Cu)
 					break;
-				}
 			}
 		}
 		close_turtle = 0u;
 		t3 = count - 1u;
 		count = t3;
 		object_2 -= 0x50u;
-	} while (t3 != 0xFFFFu);
-	*p_close_turtle = close_turtle;
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | d5;
+		if (t3 == 0xFFFFu)
+			return close_turtle;
+	}
+	close_turtle |= shl32(1u, (int)(count & 0x1Fu));
+	return close_turtle;
 }
 
 /* a turtle in front of him at the range of his weapon */
-void rock_soldier_find_turtle_ahead(uint32_t object, uint32_t *p_d5, uint32_t *p_turtle_ahead)
+uint32_t rock_soldier_find_turtle_ahead(uint32_t object)
 {
-	uint16_t d5 = (uint16_t)*p_d5;
-	uint16_t count = 0;
+	uint16_t count = 0, x_distance = 0, y_distance = 0;
 	uint32_t object_2 = 0, turtle_ahead = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0;
 
@@ -841,118 +727,92 @@ void rock_soldier_find_turtle_ahead(uint32_t object, uint32_t *p_d5, uint32_t *p
 	turtle_ahead = 0u;
 	for (;;)
 	{
-		if ((players_in_play & shl32(1u, (int)(count & 7u))) == 0u || (players_knocked_out & shl32(1u, (int)(count & 7u))) != 0u || OBJECT(object_2)->routine == 4u)
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && (players_knocked_out & shl32(1u, (int)(count & 7u))) == 0u && OBJECT(object_2)->routine != 4u)
 		{
-			t1 = count - 1u;
-			count = t1;
-			object_2 -= 0x50u;
-			if (t1 == 0xFFFFu)
-				break;
-			continue;
-		}
-		t2 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
-		d5 = t2;
-		if ((int16_t)t2 < 0)
-			d5 = (uint16_t)~d5;
-		if (d5 >= 0xBu)
-		{
-			t1 = count - 1u;
-			count = t1;
-			object_2 -= 0x50u;
-			if (t1 == 0xFFFFu)
-				break;
-			continue;
-		}
-		if (OBJECT(object)->kind == 0x1Du)
-		{
-			if ((OBJECT(object)->flags & 0x40u) != 0u)
+			t1 = OBJECT(object_2)->screen_y - OBJECT(object)->screen_y;
+			y_distance = t1;
+			distance_low_byte = y_distance;
+			if ((int16_t)t1 < 0)
 			{
-				t3 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-				d5 = t3;
-				if ((int16_t)t3 < 0 || d5 < 0x46u)
+				y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+				distance_low_byte = y_distance;
+			}
+			if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0xBu)
+			{
+				if (OBJECT(object)->kind == 0x1Du)
 				{
-					t1 = count - 1u;
-					count = t1;
-					object_2 -= 0x50u;
-					if (t1 == 0xFFFFu)
+					if ((OBJECT(object)->flags & 0x40u) != 0u)
+					{
+						t2 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+						x_distance = t2;
+						distance_low_byte = x_distance;
+						if ((int16_t)t2 >= 0 && ((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 0x46u)
+							break;
+					}
+					else
+					{
+						t3 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+						x_distance = t3;
+						distance_low_byte = x_distance;
+						if ((int16_t)t3 < 0)
+						{
+							x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+							distance_low_byte = x_distance;
+							if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 0x46u)
+								break;
+						}
+					}
+				}
+				else if ((OBJECT(object)->flags & 0x40u) != 0u)
+				{
+					t4 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+					x_distance = t4;
+					distance_low_byte = x_distance;
+					if ((int16_t)t4 >= 0 && ((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0x8Cu)
 						break;
-					continue;
 				}
-				turtle_ahead |= shl32(1u, (int)(count & 0x1Fu));
-				break;
-			}
-			t4 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-			d5 = t4;
-			if ((int16_t)t4 < 0)
-			{
-				d5 = (uint16_t)~d5;
-				if (d5 >= 0x46u)
+				else
 				{
-					turtle_ahead |= shl32(1u, (int)(count & 0x1Fu));
-					break;
+					t5 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
+					x_distance = t5;
+					distance_low_byte = x_distance;
+					if ((int16_t)t5 < 0)
+					{
+						x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+						distance_low_byte = x_distance;
+						if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0x8Cu)
+							break;
+					}
 				}
 			}
-			t1 = count - 1u;
-			count = t1;
-			object_2 -= 0x50u;
-			if (t1 == 0xFFFFu)
-				break;
-			continue;
 		}
-		if ((OBJECT(object)->flags & 0x40u) != 0u)
-		{
-			t5 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-			d5 = t5;
-			if ((int16_t)t5 < 0 || d5 >= 0x8Cu)
-			{
-				t1 = count - 1u;
-				count = t1;
-				object_2 -= 0x50u;
-				if (t1 == 0xFFFFu)
-					break;
-				continue;
-			}
-			turtle_ahead |= shl32(1u, (int)(count & 0x1Fu));
-			break;
-		}
-		t6 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
-		d5 = t6;
-		if ((int16_t)t6 < 0)
-		{
-			d5 = (uint16_t)~d5;
-			if (d5 < 0x8Cu)
-			{
-				turtle_ahead |= shl32(1u, (int)(count & 0x1Fu));
-				break;
-			}
-		}
-		t1 = count - 1u;
-		count = t1;
+		t6 = count - 1u;
+		count = t6;
 		object_2 -= 0x50u;
-		if (t1 == 0xFFFFu)
-			break;
+		if (t6 == 0xFFFFu)
+			return turtle_ahead;
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | d5;
-	*p_turtle_ahead = turtle_ahead;
+	turtle_ahead |= shl32(1u, (int)(count & 0x1Fu));
+	return turtle_ahead;
 }
 
 /* the next move by chance, by what he did before */
-void rock_soldier_site_next_move(uint32_t last_move, uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_site_next_move(uint32_t last_move, uint32_t object, uint32_t a5)
 {
 	uint16_t count = 0;
-	uint32_t a5 = 0, chances = 0;
+	uint32_t chances = 0, d7 = 0;
 	uint8_t move_chance = 0, t1 = 0;
 	uint16_t t2 = 0;
 
-	*p_d7 = 0x10u;
-	*p_d7 = random_below((uint16_t)*p_d7, object);
+	d7 = 0x10u;
+	d7 = random_below((uint16_t)d7, object);
 	count = 3u;
 	chances = table_loaded_by_lea_011C42_ADDRESS + (uint16_t)(last_move << 2);
 	for (;;)
 	{
 		move_chance = MOVE_CHANCE(chances + (int16_t)count);
-		t1 = *p_d7;
-		*p_d7 = (uint8_t)(t1 - move_chance);
+		t1 = d7;
+		d7 = (uint8_t)(t1 - move_chance);
 		if (t1 < move_chance)
 			break;
 		t2 = count - 1u;
@@ -966,72 +826,73 @@ void rock_soldier_site_next_move(uint32_t last_move, uint32_t object, uint32_t *
 	switch ((uint32_t)(int16_t)((uint32_t)count << 2))
 	{
 	case 0:
-		*p_a5 = a5;
-		rock_soldier_site_walk_start(object, p_d7, p_a5);
-		return;
+		return rock_soldier_site_walk_start(object);
 	case 4:
-		*p_d7 = rock_soldier_site_walk_on_start(object);
-		return;
+		rock_soldier_site_walk_on_start(object);
+		return a5;
 	case 8:
-		*p_d7 = rock_soldier_site_stand_start(object);
-		return;
+		rock_soldier_site_stand_start(object);
+		return a5;
 	case 12:
-		*p_d7 = rock_soldier_site_jump_start(object);
-		return;
+		rock_soldier_site_jump_start(object);
+		return a5;
 	}
+	unreachable();
 }
 
 /* he picks a turtle and walks at it, or stands if there is none */
-void rock_soldier_site_walk_start(uint32_t object, uint32_t *p_range, uint32_t *p_a5)
+uint32_t rock_soldier_site_walk_start(uint32_t object)
 {
-	uint32_t animation = 0, ignored = 0, picked = 0;
+	uint16_t range = 0;
+	uint32_t a5 = 0, animation = 0, ignored = 0, picked = 0;
 
-	boss_pick_target(object, &ignored, &picked, p_a5);
+	boss_pick_target(object, &ignored, &picked, &a5);
 	if ((uint8_t)picked == 0u)
 	{
-		*p_range = rock_soldier_site_stand_start(object);
-		return;
+		rock_soldier_site_stand_start(object);
+		return a5;
 	}
-	*p_range = 8u;
-	*p_range = rock_soldier_site_random_move_time(*p_range, object);
+	range = 8u;
+	rock_soldier_site_random_move_time(range, object);
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 0u;
 	animation = rock_soldier_site_animations[2];
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* he walks on as he was */
-uint32_t rock_soldier_site_walk_on_start(uint32_t object)
+void rock_soldier_site_walk_on_start(uint32_t object)
 {
-	uint32_t range = 0;
+	uint16_t range = 0;
 
 	range = 8u;
-	range = rock_soldier_site_random_move_time(range, object);
+	rock_soldier_site_random_move_time(range, object);
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 1u;
-	return range;
 }
 
 /* he stands a while */
-uint32_t rock_soldier_site_stand_start(uint32_t object)
+void rock_soldier_site_stand_start(uint32_t object)
 {
-	uint32_t animation = 0, range = 0;
+	uint16_t range = 0;
+	uint32_t animation = 0;
 
 	range = 4u;
-	range = rock_soldier_site_random_move_time(range, object);
+	rock_soldier_site_random_move_time(range, object);
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 2u;
 	animation = rock_soldier_site_animations[3];
 	set_animation(0u, object, animation);
-	return range;
 }
 
 /* he jumps where he stands, now and then with "Crash the turtles!" */
-uint32_t rock_soldier_site_jump_start(uint32_t object)
+void rock_soldier_site_jump_start(uint32_t object)
 {
+	uint8_t sound = 0;
 	uint32_t animation = 0, range = 0;
 
 	OBJECT(object)->flags &= ~2u;
@@ -1046,49 +907,45 @@ uint32_t rock_soldier_site_jump_start(uint32_t object)
 	range = random_below((uint16_t)range, object);
 	if ((uint8_t)range == 0u)
 	{
-		range = 0xB1u;
-		queue_sound((uint8_t)range);
+		sound = 0xB1u;
+		queue_sound(sound);
 	}
 	animation = rock_soldier_site_animations[1];
 	set_animation(0u, object, animation);
-	return range;
 }
 
 /* how long the move lasts, at random */
-uint32_t rock_soldier_site_random_move_time(uint32_t range, uint32_t object)
+void rock_soldier_site_random_move_time(uint32_t range, uint32_t object)
 {
 	range = random_below((uint16_t)range, object);
 	OBJECT(object)->rock_soldier.move_time = rock_soldier_site_move_times[range];
-	return range;
 }
 
 /* his flashing as he weakens, in his colours */
-void rock_soldier_technodrome_weak_flash(uint32_t object, uint32_t *p_d5, uint32_t *p_flash_phase)
+void rock_soldier_technodrome_weak_flash(uint32_t object)
 {
-	uint8_t colour = 0, colour_2 = 0;
+	uint8_t colour = 0;
 
-	colour = 8u;
-	colour_2 = 0xEu;
-	*p_flash_phase = rock_soldier_weak_flash(colour, colour_2, *p_flash_phase, object);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | colour;
+	distance_low_byte = 8u;
+	colour = 0xEu;
+	rock_soldier_weak_flash(colour, object);
 }
 
 /* his flashing as he weakens, in his colours */
-void rock_soldier_site_weak_flash(uint32_t object, uint32_t *p_d5, uint32_t *p_flash_phase)
+void rock_soldier_site_weak_flash(uint32_t object)
 {
-	uint8_t colour = 0, colour_2 = 0;
+	uint8_t colour = 0;
 
-	colour = 8u;
-	colour_2 = 0xDu;
-	*p_flash_phase = rock_soldier_weak_flash(colour, colour_2, *p_flash_phase, object);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | colour;
+	distance_low_byte = 8u;
+	colour = 0xDu;
+	rock_soldier_weak_flash(colour, object);
 }
 
 /* he can be hit again after a while, and flashes more as he weakens */
-uint32_t rock_soldier_weak_flash(uint8_t colour, uint8_t colour_2, uint32_t flash_phase, uint32_t object)
+void rock_soldier_weak_flash(uint8_t colour, uint32_t object)
 {
-	uint32_t flash_mask = 0;
-	uint8_t hit_delay = 0, t1 = 0;
+	uint8_t flash_mask = 0;
+	uint8_t hit_delay = 0;
 
 	if (OBJECT(object)->rock_soldier.hit_delay != 0u)
 	{
@@ -1098,33 +955,32 @@ uint32_t rock_soldier_weak_flash(uint8_t colour, uint8_t colour_2, uint32_t flas
 			OBJECT(object)->flags |= 2u;
 	}
 	if (OBJECT(object)->rock_soldier.hits_left >= 0x1Cu)
-		return flash_phase;
+		return;
 	flash_mask = 0x1Cu;
+	offset_high_word = 0x1Cu;
 	if (OBJECT(object)->rock_soldier.hits_left < 0x14u)
 	{
 		flash_mask = 8u;
+		offset_high_word = 8u;
 		if (OBJECT(object)->rock_soldier.hits_left < 0xAu)
+		{
 			flash_mask = 1u;
+			offset_high_word = 1u;
+		}
 	}
-	OBJECT(object)->colour = colour_2;
-	t1 = flash_mask & (uint8_t)frame_count;
-	flash_phase = t1;
-	if (t1 == 0u)
-		OBJECT(object)->colour = colour;
-	return flash_phase;
+	OBJECT(object)->colour = colour;
+	if ((flash_mask & (uint8_t)frame_count) == 0u)
+		OBJECT(object)->colour = distance_low_byte;
 }
 
 /* he moves by his speeds within the area's depth */
-uint32_t rock_soldier_site_move(uint32_t object)
+void rock_soldier_site_move(uint32_t object)
 {
-	uint32_t d7 = 0;
-
-	d7 = move_by_speeds(object);
+	move_by_speeds(object);
 	if (OBJECT(object)->y >= 0x7800u)
 		OBJECT(object)->y = 0x7800u;
 	if (OBJECT(object)->y < 0x1000u)
 		OBJECT(object)->y = 0x1000u;
-	return d7;
 }
 
 /* a gun blast flies the way the rock soldier faces */
@@ -1152,14 +1008,14 @@ void gun_blast_start(uint32_t object)
 }
 
 /* the blast swells as it flies, and tells its rock soldier when it hits a turtle */
-uint32_t gun_blast_fly(uint32_t d7, uint32_t object)
+void gun_blast_fly(uint32_t object)
 {
 	uint32_t shooter = 0, x_speed = 0;
 
 	if (OBJECT(object)->frame_time == 0u || (OBJECT(object)->flags & 0x20u) != 0u)
 	{
 		remove_object(object);
-		return d7;
+		return;
 	}
 	x_speed = OBJECT(object)->x_speed;
 	OBJECT(object)->x += x_speed;
@@ -1168,13 +1024,13 @@ uint32_t gun_blast_fly(uint32_t d7, uint32_t object)
 		shooter = OBJECT(object)->gun_blast.shooter;
 		OBJECT(shooter)->rock_soldier.shot_hit = 0x80u;
 	}
-	return x_speed;
+	offset_high_word = x_speed;
 }
 
 /* a piece of rock falls off the defeated rock soldier */
-uint32_t rubble_start(uint32_t object)
+void rubble_start(uint32_t object)
 {
-	uint32_t animation = 0, piece = 0, stats = 0;
+	uint32_t animation = 0, stats = 0;
 
 	OBJECT(object)->flags |= 0x80u;
 	stats = inert_stats_ADDRESS;
@@ -1182,31 +1038,28 @@ uint32_t rubble_start(uint32_t object)
 	OBJECT(object)->x_speed = 0;
 	OBJECT(object)->y_speed = 0;
 	OBJECT(object)->height_speed = -0x600;
-	piece = OBJECT(object)->parameter;
-	piece = (uint16_t)(piece << 2);
-	animation = rubble_animations[piece / 4u];
+	offset_high_word = 0u;
+	animation = rubble_animations[OBJECT(object)->parameter];
 	set_animation(0u, object, animation);
 	OBJECT(object)->routine++;
-	return piece;
 }
 
 /* the piece falls to the ground */
-uint32_t rubble_fall(uint32_t object)
+void rubble_fall(uint32_t object)
 {
-	uint32_t height_speed = 0;
+	uint8_t sound = 0;
 
-	height_speed = move_by_speeds(object);
+	move_by_speeds(object);
 	if ((int16_t)OBJECT(object)->height < 0)
 	{
 		OBJECT(object)->height = 0u;
 		OBJECT(object)->x_speed = 0;
 		OBJECT(object)->y_speed = 0;
 		OBJECT(object)->height_speed = 0;
-		height_speed = (height_speed & ~0xFFFFu) | 0x31u;
-		queue_sound((uint8_t)height_speed);
+		sound = 0x31u;
+		queue_sound(sound);
 		OBJECT(object)->routine++;
 	}
-	return height_speed;
 }
 
 /* the piece stays on the ground */
@@ -1215,43 +1068,44 @@ void rubble_stay(void)
 }
 
 /* the Technodrome's rock soldier comes in, by the state of his way in */
-void rock_soldier_technodrome_enter(uint32_t object, uint32_t *p_state_offset, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_enter(uint32_t object, uint32_t a5)
 {
-	*p_state_offset = OBJECT(object)->state;
-	*p_state_offset = (uint16_t)(*p_state_offset << 2);
-	switch (*p_state_offset)
+	offset_high_word = 0u;
+	switch (OBJECT(object)->state)
 	{
 	case 0:
-		*p_state_offset = rock_soldier_technodrome_start(object);
-		return;
-	case 4:
+		rock_soldier_technodrome_start(object);
+		return a5;
+	case 1:
 		rock_soldier_technodrome_enter_wait_for_scroll(object);
-		return;
-	case 8:
+		return a5;
+	case 2:
 		rock_soldier_technodrome_enter_wait(object);
-		return;
-	case 12:
-		rock_soldier_technodrome_enter_appear(object, p_state_offset, p_a5);
-		return;
+		return a5;
+	case 3:
+		return rock_soldier_technodrome_enter_appear(object, a5);
 	}
+	unreachable();
 }
 
 /* the rock soldier waits unseen, his hits set by the players in play; the area is not cleared */
-uint32_t rock_soldier_technodrome_start(uint32_t object)
+void rock_soldier_technodrome_start(uint32_t object)
 {
+	uint8_t players = 0;
 	uint16_t count = 0;
-	uint32_t animation = 0, players = 0, stats = 0;
+	uint32_t animation = 0, stats = 0;
 	uint16_t t1 = 0;
 
 	stats = rock_soldier_technodrome_stats_ADDRESS;
 	set_object_stats(object, stats);
 	OBJECT(object)->rock_soldier.hits_left = OBJECT(object)->health_bars;
 	players = 0u;
+	offset_high_word = 0u;
 	count = 3u;
 	do
 	{
 		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
-			players = (uint8_t)(players + 1u);
+			players++;
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
@@ -1271,7 +1125,6 @@ uint32_t rock_soldier_technodrome_start(uint32_t object)
 	missile_out = 0u;
 	mousers_break_down = 0u;
 	boss_defeated = 0u;
-	return players;
 }
 
 /* once the scroll reaches him the music fades */
@@ -1308,116 +1161,98 @@ void rock_soldier_technodrome_enter_wait(uint32_t object)
 }
 
 /* he appears and fights, with the wall slab flying off and the shock bars */
-void rock_soldier_technodrome_enter_appear(uint32_t object, uint32_t *p_objects_left, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_enter_appear(uint32_t object, uint32_t a5)
 {
-	uint32_t objects_left = *p_objects_left;
-	uint32_t bars = 0, d7 = 0, hit_box = 0, last_move = 0, wall_slab = 0;
+	uint32_t bars = 0, hit_box = 0, last_move = 0, leader = 0, objects_left = 0, wall_slab = 0;
 	uint8_t timer = 0;
 
 	timer = OBJECT(object)->rock_soldier.timer;
 	OBJECT(object)->rock_soldier.timer = timer - 1u;
-	if (timer == 1u)
-	{
-		OBJECT(object)->flags |= 0x86u;
-		last_move = 0u;
-		rock_soldier_technodrome_next_move(last_move, object, &d7, p_a5);
-		wall_slab = OBJECT_ADDRESS(24);
-		objects_left = (d7 & ~0xFFu) | 8u;
-		objects_left = (uint8_t)objects_left;
-		find_free_object(&objects_left, &wall_slab);
-		if ((uint8_t)objects_left != 0u)
-		{
-			rock_soldier_technodrome_start_wall_slab(object, wall_slab);
-			bars = OBJECT_ADDRESS(24);
-			objects_left = (objects_left & ~0xFFu) | 8u;
-			objects_left = (objects_left & ~0xFFFFu) | (uint8_t)objects_left;
-			find_free_object(&objects_left, &bars);
-			if ((uint8_t)objects_left != 0u)
-			{
-				OBJECT(bars)->flags = 1u;
-				OBJECT(bars)->contacts = 0u;
-				OBJECT(bars)->kind = 0x4Cu;
-				OBJECT(bars)->parameter = 0u;
-				OBJECT(bars)->colour = 0xFFu;
-				OBJECT(bars)->animation_delay = 0u;
-				place_at_object(object, bars);
-				OBJECT(bars)->y += 0x8A00u;
-				OBJECT(bars)->shock_bars.leader = object;
-				OBJECT(bars)->routine = 0u;
-				OBJECT(bars)->state = 0u;
-				*p_a5 = bars;
-				hit_box = OBJECT_ADDRESS(24);
-				objects_left = (objects_left & ~0xFFu) | 8u;
-				objects_left = (objects_left & ~0xFFFFu) | (uint8_t)objects_left;
-				find_free_object(&objects_left, &hit_box);
-				if ((uint8_t)objects_left != 0u)
-				{
-					OBJECT(hit_box)->flags = 1u;
-					OBJECT(hit_box)->contacts = 0u;
-					OBJECT(hit_box)->kind = 0x4Du;
-					OBJECT(hit_box)->parameter = 0u;
-					OBJECT(hit_box)->colour = 0xFFu;
-					OBJECT(hit_box)->animation_delay = 0u;
-					place_at_object(object, hit_box);
-					OBJECT(hit_box)->shock_bars.leader = *p_a5;
-					OBJECT(hit_box)->routine = 0u;
-					OBJECT(hit_box)->state = 0u;
-				}
-			}
-		}
-	}
-	*p_objects_left = objects_left;
+	if (timer != 1u)
+		return a5;
+	OBJECT(object)->flags |= 0x86u;
+	last_move = 0u;
+	a5 = rock_soldier_technodrome_next_move(last_move, object, a5);
+	wall_slab = OBJECT_ADDRESS(24);
+	objects_left = 8u;
+	find_free_object(&objects_left, &wall_slab);
+	if ((uint8_t)objects_left == 0u)
+		return a5;
+	rock_soldier_technodrome_start_wall_slab(object, wall_slab);
+	bars = OBJECT_ADDRESS(24);
+	objects_left = 8u;
+	find_free_object(&objects_left, &bars);
+	if ((uint8_t)objects_left == 0u)
+		return a5;
+	OBJECT(bars)->flags = 1u;
+	OBJECT(bars)->contacts = 0u;
+	OBJECT(bars)->kind = 0x4Cu;
+	OBJECT(bars)->parameter = 0u;
+	OBJECT(bars)->colour = 0xFFu;
+	OBJECT(bars)->animation_delay = 0u;
+	place_at_object(object, bars);
+	OBJECT(bars)->y += 0x8A00u;
+	OBJECT(bars)->shock_bars.leader = object;
+	OBJECT(bars)->routine = 0u;
+	OBJECT(bars)->state = 0u;
+	leader = bars;
+	hit_box = OBJECT_ADDRESS(24);
+	objects_left = 8u;
+	find_free_object(&objects_left, &hit_box);
+	if ((uint8_t)objects_left == 0u)
+		return leader;
+	OBJECT(hit_box)->flags = 1u;
+	OBJECT(hit_box)->contacts = 0u;
+	OBJECT(hit_box)->kind = 0x4Du;
+	OBJECT(hit_box)->parameter = 0u;
+	OBJECT(hit_box)->colour = 0xFFu;
+	OBJECT(hit_box)->animation_delay = 0u;
+	place_at_object(object, hit_box);
+	OBJECT(hit_box)->shock_bars.leader = leader;
+	OBJECT(hit_box)->routine = 0u;
+	OBJECT(hit_box)->state = 0u;
+	return leader;
 }
 
 /* he strikes a turtle close by at a chance, more often as he weakens, else goes on with his move */
-void rock_soldier_technodrome_think(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_think(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint8_t sound = 0;
-	uint32_t animation = 0, attack_chance = 0, close_turtle = 0, ignored = 0, move_offset = 0, range = 0, reaches = 0, state_offset = 0;
+	uint16_t move_offset = 0;
+	uint32_t animation = 0, attack_chance = 0, close_turtle = 0, range = 0, reaches = 0;
 
-	rock_soldier_technodrome_weak_flash(object, &d5, &ignored);
+	rock_soldier_technodrome_weak_flash(object);
 	if (OBJECT(object)->state == 3u)
 	{
-		state_offset = OBJECT(object)->state;
-		state_offset = (uint16_t)(state_offset << 2);
-		switch (state_offset)
+		offset_high_word = 0u;
+		switch (OBJECT(object)->state)
 		{
 		case 0:
-			rock_soldier_technodrome_walk(object, &d5, &state_offset, p_a5);
-			break;
-		case 4:
-			rock_soldier_technodrome_walk_on(object, &d5, &state_offset, p_a5);
-			break;
-		case 8:
-			rock_soldier_technodrome_stand(object, &d5, &state_offset, p_a5);
-			break;
-		case 12:
-			rock_soldier_technodrome_taunt(object, &d5, &state_offset, p_a5);
-			break;
+			return rock_soldier_technodrome_walk(object, a5);
+		case 1:
+			return rock_soldier_technodrome_walk_on(object, a5);
+		case 2:
+			return rock_soldier_technodrome_stand(object, a5);
+		case 3:
+			return rock_soldier_technodrome_taunt(object, a5);
 		}
 	}
 	else
 	{
-		rock_soldier_find_close_turtle(object, &close_turtle, &d5);
+		close_turtle = rock_soldier_find_close_turtle(object);
 		if ((uint8_t)close_turtle == 0u)
 		{
-			state_offset = OBJECT(object)->state;
-			state_offset = (uint16_t)(state_offset << 2);
-			switch (state_offset)
+			offset_high_word = 0u;
+			switch (OBJECT(object)->state)
 			{
 			case 0:
-				rock_soldier_technodrome_walk(object, &d5, &state_offset, p_a5);
-				break;
-			case 4:
-				rock_soldier_technodrome_walk_on(object, &d5, &state_offset, p_a5);
-				break;
-			case 8:
-				rock_soldier_technodrome_stand(object, &d5, &state_offset, p_a5);
-				break;
-			case 12:
-				rock_soldier_technodrome_taunt(object, &d5, &state_offset, p_a5);
-				break;
+				return rock_soldier_technodrome_walk(object, a5);
+			case 1:
+				return rock_soldier_technodrome_walk_on(object, a5);
+			case 2:
+				return rock_soldier_technodrome_stand(object, a5);
+			case 3:
+				return rock_soldier_technodrome_taunt(object, a5);
 			}
 		}
 		else
@@ -1428,27 +1263,7 @@ void rock_soldier_technodrome_think(uint32_t object, uint32_t *p_d5, uint32_t *p
 			attack_chance = REACH(reaches + (OBJECT(object)->rock_soldier.blows + ((uint32_t)turtles_in_play << 2)));
 			range = 0x40u;
 			range = random_below((uint16_t)range, object);
-			if (attack_chance <= (uint8_t)range)
-			{
-				state_offset = OBJECT(object)->state;
-				state_offset = (uint16_t)(state_offset << 2);
-				switch (state_offset)
-				{
-				case 0:
-					rock_soldier_technodrome_walk(object, &d5, &state_offset, p_a5);
-					break;
-				case 4:
-					rock_soldier_technodrome_walk_on(object, &d5, &state_offset, p_a5);
-					break;
-				case 8:
-					rock_soldier_technodrome_stand(object, &d5, &state_offset, p_a5);
-					break;
-				case 12:
-					rock_soldier_technodrome_taunt(object, &d5, &state_offset, p_a5);
-					break;
-				}
-			}
-			else
+			if ((uint8_t)range < attack_chance)
 			{
 				OBJECT(object)->rock_soldier.close_turtle = close_turtle;
 				OBJECT(object)->rock_soldier.explosions = 0u;
@@ -1464,200 +1279,176 @@ void rock_soldier_technodrome_think(uint32_t object, uint32_t *p_d5, uint32_t *p
 				OBJECT(object)->rock_soldier.close_turtle = 0u;
 				sound = 8u;
 				queue_sound(sound);
-				move_offset = turtles_in_play;
-				move_offset = (uint16_t)(move_offset << 2);
-				move_offset = (move_offset & ~0xFFu) | (uint8_t)(move_offset + OBJECT(object)->rock_soldier.blows);
-				state_offset = (move_offset & ~0xFFu) | rock_soldier_technodrome_moves[move_offset];
-				animation = TABLE32(rock_soldier_technodrome_animations, state_offset);
+				offset_high_word = 0u;
+				move_offset = (uint16_t)((uint32_t)turtles_in_play << 2);
+				move_offset = (uint16_t)((move_offset & ~0xFFu) | (uint8_t)(move_offset + OBJECT(object)->rock_soldier.blows));
+				animation = TABLE32(rock_soldier_technodrome_animations, (move_offset & ~0xFFu) | rock_soldier_technodrome_moves[move_offset]);
 				set_animation(attack_chance, object, animation);
 				OBJECT(object)->rock_soldier.blows++;
 				if (OBJECT(object)->rock_soldier.blows >= 4u)
 					OBJECT(object)->rock_soldier.blows = 3u;
+				return a5;
+			}
+			offset_high_word = 0u;
+			switch (OBJECT(object)->state)
+			{
+			case 0:
+				return rock_soldier_technodrome_walk(object, a5);
+			case 1:
+				return rock_soldier_technodrome_walk_on(object, a5);
+			case 2:
+				return rock_soldier_technodrome_stand(object, a5);
+			case 3:
+				return rock_soldier_technodrome_taunt(object, a5);
 			}
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = state_offset;
+	unreachable();
 }
 
 /* he walks at his target, aiming at it now and then */
-void rock_soldier_technodrome_walk(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_walk(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0, ignored = 0, last_move = 0;
-	uint8_t t1 = 0, t2 = 0, move_time = 0;
+	uint32_t d7 = 0, ignored = 0, last_move = 0;
+	uint8_t t1 = 0, move_time = 0;
 
-	d7_2 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d7_2 & 0xFu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
+	t1 = (uint8_t)frame_count & 0xFu;
+	d7 = t1;
 	if (t1 == 0u)
-		boss_aim_at_target(object, &ignored, &d7_2, p_a5);
-	t2 = d7_2 & 1u;
-	d7_2 = (d7_2 & ~0xFFu) | t2;
-	if (t2 == 0u)
-		d7_2 = rock_soldier_technodrome_move(object);
+		boss_aim_at_target(object, &ignored, &d7, &a5);
+	if ((d7 & 1u) == 0u)
+		rock_soldier_technodrome_move(object);
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 1u;
-		rock_soldier_technodrome_move_done(last_move, object, &d5, &d7_2, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = d7_2;
+	if (move_time != 0u)
+		return a5;
+	last_move = 1u;
+	return rock_soldier_technodrome_move_done(last_move, object, a5);
 }
 
 /* he walks on at his target */
-void rock_soldier_technodrome_walk_on(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_walk_on(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0, ignored = 0, last_move = 0;
-	uint8_t t1 = 0, move_time = 0;
+	uint32_t ignored = 0, ignored_2 = 0, last_move = 0;
+	uint8_t move_time = 0;
 
-	d7_2 = (d7 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = d7_2 & 0xFu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
-	if (t1 == 0u)
-		boss_aim_at_target(object, &ignored, &d7_2, p_a5);
+	if ((frame_count & 0xFu) == 0u)
+		boss_aim_at_target(object, &ignored, &ignored_2, &a5);
 	if ((frame_count & 2u) == 0u)
-		d7_2 = rock_soldier_technodrome_move(object);
+		rock_soldier_technodrome_move(object);
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
-	if (move_time == 0u)
-	{
-		last_move = 2u;
-		rock_soldier_technodrome_move_done(last_move, object, &d5, &d7_2, p_a5);
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = d7_2;
+	if (move_time != 0u)
+		return a5;
+	last_move = 2u;
+	return rock_soldier_technodrome_move_done(last_move, object, a5);
 }
 
 /* he stands a while */
-void rock_soldier_technodrome_stand(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_stand(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t last_move = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->rock_soldier.move_time;
 	OBJECT(object)->rock_soldier.move_time = move_time - 1u;
 	if (move_time != 0u)
-		return;
+		return a5;
 	last_move = 3u;
-	rock_soldier_technodrome_move_done(last_move, object, &d5, p_d7, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	return rock_soldier_technodrome_move_done(last_move, object, a5);
 }
 
 /* he taunts until the animation ends */
-void rock_soldier_technodrome_taunt(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_taunt(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t last_move = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return;
+		return a5;
 	last_move = 4u;
-	rock_soldier_technodrome_move_done(last_move, object, &d5, p_d7, p_a5);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
+	return rock_soldier_technodrome_move_done(last_move, object, a5);
 }
 
 /* a move over: now and then a missile at a turtle far enough in front, else the next move */
-void rock_soldier_technodrome_move_done(uint32_t last_move, uint32_t object, uint32_t *p_d5, uint32_t *p_objects_left, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_move_done(uint32_t last_move, uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t animation = 0, missile = 0, objects_left = 0, range = 0, turtle_ahead = 0;
+	uint32_t a5_2 = 0, animation = 0, missile = 0, objects_left = 0, range = 0, turtle_ahead = 0;
 
 	if (missile_out != 0u)
-		rock_soldier_technodrome_next_move(last_move, object, &objects_left, p_a5);
-	else
-	{
-		rock_soldier_find_turtle_ahead(object, &d5, &turtle_ahead);
-		if ((uint8_t)turtle_ahead == 0u)
-			rock_soldier_technodrome_next_move(last_move, object, &objects_left, p_a5);
-		else
-		{
-			range = 0x10u;
-			range = random_below((uint16_t)range, object);
-			if ((uint8_t)range < 4u)
-			{
-				OBJECT(object)->rock_soldier.explosions = 0u;
-				OBJECT(object)->routine = 2u;
-				OBJECT(object)->state = 0u;
-				OBJECT(object)->rock_soldier.shot_hit = 0u;
-				missile = OBJECT_ADDRESS(24);
-				objects_left = (range & ~0xFFu) | 8u;
-				objects_left = (uint8_t)objects_left;
-				find_free_object(&objects_left, &missile);
-				if ((uint8_t)objects_left == 0u)
-					rock_soldier_technodrome_walk_start(object, &objects_left, p_a5);
-				else
-				{
-					rock_soldier_technodrome_start_missile(object, missile, &objects_left, p_a5);
-					animation = rock_soldier_technodrome_animations[4];
-					set_animation(0u, object, animation);
-				}
-			}
-			else
-				rock_soldier_technodrome_next_move(last_move, object, &objects_left, p_a5);
-		}
-	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_objects_left = objects_left;
+		return rock_soldier_technodrome_next_move(last_move, object, a5);
+	turtle_ahead = rock_soldier_find_turtle_ahead(object);
+	if ((uint8_t)turtle_ahead == 0u)
+		return rock_soldier_technodrome_next_move(last_move, object, a5);
+	range = 0x10u;
+	range = random_below((uint16_t)range, object);
+	if ((uint8_t)range >= 4u)
+		return rock_soldier_technodrome_next_move(last_move, object, a5);
+	OBJECT(object)->rock_soldier.explosions = 0u;
+	OBJECT(object)->routine = 2u;
+	OBJECT(object)->state = 0u;
+	OBJECT(object)->rock_soldier.shot_hit = 0u;
+	missile = OBJECT_ADDRESS(24);
+	objects_left = 8u;
+	find_free_object(&objects_left, &missile);
+	if ((uint8_t)objects_left == 0u)
+		return rock_soldier_technodrome_walk_start(object);
+	a5_2 = rock_soldier_technodrome_start_missile(object, missile);
+	animation = rock_soldier_technodrome_animations[4];
+	set_animation(0u, object, animation);
+	return a5_2;
 }
 
 /* the missile's firing plays out, then the next move */
-void rock_soldier_technodrome_fire(uint32_t object, uint32_t *p_d5, uint32_t *p_flash_phase, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_fire(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = 0, last_move = 0;
+	uint32_t last_move = 0;
 
-	rock_soldier_technodrome_weak_flash(object, &d5, p_flash_phase);
+	rock_soldier_technodrome_weak_flash(object);
 	if (OBJECT(object)->frame_time == 0u)
 	{
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->state = 0u;
 		OBJECT(object)->rock_soldier.hurt = 0u;
 		last_move = 5u;
-		rock_soldier_technodrome_next_move(last_move, object, p_flash_phase, p_a5);
+		return rock_soldier_technodrome_next_move(last_move, object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	return a5;
 }
 
 /* the blow plays out, then the next move */
-void rock_soldier_technodrome_finish_blow(uint32_t object, uint32_t *p_d5, uint32_t *p_flash_phase, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_finish_blow(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = 0, last_move = 0;
+	uint32_t last_move = 0;
 
-	rock_soldier_technodrome_weak_flash(object, &d5, p_flash_phase);
+	rock_soldier_technodrome_weak_flash(object);
 	if (OBJECT(object)->frame_time == 0u)
 	{
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->state = 0u;
 		OBJECT(object)->rock_soldier.hurt = 0u;
 		last_move = 5u;
-		rock_soldier_technodrome_next_move(last_move, object, p_flash_phase, p_a5);
+		return rock_soldier_technodrome_next_move(last_move, object, a5);
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	return a5;
 }
 
 /* the next move by chance, by what he did before */
-void rock_soldier_technodrome_next_move(uint32_t last_move, uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_next_move(uint32_t last_move, uint32_t object, uint32_t a5)
 {
 	uint16_t count = 0;
-	uint32_t a5 = 0, chances = 0;
+	uint32_t chances = 0, d7 = 0;
 	uint8_t move_chance = 0, t1 = 0;
 	uint16_t t2 = 0;
 
-	*p_d7 = 0x10u;
-	*p_d7 = random_below((uint16_t)*p_d7, object);
+	d7 = 0x10u;
+	d7 = random_below((uint16_t)d7, object);
 	count = 3u;
 	chances = table_loaded_by_lea_012486_ADDRESS + (uint16_t)(last_move << 2);
 	for (;;)
 	{
 		move_chance = MOVE_CHANCE(chances + (int16_t)count);
-		t1 = *p_d7;
-		*p_d7 = (uint8_t)(t1 - move_chance);
+		t1 = d7;
+		d7 = (uint8_t)(t1 - move_chance);
 		if (t1 < move_chance)
 			break;
 		t2 = count - 1u;
@@ -1671,61 +1462,62 @@ void rock_soldier_technodrome_next_move(uint32_t last_move, uint32_t object, uin
 	switch ((uint32_t)(int16_t)((uint32_t)count << 2))
 	{
 	case 0:
-		*p_a5 = a5;
-		rock_soldier_technodrome_walk_start(object, p_d7, p_a5);
-		return;
+		return rock_soldier_technodrome_walk_start(object);
 	case 4:
-		*p_d7 = rock_soldier_technodrome_walk_on_start(object);
-		return;
+		rock_soldier_technodrome_walk_on_start(object);
+		return a5;
 	case 8:
-		*p_d7 = rock_soldier_technodrome_stand_start(object);
-		return;
+		rock_soldier_technodrome_stand_start(object);
+		return a5;
 	case 12:
-		*p_d7 = rock_soldier_technodrome_taunt_start(object);
-		return;
+		rock_soldier_technodrome_taunt_start(object);
+		return a5;
 	}
+	unreachable();
 }
 
 /* he picks a turtle and walks at it, or taunts if there is none */
-void rock_soldier_technodrome_walk_start(uint32_t object, uint32_t *p_range, uint32_t *p_a5)
+uint32_t rock_soldier_technodrome_walk_start(uint32_t object)
 {
-	uint32_t animation = 0, ignored = 0, picked = 0;
+	uint16_t range = 0;
+	uint32_t a5 = 0, animation = 0, ignored = 0, picked = 0;
 
-	boss_pick_target(object, &ignored, &picked, p_a5);
+	boss_pick_target(object, &ignored, &picked, &a5);
 	if ((uint8_t)picked == 0u)
 	{
-		*p_range = rock_soldier_technodrome_taunt_start(object);
-		return;
+		rock_soldier_technodrome_taunt_start(object);
+		return a5;
 	}
-	*p_range = 8u;
-	*p_range = rock_soldier_technodrome_random_move_time(*p_range, object);
+	range = 8u;
+	rock_soldier_technodrome_random_move_time(range, object);
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 0u;
 	animation = rock_soldier_technodrome_animations[2];
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* he walks on as he was */
-uint32_t rock_soldier_technodrome_walk_on_start(uint32_t object)
+void rock_soldier_technodrome_walk_on_start(uint32_t object)
 {
-	uint32_t range = 0;
+	uint16_t range = 0;
 
 	range = 8u;
-	range = rock_soldier_technodrome_random_move_time(range, object);
+	rock_soldier_technodrome_random_move_time(range, object);
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 1u;
-	return range;
 }
 
 /* he stands a while, crouched on his way in */
-uint32_t rock_soldier_technodrome_stand_start(uint32_t object)
+void rock_soldier_technodrome_stand_start(uint32_t object)
 {
-	uint32_t animation = 0, range = 0;
+	uint16_t range = 0;
+	uint32_t animation = 0;
 
 	range = 4u;
-	range = rock_soldier_technodrome_random_move_time(range, object);
+	rock_soldier_technodrome_random_move_time(range, object);
 	animation = rock_soldier_technodrome_animations[0];
 	if (OBJECT(object)->routine == 0u)
 		animation = rock_soldier_technodrome_animations[1];
@@ -1733,14 +1525,13 @@ uint32_t rock_soldier_technodrome_stand_start(uint32_t object)
 	OBJECT(object)->routine = 1u;
 	OBJECT(object)->state = 2u;
 	set_animation(0u, object, animation);
-	return range;
 }
 
 /* he taunts with a speech */
-uint32_t rock_soldier_technodrome_taunt_start(uint32_t object)
+void rock_soldier_technodrome_taunt_start(uint32_t object)
 {
-	uint8_t kept_roll = 0;
-	uint32_t animation = 0, range = 0, sound = 0;
+	uint8_t kept_roll = 0, sound = 0;
+	uint32_t animation = 0, range = 0;
 
 	OBJECT(object)->rock_soldier.explosions = 0u;
 	OBJECT(object)->routine = 1u;
@@ -1751,31 +1542,26 @@ uint32_t rock_soldier_technodrome_taunt_start(uint32_t object)
 	sound = 0xA6u;
 	if (kept_roll == 0u)
 		sound = 0xB1u;
-	queue_sound((uint8_t)sound);
+	queue_sound(sound);
 	animation = rock_soldier_technodrome_animations[3];
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* how long the move lasts, at random */
-uint32_t rock_soldier_technodrome_random_move_time(uint32_t range, uint32_t object)
+void rock_soldier_technodrome_random_move_time(uint32_t range, uint32_t object)
 {
 	range = random_below((uint16_t)range, object);
 	OBJECT(object)->rock_soldier.move_time = rock_soldier_technodrome_move_times[range];
-	return range;
 }
 
 /* he moves by his speeds within the area's depth */
-uint32_t rock_soldier_technodrome_move(uint32_t object)
+void rock_soldier_technodrome_move(uint32_t object)
 {
-	uint32_t d7 = 0;
-
-	d7 = move_by_speeds(object);
+	move_by_speeds(object);
 	if (OBJECT(object)->y >= 0xF68000u)
 		OBJECT(object)->y = 0xF68000u;
 	if (OBJECT(object)->y < 0xF61000u)
 		OBJECT(object)->y = 0xF61000u;
-	return d7;
 }
 
 /* the wall slab flies off where he appears */
@@ -1821,20 +1607,20 @@ void wall_slab_start(uint32_t object)
 }
 
 /* the slab flies until it leaves the screen */
-uint32_t wall_slab_fly(uint32_t d7, uint32_t object)
+void wall_slab_fly(uint32_t object)
 {
 	if ((OBJECT(object)->flags & 0x20u) != 0u)
 	{
 		remove_object(object);
-		return d7;
+		return;
 	}
-	return move_by_speeds(object);
+	move_by_speeds(object);
 }
 
 /* a missile from his launcher, the way he faces */
-void rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile, uint32_t *p_missile_offset, uint32_t *p_shadow)
+uint32_t rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile)
 {
-	uint32_t missile_offset = *p_missile_offset;
+	uint32_t missile_offset = 0, shadow = 0;
 
 	OBJECT(missile)->flags = 1u;
 	OBJECT(missile)->contacts = 0u;
@@ -1844,13 +1630,14 @@ void rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile, u
 	OBJECT(missile)->animation_delay = 0u;
 	place_at_object(object, missile);
 	OBJECT(missile)->missile.flies_left = 0u;
-	missile_offset = (missile_offset & ~0xFFFFu) | 0x4000u;
+	missile_offset = 0x4000u;
 	if ((OBJECT(object)->flags & 0x40u) == 0u)
 	{
 		missile_offset = (int16_t)~missile_offset;
+		offset_high_word = missile_offset;
 		OBJECT(missile)->missile.flies_left |= 0x80u;
 	}
-	OBJECT(missile)->x += missile_offset;
+	OBJECT(missile)->x += (missile_offset & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
 	OBJECT(missile)->height = 0x3800u;
 	OBJECT(missile)->missile.shooter = object;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
@@ -1858,9 +1645,9 @@ void rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile, u
 	OBJECT(missile)->routine = 0u;
 	OBJECT(missile)->state = 0u;
 	OBJECT(missile)->contacts |= 0x80u;
-	*p_shadow = missile_shadow_ADDRESS;
+	shadow = missile_shadow_ADDRESS;
 	OBJECT(missile)->shadow = missile_shadow_ADDRESS;
-	*p_missile_offset = missile_offset;
+	return shadow;
 }
 
 /* a missile flies the way the rock soldier faces, knocking turtles flying */
@@ -1889,41 +1676,30 @@ void missile_start(uint32_t object)
 }
 
 /* the missile flies until it meets a wall or reaches the screen's sides, and explodes */
-void missile_fly(uint32_t object, uint32_t *p_d5, uint32_t *p_x_speed, uint32_t *p_a5)
+uint32_t missile_fly(uint32_t object, uint32_t a5)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t x_speed = *p_x_speed;
-	uint32_t a6 = 0, animation = 0;
+	uint8_t sound = 0;
+	uint32_t a6 = 0, animation = 0, x_speed = 0;
 
-	if (OBJECT(object)->screen_x < 0x60u || OBJECT(object)->screen_x >= 0x180u)
-	{
-		OBJECT(object)->routine++;
-		x_speed = (x_speed & ~0xFFu) | 0x13u;
-		queue_sound((uint8_t)x_speed);
-		animation = rocket_animations[0];
-		set_animation(0u, object, animation);
-	}
-	else
+	if (OBJECT(object)->screen_x >= 0x60u && OBJECT(object)->screen_x < 0x180u)
 	{
 		LAYER(WORKING_LAYER)->x = LAYER(LAYER_B)->x;
-		read_floor_cells_on_screen(object, &d5, p_a5, &a6);
+		read_floor_cells_on_screen(object, &a5, &a6);
 		turtle_walls_right(object, a6);
-		if ((OBJECT(object)->contacts & 8u) != 0u)
-		{
-			OBJECT(object)->routine++;
-			x_speed = (x_speed & ~0xFFu) | 0x13u;
-			queue_sound((uint8_t)x_speed);
-			animation = rocket_animations[0];
-			set_animation(0u, object, animation);
-		}
-		else
+		if ((OBJECT(object)->contacts & 8u) == 0u)
 		{
 			x_speed = OBJECT(object)->x_speed;
 			OBJECT(object)->x += x_speed;
+			offset_high_word = x_speed;
+			return a5;
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_x_speed = x_speed;
+	OBJECT(object)->routine++;
+	sound = 0x13u;
+	queue_sound(sound);
+	animation = rocket_animations[0];
+	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* the explosion ends and the missile is gone */

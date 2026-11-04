@@ -3,7 +3,7 @@
  *    Description: the VBLANK interrupt: the inputs, the frame's work, the game's states and the job queue
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -176,13 +176,12 @@ void count_coin(uint32_t coin_slot)
 }
 
 /* each slot's credits added to its player's lives */
-void add_credit_lives(uint32_t *p_credit_lives, uint32_t *p_players, uint32_t *p_player_number)
+uint32_t add_credit_lives(void)
 {
-	uint32_t credit_lives = *p_credit_lives;
 	uint32_t carry = 0, extend = 0;
 	uint8_t slot = 0;
-	uint16_t count = 0, count_2 = 0, lives = 0;
-	uint32_t coin_slot = 0, player = 0, player_2 = 0, player_number = 0, players = 0;
+	uint16_t count = 0, count_2 = 0, lives = 0, players = 0;
+	uint32_t coin_slot = 0, player = 0, player_2 = 0, player_number = 0;
 	uint16_t credits = 0, t1 = 0, t2 = 0, t3 = 0;
 
 	coin_slot = COIN_SLOT_ADDRESS(0);
@@ -199,11 +198,11 @@ void add_credit_lives(uint32_t *p_credit_lives, uint32_t *p_players, uint32_t *p
 			count_2 = (uint16_t)((count_2 & ~0xFFu) | (uint8_t)(count_2 - 1u));
 			do
 			{
-				credit_lives = lives_per_credit;
+				distance_low_byte = lives_per_credit;
 				lives = PLAYER(player_2)->lives;
 				extend = 0u;
-				carry = m68k_abcd_cy((uint8_t)lives, credit_lives, extend);
-				lives = (uint16_t)((lives & ~0xFFu) | m68k_abcd((uint8_t)lives, credit_lives, extend));
+				carry = m68k_abcd_cy((uint8_t)lives, distance_low_byte, extend);
+				lives = (uint16_t)((lives & ~0xFFu) | m68k_abcd((uint8_t)lives, distance_low_byte, extend));
 				if (carry)
 				{
 					lives += 0x100u;
@@ -224,6 +223,7 @@ void add_credit_lives(uint32_t *p_credit_lives, uint32_t *p_players, uint32_t *p
 	} while (t2 != 0xFFFFu);
 	player = PLAYER_ADDRESS(3);
 	player_number = 3u;
+	offset_high_word = 3u;
 	players = 0u;
 	do
 	{
@@ -236,10 +236,9 @@ void add_credit_lives(uint32_t *p_credit_lives, uint32_t *p_players, uint32_t *p
 		player_number = t3;
 		player -= 8u;
 	} while (t3 != 0xFFFFu);
-	players_with_lives = players;
-	*p_credit_lives = credit_lives;
-	*p_players = players;
-	*p_player_number = player_number;
+	players_with_lives = (uint8_t)players;
+	fade_banks = players;
+	return player_number;
 }
 
 /* Unused: a column of 28 tiles set to the one given */
@@ -264,7 +263,7 @@ void unreached_003DAA(uint8_t tile_code)
 /* the frame's interrupt: the inputs, the coins, the sound, the palettes and the game state's frame */
 void vblank_interrupt(void)
 {
-	uint32_t a5 = 0, d5 = 0, d6 = 0, d7 = 0;
+	uint32_t d7 = 0;
 
 	board_control &= 0xDFu;
 	io_write8(IO_0A0001, board_control);
@@ -273,14 +272,14 @@ void vblank_interrupt(void)
 	take_interrupts();
 	frame_count++;
 	sound_stopped_by_coin = 0u;
-	d6 = send_sound_command(0u);
+	send_sound_command();
 	d7 = read_inputs(0u);
 	if (game_state != 3u)
 	{
 		update_coins();
-		add_credit_lives(&d5, &d6, &d7);
+		d7 = add_credit_lives();
 	}
-	run_palette_requests(&d5, &d6, &d7, &a5);
+	run_palette_requests((uint16_t)d7);
 	step_palette_effects();
 	switch (game_state)
 	{
@@ -288,10 +287,10 @@ void vblank_interrupt(void)
 		run_startup();
 		break;
 	case 1:
-		run_attract(0u, (uint8_t)d5, (uint16_t)d6, d7, a5);
+		run_attract();
 		break;
 	case 2:
-		run_game(0u, (uint8_t)d5, (uint16_t)d6, d7, a5);
+		run_game();
 		break;
 	case 3:
 		run_test_mode();
@@ -438,7 +437,7 @@ void set_screen_flip(void)
 }
 
 /* the attract mode's frame, and a game when a player starts */
-void run_attract(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
+void run_attract(void)
 {
 	uint8_t sound = 0;
 
@@ -448,16 +447,16 @@ void run_attract(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
 		attract_begin();
 		break;
 	case 1:
-		attract_coin_screen(d1);
+		attract_coin_screen();
 		break;
 	case 2:
-		attract_opening(d6, a5);
+		attract_opening();
 		break;
 	case 3:
 		attract_title();
 		break;
 	case 4:
-		attract_demo(d1, d5, d6, d7, a5);
+		attract_demo();
 		break;
 	case 5:
 		attract_profile();
@@ -486,7 +485,7 @@ void run_attract(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
 }
 
 /* the game's frame by its scene */
-void run_game(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
+void run_game(void)
 {
 	switch (scene)
 	{
@@ -500,19 +499,19 @@ void run_game(uint32_t d1, uint8_t d5, uint16_t d6, uint32_t d7, uint32_t a5)
 		scene_area_setup();
 		return;
 	case 3:
-		scene_area_title(d1);
+		scene_area_title();
 		return;
 	case 4:
-		scene_play(d1, d5, d7);
+		scene_play();
 		return;
 	case 5:
-		scene_area_exit(d1, d7);
+		scene_area_exit();
 		return;
 	case 6:
-		scene_ending(d6, a5);
+		scene_ending();
 		return;
 	case 7:
-		scene_continue(d1, d6, a5);
+		scene_continue();
 		return;
 	case 8:
 		scene_ranking();
@@ -621,15 +620,16 @@ void check_starts(void)
 }
 
 /* in a game, the players with lives who press a button join it */
-uint32_t check_joins(uint32_t d1)
+void check_joins(void)
 {
+	uint8_t players = 0;
 	uint16_t player_number = 0;
 	uint32_t inputs = 0, player = 0;
 	uint8_t t1 = 0;
 	uint16_t lives = 0;
 
 	if (game_on == 0u)
-		return d1;
+		return;
 	scratch_byte = 0u;
 	player_number = 0u;
 	player = PLAYER_ADDRESS(0);
@@ -639,30 +639,21 @@ uint32_t check_joins(uint32_t d1)
 		if ((players_in_play & shl32(1u, (int)(player_number & 7u))) == 0u)
 		{
 			lives = PLAYER(player)->lives;
-			d1 = lives;
-			if (lives != 0u)
-			{
-				d1 = (d1 & ~0xFFu) | player_inputs(player_number);
-				if ((d1 & 0x30u) != 0u)
-				{
-					d1 = (d1 & ~0xFFu) | player_inputs_last_frame(player_number);
-					if ((d1 & 0x30u) == 0u)
-						scratch_byte |= shl32(1u, (int)(player_number & 7u));
-				}
-			}
+			screen_x_high = lives;
+			if (lives != 0u && (player_inputs(player_number) & 0x30u) != 0u && (player_inputs_last_frame(player_number) & 0x30u) == 0u)
+				scratch_byte |= shl32(1u, (int)(player_number & 7u));
 		}
 		player_number = (uint8_t)(player_number + 1u);
 		player += 8u;
 	} while (player_number < 4u);
 	t1 = scratch_byte;
-	d1 = (d1 & ~0xFFu) | t1;
+	players = t1;
 	if (t1 != 0u)
 	{
-		players_in_play |= d1;
-		players_joining |= d1;
+		players_in_play |= players;
+		players_joining |= players;
 		game_on = 1u;
 	}
-	return d1;
 }
 
 /* the first player's score and health reset */
@@ -789,44 +780,38 @@ void reset_score(uint32_t player)
 }
 
 /* the players who join or come back, their boxes and messages */
-void update_players_in_game(uint32_t d1, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_marker)
+uint32_t update_players_in_game(uint32_t marker)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint32_t d7_2 = 0;
-
-	join_players(d7, &d1, &d5, p_marker);
-	redraw_new_lives(d7, &d1, &d5);
-	respawn_players(d7, &d1, &d5, p_marker);
-	update_player_messages(d1, &d5, &d7_2);
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = d7_2;
+	marker = join_players(marker);
+	redraw_new_lives();
+	marker = respawn_players(marker);
+	update_player_messages();
+	return marker;
 }
 
 /* the boxes whose lives a coin changed */
-void redraw_new_lives(uint32_t d7, uint32_t *p_d1, uint32_t *p_box_offset)
+void redraw_new_lives(void)
 {
-	uint32_t box_offset = *p_box_offset;
-	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0;
+	uint16_t box_flags = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
-	box_flags = (d7 & ~0xFFFFu) | 0xB00u;
-	box_flags |= (uint8_t)(box_flags + players_credited);
-	box_flags = box_flags | 0x30u;
-	draw_player_boxes(box_flags, p_d1, &ignored, &box_offset, &ignored_2);
+	box_flags = (uint16_t)(0xB00u | players_credited);
+	box_flags = (uint16_t)(box_flags | 0x30u);
+	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 	players_credited = 0u;
-	*p_box_offset = (*p_box_offset & 0xFFFF0000u) | (box_offset & 0xFFFFu);
 }
 
 /* the players who join: their turtles in, a life each */
-void join_players(uint32_t d7, uint32_t *p_d1, uint32_t *p_box_offset, uint32_t *p_marker)
+uint32_t join_players(uint32_t marker)
 {
-	uint32_t box_offset = *p_box_offset;
-	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, players = 0;
+	uint8_t players = 0;
+	uint16_t box_flags = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	if (players_joining == 0u)
-		return;
-	players = (d7 & ~0xFFu) | players_joining;
-	turtle_join((uint8_t)players, p_d1, p_marker);
+		return marker;
+	players = players_joining;
+	marker = turtle_join(players);
 	if ((players_joining & 1u) != 0u)
 		use_life_player_1();
 	if ((players_joining & 2u) != 0u)
@@ -835,22 +820,22 @@ void join_players(uint32_t d7, uint32_t *p_d1, uint32_t *p_box_offset, uint32_t 
 		use_life_player_3();
 	if ((players_joining & 8u) != 0u)
 		use_life_player_4();
-	box_flags = (players & ~0xFFFFu) | 0xB00u;
-	box_flags |= (uint8_t)(box_flags + players_joining);
-	box_flags = box_flags | 0x30u;
-	draw_player_boxes(box_flags, p_d1, &ignored, &box_offset, &ignored_2);
+	box_flags = (uint16_t)(0xB00u | players_joining);
+	box_flags = (uint16_t)(box_flags | 0x30u);
+	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 	players_joining = 0u;
-	*p_box_offset = (*p_box_offset & 0xFFFF0000u) | (box_offset & 0xFFFFu);
+	return marker;
 }
 
 /* the players whose turtle was knocked out: a life each, the turtle back */
-void respawn_players(uint32_t d7, uint32_t *p_d1, uint32_t *p_box_offset, uint32_t *p_marker)
+uint32_t respawn_players(uint32_t marker)
 {
-	uint32_t box_offset = *p_box_offset;
-	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, players = 0;
+	uint8_t players = 0;
+	uint16_t box_flags = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	if (players_knocked_out == 0u)
-		return;
+		return marker;
 	if ((players_knocked_out & 1u) != 0u)
 		use_life_player_1();
 	if ((players_knocked_out & 2u) != 0u)
@@ -859,63 +844,61 @@ void respawn_players(uint32_t d7, uint32_t *p_d1, uint32_t *p_box_offset, uint32
 		use_life_player_3();
 	if ((players_knocked_out & 8u) != 0u)
 		use_life_player_4();
-	players = (d7 & ~0xFFu) | players_in_play;
-	players = players & (players_knocked_out | 0xFFFFFF00u);
-	turtle_respawn((uint8_t)players, p_d1, p_marker);
-	box_flags = (players & ~0xFFFFu) | 0xB00u;
-	box_flags |= (uint8_t)(box_flags + players_knocked_out);
-	box_flags = box_flags | 0x30u;
-	draw_player_boxes(box_flags, p_d1, &ignored, &box_offset, &ignored_2);
+	players = players_in_play & players_knocked_out;
+	marker = turtle_respawn(players);
+	box_flags = (uint16_t)(0xB00u | players_knocked_out);
+	box_flags = (uint16_t)(box_flags | 0x30u);
+	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 	players_knocked_out = 0u;
-	*p_box_offset = (*p_box_offset & 0xFFFF0000u) | (box_offset & 0xFFFFu);
+	return marker;
 }
 
 /* the messages under the four boxes */
-void update_player_messages(uint32_t d1, uint32_t *p_d5, uint32_t *p_player_message)
+void update_player_messages(void)
 {
-	uint32_t d5 = *p_d5;
 	uint16_t count = 0;
 	uint16_t t1 = 0;
 
 	count = 3u;
 	do
 	{
-		update_player_message((uint8_t)count, d1, &d5, p_player_message);
+		update_player_message((uint8_t)count);
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
 }
 
 /* the message under a player's box by how he stands */
-void update_player_message(uint8_t count, uint32_t d1, uint32_t *p_d5, uint32_t *p_player_message)
+void update_player_message(uint8_t count)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t ignored = 0, ignored_2 = 0, player_message = 0, players_around = 0, players_playing = 0;
+	uint8_t player_message = 0;
+	uint32_t ignored = 0, ignored_2 = 0;
 
-	players_around = (d1 & ~0xFFu) | players_with_lives;
-	players_around = players_around | players_joining;
-	players_around = players_around | players_in_play;
-	players_around = players_around | players_knocked_out;
-	if ((players_around & shl32(1u, (int)(count & 0x1Fu))) != 0u)
+	if (((players_with_lives | players_joining | players_in_play | players_knocked_out | (screen_x_high & ~0xFFu)) & shl32(1u, (int)(count & 0x1Fu))) != 0u)
 	{
-		players_playing = (players_around & ~0xFFu) | players_joining;
-		players_playing = players_playing | players_in_play;
-		players_playing = players_playing | players_knocked_out;
-		if (((players_playing | players_out_of_lives) & shl32(1u, (int)(count & 0x1Fu))) != 0u || (players_with_lives & shl32(1u, (int)(count & 7u))) == 0u)
+		if (((players_joining | players_in_play | players_knocked_out | players_out_of_lives | (screen_x_high & ~0xFFu)) & shl32(1u, (int)(count & 0x1Fu))) != 0u || (players_with_lives & shl32(1u, (int)(count & 7u))) == 0u)
+		{
+			offset_high_word = 0u;
 			player_message = 0xCu;
+		}
 		else
+		{
+			offset_high_word = 0u;
 			player_message = 4u;
+		}
 	}
 	else if ((players_out_of_lives & shl32(1u, (int)(count & 7u))) != 0u)
+	{
+		offset_high_word = 0u;
 		player_message = 8u;
+	}
 	else
+	{
 		player_message = 0u;
-	player_message = (uint8_t)(player_message | count);
-	player_message = (uint16_t)(player_message + 0xD00u);
-	draw_player_message((uint8_t)player_message, &ignored, &d5, &ignored_2);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_player_message = player_message;
+		offset_high_word = 0u;
+	}
+	player_message = (uint8_t)(uint16_t)((uint8_t)(player_message | count) + 0xD00u);
+	draw_player_message(player_message, &ignored, &ignored_2);
 }
 
 /* Unused: queues the drawing of the players' boxes the bits given pick */

@@ -3,7 +3,7 @@
  *    Description: the areas' scroll segments: the layers' limits and speeds
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -77,17 +77,17 @@ void start_scroll_segment(void)
 
 /* a segment that scrolls by itself: the layer moved by its speeds, a new column or row to draw past each
    tile */
-uint32_t auto_scroll(uint32_t d1, uint32_t turtle)
+void auto_scroll(uint32_t turtle)
 {
 	uint32_t carry = 0;
-	uint32_t column_phase = 0, new_column_x = 0, new_row_y = 0, row_phase = 0, x_step = 0, y_step = 0;
+	uint16_t column_phase = 0, row_phase = 0;
+	uint32_t new_column_x = 0, new_row_y = 0, x_step = 0, y_step = 0;
 	uint16_t column_phase_2 = 0, column_phase_3 = 0, row_phase_2 = 0, row_phase_3 = 0;
 
 	if (scroll_mode >= 0)
-		return d1;
+		return;
 	x_step = LAYER(WORKING_LAYER)->x_speed;
-	column_phase = (d1 & ~0xFFFFu) | x_step;
-	column_phase = (column_phase & ~0xFFFFu) | (uint16_t)(column_phase << 5);
+	column_phase = (uint16_t)(x_step << 5);
 	if ((uint8_t)LAYER(WORKING_LAYER)->x_direction != 0u)
 	{
 		if (LAYER(WORKING_LAYER)->x_direction < 0)
@@ -109,7 +109,7 @@ uint32_t auto_scroll(uint32_t d1, uint32_t turtle)
 			new_column_x = LAYER(WORKING_LAYER)->x - 0x1800u;
 			column_phase_3 = LAYER(WORKING_LAYER)->column_phase;
 			LAYER(WORKING_LAYER)->column_phase = column_phase_3 - column_phase;
-			if (column_phase_3 < (uint16_t)column_phase)
+			if (column_phase_3 < column_phase)
 			{
 				LAYER(WORKING_LAYER)->new_column_x = new_column_x;
 				LAYER(WORKING_LAYER)->new_column--;
@@ -117,19 +117,26 @@ uint32_t auto_scroll(uint32_t d1, uint32_t turtle)
 		}
 	}
 	y_step = LAYER(WORKING_LAYER)->y_speed;
-	row_phase = (column_phase & ~0xFFFFu) | y_step;
-	row_phase = (row_phase & ~0xFFFFu) | (uint16_t)(row_phase << 5);
+	row_phase = (uint16_t)(y_step << 5);
 	if ((uint8_t)LAYER(WORKING_LAYER)->y_direction == 0u)
-		return row_phase;
+	{
+		screen_x_high = (screen_x_high & ~0xFF00u) | (row_phase & 0xFF00u);
+		return;
+	}
 	if (LAYER(WORKING_LAYER)->y_direction < 0)
 	{
 		LAYER(WORKING_LAYER)->y -= y_step;
 		new_row_y = LAYER(WORKING_LAYER)->y - 0xF800u;
 		row_phase_2 = LAYER(WORKING_LAYER)->row_phase;
 		LAYER(WORKING_LAYER)->row_phase = row_phase_2 - row_phase;
-		if (row_phase_2 < (uint16_t)row_phase)
-			return queue_scroll_row(new_row_y, row_phase, turtle);
-		return row_phase;
+		if (row_phase_2 < row_phase)
+		{
+			screen_x_high = (screen_x_high & ~0xFF00u) | (row_phase & 0xFF00u);
+			queue_scroll_row(new_row_y, turtle);
+			return;
+		}
+		screen_x_high = (screen_x_high & ~0xFF00u) | (row_phase & 0xFF00u);
+		return;
 	}
 	LAYER(WORKING_LAYER)->y += y_step;
 	new_row_y = LAYER(WORKING_LAYER)->y;
@@ -137,34 +144,34 @@ uint32_t auto_scroll(uint32_t d1, uint32_t turtle)
 	carry = (uint16_t)(row_phase_3 + row_phase) < row_phase_3;
 	LAYER(WORKING_LAYER)->row_phase = row_phase_3 + row_phase;
 	if (carry)
-		return queue_scroll_row(new_row_y, row_phase, turtle);
-	return row_phase;
+	{
+		screen_x_high = (screen_x_high & ~0xFF00u) | (row_phase & 0xFF00u);
+		queue_scroll_row(new_row_y, turtle);
+		return;
+	}
+	screen_x_high = (screen_x_high & ~0xFF00u) | (row_phase & 0xFF00u);
 }
 
 /* every frame of play: the time without a knock-out, the difficulty it adds, the balloon's time */
-void update_time_without_knockout(uint32_t *p_d5, uint32_t *p_d7)
+void update_time_without_knockout(void)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t carry = 0;
 	uint8_t t1 = 0;
 
 	time_without_knockout++;
 	difficulty_from_time = (uint8_t)(time_without_knockout >> 8u) >> 5;
-	if (balloon_time == 0u)
-		carry = hold_scroll_for_enemies();
-	else
+	if (balloon_time != 0u)
 	{
 		t1 = balloon_time;
 		balloon_time = t1 - 1u;
-		if (t1 != 1u)
-			carry = hold_scroll_for_enemies();
-		else
+		if (t1 == 1u)
 		{
-			erase_balloon(&d5, p_d7);
+			erase_balloon();
 			carry = hold_scroll_for_enemies();
+			return;
 		}
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	carry = hold_scroll_for_enemies();
 }
 
 /* the scroll is held while more enemies are on the screen than the stage allows at this difficulty */
@@ -199,6 +206,7 @@ uint32_t hold_scroll_for_enemies(void)
 	case 9:
 		return hold_scroll_final(held, enemy_limit);
 	}
+	unreachable();
 }
 
 /* the burning building's scroll held while the screen has too many enemies */

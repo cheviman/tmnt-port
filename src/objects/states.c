@@ -3,7 +3,7 @@
  *    Description: the objects' state dispatcher and the objects' handlers (provisional: by subject later)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* the object's current state run from the table of state handlers it is given */
-void run_object_state(uint32_t object, uint32_t slot, uint32_t states, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t run_object_state(uint32_t object, uint32_t slot, uint32_t a5, uint32_t states)
 {
 	uint16_t state_offset = 0;
 	uint32_t handler = 0;
@@ -23,1337 +23,1216 @@ void run_object_state(uint32_t object, uint32_t slot, uint32_t states, uint32_t 
 	{
 	case 0x048F62u:
 		enemy_hop_crouch(object);
-		return;
+		return a5;
 	case 0x048F72u:
 		enemy_hop_down(object);
-		return;
+		return a5;
 	case 0x048FBAu:
-		*p_d7 = enemy_hop_fall(*p_d7, object);
-		return;
+		enemy_hop_fall(object);
+		return a5;
 	case 0x048FFAu:
 		enemy_hop_land(object);
-		return;
+		return a5;
 	case 0x04901Au:
 		enemy_hop_right(object);
-		return;
+		return a5;
 	case 0x049078u:
 		enemy_hop_left(object);
-		return;
+		return a5;
 	case 0x0490D6u:
 		enemy_hop_up_crouch(object);
-		return;
+		return a5;
 	case 0x0490E6u:
 		enemy_hop_up(object);
-		return;
+		return a5;
 	case 0x04911Cu:
-		*p_d7 = enemy_hop_up_fall(*p_d7, object);
-		return;
+		enemy_hop_up_fall(object);
+		return a5;
 	case 0x04916Cu:
 		enemy_hop_up_right(object);
-		return;
+		return a5;
 	case 0x0491A8u:
-		*p_d7 = enemy_hop_up_fall_blocked(*p_d7, object);
-		return;
+		enemy_hop_up_fall_blocked(object);
+		return a5;
 	case 0x0491F8u:
 		enemy_hop_up_left(object);
-		return;
+		return a5;
 	case 0x049260u:
 		enemy_shuffle_start(object);
-		return;
+		return a5;
 	case 0x049276u:
 		enemy_shuffle_step(object);
-		return;
+		return a5;
 	case 0x0492A8u:
 		enemy_shuffle_turn(object);
-		return;
+		return a5;
 	case 0x0492DEu:
 		enemy_shuffle_end(object);
-		return;
+		return a5;
 	case 0x049300u:
 		enemy_retreat_start(object);
-		return;
+		return a5;
 	case 0x04933Au:
 		enemy_retreat_step(object);
-		return;
+		return a5;
 	case 0x049378u:
-		enemy_circle_start(object, p_d7, p_a5);
-		return;
+		return enemy_circle_start(object);
 	case 0x0493CAu:
-		enemy_circle_step(object, p_d7, p_a5);
-		return;
+		return enemy_circle_step(object, a5);
 	case 0x049420u:
-		*p_d7 = enemy_charge_start(object);
-		return;
+		enemy_charge_start(object);
+		return a5;
 	case 0x049468u:
 		enemy_charge_run(object);
-		return;
+		return a5;
 	case 0x04949Eu:
 		enemy_charge_brake(object);
-		return;
+		return a5;
 	case 0x0494DAu:
 		enemy_crash_into_scenery_start(object);
-		return;
+		return a5;
 	case 0x049534u:
 		enemy_crash_into_scenery_end(object);
-		return;
+		return a5;
 	case 0x049570u:
 		enemy_crash_into_scenery_low_start(object);
-		return;
+		return a5;
 	case 0x0495DEu:
-		*p_a5 = enemy_walk_to_target_start(object, slot);
-		return;
+		return enemy_walk_to_target_start(object, slot);
 	case 0x049604u:
-		enemy_walk_to_target_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_step(object, slot, a5);
 	case 0x04966Eu:
-		*p_a5 = enemy_walk_to_side_start(object, slot);
-		return;
+		return enemy_walk_to_side_start(object, slot);
 	case 0x049694u:
-		*p_a5 = enemy_walk_to_side_step(object, slot);
-		return;
+		return enemy_walk_to_side_step(object, slot);
 	case 0x0496FAu:
 		enemy_walk_to_side_crouch(object);
-		return;
+		return a5;
 	case 0x04971Eu:
-		*p_a5 = enemy_walk_to_side_turn(object, slot, *p_a5);
-		return;
+		return enemy_walk_to_side_turn(object, slot, a5);
 	case 0x04973Eu:
-		*p_a5 = enemy_walk_to_side_hold(object, slot);
-		return;
+		return enemy_walk_to_side_hold(object, slot);
 	case 0x0497A6u:
 		enemy_keep_distance_start(object);
-		return;
+		return a5;
 	case 0x0497C2u:
-		enemy_keep_distance_watch(object, slot, p_d7, p_a5);
-		return;
+		return enemy_keep_distance_watch(object, slot, a5);
 	case 0x04984Cu:
-		*p_a5 = enemy_keep_distance_back_off(object, slot);
-		return;
+		return enemy_keep_distance_back_off(object, slot);
 	case 0x049868u:
-		*p_a5 = enemy_keep_distance_close_in(object, slot);
-		return;
+		return enemy_keep_distance_close_in(object, slot);
 	case 0x0498B2u:
-		enemy_back_off_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_back_off_start(object, slot);
 	case 0x0498EEu:
-		*p_a5 = enemy_back_off_walk(object, slot);
-		return;
+		return enemy_back_off_walk(object, slot);
 	case 0x04991Eu:
 		enemy_back_off_wait(object, slot);
-		return;
+		return a5;
 	case 0x049948u:
-		enemy_run_away_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_run_away_start(object, slot);
 	case 0x049980u:
-		*p_a5 = enemy_run_away_step(object, slot);
-		return;
+		return enemy_run_away_step(object, slot);
 	case 0x0499B8u:
-		*p_a5 = enemy_walk_across_start(object, slot);
-		return;
+		return enemy_walk_across_start(object, slot);
 	case 0x0499EAu:
-		*p_a5 = enemy_walk_across_step(object, slot);
-		return;
+		return enemy_walk_across_step(object, slot);
 	case 0x049A1Au:
 		enemy_jab_start(object);
-		return;
+		return a5;
 	case 0x049A42u:
 		enemy_attack_end(object);
-		return;
+		return a5;
 	case 0x049A66u:
 		enemy_chop_start(object);
-		return;
+		return a5;
 	case 0x049AA2u:
 		enemy_swing_start(object);
-		return;
+		return a5;
 	case 0x049ADEu:
 		enemy_high_kick_start(object);
-		return;
+		return a5;
 	case 0x049B2Eu:
 		enemy_jump_kick_crouch(object);
-		return;
+		return a5;
 	case 0x049B56u:
-		*p_d7 = enemy_jump_kick_leap(*p_d7, object);
-		return;
+		enemy_jump_kick_leap(object);
+		return a5;
 	case 0x049B82u:
-		*p_d7 = enemy_jump_kick_fly(*p_d7, object);
-		return;
+		enemy_jump_kick_fly(object);
+		return a5;
 	case 0x049BE4u:
 		enemy_long_jump_kick_crouch(object);
-		return;
+		return a5;
 	case 0x049C0Cu:
-		*p_d7 = enemy_long_jump_kick_leap(*p_d7, object);
-		return;
+		enemy_long_jump_kick_leap(object);
+		return a5;
 	case 0x049C38u:
-		*p_d7 = enemy_long_jump_kick_fly(*p_d7, object);
-		return;
+		enemy_long_jump_kick_fly(object);
+		return a5;
 	case 0x049C92u:
-		enemy_grab_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_grab_start(object, slot, a5);
 	case 0x049D06u:
-		enemy_grab_run(object, slot, p_d7, p_a5);
-		return;
+		return enemy_grab_run(object, slot, a5);
 	case 0x049D7Eu:
 		enemy_grab_hold(object, slot);
-		return;
+		return a5;
 	case 0x049DD0u:
 		enemy_grab_end(object);
-		return;
+		return a5;
 	case 0x049DF0u:
 		enemy_flinch_back_start(object);
-		return;
+		return a5;
 	case 0x049E00u:
 		enemy_flinch_end(object);
-		return;
+		return a5;
 	case 0x049E24u:
 		enemy_flinch_bent_start(object);
-		return;
+		return a5;
 	case 0x049E48u:
 		enemy_flinch_reel_start(object);
-		return;
+		return a5;
 	case 0x049E6Cu:
 		enemy_flinch_hunched_start(object);
-		return;
+		return a5;
 	case 0x049EACu:
-		*p_d7 = enemy_killed_back_start(*p_d7, object, slot);
-		return;
+		enemy_killed_back_start(object, slot);
+		return a5;
 	case 0x049EC8u:
-		*p_d7 = enemy_killed_back_fly(*p_d7, object);
-		return;
+		enemy_killed_back_fly(object);
+		return a5;
 	case 0x049F38u:
 		enemy_killed_back_lie(object, slot);
-		return;
+		return a5;
 	case 0x049F6Au:
 		enemy_killed_back_on_wall(object);
-		return;
+		return a5;
 	case 0x049F78u:
-		*p_d7 = enemy_killed_back_slide_down(*p_d7, object);
-		return;
+		enemy_killed_back_slide_down(object);
+		return a5;
 	case 0x049FA0u:
 		enemy_killed_back_down(object, slot);
-		return;
+		return a5;
 	case 0x049FE8u:
-		*p_d7 = enemy_killed_forward_start(*p_d7, object, slot);
-		return;
+		enemy_killed_forward_start(object, slot);
+		return a5;
 	case 0x04A004u:
-		*p_d7 = enemy_killed_forward_fly(*p_d7, object);
-		return;
+		enemy_killed_forward_fly(object);
+		return a5;
 	case 0x04A074u:
 		enemy_killed_forward_lie(object, slot);
-		return;
+		return a5;
 	case 0x04A0A6u:
 		enemy_killed_forward_on_wall(object);
-		return;
+		return a5;
 	case 0x04A0B4u:
-		*p_d7 = enemy_killed_forward_slide_down(*p_d7, object);
-		return;
+		enemy_killed_forward_slide_down(object);
+		return a5;
 	case 0x04A0DCu:
 		enemy_killed_forward_down(object, slot);
-		return;
+		return a5;
 	case 0x04A120u:
-		*p_d7 = enemy_knocked_forward_start(*p_d7, object, slot);
-		return;
+		enemy_knocked_forward_start(object, slot);
+		return a5;
 	case 0x04A13Cu:
-		*p_d7 = enemy_knocked_forward_fly(*p_d7, object);
-		return;
+		enemy_knocked_forward_fly(object);
+		return a5;
 	case 0x04A176u:
 		enemy_knocked_forward_lie(object, slot);
-		return;
+		return a5;
 	case 0x04A1BAu:
 		enemy_knocked_forward_wait(object);
-		return;
+		return a5;
 	case 0x04A202u:
 		enemy_thrown_by_donatello_start(object);
-		return;
+		return a5;
 	case 0x04A214u:
-		enemy_thrown_by_donatello_swing(object, slot, p_d7, p_a5);
-		return;
+		return enemy_thrown_by_donatello_swing(object, slot, a5);
 	case 0x04A25Au:
-		*p_d7 = enemy_thrown_fly(*p_d7, object);
-		return;
+		enemy_thrown_fly(object);
+		return a5;
 	case 0x04A396u:
 		enemy_thrown_by_michelangelo_start(object);
-		return;
+		return a5;
 	case 0x04A3A8u:
-		enemy_thrown_by_michelangelo_swing(object, slot, p_d7, p_a5);
-		return;
+		return enemy_thrown_by_michelangelo_swing(object, slot, a5);
 	case 0x04A454u:
 		enemy_thrown_by_raphael_start(object);
-		return;
+		return a5;
 	case 0x04A466u:
-		enemy_thrown_by_raphael_swing(object, slot, p_d7, p_a5);
-		return;
+		return enemy_thrown_by_raphael_swing(object, slot, a5);
 	case 0x04A512u:
 		enemy_thrown_by_leonardo_start(object);
-		return;
+		return a5;
 	case 0x04A524u:
-		enemy_thrown_by_leonardo_swing(object, slot, p_d7, p_a5);
-		return;
+		return enemy_thrown_by_leonardo_swing(object, slot, a5);
 	case 0x04A5CEu:
-		*p_d7 = enemy_knocked_back_start(*p_d7, object, slot);
-		return;
+		enemy_knocked_back_start(object, slot);
+		return a5;
 	case 0x04A5F8u:
-		*p_d7 = enemy_knocked_back_fly(*p_d7, object);
-		return;
+		enemy_knocked_back_fly(object);
+		return a5;
 	case 0x04A632u:
 		enemy_knocked_back_lie(object, slot);
-		return;
+		return a5;
 	case 0x04A676u:
 		enemy_knocked_back_wait(object);
-		return;
+		return a5;
 	case 0x04A690u:
 		enemy_knocked_back_get_up(object);
-		return;
+		return a5;
 	case 0x04A6C6u:
 		enemy_die_start(object);
-		return;
+		return a5;
 	case 0x04A6E6u:
 		enemy_die_vanish(object);
-		return;
+		return a5;
 	case 0x04A718u:
 		enemy_die_on_back_start(object);
-		return;
+		return a5;
 	case 0x04ADC8u:
-		*p_a5 = enemy_walk_to_target_sword_start(object, slot);
-		return;
+		return enemy_walk_to_target_sword_start(object, slot);
 	case 0x04AE0Eu:
-		*p_a5 = enemy_walk_to_side_sword_start(object, slot);
-		return;
+		return enemy_walk_to_side_sword_start(object, slot);
 	case 0x04AE34u:
 		enemy_walk_to_side_sword_crouch(object);
-		return;
+		return a5;
 	case 0x04AE58u:
-		*p_a5 = enemy_walk_to_side_sword_turn(object, slot, *p_a5);
-		return;
+		return enemy_walk_to_side_sword_turn(object, slot, a5);
 	case 0x04AE8Cu:
-		*p_a5 = enemy_walk_past_sword_start(object, slot);
-		return;
+		return enemy_walk_past_sword_start(object, slot);
 	case 0x04AEBCu:
-		*p_a5 = enemy_walk_past_sword_step(object, slot);
-		return;
+		return enemy_walk_past_sword_step(object, slot);
 	case 0x04AF3Cu:
-		enemy_back_off_sword_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_back_off_sword_start(object, slot);
 	case 0x04AF78u:
-		*p_a5 = enemy_back_off_sword_walk(object, slot);
-		return;
+		return enemy_back_off_sword_walk(object, slot);
 	case 0x04AFA8u:
 		enemy_back_off_sword_wait(object, slot);
-		return;
+		return a5;
 	case 0x04AFD2u:
-		*p_a5 = enemy_walk_to_line_sword_start(object, slot);
-		return;
+		return enemy_walk_to_line_sword_start(object, slot);
 	case 0x04B00Au:
-		*p_a5 = enemy_walk_to_line_sword_step(object, slot);
-		return;
+		return enemy_walk_to_line_sword_step(object, slot);
 	case 0x04B04Eu:
-		*p_a5 = enemy_walk_to_target_hammer_start(object, slot);
-		return;
+		return enemy_walk_to_target_hammer_start(object, slot);
 	case 0x04B08Cu:
-		*p_a5 = enemy_walk_to_side_hammer_start(object, slot);
-		return;
+		return enemy_walk_to_side_hammer_start(object, slot);
 	case 0x04B0B2u:
-		*p_a5 = enemy_walk_to_side_far_step(object, slot);
-		return;
+		return enemy_walk_to_side_far_step(object, slot);
 	case 0x04B118u:
-		*p_a5 = enemy_walk_to_side_far_hold(object, slot);
-		return;
+		return enemy_walk_to_side_far_hold(object, slot);
 	case 0x04B146u:
-		*p_a5 = enemy_stalk_hammer_start(object, slot);
-		return;
+		return enemy_stalk_hammer_start(object, slot);
 	case 0x04B168u:
-		*p_a5 = enemy_stalk_hammer_approach(object, slot);
-		return;
+		return enemy_stalk_hammer_approach(object, slot);
 	case 0x04B1ACu:
-		*p_a5 = enemy_stalk_hammer_step(object, slot, *p_a5);
-		return;
+		return enemy_stalk_hammer_step(object, slot, a5);
 	case 0x04B250u:
-		*p_a5 = enemy_walk_away_hammer_start(object, slot);
-		return;
+		return enemy_walk_away_hammer_start(object, slot);
 	case 0x04B284u:
-		*p_a5 = enemy_walk_away_hammer_walk(object, slot);
-		return;
+		return enemy_walk_away_hammer_walk(object, slot);
 	case 0x04B2BCu:
 		enemy_walk_away_hammer_wait(object, slot);
-		return;
+		return a5;
 	case 0x04B2EEu:
 		enemy_slash_sword_start(object);
-		return;
+		return a5;
 	case 0x04B32Au:
 		enemy_low_slash_sword_start(object);
-		return;
+		return a5;
 	case 0x04B37Au:
 		enemy_leaping_slash_sword_start(object);
-		return;
+		return a5;
 	case 0x04B3A2u:
-		*p_d7 = enemy_leaping_slash_sword_leap(*p_d7, object);
-		return;
+		enemy_leaping_slash_sword_leap(object);
+		return a5;
 	case 0x04B3F0u:
-		*p_d7 = enemy_leaping_slash_sword_fly(*p_d7, object);
-		return;
+		enemy_leaping_slash_sword_fly(object);
+		return a5;
 	case 0x04B452u:
 		enemy_jump_slash_sword_start(object);
-		return;
+		return a5;
 	case 0x04B47Au:
-		*p_d7 = enemy_jump_slash_sword_leap(*p_d7, object);
-		return;
+		enemy_jump_slash_sword_leap(object);
+		return a5;
 	case 0x04B4A6u:
-		*p_d7 = enemy_jump_slash_sword_fly(*p_d7, object);
-		return;
+		enemy_jump_slash_sword_fly(object);
+		return a5;
 	case 0x04B508u:
 		enemy_flying_slash_sword_start(object);
-		return;
+		return a5;
 	case 0x04B530u:
-		*p_d7 = enemy_flying_slash_sword_leap(*p_d7, object);
-		return;
+		enemy_flying_slash_sword_leap(object);
+		return a5;
 	case 0x04B588u:
-		*p_d7 = enemy_flying_slash_sword_fly(*p_d7, object);
-		return;
+		enemy_flying_slash_sword_fly(object);
+		return a5;
 	case 0x04B5EAu:
 		enemy_smash_hammer_start(object);
-		return;
+		return a5;
 	case 0x04B622u:
 		enemy_smash_hammer_end(object);
-		return;
+		return a5;
 	case 0x04B646u:
 		enemy_flinch_back_sword_start(object);
-		return;
+		return a5;
 	case 0x04B66Au:
 		enemy_flinch_bent_sword_start(object);
-		return;
+		return a5;
 	case 0x04B68Eu:
 		enemy_flinch_reel_sword_start(object);
-		return;
+		return a5;
 	case 0x04B6B2u:
 		enemy_flinch_hunched_sword_start(object);
-		return;
+		return a5;
 	case 0x04B6D6u:
 		enemy_flinch_back_hammer_start(object);
-		return;
+		return a5;
 	case 0x04B6FAu:
 		enemy_flinch_bent_hammer_start(object);
-		return;
+		return a5;
 	case 0x04C824u:
 		enemy_step_out_start(object);
-		return;
+		return a5;
 	case 0x04C840u:
 		enemy_step_out_wait(object);
-		return;
+		return a5;
 	case 0x04C860u:
 		enemy_step_out_walk(object);
-		return;
+		return a5;
 	case 0x04CF74u:
 		enemy_walk_in_on_ledge_start(object);
-		return;
+		return a5;
 	case 0x04CF9Au:
-		enemy_walk_in_on_ledge_walk(object, handler, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_in_on_ledge_walk(object, a5, handler);
 	case 0x04CFD6u:
 		enemy_jump_down_leap(object);
-		return;
+		return a5;
 	case 0x04D006u:
-		*p_d7 = enemy_jump_down_fall_stairs(*p_d7, object);
-		return;
+		enemy_jump_down_fall_stairs(object);
+		return a5;
 	case 0x04D00Cu:
-		*p_d7 = enemy_jump_down_fall(*p_d7, object);
-		return;
+		enemy_jump_down_fall(object);
+		return a5;
 	case 0x04D04Au:
 		enemy_jump_down_land(object);
-		return;
+		return a5;
 	case 0x04D072u:
 		enemy_step_down_start(object);
-		return;
+		return a5;
 	case 0x04D08Eu:
 		enemy_step_down_wait(object);
-		return;
+		return a5;
 	case 0x04D2D4u:
 		enemy_leap_out_start(object);
-		return;
+		return a5;
 	case 0x04D2FEu:
-		*p_d7 = enemy_leap_out_fly(*p_d7, object);
-		return;
+		enemy_leap_out_fly(object);
+		return a5;
 	case 0x04D330u:
 		enemy_leap_out_land(object);
-		return;
+		return a5;
 	case 0x04D820u:
 		enemy_hang_in_start(object);
-		return;
+		return a5;
 	case 0x04D856u:
 		enemy_hang_in_move(object);
-		return;
+		return a5;
 	case 0x04D884u:
-		*p_d7 = enemy_hang_in_drop(*p_d7, object);
-		return;
+		enemy_hang_in_drop(object);
+		return a5;
 	case 0x04D8ACu:
 		enemy_hang_in_land(object);
-		return;
+		return a5;
 	case 0x04D8E0u:
 		enemy_kick_in_start(object);
-		return;
+		return a5;
 	case 0x04D91Cu:
 		enemy_kick_in_run(object);
-		return;
+		return a5;
 	case 0x04D93Au:
-		*p_d7 = enemy_kick_in_leap(*p_d7, object);
-		return;
+		enemy_kick_in_leap(object);
+		return a5;
 	case 0x04D96Cu:
-		*p_d7 = enemy_kick_in_fly(*p_d7, object);
-		return;
+		enemy_kick_in_fly(object);
+		return a5;
 	case 0x04D9A6u:
 		enemy_kick_in_land(object);
-		return;
+		return a5;
 	case 0x04D9C2u:
 		enemy_run_in_start(object);
-		return;
+		return a5;
 	case 0x04D9F8u:
 		enemy_run_in_run(object);
-		return;
+		return a5;
 	case 0x04DA2Cu:
 		enemy_dive_in_start(object);
-		return;
+		return a5;
 	case 0x04DA58u:
-		enemy_dive_in_run(object, handler, p_d5, p_d7, p_a5);
-		return;
+		return enemy_dive_in_run(object, a5, handler);
 	case 0x04DA92u:
 		enemy_dive_in_leap(object);
-		return;
+		return a5;
 	case 0x04DACAu:
 		enemy_dive_in_dive(object);
-		return;
+		return a5;
 	case 0x04DAF6u:
 		enemy_dive_in_curl(object);
-		return;
+		return a5;
 	case 0x04DB1Au:
 		enemy_dive_in_uncurl(object);
-		return;
+		return a5;
 	case 0x04DB36u:
-		*p_d7 = enemy_dive_in_land(*p_d7, object);
-		return;
+		enemy_dive_in_land(object);
+		return a5;
 	case 0x04DB76u:
 		enemy_walk_in_start(object);
-		return;
+		return a5;
 	case 0x04DBAEu:
 		enemy_walk_in_walk(object);
-		return;
+		return a5;
 	case 0x04DBD4u:
 		enemy_walk_in_ready(object);
-		return;
+		return a5;
 	case 0x04DD50u:
-		*p_a5 = enemy_walk_to_target_spear_start(object, slot);
-		return;
+		return enemy_walk_to_target_spear_start(object, slot);
 	case 0x04DD8Eu:
-		*p_a5 = enemy_walk_to_side_spear_start(object, slot);
-		return;
+		return enemy_walk_to_side_spear_start(object, slot);
 	case 0x04DDC8u:
-		*p_a5 = enemy_walk_off_line_spear_start(object, slot);
-		return;
+		return enemy_walk_off_line_spear_start(object, slot);
 	case 0x04DDF8u:
-		*p_a5 = enemy_walk_off_line_spear_step(object, slot);
-		return;
+		return enemy_walk_off_line_spear_step(object, slot);
 	case 0x04DE78u:
-		*p_a5 = enemy_back_off_spear_start(object, slot);
-		return;
+		return enemy_back_off_spear_start(object, slot);
 	case 0x04DEB2u:
-		*p_a5 = enemy_back_off_spear_walk(object, slot);
-		return;
+		return enemy_back_off_spear_walk(object, slot);
 	case 0x04DEF6u:
-		enemy_step_aside_spear_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_step_aside_spear_start(object, slot);
 	case 0x04DF40u:
-		*p_a5 = enemy_step_aside_spear_step(object, slot);
-		return;
+		return enemy_step_aside_spear_step(object, slot);
 	case 0x04DF80u:
-		*p_a5 = enemy_walk_to_target_knife_start(object, slot);
-		return;
+		return enemy_walk_to_target_knife_start(object, slot);
 	case 0x04DFBEu:
-		*p_a5 = enemy_walk_to_side_knife_start(object, slot);
-		return;
+		return enemy_walk_to_side_knife_start(object, slot);
 	case 0x04E018u:
-		enemy_circle_knife_start(object, p_d7, p_a5);
-		return;
+		return enemy_circle_knife_start(object);
 	case 0x04E06Au:
-		enemy_circle_knife_step(object, p_d7, p_a5);
-		return;
+		return enemy_circle_knife_step(object, a5);
 	case 0x04E0C4u:
 		enemy_keep_distance_knife_start(object);
-		return;
+		return a5;
 	case 0x04E0E0u:
-		enemy_keep_distance_knife_watch(object, slot, p_d7, p_a5);
-		return;
+		return enemy_keep_distance_knife_watch(object, slot, a5);
 	case 0x04E16Au:
-		*p_a5 = enemy_keep_distance_knife_back_off(object, slot);
-		return;
+		return enemy_keep_distance_knife_back_off(object, slot);
 	case 0x04E186u:
-		*p_a5 = enemy_keep_distance_knife_close_in(object, slot);
-		return;
+		return enemy_keep_distance_knife_close_in(object, slot);
 	case 0x04E1D0u:
-		enemy_back_off_knife_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_back_off_knife_start(object, slot);
 	case 0x04E20Au:
-		*p_a5 = enemy_back_off_knife_walk(object, slot);
-		return;
+		return enemy_back_off_knife_walk(object, slot);
 	case 0x04E23Eu:
 		enemy_back_off_knife_wait(object, slot);
-		return;
+		return a5;
 	case 0x04E268u:
-		*p_a5 = enemy_step_aside_knife_start(object, slot);
-		return;
+		return enemy_step_aside_knife_start(object, slot);
 	case 0x04E2A0u:
-		*p_a5 = enemy_step_aside_knife_step(object, slot);
-		return;
+		return enemy_step_aside_knife_step(object, slot);
 	case 0x04E2D8u:
 		enemy_spear_thrust_start(object);
-		return;
+		return a5;
 	case 0x04E300u:
 		enemy_spear_thrust_end(object);
-		return;
+		return a5;
 	case 0x04E354u:
 		enemy_spear_throw_start(object);
-		return;
+		return a5;
 	case 0x04E380u:
-		*p_a5 = enemy_spear_throw_release(object, *p_a5);
-		return;
+		return enemy_spear_throw_release(object, a5);
 	case 0x04E3A0u:
-		enemy_spear_throw_end(object, slot, handler, p_d5, p_d7, p_a5);
-		return;
+		return enemy_spear_throw_end(object, slot, a5, handler);
 	case 0x04E3D8u:
 		enemy_knife_stab_start(object);
-		return;
+		return a5;
 	case 0x04E414u:
 		enemy_high_kick_knife_start(object);
-		return;
+		return a5;
 	case 0x04E464u:
 		enemy_jump_kick_knife_crouch(object);
-		return;
+		return a5;
 	case 0x04E48Cu:
-		*p_d7 = enemy_jump_kick_knife_leap(*p_d7, object);
-		return;
+		enemy_jump_kick_knife_leap(object);
+		return a5;
 	case 0x04E4B8u:
-		*p_d7 = enemy_jump_kick_knife_fly(*p_d7, object);
-		return;
+		enemy_jump_kick_knife_fly(object);
+		return a5;
 	case 0x04E510u:
 		enemy_throw_knife_start(object);
-		return;
+		return a5;
 	case 0x04E53Cu:
-		*p_a5 = enemy_throw_knife_release(object, *p_a5);
-		return;
+		return enemy_throw_knife_release(object, a5);
 	case 0x04E556u:
 		enemy_throw_knife_end(object);
-		return;
+		return a5;
 	case 0x04E57Au:
 		enemy_flinch_back_spear_start(object);
-		return;
+		return a5;
 	case 0x04E59Eu:
 		enemy_flinch_bent_spear_start(object);
-		return;
+		return a5;
 	case 0x04E5C2u:
 		enemy_flinch_reel_spear_start(object);
-		return;
+		return a5;
 	case 0x04E5E6u:
 		enemy_flinch_hunched_spear_start(object);
-		return;
+		return a5;
 	case 0x04E60Au:
 		enemy_flinch_back_knife_start(object);
-		return;
+		return a5;
 	case 0x04E62Eu:
 		enemy_flinch_bent_knife_start(object);
-		return;
+		return a5;
 	case 0x04E652u:
 		enemy_flinch_reel_knife_start(object);
-		return;
+		return a5;
 	case 0x04E676u:
 		enemy_flinch_hunched_knife_start(object);
-		return;
+		return a5;
 	case 0x04E7CEu:
-		*p_a5 = enemy_walk_to_target_gun_start(object, slot);
-		return;
+		return enemy_walk_to_target_gun_start(object, slot);
 	case 0x04E80Cu:
-		*p_a5 = enemy_walk_to_side_gun_start(object, slot);
-		return;
+		return enemy_walk_to_side_gun_start(object, slot);
 	case 0x04E84Au:
-		*p_a5 = enemy_walk_to_range_gun_start(object, slot);
-		return;
+		return enemy_walk_to_range_gun_start(object, slot);
 	case 0x04E870u:
-		*p_a5 = enemy_walk_to_range_step(object, slot);
-		return;
+		return enemy_walk_to_range_step(object, slot);
 	case 0x04E8D8u:
-		*p_a5 = enemy_walk_to_range_hold(object, slot, *p_a5);
-		return;
+		return enemy_walk_to_range_hold(object, slot, a5);
 	case 0x04E912u:
-		enemy_back_off_gun_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_back_off_gun_start(object, slot);
 	case 0x04E94Cu:
-		*p_a5 = enemy_back_off_gun_walk(object, slot);
-		return;
+		return enemy_back_off_gun_walk(object, slot);
 	case 0x04E97Cu:
 		enemy_back_off_gun_wait(object, slot);
-		return;
+		return a5;
 	case 0x04E9A6u:
-		enemy_run_away_gun_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_run_away_gun_start(object, slot);
 	case 0x04E9DEu:
-		*p_a5 = enemy_run_away_gun_step(object, slot);
-		return;
+		return enemy_run_away_gun_step(object, slot);
 	case 0x04EA26u:
-		*p_a5 = enemy_walk_to_target_axe_start(object, slot);
-		return;
+		return enemy_walk_to_target_axe_start(object, slot);
 	case 0x04EA64u:
-		*p_a5 = enemy_walk_to_side_axe_start(object, slot);
-		return;
+		return enemy_walk_to_side_axe_start(object, slot);
 	case 0x04EAA2u:
-		*p_a5 = enemy_walk_to_range_axe_start(object, slot);
-		return;
+		return enemy_walk_to_range_axe_start(object, slot);
 	case 0x04EAE0u:
-		enemy_back_off_axe_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_back_off_axe_start(object, slot);
 	case 0x04EB1Cu:
-		*p_a5 = enemy_back_off_axe_walk(object, slot);
-		return;
+		return enemy_back_off_axe_walk(object, slot);
 	case 0x04EB4Cu:
 		enemy_back_off_axe_wait(object, slot);
-		return;
+		return a5;
 	case 0x04EB76u:
-		enemy_run_away_axe_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_run_away_axe_start(object, slot);
 	case 0x04EBAEu:
-		*p_a5 = enemy_run_away_axe_step(object, slot);
-		return;
+		return enemy_run_away_axe_step(object, slot);
 	case 0x04EBF4u:
 		enemy_throw_axes_start(object);
-		return;
+		return a5;
 	case 0x04EC20u:
-		*p_a5 = enemy_throw_axes_release(object, *p_a5);
-		return;
+		return enemy_throw_axes_release(object, a5);
 	case 0x04EC72u:
 		enemy_high_kick_axe_start(object);
-		return;
+		return a5;
 	case 0x04ECAEu:
 		enemy_gun_swing_start(object);
-		return;
+		return a5;
 	case 0x04ECF4u:
 		enemy_shoot_gun_start(object);
-		return;
+		return a5;
 	case 0x04ED20u:
-		*p_a5 = enemy_shoot_gun_fire(object, *p_a5);
-		return;
+		return enemy_shoot_gun_fire(object, a5);
 	case 0x04ED72u:
 		enemy_flinch_back_gun_start(object);
-		return;
+		return a5;
 	case 0x04ED96u:
 		enemy_flinch_bent_gun_start(object);
-		return;
+		return a5;
 	case 0x04EDBAu:
 		enemy_flinch_back_axe_start(object);
-		return;
+		return a5;
 	case 0x04EDDEu:
 		enemy_flinch_bent_axe_start(object);
-		return;
+		return a5;
 	case 0x04EE02u:
 		enemy_flinch_reel_axe_start(object);
-		return;
+		return a5;
 	case 0x04F094u:
 		enemy_throw_shuriken_start(object);
-		return;
+		return a5;
 	case 0x04F0C0u:
-		*p_a5 = enemy_throw_shuriken_release(object, *p_a5);
-		return;
+		return enemy_throw_shuriken_release(object, a5);
 	case 0x04F10Au:
 		enemy_boomerang_throw_wind_up(object);
-		return;
+		return a5;
 	case 0x04F11Au:
 		enemy_boomerang_throw_aim(object);
-		return;
+		return a5;
 	case 0x04F150u:
-		*p_a5 = enemy_boomerang_throw_release(object, *p_a5);
-		return;
+		return enemy_boomerang_throw_release(object, a5);
 	case 0x04F186u:
 		enemy_boomerang_throw_wait(object);
-		return;
+		return a5;
 	case 0x04F2AEu:
 		enemy_rocksteady_enter_wait(object);
-		return;
+		return a5;
 	case 0x04F2CEu:
-		enemy_rocksteady_enter_taunt(state_offset, object, p_d5, p_d7);
-		return;
+		enemy_rocksteady_enter_taunt(state_offset, object);
+		return a5;
 	case 0x04F318u:
 		enemy_rocksteady_enter_ready(object);
-		return;
+		return a5;
 	case 0x04F340u:
 		enemy_rocksteady_enter_walk_in(object);
-		return;
+		return a5;
 	case 0x04F35Eu:
 		enemy_rocksteady_enter_wait_for_signal(object);
-		return;
+		return a5;
 	case 0x04F380u:
-		*p_a5 = enemy_rocksteady_enter_walk_in_with_bebop(object, *p_a5);
-		return;
+		return enemy_rocksteady_enter_walk_in_with_bebop(object, a5);
 	case 0x04F736u:
 		enemy_rocksteady_raise_fist_start(object, slot);
-		return;
+		return a5;
 	case 0x04F764u:
 		enemy_rocksteady_laugh_start(object, slot);
-		return;
+		return a5;
 	case 0x04F792u:
 		enemy_rocksteady_shake_fist_start(object, slot);
-		return;
+		return a5;
 	case 0x04F7ACu:
 		enemy_rocksteady_hold_pose(object);
-		return;
+		return a5;
 	case 0x04F7C6u:
 		enemy_rocksteady_draw_gun_start(object, slot);
-		return;
+		return a5;
 	case 0x04F7E0u:
 		enemy_rocksteady_pose_end(object);
-		return;
+		return a5;
 	case 0x04F802u:
 		enemy_rocksteady_put_gun_away_start(object, slot);
-		return;
+		return a5;
 	case 0x04F830u:
-		enemy_rocksteady_circle_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_circle_start(object, slot, a5);
 	case 0x04F862u:
-		enemy_rocksteady_circle_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_circle_step(object, slot, a5);
 	case 0x04F8B0u:
 		enemy_rocksteady_line_up_start(object, slot);
-		return;
+		return a5;
 	case 0x04F8CCu:
 		enemy_rocksteady_line_up_step(object, slot);
-		return;
+		return a5;
 	case 0x04F936u:
-		enemy_rocksteady_close_in_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_close_in_start(object, slot, a5);
 	case 0x04F952u:
-		enemy_rocksteady_close_in_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_close_in_step(object, slot, a5);
 	case 0x04F9F2u:
-		*p_a5 = enemy_rocksteady_shoot_around_start(object, *p_a5);
-		return;
+		return enemy_rocksteady_shoot_around_start(object, a5);
 	case 0x04FA0Au:
-		*p_a5 = enemy_rocksteady_shoot_around_fire(object, *p_a5);
-		return;
+		return enemy_rocksteady_shoot_around_fire(object, a5);
 	case 0x04FAE6u:
 		enemy_rocksteady_pincer_charge_start(object);
-		return;
+		return a5;
 	case 0x04FB06u:
 		enemy_rocksteady_pincer_charge_run_to_edge(object);
-		return;
+		return a5;
 	case 0x04FB3Cu:
 		enemy_rocksteady_pincer_charge_wait_for_bebop(object);
-		return;
+		return a5;
 	case 0x04FB82u:
 		enemy_rocksteady_pincer_charge_get_ready(object);
-		return;
+		return a5;
 	case 0x04FB86u:
 		enemy_rocksteady_pincer_charge_run(object);
-		return;
+		return a5;
 	case 0x04FBEEu:
 		enemy_rocksteady_pincer_charge_crash(object);
-		return;
+		return a5;
 	case 0x04FC1Cu:
 		enemy_rocksteady_charge_start(object);
-		return;
+		return a5;
 	case 0x04FC4Au:
 		enemy_rocksteady_charge_get_ready(object);
-		return;
+		return a5;
 	case 0x04FC76u:
 		enemy_rocksteady_charge_run(object);
-		return;
+		return a5;
 	case 0x04FCE8u:
 		enemy_rocksteady_punch_start(object);
-		return;
+		return a5;
 	case 0x04FD2Cu:
 		enemy_rocksteady_blow_end(object);
-		return;
+		return a5;
 	case 0x04FD60u:
 		enemy_rocksteady_gun_butt_start(object);
-		return;
+		return a5;
 	case 0x04FDB8u:
-		*p_a5 = enemy_rocksteady_shoot_start(object, slot);
-		return;
+		return enemy_rocksteady_shoot_start(object, slot);
 	case 0x04FE02u:
-		*p_a5 = enemy_rocksteady_shoot_fire(object, *p_a5);
-		return;
+		return enemy_rocksteady_shoot_fire(object, a5);
 	case 0x04FE5Eu:
 		enemy_rocksteady_flinch_start(object);
-		return;
+		return a5;
 	case 0x04FE7Au:
 		enemy_rocksteady_flinch_end(object);
-		return;
+		return a5;
 	case 0x04FEC6u:
 		enemy_rocksteady_reel_start(object);
-		return;
+		return a5;
 	case 0x04FEFEu:
 		enemy_rocksteady_flinch_from_behind_start(object);
-		return;
+		return a5;
 	case 0x04FF5Eu:
-		*p_d7 = enemy_rocksteady_knocked_down_start(*p_d7, object, slot);
-		return;
+		enemy_rocksteady_knocked_down_start(object, slot);
+		return a5;
 	case 0x04FF98u:
-		*p_d7 = enemy_rocksteady_knocked_down_fall(*p_d7, object);
-		return;
+		enemy_rocksteady_knocked_down_fall(object);
+		return a5;
 	case 0x04FFCEu:
 		enemy_rocksteady_knocked_down_slide(object);
-		return;
+		return a5;
 	case 0x04FFFCu:
 		enemy_rocksteady_knocked_down_lie(object);
-		return;
+		return a5;
 	case 0x050036u:
 		enemy_rocksteady_knocked_down_get_up(object);
-		return;
+		return a5;
 	case 0x0500AEu:
-		*p_d7 = enemy_rocksteady_defeated_start(*p_d7, object, slot);
-		return;
+		enemy_rocksteady_defeated_start(object, slot);
+		return a5;
 	case 0x0500F0u:
-		*p_d7 = enemy_rocksteady_defeated_fall(*p_d7, object);
-		return;
+		enemy_rocksteady_defeated_fall(object);
+		return a5;
 	case 0x050152u:
 		enemy_rocksteady_defeated_slide(object);
-		return;
+		return a5;
 	case 0x050180u:
 		enemy_rocksteady_defeated_blink(object);
-		return;
+		return a5;
 	case 0x0502A6u:
 		enemy_bebop_enter_wait_for_scroll(object);
-		return;
+		return a5;
 	case 0x0502DCu:
 		enemy_bebop_enter_wait(object);
-		return;
+		return a5;
 	case 0x0502F2u:
-		*p_d7 = enemy_bebop_enter_drop(*p_d7, object);
-		return;
+		enemy_bebop_enter_drop(object);
+		return a5;
 	case 0x050320u:
-		*p_d7 = enemy_bebop_enter_jump(*p_d7, object);
-		return;
+		enemy_bebop_enter_jump(object);
+		return a5;
 	case 0x050340u:
-		*p_d7 = enemy_bebop_enter_in_air(*p_d7, object);
-		return;
+		enemy_bebop_enter_in_air(object);
+		return a5;
 	case 0x05036Eu:
 		enemy_bebop_enter_ready(object);
-		return;
+		return a5;
 	case 0x050392u:
 		enemy_bebop_enter_wait_for_signal(object);
-		return;
+		return a5;
 	case 0x0503B2u:
-		*p_a5 = enemy_bebop_enter_walk_in(object, *p_a5);
-		return;
+		return enemy_bebop_enter_walk_in(object, a5);
 	case 0x0506A2u:
-		*p_d7 = enemy_bebop_stand_start(object, slot);
-		return;
+		enemy_bebop_stand_start(object, slot);
+		return a5;
 	case 0x0506D2u:
 		enemy_bebop_stand_wait(object);
-		return;
+		return a5;
 	case 0x0506ECu:
-		enemy_bebop_walk_to_front_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_bebop_walk_to_front_start(object, slot, a5);
 	case 0x050708u:
-		enemy_bebop_walk_to_front_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_bebop_walk_to_front_step(object, slot, a5);
 	case 0x050784u:
 		enemy_bebop_walk_level_step(object, slot);
-		return;
+		return a5;
 	case 0x050802u:
-		enemy_bebop_walk_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_bebop_walk_start(object, slot, a5);
 	case 0x05081Eu:
-		enemy_bebop_close_in_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_bebop_close_in_step(object, slot, a5);
 	case 0x0508F0u:
 		enemy_bebop_pincer_charge_start(object);
-		return;
+		return a5;
 	case 0x050952u:
 		enemy_bebop_pincer_charge_run_to_edge(object);
-		return;
+		return a5;
 	case 0x050988u:
 		enemy_bebop_pincer_charge_wait_for_rocksteady(object);
-		return;
+		return a5;
 	case 0x0509CEu:
 		enemy_bebop_pincer_charge_get_ready(object);
-		return;
+		return a5;
 	case 0x0509D2u:
 		enemy_bebop_pincer_charge_run(object);
-		return;
+		return a5;
 	case 0x050AB8u:
 		enemy_bebop_pincer_charge_crash(object);
-		return;
+		return a5;
 	case 0x050AF0u:
 		enemy_bebop_punch_start(object);
-		return;
+		return a5;
 	case 0x050B38u:
 		enemy_bebop_punch_end(object);
-		return;
+		return a5;
 	case 0x050BA4u:
 		enemy_bebop_charge_start(object);
-		return;
+		return a5;
 	case 0x050BD2u:
 		enemy_bebop_charge_get_ready(object);
-		return;
+		return a5;
 	case 0x050BFEu:
 		enemy_bebop_charge_run(object);
-		return;
+		return a5;
 	case 0x050C82u:
 		enemy_bebop_shoot_start(object);
-		return;
+		return a5;
 	case 0x050CAEu:
-		*p_a5 = enemy_bebop_shoot_fire(object, *p_a5);
-		return;
+		return enemy_bebop_shoot_fire(object, a5);
 	case 0x050CFAu:
 		enemy_bebop_flinch_start(object);
-		return;
+		return a5;
 	case 0x050D0Au:
 		enemy_bebop_strike_back(object);
-		return;
+		return a5;
 	case 0x050D40u:
 		enemy_bebop_flinch_from_behind_start(object);
-		return;
+		return a5;
 	case 0x050D56u:
 		enemy_bebop_flinch_from_behind_end(object);
-		return;
+		return a5;
 	case 0x050DA4u:
-		*p_d7 = enemy_bebop_knocked_down_start(*p_d7, object, slot);
-		return;
+		enemy_bebop_knocked_down_start(object, slot);
+		return a5;
 	case 0x050DCCu:
-		*p_d7 = enemy_bebop_knocked_down_fall(*p_d7, object);
-		return;
+		enemy_bebop_knocked_down_fall(object);
+		return a5;
 	case 0x050E00u:
 		enemy_bebop_knocked_down_slide(object);
-		return;
+		return a5;
 	case 0x050E2Eu:
 		enemy_bebop_knocked_down_lie(object);
-		return;
+		return a5;
 	case 0x050E8Eu:
-		*p_d7 = enemy_bebop_defeated_start(*p_d7, object, slot);
-		return;
+		enemy_bebop_defeated_start(object, slot);
+		return a5;
 	case 0x050EC0u:
-		*p_d7 = enemy_bebop_defeated_fall(*p_d7, object);
-		return;
+		enemy_bebop_defeated_fall(object);
+		return a5;
 	case 0x050F20u:
 		enemy_bebop_defeated_slide(object);
-		return;
+		return a5;
 	case 0x050F4Eu:
 		enemy_bebop_defeated_blink(object);
-		return;
+		return a5;
 	case 0x05103Au:
 		enemy_mouser_enter_start(object);
-		return;
+		return a5;
 	case 0x05106Eu:
 		enemy_mouser_enter_hop(object);
-		return;
+		return a5;
 	case 0x0510B2u:
-		*p_d7 = enemy_mouser_enter_fall(*p_d7, object);
-		return;
+		enemy_mouser_enter_fall(object);
+		return a5;
 	case 0x0510E4u:
 		enemy_mouser_enter_land(object);
-		return;
+		return a5;
 	case 0x05135Cu:
-		*p_d7 = enemy_mouser_bite_start(*p_d7, object);
-		return;
+		enemy_mouser_bite_start(object);
+		return a5;
 	case 0x0513A2u:
-		*p_d7 = enemy_mouser_bite_fly(*p_d7, object, slot);
-		return;
+		enemy_mouser_bite_fly(object, slot);
+		return a5;
 	case 0x051404u:
 		enemy_mouser_bite_land(object);
-		return;
+		return a5;
 	case 0x051414u:
 		enemy_mouser_bite_hold(object);
-		return;
+		return a5;
 	case 0x0514EEu:
 		enemy_mouser_hop_down(object);
-		return;
+		return a5;
 	case 0x05152Cu:
-		*p_d7 = enemy_mouser_hop_fall(*p_d7, object);
-		return;
+		enemy_mouser_hop_fall(object);
+		return a5;
 	case 0x05156Cu:
 		enemy_mouser_hop_land(object);
-		return;
+		return a5;
 	case 0x051588u:
 		enemy_mouser_hop_right(object);
-		return;
+		return a5;
 	case 0x0515D8u:
 		enemy_mouser_hop_left(object);
-		return;
+		return a5;
 	case 0x051628u:
 		enemy_mouser_hop_up(object);
-		return;
+		return a5;
 	case 0x051654u:
-		*p_d7 = enemy_mouser_hop_up_fall(*p_d7, object);
-		return;
+		enemy_mouser_hop_up_fall(object);
+		return a5;
 	case 0x0516A0u:
 		enemy_mouser_hop_up_right(object);
-		return;
+		return a5;
 	case 0x0516D2u:
-		*p_d7 = enemy_mouser_hop_up_fall_blocked(*p_d7, object);
-		return;
+		enemy_mouser_hop_up_fall_blocked(object);
+		return a5;
 	case 0x05171Eu:
 		enemy_mouser_hop_up_left(object);
-		return;
+		return a5;
 	case 0x051774u:
-		enemy_mouser_chase_start((uint8_t)state_offset, object, p_d7, p_a5);
-		return;
+		return enemy_mouser_chase_start((uint8_t)state_offset, object);
 	case 0x0517A0u:
-		enemy_mouser_chase_run(object, slot, p_d7, p_a5);
-		return;
+		return enemy_mouser_chase_run(object, slot, a5);
 	case 0x051812u:
-		*p_d7 = enemy_mouser_chase_pause(object);
-		return;
+		enemy_mouser_chase_pause(object);
+		return a5;
 	case 0x05181Cu:
 		enemy_mouser_chase_wait(object);
-		return;
+		return a5;
 	case 0x05183Eu:
-		*p_a5 = enemy_mouser_creep_to_side_start((uint8_t)state_offset, object);
-		return;
+		return enemy_mouser_creep_to_side_start((uint8_t)state_offset, object);
 	case 0x05185Cu:
-		enemy_mouser_creep_to_side_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_mouser_creep_to_side_step(object, slot, a5);
 	case 0x0518D4u:
-		enemy_mouser_back_off_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_mouser_back_off_start(object, slot);
 	case 0x05190Eu:
-		*p_a5 = enemy_mouser_back_off_run((uint8_t)state_offset, object);
-		return;
+		return enemy_mouser_back_off_run((uint8_t)state_offset, object);
 	case 0x05192Cu:
-		*p_d7 = enemy_mouser_sit(object);
-		return;
+		enemy_mouser_sit(object);
+		return a5;
 	case 0x05194Cu:
 		enemy_mouser_back_off_wait(object, slot);
-		return;
+		return a5;
 	case 0x051980u:
-		*p_d7 = enemy_mouser_thrown_off_start(*p_d7, object);
-		return;
+		enemy_mouser_thrown_off_start(object);
+		return a5;
 	case 0x0519E4u:
-		*p_d7 = enemy_mouser_break_down_start(*p_d7, object);
-		return;
+		enemy_mouser_break_down_start(object);
+		return a5;
 	case 0x051A2Cu:
-		*p_d7 = enemy_mouser_knocked_flying_start(*p_d7, object, slot);
-		return;
+		enemy_mouser_knocked_flying_start(object, slot);
+		return a5;
 	case 0x051A6Cu:
-		*p_d7 = enemy_mouser_fly_and_crash(*p_d7, object);
-		return;
+		enemy_mouser_fly_and_crash(object);
+		return a5;
 	case 0x051AB0u:
 		enemy_mouser_remove(object, slot);
-		return;
+		return a5;
 	case 0x051CC8u:
 		enemy_rodney_enter_wait(object);
-		return;
+		return a5;
 	case 0x051CFCu:
 		enemy_rodney_enter_burst_out(object);
-		return;
+		return a5;
 	case 0x051D36u:
 		enemy_rodney_enter_fall(object);
-		return;
+		return a5;
 	case 0x051D72u:
 		enemy_rodney_enter_land(object);
-		return;
+		return a5;
 	case 0x05200Eu:
-		enemy_rodney_rush_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_rodney_rush_start(object, slot);
 	case 0x05207Au:
-		*p_d7 = enemy_rodney_rush_run(object);
-		return;
+		enemy_rodney_rush_run(object);
+		return a5;
 	case 0x052116u:
 		enemy_rodney_brake(object);
-		return;
+		return a5;
 	case 0x05214Eu:
 		enemy_rodney_rush_across_start(object);
-		return;
+		return a5;
 	case 0x052188u:
-		*p_d7 = enemy_rodney_rush_across_run(object);
-		return;
+		enemy_rodney_rush_across_run(object);
+		return a5;
 	case 0x052244u:
 		enemy_rodney_back_off_start(object);
-		return;
+		return a5;
 	case 0x052286u:
-		enemy_rodney_slide_to_stop(object, p_d5, p_d7);
-		return;
+		enemy_rodney_slide_to_stop(object);
+		return a5;
 	case 0x0522CCu:
 		enemy_rodney_back_off_turn(object);
-		return;
+		return a5;
 	case 0x0522F0u:
 		enemy_rodney_back_off_wait(object, slot);
-		return;
+		return a5;
 	case 0x052330u:
 		enemy_rodney_shoot_start(object);
-		return;
+		return a5;
 	case 0x052378u:
 		enemy_rodney_shoot_turn(object);
-		return;
+		return a5;
 	case 0x0523A8u:
 		enemy_rodney_shoot_ready(object);
-		return;
+		return a5;
 	case 0x0523C6u:
-		*p_a5 = enemy_rodney_shoot_fire(object, *p_a5);
-		return;
+		return enemy_rodney_shoot_fire(object, a5);
 	case 0x05240Eu:
 		enemy_rodney_shoot_end(object);
-		return;
+		return a5;
 	case 0x052484u:
 		enemy_rodney_whip_start(object);
-		return;
+		return a5;
 	case 0x05248Cu:
-		enemy_rodney_whip_slow_down(object, p_d5, p_d7);
-		return;
+		enemy_rodney_whip_slow_down(object);
+		return a5;
 	case 0x052494u:
 		enemy_rodney_whip_wind_up(object);
-		return;
+		return a5;
 	case 0x0524D2u:
-		*p_a5 = enemy_rodney_whip_throw_arm(object, *p_a5);
-		return;
+		return enemy_rodney_whip_throw_arm(object, a5);
 	case 0x052530u:
-		*p_d7 = enemy_rodney_whip_reach(*p_d7, object);
-		return;
+		enemy_rodney_whip_reach(object);
+		return a5;
 	case 0x0525D0u:
-		*p_d7 = enemy_rodney_whip_lash(object);
-		return;
+		enemy_rodney_whip_lash(object);
+		return a5;
 	case 0x0525E6u:
 		enemy_rodney_whip_retract(object);
-		return;
+		return a5;
 	case 0x052624u:
-		*p_d7 = enemy_rodney_knocked_back_start(*p_d7, object, slot);
-		return;
+		enemy_rodney_knocked_back_start(object, slot);
+		return a5;
 	case 0x05265Cu:
-		*p_d7 = enemy_rodney_knocked_back_fall(*p_d7, object);
-		return;
+		enemy_rodney_knocked_back_fall(object);
+		return a5;
 	case 0x05268Au:
 		enemy_rodney_knocked_back_end(object);
-		return;
+		return a5;
 	case 0x0526CCu:
-		*p_d7 = enemy_rodney_destroyed_start(*p_d7, object, slot);
-		return;
+		enemy_rodney_destroyed_start(object, slot);
+		return a5;
 	case 0x052704u:
-		*p_d7 = enemy_rodney_destroyed_fall(*p_d7, object);
-		return;
+		enemy_rodney_destroyed_fall(object);
+		return a5;
 	case 0x05273Cu:
 		enemy_rodney_destroyed_land(object);
-		return;
+		return a5;
 	case 0x052756u:
 		enemy_rodney_destroyed_end(object, slot);
-		return;
+		return a5;
 	case 0x052CAEu:
 		enemy_shredder_appear_wait(object);
-		return;
+		return a5;
 	case 0x052CDCu:
 		enemy_shredder_appear_step_out(object);
-		return;
+		return a5;
 	case 0x052D20u:
 		enemy_shredder_appear_walk_in(object);
-		return;
+		return a5;
 	case 0x052D62u:
-		*p_a5 = enemy_shredder_split_start(object);
-		return;
+		return enemy_shredder_split_start(object);
 	case 0x052DB2u:
 		enemy_shredder_split_blink(object);
-		return;
+		return a5;
 	case 0x052DE4u:
 		enemy_shredder_clone_appear_start(object);
-		return;
+		return a5;
 	case 0x052E1Au:
 		enemy_shredder_clone_appear_blink(object);
-		return;
+		return a5;
 	case 0x052E84u:
-		*p_a5 = enemy_shredder_walk_to_side_start(object, slot);
-		return;
+		return enemy_shredder_walk_to_side_start(object, slot);
 	case 0x052EAEu:
-		*p_a5 = enemy_shredder_walk_to_side_step(object, slot);
-		return;
+		return enemy_shredder_walk_to_side_step(object, slot);
 	case 0x052F20u:
 		enemy_shredder_walk_to_side_crouch(object);
-		return;
+		return a5;
 	case 0x052F52u:
-		*p_a5 = enemy_shredder_walk_to_side_turn(object, slot, *p_a5);
-		return;
+		return enemy_shredder_walk_to_side_turn(object, slot, a5);
 	case 0x052F80u:
-		*p_a5 = enemy_shredder_walk_to_side_hold(object, slot);
-		return;
+		return enemy_shredder_walk_to_side_hold(object, slot);
 	case 0x052FECu:
-		*p_a5 = enemy_shredder_walk_to_target_start(object, slot);
-		return;
+		return enemy_shredder_walk_to_target_start(object, slot);
 	case 0x053016u:
-		enemy_shredder_walk_to_target_step(object, slot, p_d7, p_a5);
-		return;
+		return enemy_shredder_walk_to_target_step(object, slot, a5);
 	case 0x053084u:
 		enemy_shredder_guard_start(object);
-		return;
+		return a5;
 	case 0x0530B0u:
 		enemy_shredder_guard_counter(object);
-		return;
+		return a5;
 	case 0x053102u:
-		enemy_shredder_back_off_start(object, slot, p_d7, p_a5);
-		return;
+		return enemy_shredder_back_off_start(object, slot);
 	case 0x05314Cu:
-		*p_a5 = enemy_shredder_back_off_walk(object, slot);
-		return;
+		return enemy_shredder_back_off_walk(object, slot);
 	case 0x053198u:
 		enemy_shredder_back_off_wait(object, slot);
-		return;
+		return a5;
 	case 0x0531C8u:
 		enemy_shredder_lose_bar_start(object);
-		return;
+		return a5;
 	case 0x0531E4u:
-		*p_a5 = enemy_shredder_lose_bar_end(object, *p_a5);
-		return;
+		return enemy_shredder_lose_bar_end(object, a5);
 	case 0x053256u:
 		enemy_shredder_flinch_start(object);
-		return;
+		return a5;
 	case 0x0532AAu:
 		enemy_shredder_flinch_end(object);
-		return;
+		return a5;
 	case 0x0532E8u:
 		enemy_shredder_flinch_from_behind_start(object);
-		return;
+		return a5;
 	case 0x053368u:
-		*p_d7 = enemy_shredder_defeated_start(*p_d7, object, slot);
-		return;
+		enemy_shredder_defeated_start(object, slot);
+		return a5;
 	case 0x053398u:
-		*p_d7 = enemy_shredder_defeated_fall(*p_d7, object);
-		return;
+		enemy_shredder_defeated_fall(object);
+		return a5;
 	case 0x0533D2u:
 		enemy_shredder_defeated_land(object);
-		return;
+		return a5;
 	case 0x053422u:
 		enemy_shredder_defeated_wait(object);
-		return;
+		return a5;
 	case 0x05343Eu:
 		enemy_shredder_defeated_stay();
-		return;
+		return a5;
 	case 0x053458u:
 		enemy_shredder_vanish_start(object, slot);
-		return;
+		return a5;
 	case 0x053482u:
 		enemy_shredder_vanish_wait(object);
-		return;
+		return a5;
 	case 0x053496u:
 		enemy_shredder_vanish_blink(object);
-		return;
+		return a5;
 	case 0x0534D8u:
 		enemy_shredder_kick_start(object);
-		return;
+		return a5;
 	case 0x05350Eu:
 		enemy_shredder_blow_end(object);
-		return;
+		return a5;
 	case 0x053538u:
 		enemy_shredder_thrust_start(object);
-		return;
+		return a5;
 	case 0x053582u:
 		enemy_shredder_slash_start(object);
-		return;
+		return a5;
 	case 0x0535CCu:
 		enemy_shredder_sweep_start(object);
-		return;
+		return a5;
 	case 0x053628u:
-		*p_a5 = enemy_shredder_ray_start(object, slot);
-		return;
+		return enemy_shredder_ray_start(object, slot);
 	case 0x053644u:
-		*p_a5 = enemy_shredder_ray_line_up(object, slot);
-		return;
+		return enemy_shredder_ray_line_up(object, slot);
 	case 0x0536CAu:
 		enemy_shredder_ray_charge(object);
-		return;
+		return a5;
 	case 0x0536EAu:
-		*p_a5 = enemy_shredder_ray_fire(object, *p_a5);
-		return;
+		return enemy_shredder_ray_fire(object, a5);
 	case 0x05373Au:
 		enemy_shredder_ray_end(object);
-		return;
+		return a5;
 	}
+	unreachable();
 }
 
 /* the object moved by its speeds, its height too */
@@ -1420,12 +1299,11 @@ void move_object_blocked(uint32_t object)
 }
 
 /* the chance of the first of its definition's attacks whose reach holds its turtle; none out of reach */
-void enemy_attack_chance(uint32_t object, uint32_t *p_chance, uint32_t *p_count, uint32_t *p_attack)
+void enemy_attack_chance(uint32_t object, uint32_t *p_chance, uint32_t *p_attack)
 {
 	uint32_t chance = *p_chance;
-	uint32_t count = *p_count;
 	uint32_t attack = *p_attack;
-	uint16_t target_dx = 0, target_dy = 0;
+	uint16_t count = 0, target_dx = 0, target_dy = 0;
 	uint16_t t1 = 0;
 
 	target_dx = OBJECT(object)->enemy.target_dx;
@@ -1439,6 +1317,7 @@ void enemy_attack_chance(uint32_t object, uint32_t *p_chance, uint32_t *p_count,
 		else
 		{
 			count = 3u;
+			offset_high_word = 3u;
 			for (;;)
 			{
 				if (ATTACK_RECORD(attack)->reach_y < (uint8_t)target_dy)
@@ -1462,7 +1341,6 @@ void enemy_attack_chance(uint32_t object, uint32_t *p_chance, uint32_t *p_count,
 		}
 	}
 	*p_chance = chance;
-	*p_count = count;
 	*p_attack = attack;
 }
 
@@ -1511,16 +1389,13 @@ void enemy_look_at_target(uint32_t object, uint32_t turtle, uint32_t *p_dx, uint
 }
 
 /* the two turtles nearest to the object, kept for later; with no turtle in play, the ones kept before */
-void enemy_nearest_turtles(uint32_t object, uint32_t *p_next_distance, uint32_t *p_count, uint32_t *p_next_closest, uint32_t *p_closest)
+void enemy_nearest_turtles(uint32_t object, uint32_t *p_next_closest, uint32_t *p_closest)
 {
-	uint32_t next_distance = *p_next_distance;
-	uint32_t count = *p_count;
 	uint32_t next_closest = *p_next_closest;
 	uint32_t closest = *p_closest;
-	uint16_t distance = 0, y_distance = 0;
-	uint32_t closest_distance = 0, object_2 = 0;
-	uint16_t t1 = 0, t2 = 0, t4 = 0;
-	uint32_t t3 = 0;
+	uint16_t closest_distance = 0, count = 0, distance = 0, next_distance = 0, y_distance = 0;
+	uint32_t object_2 = 0;
+	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	if (turtles_in_play == 0u)
 	{
@@ -1530,9 +1405,10 @@ void enemy_nearest_turtles(uint32_t object, uint32_t *p_next_distance, uint32_t 
 	else
 	{
 		count = 3u;
+		offset_high_word = 3u;
 		object_2 = OBJECT_ADDRESS(0);
-		next_distance = 0xFFFFFFFFu;
-		closest_distance = 0xFFFFFFFFu;
+		next_distance = 0xFFFFu;
+		closest_distance = 0xFFFFu;
 		do
 		{
 			if (OBJECT(object_2)->flags != 0u)
@@ -1550,45 +1426,39 @@ void enemy_nearest_turtles(uint32_t object, uint32_t *p_next_distance, uint32_t 
 				{
 					if (distance < (uint16_t)next_distance)
 					{
-						next_distance = (next_distance & ~0xFFFFu) | distance;
+						next_distance = (uint16_t)distance;
 						next_closest = object_2;
 					}
 				}
 				else
 				{
-					t3 = closest_distance;
-					closest_distance = next_distance;
-					next_distance = t3;
+					next_distance = (uint16_t)closest_distance;
 					next_closest = closest;
-					closest_distance = (closest_distance & ~0xFFFFu) | distance;
+					closest_distance = (uint16_t)distance;
 					closest = object_2;
 				}
 			}
-			t4 = count - 1u;
-			count = t4;
+			t3 = count - 1u;
+			count = t3;
 			object_2 += 0x50u;
-		} while (t4 != 0xFFFFu);
+		} while (t3 != 0xFFFFu);
 		nearest_turtle = closest;
 		second_nearest_turtle = next_closest;
+		distance_low_byte = next_distance;
 	}
-	*p_next_distance = next_distance;
-	*p_count = count;
 	*p_next_closest = next_closest;
 	*p_closest = closest;
 }
 
 /* the two players' slots whose turtles are nearest to the object, kept; with no turtle in play, the ones
    kept before */
-void enemy_nearest_slots(uint32_t object, uint32_t *p_next_distance, uint32_t *p_count, uint32_t *p_next_closest, uint32_t *p_closest)
+void enemy_nearest_slots(uint32_t object, uint32_t *p_next_closest, uint32_t *p_closest)
 {
-	uint32_t next_distance = *p_next_distance;
-	uint32_t count = *p_count;
 	uint32_t next_closest = *p_next_closest;
 	uint32_t closest = *p_closest;
-	uint16_t distance = 0, y_distance = 0;
-	uint32_t closest_distance = 0, object_2 = 0, player_slot = 0;
-	uint16_t t1 = 0, t2 = 0, t4 = 0;
-	uint32_t t3 = 0;
+	uint16_t closest_distance = 0, count = 0, distance = 0, next_distance = 0, y_distance = 0;
+	uint32_t object_2 = 0, player_slot = 0;
+	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	if (turtles_in_play == 0u)
 	{
@@ -1598,9 +1468,10 @@ void enemy_nearest_slots(uint32_t object, uint32_t *p_next_distance, uint32_t *p
 	else
 	{
 		count = 3u;
+		offset_high_word = 3u;
 		player_slot = PLAYER_SLOT_ADDRESS(0);
-		next_distance = 0xFFFFFFFFu;
-		closest_distance = 0xFFFFFFFFu;
+		next_distance = 0xFFFFu;
+		closest_distance = 0xFFFFu;
 		do
 		{
 			object_2 = PLAYER_SLOT(player_slot)->turtle;
@@ -1619,29 +1490,26 @@ void enemy_nearest_slots(uint32_t object, uint32_t *p_next_distance, uint32_t *p
 				{
 					if (distance < (uint16_t)next_distance)
 					{
-						next_distance = (next_distance & ~0xFFFFu) | distance;
+						next_distance = (uint16_t)distance;
 						next_closest = player_slot;
 					}
 				}
 				else
 				{
-					t3 = closest_distance;
-					closest_distance = next_distance;
-					next_distance = t3;
+					next_distance = (uint16_t)closest_distance;
 					next_closest = closest;
-					closest_distance = (closest_distance & ~0xFFFFu) | distance;
+					closest_distance = (uint16_t)distance;
 					closest = player_slot;
 				}
 			}
-			t4 = count - 1u;
-			count = t4;
+			t3 = count - 1u;
+			count = t3;
 			player_slot += 0x10u;
-		} while (t4 != 0xFFFFu);
+		} while (t3 != 0xFFFFu);
 		nearest_slot = closest;
 		second_nearest_slot = next_closest;
+		distance_low_byte = next_distance;
 	}
-	*p_next_distance = next_distance;
-	*p_count = count;
 	*p_next_closest = next_closest;
 	*p_closest = closest;
 }
@@ -1657,6 +1525,7 @@ uint32_t random_below(uint16_t range, uint32_t object)
 	random_seed = random;
 	random = ((uint32_t)(uint16_t)random * range_copy) & ~0xFFFFu;
 	random = (random << 16) | (random >> 16);
+	offset_high_word = random;
 	return random;
 }
 
@@ -1786,21 +1655,18 @@ void enemy_keep_on_screen(uint32_t object)
 }
 
 /* whether the enemy is on the screen across */
-void enemy_on_screen(uint32_t object, uint32_t *p_on_screen, uint32_t *p_zero)
+uint32_t enemy_on_screen(uint32_t object)
 {
-	uint32_t zero = *p_zero;
+	uint32_t zero = 0;
 
 	if (OBJECT(object)->screen_x >= 0x190u || OBJECT(object)->screen_x < 0x70u)
 	{
 		zero = 0xFFFFFFFFu == 0u;
-		*p_on_screen = 0xFFFFFFFFu;
+		offset_high_word = 0xFFFFFFFFu;
+		return zero;
 	}
-	else
-	{
-		zero = 1u;
-		*p_on_screen &= ~0xFFu;
-	}
-	*p_zero = zero;
+	zero = 1u;
+	return zero;
 }
 
 /* its health bars and health from its table, by the difficulty setting */
@@ -1850,57 +1716,54 @@ void enemy_back_to_thinking_hittable(uint32_t object)
 }
 
 /* whether it is down on its floor again, its height then set to the floor's */
-void enemy_landed(uint32_t object, uint32_t *p_d7, uint32_t *p_zero)
+uint32_t enemy_landed(uint32_t object)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t zero = *p_zero;
-	uint32_t floor_height = 0;
+	uint32_t zero = 0;
+	uint8_t height_whole = 0;
 
-	floor_height = (d7 & ~0xFFu) | OBJECT(object)->height_whole;
-	if ((uint8_t)floor_height >= 0xF0u || (uint8_t)floor_height < OBJECT(object)->floor_height)
+	height_whole = OBJECT(object)->height_whole;
+	if (height_whole >= 0xF0u || height_whole < OBJECT(object)->floor_height)
 	{
 		OBJECT(object)->height_whole = OBJECT(object)->floor_height;
 		zero = 1u;
 		OBJECT(object)->height &= 0xFF00u;
+		return zero;
 	}
-	else
-	{
-		zero = 0xFFFFFFFFu == 0u;
-		floor_height = 0xFFFFFFFFu;
-	}
-	*p_d7 = floor_height;
-	*p_zero = zero;
+	zero = 0xFFFFFFFFu == 0u;
+	offset_high_word = 0xFFFFFFFFu;
+	return zero;
 }
 
 /* starts a leap or a fall along an arc record: its speeds and a first step across unless blocked */
-uint32_t enemy_start_arc(uint32_t d7, uint32_t object, uint32_t arc)
+void enemy_start_arc(uint32_t object, uint32_t arc)
 {
-	uint32_t x_step = 0;
+	uint16_t x_step = 0;
+	uint32_t x_step_2 = 0;
 	uint32_t t1 = 0;
 
 	OBJECT(object)->x_speed = ARC(arc)->x_speed;
 	OBJECT(object)->y_speed = 0;
 	OBJECT(object)->height_speed = ARC(arc)->height_speed;
-	x_step = (d7 & ~0xFFFFu) | (uint16_t)ARC(arc)->x_step;
+	x_step = (uint16_t)ARC(arc)->x_step;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
 	{
 		OBJECT(object)->x_speed = 0u - OBJECT(object)->x_speed;
-		x_step = (x_step & ~0xFFFFu) | (uint16_t)(0u - x_step);
+		x_step = (uint16_t)(0u - x_step);
 	}
 	if (area == 7u && OBJECT(object)->floor_height != 0u)
-		return x_step;
+		return;
 	t1 = (int16_t)x_step;
-	x_step = t1;
+	x_step_2 = t1;
+	offset_high_word = x_step_2;
 	if ((int32_t)t1 >= 0)
 	{
 		if ((OBJECT(object)->contacts & 8u) == 0u)
-			OBJECT(object)->x += x_step;
-		return x_step;
+			OBJECT(object)->x += (x_step_2 & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+		return;
 	}
 	if ((OBJECT(object)->contacts & 0x10u) != 0u)
-		return x_step;
-	OBJECT(object)->x += x_step;
-	return x_step;
+		return;
+	OBJECT(object)->x += (x_step_2 & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
 }
 
 /* a frame of an arc: the speed across slowed by the record's drag, the fall sped up to its limit */
@@ -1982,9 +1845,8 @@ void enemy_set_floor(uint32_t object)
 }
 
 /* the floor map where it stands: its walls and edges into the contacts */
-void enemy_floor_contacts(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down, uint32_t *p_d5, uint32_t *p_new_contacts, uint32_t *p_a5)
+void enemy_floor_contacts(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down, uint32_t *p_a5)
 {
-	uint32_t d5 = *p_d5;
 	uint32_t floor_cell_place = 0;
 
 	if ((OBJECT(object)->flags & 0x20u) != 0u || (int16_t)OBJECT(object)->screen_y < 8)
@@ -1996,32 +1858,33 @@ void enemy_floor_contacts(uint32_t object, uint32_t *p_floor_right, uint32_t *p_
 	}
 	else
 	{
-		read_floor_cells_on_screen(object, &d5, p_a5, &floor_cell_place);
+		read_floor_cells_on_screen(object, p_a5, &floor_cell_place);
 		enemy_floor_cell_place = floor_cell_place;
 		if (floor_cell >= 0xFDu)
 		{
-			enemy_floor_edges(object, p_floor_right, p_floor_left, p_floor_up, p_floor_down, p_new_contacts);
+			enemy_floor_edges(object, p_floor_right, p_floor_left, p_floor_up, p_floor_down);
 			*p_a5 = 0x4881Bu;
 			OBJECT(object)->contacts &= TABLE8(floor_contact_masks, 0x3u + (uint32_t)(int16_t)(int8_t)floor_cell);
 		}
 		else
-			enemy_floor_edges(object, p_floor_right, p_floor_left, p_floor_up, p_floor_down, p_new_contacts);
+			enemy_floor_edges(object, p_floor_right, p_floor_left, p_floor_up, p_floor_down);
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
 }
 
 /* the floor map's walls around it into the contacts */
-void enemy_floor_edges(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down, uint32_t *p_new_contacts)
+void enemy_floor_edges(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down)
 {
-	uint32_t new_contacts = *p_new_contacts;
-	uint8_t floor_down = 0, floor_left = 0, floor_right = 0, floor_up = 0;
+	uint8_t floor_down = 0, floor_left = 0, floor_right = 0, floor_up = 0, new_contacts = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
-	new_contacts &= ~0xFFu;
+	new_contacts = 0u;
 	t1 = floor_cell_right;
 	floor_right = t1;
 	if ((int8_t)t1 < 0 && floor_right == height_cell_right)
+	{
 		new_contacts = 8u;
+		offset_high_word = 8u;
+	}
 	t2 = floor_cell_left;
 	floor_left = t2;
 	if ((int8_t)t2 < 0 && floor_left == height_cell_left)
@@ -2039,7 +1902,6 @@ void enemy_floor_edges(uint32_t object, uint32_t *p_floor_right, uint32_t *p_flo
 	*p_floor_left = (*p_floor_left & 0xFFFFFF00u) | floor_left;
 	*p_floor_up = (*p_floor_up & 0xFFFFFF00u) | floor_up;
 	*p_floor_down = (*p_floor_down & 0xFFFFFF00u) | floor_down;
-	*p_new_contacts = new_contacts;
 }
 
 /* whether it steps over an edge: off an object it stands on, or up or down a ledge toward its turtle's
@@ -2221,22 +2083,22 @@ void enemy_stairs_up(uint32_t object, uint32_t floor_cell_place)
 }
 
 /* kind 00, the bare-handed Foot soldier: its floor, one more enemy on the screen, then its setup */
-void enemy_foot_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_foot_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	enemy_set_floor(object);
 	enemies_on_screen++;
-	enemy_foot_soldier_setup(object, player_slot, p_d5, p_d7, p_a5);
+	return enemy_foot_soldier_setup(object, a5, player_slot);
 }
 
 /* the bare-handed soldier's turtle, health, definition and shadow; its way in by its parameter, or
    straight to thinking */
-void enemy_foot_soldier_setup(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_foot_soldier_setup(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint8_t first_move = 0;
 	uint32_t animation = 0;
 	uint8_t parameter = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -2255,38 +2117,41 @@ void enemy_foot_soldier_setup(uint32_t object, uint32_t player_slot, uint32_t *p
 	{
 		OBJECT(object)->enemy.move = (uint32_t)first_move << 2;
 		OBJECT(object)->routine++;
-		return;
+		return a5;
 	}
 	OBJECT(object)->flags |= 0x82u;
 	OBJECT(object)->routine += 2u;
 	animation = animations_0547C6_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* the way in its move picks, keeping track of its turtle, the objects and the floor */
-void enemy_enter(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_enter(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
+	uint32_t a5 = *p_a5;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, slot = 0, states = 0, turtle = 0;
 
 	slot = 0x60000u | OBJECT(object)->enemy.target;
 	turtle = PLAYER_SLOT(slot)->turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	a5 = enemy_collide_with_objects(object, a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, &a5);
 	states = TABLE32(enemy_ways_in, (uint32_t)(int16_t)OBJECT(object)->enemy.move);
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	*p_slot = slot;
+	*p_a5 = a5;
 }
 
 /* the thinking: a new turtle every 16 frames, a side by it or away, an attack by its definition's
    chances or its next move */
-void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5)
 {
 	bool L_048BCA = false, L_048CC0 = false;
 	uint32_t zero = 0;
 	uint8_t enemies = 0;
-	uint16_t count = 0;
-	uint32_t approach = 0, attack = 0, chance = 0, floor_down = 0, floor_left = 0, floor_right = 0, floor_up = 0, ignored = 0, ignored_2 = 0, turtle = 0;
+	uint16_t count = 0, d7 = 0;
+	uint32_t approach = 0, attack = 0, chance = 0, d7_2 = 0, dodge_chance = 0, floor_down = 0, floor_left = 0, floor_right = 0, floor_up = 0, ignored = 0, ignored_2 = 0, turtle = 0;
 	uint8_t retarget_time = 0, t3 = 0, floor_height = 0, t4 = 0, t5 = 0, move_chance = 0, t6 = 0, chance_2 = 0, t8 = 0;
 	uint16_t t7 = 0, t9 = 0;
 	uint32_t t1 = 0, t2 = 0;
@@ -2300,7 +2165,7 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 		if (turtles_in_play != 0u)
 		{
 			PLAYER_SLOT(*p_slot)->enemies--;
-			enemy_nearest_slots(object, p_d5, p_d7, p_a5, &second_slot);
+			enemy_nearest_slots(object, p_a5, &second_slot);
 			enemies = enemies_per_turtle;
 			if (enemies <= PLAYER_SLOT(second_slot)->enemies)
 			{
@@ -2318,8 +2183,7 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 					}
 				}
 			}
-			*p_d7 = (*p_d7 & ~0xFFFFu) | (uint16_t)second_slot;
-			if ((uint16_t)*p_d7 != OBJECT(object)->enemy.target)
+			if ((uint16_t)second_slot != OBJECT(object)->enemy.target)
 				enemy_leave_side(object, *p_slot);
 			OBJECT(object)->enemy.target = second_slot;
 			*p_slot = second_slot;
@@ -2349,27 +2213,23 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 		return;
 	}
 	floor_height = OBJECT(object)->floor_height;
-	*p_d7 = (*p_d7 & ~0xFFFFu) | floor_height;
-	if (floor_height != 0u)
+	d7 = floor_height;
+	if (floor_height != 0u && (int16_t)(d7 + OBJECT(object)->screen_y) >= 0xF0)
 	{
-		*p_d7 = (*p_d7 & ~0xFFFFu) | (uint16_t)(*p_d7 + OBJECT(object)->screen_y);
-		if ((int16_t)*p_d7 >= 0xF0)
-		{
-			enemy_leave_side(object, *p_slot);
-			mem_write8(*p_slot + 4u, mem_read8(*p_slot + 4u) - 1u);
-			OBJECT(object)->flags = 0u;
-			OBJECT(object)->contacts = 0u;
-			t3 = enemies_on_screen - 1u;
-			enemies_on_screen = t3;
-			if ((int8_t)t3 < 0)
-				enemies_on_screen = 0u;
-			return;
-		}
+		enemy_leave_side(object, *p_slot);
+		mem_write8(*p_slot + 4u, mem_read8(*p_slot + 4u) - 1u);
+		OBJECT(object)->flags = 0u;
+		OBJECT(object)->contacts = 0u;
+		t3 = enemies_on_screen - 1u;
+		enemies_on_screen = t3;
+		if ((int8_t)t3 < 0)
+			enemies_on_screen = 0u;
+		return;
 	}
 	turtle = mem_read32(*p_slot);
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &floor_right, &floor_left, &floor_up, &floor_down, p_d5, p_d7, p_a5);
+	*p_a5 = enemy_collide_with_objects(object, *p_a5);
+	enemy_floor_contacts(object, &floor_right, &floor_left, &floor_up, &floor_down, p_a5);
 	zero = enemy_check_floor_edge((uint8_t)floor_right, (uint8_t)floor_left, (uint8_t)floor_up, (uint8_t)floor_down, object, *p_slot);
 	if (zero == 0u)
 	{
@@ -2442,9 +2302,9 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 			L_048CC0 = mem_read8(mem_read32(*p_slot) + 4u) != 3u || OBJECT(object)->enemy.target_dy >= 8u || (int8_t)OBJECT(object)->enemy.target_faces >= 0;
 			if (!L_048CC0)
 			{
-				*p_d7 = 0x64u;
-				*p_d7 = random_below((uint16_t)*p_d7, object);
-				L_048CC0 = OBJECT(object)->enemy.dodge_chance <= (uint8_t)*p_d7;
+				dodge_chance = 0x64u;
+				dodge_chance = random_below((uint16_t)dodge_chance, object);
+				L_048CC0 = OBJECT(object)->enemy.dodge_chance <= (uint8_t)dodge_chance;
 				if (!L_048CC0)
 				{
 					enemy_give_side_back(object, *p_slot);
@@ -2462,28 +2322,28 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 	}
 	if (L_048CC0)
 	{
-		enemy_on_screen(object, p_d7, &zero);
+		zero = enemy_on_screen(object);
 		if (zero)
 		{
 			turtle = mem_read32(*p_slot);
 			if (OBJECT(turtle)->routine != 4u || (int8_t)hit_reaction_down[OBJECT(turtle)->turtle.hit_reaction] < 0)
 			{
 				attack = OBJECT(object)->enemy.definition + 0x28u;
-				enemy_attack_chance(object, &chance, p_d7, &attack);
+				enemy_attack_chance(object, &chance, &attack);
 				if ((int8_t)chance >= 0)
 				{
-					*p_d7 = 0x64u;
-					*p_d7 = random_below((uint16_t)*p_d7, object);
-					if ((uint8_t)*p_d7 < (uint8_t)chance)
+					d7_2 = 0x64u;
+					d7_2 = random_below((uint16_t)d7_2, object);
+					if ((uint8_t)d7_2 < (uint8_t)chance)
 					{
-						*p_d7 = 0x64u;
-						*p_d7 = random_below((uint16_t)*p_d7, object);
+						d7_2 = 0x64u;
+						d7_2 = random_below((uint16_t)d7_2, object);
 						count = 3u;
 						do
 						{
 							move_chance = ATTACK_RECORD(attack + (int16_t)count)->move_chance;
-							t6 = *p_d7;
-							*p_d7 = (*p_d7 & ~0xFFu) | (uint8_t)(t6 - move_chance);
+							t6 = d7_2;
+							d7_2 = (uint8_t)(t6 - move_chance);
 							if (t6 < move_chance)
 							{
 								OBJECT(object)->enemy.move = ((count & ~0xFFu) | ATTACK_RECORD(attack + (int16_t)count)->move) << 2;
@@ -2503,14 +2363,14 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 	if (OBJECT(object)->enemy.move_time == 0u)
 	{
 		approach = OBJECT(object)->enemy.definition + (uint16_t)((uint32_t)OBJECT(object)->enemy.approach << 3);
-		*p_d7 = 0x64u;
-		*p_d7 = random_below((uint16_t)*p_d7, object);
+		d7_2 = 0x64u;
+		d7_2 = random_below((uint16_t)d7_2, object);
 		count = 3u;
 		for (;;)
 		{
 			chance_2 = APPROACH_MOVES(approach + (int16_t)count)->chance;
-			t8 = *p_d7;
-			*p_d7 = (*p_d7 & ~0xFFu) | (uint8_t)(t8 - chance_2);
+			t8 = d7_2;
+			d7_2 = (uint8_t)(t8 - chance_2);
 			if (t8 < chance_2)
 				break;
 			t9 = count - 1u;
@@ -2527,205 +2387,205 @@ void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_slot, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_slot, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_slot, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_slot, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_slot, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_slot, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_slot, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_slot, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_slot, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_slot, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_slot, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_slot, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* the attack its move picks, keeping track of its turtle, the objects and the floor */
-void enemy_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, turtle = 0;
 	uint32_t jump_target = 0;
@@ -2733,28 +2593,28 @@ void enemy_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_s
 	*p_slot = 0x60000u | OBJECT(object)->enemy.target;
 	turtle = PLAYER_SLOT(*p_slot)->turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	*p_a5 = enemy_collide_with_objects(object, *p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	jump_target = TABLE32(enemy_attacks, (uint32_t)(int16_t)OBJECT(object)->enemy.move);
 	switch (jump_target)
 	{
 	case 0x049A06u:
-		enemy_jab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jab(object, *p_slot, *p_a5);
 		return;
 	case 0x049A52u:
-		enemy_chop(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_chop(object, *p_slot, *p_a5);
 		return;
 	case 0x049A8Eu:
-		enemy_swing(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_swing(object, *p_slot, *p_a5);
 		return;
 	case 0x049ACAu:
-		enemy_high_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049B06u:
-		enemy_jump_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049BBCu:
-		enemy_long_jump_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_long_jump_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049C72u:
 		enemy_attack_none_after_long_jump_kick();
@@ -2763,115 +2623,115 @@ void enemy_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_s
 		enemy_attack_none_before_grab();
 		return;
 	case 0x049C76u:
-		enemy_grab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_grab(object, *p_slot, *p_a5);
 		return;
 	case 0x04B2DAu:
-		enemy_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B316u:
-		enemy_low_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_low_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B352u:
-		enemy_leaping_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_leaping_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B42Au:
-		enemy_jump_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B4E0u:
-		enemy_flying_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flying_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B5D6u:
-		enemy_smash_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_smash_hammer(object, *p_slot, *p_a5);
 		return;
 	case 0x04E2C4u:
-		enemy_spear_thrust(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_thrust(object, *p_slot, *p_a5);
 		return;
 	case 0x04E336u:
-		enemy_spear_throw(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_throw(object, *p_slot, *p_a5);
 		return;
 	case 0x04E3C4u:
-		enemy_knife_stab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knife_stab(object, *p_slot, *p_a5);
 		return;
 	case 0x04E400u:
-		enemy_high_kick_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04E43Cu:
-		enemy_jump_kick_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04E4F2u:
-		enemy_throw_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04EBD6u:
-		enemy_throw_axes(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_axes(object, *p_slot, *p_a5);
 		return;
 	case 0x04EC5Eu:
-		enemy_high_kick_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_axe(object, *p_slot, *p_a5);
 		return;
 	case 0x04EC9Au:
-		enemy_gun_swing(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_gun_swing(object, *p_slot, *p_a5);
 		return;
 	case 0x04ECD6u:
-		enemy_shoot_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shoot_gun(object, *p_slot, *p_a5);
 		return;
 	case 0x04F076u:
-		enemy_throw_shuriken(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_shuriken(object, *p_slot, *p_a5);
 		return;
 	case 0x04F0E4u:
-		enemy_boomerang_throw(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_boomerang_throw(object, *p_slot, *p_a5);
 		return;
 	case 0x04FA96u:
-		enemy_rocksteady_pincer_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_pincer_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x04FC04u:
-		enemy_rocksteady_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x04FCD4u:
-		enemy_rocksteady_punch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_punch(object, *p_slot, *p_a5);
 		return;
 	case 0x04FD4Cu:
-		enemy_rocksteady_gun_butt(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_gun_butt(object, *p_slot, *p_a5);
 		return;
 	case 0x04FD88u:
-		enemy_rocksteady_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x0508A0u:
-		enemy_bebop_pincer_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_pincer_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x050ADCu:
-		enemy_bebop_punch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_punch(object, *p_slot, *p_a5);
 		return;
 	case 0x050B8Cu:
-		enemy_bebop_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x050C68u:
-		enemy_bebop_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x052306u:
-		enemy_rodney_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x052422u:
-		enemy_rodney_whip(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_whip(object, *p_slot, *p_a5);
 		return;
 	case 0x0534C4u:
-		enemy_shredder_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x053524u:
-		enemy_shredder_thrust(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_thrust(object, *p_slot, *p_a5);
 		return;
 	case 0x05356Eu:
-		enemy_shredder_slash(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_slash(object, *p_slot, *p_a5);
 		return;
 	case 0x0535B8u:
-		enemy_shredder_sweep(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_sweep(object, *p_slot, *p_a5);
 		return;
 	case 0x053602u:
-		enemy_shredder_ray(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_ray(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* hit: the sound, then its reaction by where the blow came from, its health and its definition */
-void enemy_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
 	uint8_t sound = 0;
 	uint16_t hit_side = 0;
@@ -2906,7 +2766,7 @@ void enemy_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, 
 			{
 				OBJECT(object)->enemy.move = 0x10u;
 				OBJECT(object)->routine++;
-				enemy_react(object, p_d5, p_d7, p_a1, p_a5);
+				enemy_react(object, p_a1, p_a5);
 				return;
 			}
 			OBJECT(object)->enemy.move = 0x20u;
@@ -2925,218 +2785,220 @@ void enemy_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, 
 		{
 			OBJECT(object)->enemy.move = 0x14u;
 			OBJECT(object)->routine++;
-			enemy_react(object, p_d5, p_d7, p_a1, p_a5);
+			enemy_react(object, p_a1, p_a5);
 			return;
 		}
 		OBJECT(object)->enemy.move = 0xCu;
 	}
 	OBJECT(object)->routine++;
-	enemy_react(object, p_d5, p_d7, p_a1, p_a5);
+	enemy_react(object, p_a1, p_a5);
 }
 
 /* the reaction to a hit its move picks, against the objects and the floor */
-void enemy_react(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0;
 
 	*p_slot = 0x60000u | OBJECT(object)->enemy.target;
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_d5, p_d7, p_a5);
+	*p_a5 = enemy_collide_with_objects(object, *p_a5);
+	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_a5);
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy.move)
 	{
 	case 228:
-		enemy_crash_into_scenery(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_crash_into_scenery_low(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery_low(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_flinch_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_flinch_bent(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_flinch_reel(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_flinch_hunched(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_killed_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_back(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_killed_forward(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_forward(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_knocked_forward(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_forward(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_thrown_by_donatello(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_donatello(object, *p_slot, *p_a5);
 		return;
 	case 132:
 		*p_a5 = enemy_let_go_by_donatello(object, *p_slot);
 		return;
 	case 136:
-		enemy_thrown_by_michelangelo(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_michelangelo(object, *p_slot, *p_a5);
 		return;
 	case 140:
 		*p_a5 = enemy_let_go_by_michelangelo(object, *p_slot);
 		return;
 	case 188:
-		enemy_thrown_by_raphael(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_raphael(object, *p_slot, *p_a5);
 		return;
 	case 192:
 		*p_a5 = enemy_let_go_by_raphael(object, *p_slot);
 		return;
 	case 196:
-		enemy_thrown_by_leonardo(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_leonardo(object, *p_slot, *p_a5);
 		return;
 	case 200:
 		*p_a5 = enemy_let_go_by_leonardo(object, *p_slot);
 		return;
 	case 20:
-		enemy_knocked_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_back(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_die(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_die_on_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die_on_back(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_flinch_back_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_sword(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_flinch_bent_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_sword(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_flinch_reel_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_flinch_hunched_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_flinch_back_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_flinch_bent_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_flinch_hunched_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_flinch_back_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_flinch_bent_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_flinch_reel_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_spear(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_flinch_hunched_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_spear(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_flinch_back_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_knife(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_flinch_bent_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_knife(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_flinch_reel_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_knife(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_flinch_hunched_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_flinch_back_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_gun(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_flinch_bent_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_gun(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_flinch_back_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_axe(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_flinch_bent_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_axe(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_flinch_reel_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_axe(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_rocksteady_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_rocksteady_reel(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_reel(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_rocksteady_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_rocksteady_knocked_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_knocked_down(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_rocksteady_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_defeated(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_bebop_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_bebop_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_bebop_knocked_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_knocked_down(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_bebop_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_defeated(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_mouser_thrown_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_thrown_off(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_mouser_break_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_break_down(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_mouser_knocked_flying(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_knocked_flying(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_rodney_knocked_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_knocked_back(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_rodney_destroyed(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_destroyed(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_shredder_lose_bar(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_lose_bar(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_shredder_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_shredder_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_shredder_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_defeated(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_shredder_vanish(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_vanish(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* the step over a floor edge its move picks, keeping track of its turtle and the floor */
-void enemy_step_over_edge(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_step_over_edge(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
+	uint32_t a5 = *p_a5;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, slot = 0, states = 0, turtle = 0;
 
 	slot = 0x60000u | OBJECT(object)->enemy.target;
 	turtle = PLAYER_SLOT(slot)->turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	a5 = enemy_collide_with_objects(object, a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, &a5);
 	states = TABLE32(enemy_edge_steps, (uint32_t)(int16_t)OBJECT(object)->enemy.move);
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	*p_slot = slot;
+	*p_a5 = a5;
 }
 
 /* crouches before a hop over a floor edge */
@@ -3167,7 +3029,7 @@ void enemy_hop_down(uint32_t object)
 }
 
 /* a frame of the hop, its floor raised by stairs; on landing a crouch and 16 frames still */
-uint32_t enemy_hop_fall(uint32_t d7, uint32_t object)
+void enemy_hop_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -3175,16 +3037,15 @@ uint32_t enemy_hop_fall(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_up(object);
 	move_object_with_height_blocked(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* still for a moment after landing, then back to thinking */
@@ -3265,7 +3126,7 @@ void enemy_hop_up(uint32_t object)
 }
 
 /* a frame of the jump, its floor lowered by stairs; on landing a drop pose and 16 frames still */
-uint32_t enemy_hop_up_fall(uint32_t d7, uint32_t object)
+void enemy_hop_up_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -3273,16 +3134,15 @@ uint32_t enemy_hop_up_fall(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_down(object);
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = enemy_drop_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the crouch ends, jumps over an edge to the right */
@@ -3305,7 +3165,7 @@ void enemy_hop_up_right(uint32_t object)
 
 /* a frame of the jump, not into walls, its floor lowered by stairs; on landing a crouch and 16 frames
    still */
-uint32_t enemy_hop_up_fall_blocked(uint32_t d7, uint32_t object)
+void enemy_hop_up_fall_blocked(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -3313,16 +3173,15 @@ uint32_t enemy_hop_up_fall_blocked(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_down(object);
 	move_object_with_height_blocked(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the crouch ends, jumps over an edge to the left */
@@ -3344,12 +3203,12 @@ void enemy_hop_up_left(uint32_t object)
 }
 
 /* sidesteps back and forth in its stance four times, then a new move */
-void enemy_shuffle(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shuffle(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049240_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* four sidesteps to go, from its stance */
@@ -3417,10 +3276,10 @@ void enemy_shuffle_end(uint32_t object)
 /* Unused: a move run from a table of states that no move picks */
 void unreached_0492EC(uint32_t object, uint32_t slot, uint32_t a5)
 {
-	uint32_t ignored = 0, ignored_2 = 0, states = 0;
+	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0492F8_ADDRESS;
-	run_object_state(object, slot, states, &ignored, &ignored_2, &a5);
+	run_object_state(object, slot, a5, states);
 }
 
 /* Unused: the enemy backs away from its turtle facing it */
@@ -3453,16 +3312,16 @@ void enemy_retreat_step(uint32_t object)
 
 /* runs round its turtle for 180 frames, one way or the other at random, turning back when it bumps into
    something */
-void enemy_circle(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049350_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 180 frames of running round its turtle, facing it, one way round or the other at random */
-void enemy_circle_start(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle_start(uint32_t object)
 {
 	uint32_t animations = 0, direction = 0;
 
@@ -3472,73 +3331,66 @@ void enemy_circle_start(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
 	direction = enemy_face_target_animation(0u, object, animations);
 	OBJECT(object)->enemy_circle.clockwise = 0u;
 	if ((int8_t)(uint8_t)(random_seed >> 8u) >= 0)
-	{
-		enemy_circle_aim((uint8_t)direction, object, p_d7, p_a5);
-		return;
-	}
+		return enemy_circle_aim((uint8_t)direction, object);
 	OBJECT(object)->enemy_circle.clockwise = 1u;
-	enemy_circle_aim((uint8_t)direction, object, p_d7, p_a5);
+	return enemy_circle_aim((uint8_t)direction, object);
 }
 
 /* its speeds for running round its turtle the way it goes */
-void enemy_circle_aim(uint8_t direction, uint32_t object, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_circle_aim(uint8_t direction, uint32_t object)
 {
-	uint16_t speed = 0;
-	uint32_t x_speed = 0;
+	uint8_t speed = 0;
+	uint32_t a5 = 0, x_speed = 0, y_speed = 0;
 
 	if (OBJECT(object)->enemy_circle.clockwise != 0u)
 		direction += 0x50u;
 	else
 		direction -= 0x30u;
-	speed = 0x180u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0x80u;
+	screen_x_high = 0x180u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
+	return a5;
 }
 
 /* a frame of the run round its turtle: the other way when it bumps into something, aiming again as its
    turtle moves */
-void enemy_circle_step(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle_step(uint32_t object, uint32_t a5)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t animations = 0, d7_2 = 0, direction = 0;
-	uint8_t t1 = 0;
+	uint32_t animations = 0, direction = 0;
 
 	OBJECT(object)->enemy_circle.move_time--;
-	d7_2 = (d7 & ~0xFFu) | OBJECT(object)->contacts;
-	t1 = d7_2 & 0x1Eu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
-	if (t1 != 0u)
+	if ((OBJECT(object)->contacts & 0x1Eu) != 0u)
 	{
 		OBJECT(object)->enemy_circle.clockwise ^= 1u;
 		animations = animations_049358_ADDRESS;
 		direction = enemy_face_target_animation(0u, object, animations);
-		enemy_circle_aim((uint8_t)direction, object, &d7_2, p_a5);
+		a5 = enemy_circle_aim((uint8_t)direction, object);
 		move_object_blocked(object);
-		*p_d7 = d7_2;
-		return;
+		return a5;
 	}
 	if (OBJECT(object)->enemy_circle.target_direction != OBJECT(object)->enemy_circle.facing)
 	{
 		animations = animations_049358_ADDRESS;
 		direction = enemy_face_target_animation(0u, object, animations);
-		enemy_circle_aim((uint8_t)direction, object, &d7_2, p_a5);
+		a5 = enemy_circle_aim((uint8_t)direction, object);
 	}
 	move_object_blocked(object);
-	*p_d7 = d7_2;
+	return a5;
 }
 
 /* dashes across at its turtle and brakes past it */
-void enemy_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_charge(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049414_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a dash across toward its turtle at full speed, for at most 180 frames */
-uint32_t enemy_charge_start(uint32_t object)
+void enemy_charge_start(uint32_t object)
 {
 	uint8_t target_direction = 0;
 	uint32_t animation = 0, roll = 0;
@@ -3559,7 +3411,6 @@ uint32_t enemy_charge_start(uint32_t object)
 	OBJECT(object)->enemy_charge.move_time = 0xB4u;
 	animation = enemy_dash_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return roll;
 }
 
 /* a frame of the dash until it is level with its turtle, then the braking time: longer, at random, when
@@ -3602,12 +3453,12 @@ void enemy_charge_brake(uint32_t object)
 }
 
 /* Unused: an enemy crashes into the scenery, which breaks, and dies */
-void enemy_crash_into_scenery(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_crash_into_scenery(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0494D2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* Unused: the scenery breaks where the enemy crashes, and it lies there */
@@ -3656,12 +3507,12 @@ void enemy_crash_into_scenery_end(uint32_t object)
 }
 
 /* Unused: the same crash lower in the scenery */
-void enemy_crash_into_scenery_low(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_crash_into_scenery_low(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049568_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* Unused: the scenery breaks lower down where the enemy crashes */
@@ -3691,12 +3542,12 @@ void enemy_crash_into_scenery_low_start(uint32_t object)
 }
 
 /* walks to its turtle, aiming again every 8 frames */
-void enemy_walk_to_target(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0495D6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk's speed and animations, facing its turtle; it aims again in 8 frames */
@@ -3716,10 +3567,10 @@ uint32_t enemy_walk_to_target_start(uint32_t object, uint32_t player_slot)
 }
 
 /* a frame of the walk to its turtle, aiming again every 8 frames, standing when close */
-void enemy_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_animations)
+uint32_t enemy_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t animations)
 {
 	uint16_t speed = 0;
-	uint32_t direction = 0, turtle = 0, x_speed = 0;
+	uint32_t direction = 0, turtle = 0, x_speed = 0, y_speed = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy_walk.move_time;
@@ -3728,25 +3579,30 @@ void enemy_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t *
 	{
 		turtle = PLAYER_SLOT(player_slot)->turtle;
 		direction = direction_to_object(0u, object, turtle);
-		*p_animations = OBJECT(object)->enemy_walk.animations;
-		enemy_turn_to_object((uint8_t)direction, object, *p_animations, turtle);
+		animations = OBJECT(object)->enemy_walk.animations;
+		enemy_turn_to_object((uint8_t)direction, object, animations, turtle);
 		speed = OBJECT(object)->enemy_walk.speed;
-		speeds_from_direction((uint8_t)direction, speed, &x_speed, p_y_speed, p_animations);
+		screen_x_high = speed;
+		speeds_from_direction((uint8_t)direction, (uint8_t)speed, &x_speed, &y_speed, &animations);
 		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_y_speed;
+		OBJECT(object)->y_speed = y_speed;
 		OBJECT(object)->enemy_walk.move_time = 8u;
 	}
 	if (OBJECT(object)->enemy_walk.target_dx >= 0x20u || OBJECT(object)->enemy_walk.target_dy >= 0x20u)
+	{
 		move_object_blocked(object);
+		return animations;
+	}
+	return animations;
 }
 
 /* walks to its turtle's side, now and then crouching, and keeps level with it */
-void enemy_walk_to_side(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04965A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side, facing it */
@@ -3864,12 +3720,12 @@ uint32_t enemy_walk_to_side_hold(uint32_t object, uint32_t player_slot)
 }
 
 /* keeps 0x50 to 0x70 away from its turtle, backing off when nearer and closing in when farther */
-void enemy_keep_distance(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_keep_distance(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049796_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle, for up to 255 frames of keeping its distance */
@@ -3885,11 +3741,10 @@ void enemy_keep_distance_start(uint32_t object)
 }
 
 /* stands facing its turtle; too near it backs off, too far it closes in */
-void enemy_keep_distance_watch(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_sines)
+uint32_t enemy_keep_distance_watch(uint32_t object, uint32_t player_slot, uint32_t a5)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, animations_2 = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5_2 = 0, animations = 0, animations_2 = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time--;
 	if (OBJECT(object)->enemy.target_direction != OBJECT(object)->enemy.facing)
@@ -3901,27 +3756,30 @@ void enemy_keep_distance_watch(uint32_t object, uint32_t player_slot, uint32_t *
 	if (OBJECT(object)->enemy.target_dx >= 0x50u || OBJECT(object)->enemy.target_dy >= 0x20u)
 	{
 		if (OBJECT(object)->enemy.target_dx < 0x70u && OBJECT(object)->enemy.target_dy < 0x40u)
-			return;
+			return a5;
 		OBJECT(object)->state = 3u;
 		direction = OBJECT(object)->enemy.target_direction;
 		animations_2 = animations_049258_ADDRESS;
 		turtle = PLAYER_SLOT(player_slot)->turtle;
 		enemy_face_object(direction, object, animations_2, turtle);
-		speed = 0x100u;
-		speeds_from_direction(direction, speed, &x_speed, p_d7, p_sines);
+		speed = 0u;
+		screen_x_high = 0x100u;
+		speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5_2);
 		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_d7;
-		return;
+		OBJECT(object)->y_speed = y_speed;
+		return a5_2;
 	}
 	OBJECT(object)->state = 2u;
 	direction = (uint8_t)(OBJECT(object)->enemy.target_direction - 0x80u);
 	animations_2 = animations_049258_ADDRESS;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations_2, turtle);
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_d7, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5_2);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_d7;
+	OBJECT(object)->y_speed = y_speed;
+	return a5_2;
 }
 
 /* walks away from its turtle until far enough, then watches again */
@@ -3957,20 +3815,19 @@ uint32_t enemy_keep_distance_close_in(uint32_t object, uint32_t player_slot)
 }
 
 /* walks away from its turtle for 40 frames, crouches, and waits while the turtle is down */
-void enemy_back_off(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0498A6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 40 frames of walking backwards away from its turtle, still facing it */
-void enemy_back_off_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_back_off_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_back_off.move_time = 0x40u;
 	OBJECT(object)->enemy_back_off.time = 0x28u;
@@ -3979,11 +3836,13 @@ void enemy_back_off_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_s
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while its turtle is down; when the time runs out, a crouch */
@@ -4022,33 +3881,33 @@ void enemy_back_off_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* runs away from its turtle for 8 frames */
-void enemy_run_away(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_run_away(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049940_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 8 frames of running away from its turtle, still facing it */
-void enemy_run_away_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_run_away_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0, target_direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0, target_direction = 0;
+	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time = 8u;
 	direction = (uint8_t)(OBJECT(object)->enemy.target_direction - 0x80u);
-	speed = 0x200u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, &ignored);
+	speed = 0u;
+	screen_x_high = 0x200u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
 	target_direction = OBJECT(object)->enemy.target_direction;
 	animations = animations_049258_ADDRESS;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(target_direction, object, animations, turtle);
-	*p_a5 = enemy_run_away_step(object, player_slot);
+	return enemy_run_away_step(object, player_slot);
 }
 
 /* a frame of running away; at its end, back to its first approach */
@@ -4071,12 +3930,12 @@ uint32_t enemy_run_away_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks across toward its turtle for 120 frames */
-void enemy_walk_across(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_across(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0499B0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 120 frames of walking across toward its turtle, facing it */
@@ -4113,12 +3972,12 @@ uint32_t enemy_walk_across_step(uint32_t object, uint32_t player_slot)
 }
 
 /* a jab, back to thinking when it ends */
-void enemy_jab(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_jab(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049A12_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the jab's animation and damage, facing its turtle */
@@ -4145,12 +4004,12 @@ void enemy_attack_end(uint32_t object)
 }
 
 /* a chop, back to thinking when it ends */
-void enemy_chop(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_chop(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049A5E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the chop's animation and damage, facing its turtle */
@@ -4169,12 +4028,12 @@ void enemy_chop_start(uint32_t object)
 }
 
 /* a swing, back to thinking when it ends */
-void enemy_swing(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_swing(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049A9A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the swing's animation and damage, facing its turtle */
@@ -4193,12 +4052,12 @@ void enemy_swing_start(uint32_t object)
 }
 
 /* a high kick, back to thinking when it ends */
-void enemy_high_kick(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_high_kick(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049AD6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the high kick's animation and damage, facing its turtle */
@@ -4217,12 +4076,12 @@ void enemy_high_kick_start(uint32_t object)
 }
 
 /* a flying kick: a crouch, a leap along its arc and the landing */
-void enemy_jump_kick(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_jump_kick(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049B12_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* crouches for the flying kick, its damage set, facing its turtle */
@@ -4241,23 +4100,22 @@ void enemy_jump_kick_crouch(uint32_t object)
 }
 
 /* when the crouch ends, leaps along the kick's arc */
-uint32_t enemy_jump_kick_leap(uint32_t d7, uint32_t object)
+void enemy_jump_kick_leap(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_jump_kick_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_jump_kick_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the flying kick along its arc, following stairs; on landing a crouch */
-uint32_t enemy_jump_kick_fly(uint32_t d7, uint32_t object)
+void enemy_jump_kick_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -4266,23 +4124,22 @@ uint32_t enemy_jump_kick_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_jump_kick_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a flying kick along a longer arc */
-void enemy_long_jump_kick(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_long_jump_kick(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049BC8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* crouches for the long flying kick, its damage set, facing its turtle */
@@ -4301,23 +4158,22 @@ void enemy_long_jump_kick_crouch(uint32_t object)
 }
 
 /* when the crouch ends, leaps along the long kick's arc */
-uint32_t enemy_long_jump_kick_leap(uint32_t d7, uint32_t object)
+void enemy_long_jump_kick_leap(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_long_jump_kick_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_jump_kick_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the long flying kick along its arc, following stairs; on landing a crouch */
-uint32_t enemy_long_jump_kick_fly(uint32_t d7, uint32_t object)
+void enemy_long_jump_kick_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -4326,14 +4182,13 @@ uint32_t enemy_long_jump_kick_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_long_jump_kick_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* an enemy's attack 6: does nothing */
@@ -4347,50 +4202,51 @@ void enemy_attack_none_before_grab(void)
 }
 
 /* runs at its turtle with its arms out and holds it, one grab at a time per turtle */
-void enemy_grab(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_grab(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049C82_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* unless its turtle faces it, is down or is being grabbed: runs at it with its arms out for 60 frames */
-void enemy_grab_start(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_grab_start(uint32_t object, uint32_t player_slot, uint32_t a5)
 {
-	uint8_t attack = 0;
-	uint16_t speed = 0;
-	uint32_t animation = 0, direction = 0, turtle = 0, x_speed = 0;
+	uint8_t attack = 0, speed = 0;
+	uint32_t a5_2 = 0, animation = 0, direction = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	if ((int8_t)OBJECT(object)->enemy_grab.target_faces < 0 || OBJECT(PLAYER_SLOT(player_slot)->turtle)->routine == 4u || PLAYER_SLOT(player_slot)->grab_time != 0u)
-		enemy_back_to_thinking(object);
-	else
 	{
-		animation = enemy_grab_animation_ADDRESS;
-		set_animation(0u, object, animation);
-		OBJECT(object)->damage = 0x101u;
-		attack = 0xEu;
-		enemy_face_target(attack, object);
-		PLAYER_SLOT(player_slot)->grab_time = 0x60u;
-		OBJECT(object)->enemy_grab.time = 0x3Cu;
-		turtle = PLAYER_SLOT(player_slot)->turtle;
-		direction = direction_to_object(0u, object, turtle);
-		speed = 0x200u;
-		speeds_from_direction((uint8_t)direction, speed, &x_speed, p_d7, p_a5);
-		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_d7;
-		OBJECT(object)->flags |= 4u;
-		OBJECT(object)->state++;
-		move_object_blocked(object);
+		enemy_back_to_thinking(object);
+		return a5;
 	}
+	animation = enemy_grab_animation_ADDRESS;
+	set_animation(0u, object, animation);
+	OBJECT(object)->damage = 0x101u;
+	attack = 0xEu;
+	enemy_face_target(attack, object);
+	PLAYER_SLOT(player_slot)->grab_time = 0x60u;
+	OBJECT(object)->enemy_grab.time = 0x3Cu;
+	turtle = PLAYER_SLOT(player_slot)->turtle;
+	direction = direction_to_object(0u, object, turtle);
+	speed = 0u;
+	screen_x_high = 0x200u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5_2);
+	OBJECT(object)->x_speed = x_speed;
+	OBJECT(object)->y_speed = y_speed;
+	OBJECT(object)->flags |= 4u;
+	OBJECT(object)->state++;
+	move_object_blocked(object);
+	return a5_2;
 }
 
 /* a frame of the run at its turtle; catching it, it hides in the hold; the turtle down or time up, it
    thinks again */
-void enemy_grab_run(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_grab_run(uint32_t object, uint32_t player_slot, uint32_t a5)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, turtle = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint32_t a5_2 = 0, direction = 0, turtle = 0, x_speed = 0, y_speed = 0;
 	uint8_t time = 0;
 
 	PLAYER_SLOT(player_slot)->grab_time = 0x60u;
@@ -4402,26 +4258,31 @@ void enemy_grab_run(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint3
 		enemy_leave_side(object, player_slot);
 		OBJECT(object)->flags &= 0x73u;
 		OBJECT(object)->state++;
-		return;
+		return a5;
 	}
 	if (OBJECT(PLAYER_SLOT(player_slot)->turtle)->routine != 4u)
 	{
 		time = OBJECT(object)->enemy_grab.time;
 		OBJECT(object)->enemy_grab.time = time - 1u;
-		if (time != 1u)
+		if (time == 1u)
 		{
-			turtle = PLAYER_SLOT(player_slot)->turtle;
-			direction = direction_to_object(0u, object, turtle);
-			speed = 0x200u;
-			speeds_from_direction((uint8_t)direction, speed, &x_speed, p_d7, p_a5);
-			OBJECT(object)->x_speed = x_speed;
-			OBJECT(object)->y_speed = *p_d7;
-			move_object_blocked(object);
-			return;
+			OBJECT(object)->flags &= ~4u;
+			enemy_back_to_thinking(object);
+			return a5;
 		}
+		turtle = PLAYER_SLOT(player_slot)->turtle;
+		direction = direction_to_object(0u, object, turtle);
+		speed = 0u;
+		screen_x_high = 0x200u;
+		speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5_2);
+		OBJECT(object)->x_speed = x_speed;
+		OBJECT(object)->y_speed = y_speed;
+		move_object_blocked(object);
+		return a5_2;
 	}
 	OBJECT(object)->flags &= ~4u;
 	enemy_back_to_thinking(object);
+	return a5;
 }
 
 /* keeps its turtle held while the turtle struggles; the turtle loose, the next state; the turtle up
@@ -4459,12 +4320,12 @@ void enemy_grab_end(uint32_t object)
 }
 
 /* hit: a flinch with its head thrown back, then back to thinking */
-void enemy_flinch_back(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049DE8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the flinch with its head thrown back */
@@ -4486,12 +4347,12 @@ void enemy_flinch_end(uint32_t object)
 }
 
 /* hit: a flinch bent over, then back to thinking */
-void enemy_flinch_bent(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049E1C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the flinch bent over */
@@ -4505,12 +4366,12 @@ void enemy_flinch_bent_start(uint32_t object)
 }
 
 /* hit: a flinch reeling, then back to thinking */
-void enemy_flinch_reel(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_reel(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049E40_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the flinch reeling */
@@ -4524,12 +4385,12 @@ void enemy_flinch_reel_start(uint32_t object)
 }
 
 /* hit: a flinch hunched, then back to thinking */
-void enemy_flinch_hunched(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_hunched(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049E64_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the flinch hunched */
@@ -4543,35 +4404,34 @@ void enemy_flinch_hunched_start(uint32_t object)
 }
 
 /* killed: knocked flying on its back, splatting against a wall it meets, then its death */
-void enemy_killed_back(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_killed_back(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049E88_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked flying on its back along its arc, its side by the turtle given up */
-uint32_t enemy_killed_back_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_killed_back_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
 	arc = enemy_killed_back_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_knocked_back_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	enemy_leave_side(object, player_slot);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the flight: against a wall a splat with its sound, else on landing it lies down */
-uint32_t enemy_killed_back_fly(uint32_t d7, uint32_t object)
+void enemy_killed_back_fly(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint8_t wall_mask = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0, wall_mask = 0;
+	uint32_t animation = 0, arc = 0;
 
 	wall_mask = 8u;
 	if ((OBJECT(object)->flags & 0x40u) == 0u)
@@ -4579,24 +4439,23 @@ uint32_t enemy_killed_back_fly(uint32_t d7, uint32_t object)
 	if ((wall_mask & OBJECT(object)->contacts) != 0u)
 	{
 		OBJECT(object)->state = 3u;
-		sound = (d7 & ~0xFFu) | 0x89u;
-		queue_sound((uint8_t)sound);
+		sound = 0x89u;
+		queue_sound(sound);
 		animation = enemy_spin_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		return sound;
+		return;
 	}
 	enemy_follow_stairs(object);
 	move_object_with_height_blocked(object);
 	arc = enemy_killed_back_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knocked_back_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop on its back, then its death, one enemy less after its turtle */
@@ -4626,20 +4485,19 @@ void enemy_killed_back_on_wall(uint32_t object)
 }
 
 /* slides down the wall to the floor, then lies there */
-uint32_t enemy_killed_back_slide_down(uint32_t d7, uint32_t object)
+void enemy_killed_back_slide_down(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
 
 	OBJECT(object)->height -= 0x100u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
 	OBJECT(object)->contacts &= 0x7Fu;
 	animation = enemy_killed_back_slide_down_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when it has lain long enough, its death, one enemy less after its turtle */
@@ -4654,35 +4512,34 @@ void enemy_killed_back_down(uint32_t object, uint32_t player_slot)
 }
 
 /* killed: falling on its face, splatting against a wall it meets, then its death */
-void enemy_killed_forward(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_killed_forward(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_049FC4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked flying forward along its arc, its side by the turtle given up */
-uint32_t enemy_killed_forward_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_killed_forward_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
 	arc = enemy_killed_forward_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_knocked_forward_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	enemy_leave_side(object, player_slot);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the flight: against a wall a splat with its sound, else on landing it lies down */
-uint32_t enemy_killed_forward_fly(uint32_t d7, uint32_t object)
+void enemy_killed_forward_fly(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint8_t wall_mask = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0, wall_mask = 0;
+	uint32_t animation = 0, arc = 0;
 
 	wall_mask = 8u;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
@@ -4690,24 +4547,23 @@ uint32_t enemy_killed_forward_fly(uint32_t d7, uint32_t object)
 	if ((wall_mask & OBJECT(object)->contacts) != 0u)
 	{
 		OBJECT(object)->state = 3u;
-		sound = (d7 & ~0xFFu) | 0x89u;
-		queue_sound((uint8_t)sound);
+		sound = 0x89u;
+		queue_sound(sound);
 		animation = enemy_killed_forward_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		return sound;
+		return;
 	}
 	enemy_follow_stairs(object);
 	move_object_with_height_blocked(object);
 	arc = enemy_killed_forward_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knocked_forward_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop on its face, then its death, one enemy less after its turtle */
@@ -4736,13 +4592,13 @@ void enemy_killed_forward_on_wall(uint32_t object)
 }
 
 /* slides down the wall to the floor, then lies there */
-uint32_t enemy_killed_forward_slide_down(uint32_t d7, uint32_t object)
+void enemy_killed_forward_slide_down(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
 
 	OBJECT(object)->height -= 0x100u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero)
 	{
 		OBJECT(object)->state++;
@@ -4750,7 +4606,6 @@ uint32_t enemy_killed_forward_slide_down(uint32_t d7, uint32_t object)
 		animation = enemy_killed_forward_slide_down_animation_ADDRESS;
 		set_animation(0u, object, animation);
 	}
-	return d7;
 }
 
 /* when it has lain long enough, its death, one enemy less after its turtle */
@@ -4765,31 +4620,30 @@ void enemy_killed_forward_down(uint32_t object, uint32_t player_slot)
 }
 
 /* knocked down on its face: lies 30 frames and gets up, or dies with no bar left */
-void enemy_knocked_forward(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_knocked_forward(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A100_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked down forward along its arc, its side by the turtle given up */
-uint32_t enemy_knocked_forward_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_knocked_forward_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
 	arc = enemy_knocked_forward_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_knocked_forward_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	enemy_leave_side(object, player_slot);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing it lies down */
-uint32_t enemy_knocked_forward_fly(uint32_t d7, uint32_t object)
+void enemy_knocked_forward_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -4798,14 +4652,13 @@ uint32_t enemy_knocked_forward_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_knocked_forward_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knocked_forward_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop; 30 frames on the ground, or its death with no bar left */
@@ -4850,12 +4703,12 @@ void enemy_knocked_forward_wait(uint32_t object)
 
 /* thrown by Donatello: hidden while he swings it, then placed by him, hurt and knocked flying on its
    back */
-void enemy_thrown_by_donatello(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_thrown_by_donatello(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A1E0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hidden in Donatello's hands for the 12 frames of his swing */
@@ -4867,36 +4720,36 @@ void enemy_thrown_by_donatello_start(uint32_t object)
 }
 
 /* when the swing ends: placed by Donatello, hurt, shown again and knocked flying on its back */
-void enemy_thrown_by_donatello_swing(uint32_t object, uint32_t player_slot, uint32_t *p_damage, uint32_t *p_placement)
+uint32_t enemy_thrown_by_donatello_swing(uint32_t object, uint32_t player_slot, uint32_t placement)
 {
-	uint32_t damage = *p_damage;
-	uint32_t object_2 = 0;
+	uint16_t damage = 0;
+	uint32_t a5 = 0, object_2 = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy.move_time;
 	OBJECT(object)->enemy.move_time = move_time - 1u;
 	if (move_time != 1u)
-		return;
+		return placement;
 	OBJECT(object)->flags &= 0xBFu;
 	if ((int8_t)OBJECT(object)->enemy.facing >= 0)
 		OBJECT(object)->flags |= 0x40u;
 	object_2 = 0x60000u | OBJECT(object)->attacker;
-	*p_placement = thrown_by_donatello_placement_ADDRESS;
-	enemy_place_by(object, *p_placement, object_2);
-	damage = (damage & ~0xFFFFu) | 0x306u;
-	enemy_take_damage((uint16_t)damage, object);
+	a5 = thrown_by_donatello_placement_ADDRESS;
+	enemy_place_by(object, a5, object_2);
+	damage = 0x306u;
+	enemy_take_damage(damage, object);
 	OBJECT(object)->flags |= 0x80u;
-	damage = enemy_knocked_back_start(damage, object, player_slot);
-	*p_damage = damage;
+	enemy_knocked_back_start(object, player_slot);
+	return a5;
 }
 
 /* a frame of the flight after a throw: against a wall a splat with its sound, else on landing it lies
    down */
-uint32_t enemy_thrown_fly(uint32_t d7, uint32_t object)
+void enemy_thrown_fly(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint8_t wall_mask = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0, wall_mask = 0;
+	uint32_t animation = 0, arc = 0;
 
 	wall_mask = 8u;
 	if ((OBJECT(object)->flags & 0x40u) == 0u)
@@ -4904,24 +4757,23 @@ uint32_t enemy_thrown_fly(uint32_t d7, uint32_t object)
 	if ((wall_mask & OBJECT(object)->contacts) != 0u)
 	{
 		OBJECT(object)->state = 4u;
-		sound = (d7 & ~0xFFu) | 0x89u;
-		queue_sound((uint8_t)sound);
+		sound = 0x89u;
+		queue_sound(sound);
 		animation = enemy_spin_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		return sound;
+		return;
 	}
 	enemy_follow_stairs(object);
 	move_object_with_height_blocked(object);
 	arc = enemy_knocked_back_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knocked_back_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* the damage taken off its health, and off its bars when the health runs out, down to none */
@@ -4938,7 +4790,7 @@ void enemy_take_damage(uint16_t damage, uint32_t object)
 	{
 		t2 = (health_bars & ~0xFFu) | (uint8_t)damage;
 		health_bars = (uint16_t)(t2 - damage);
-		if (t2 < (uint16_t)damage)
+		if (t2 < damage)
 			health_bars = 0u;
 	}
 	OBJECT(object)->health_bars = (uint8_t)(health_bars >> 8u);
@@ -4979,12 +4831,12 @@ uint32_t enemy_let_go_by_donatello(uint32_t object, uint32_t player_slot)
 
 /* thrown by Michelangelo: hidden while he swings it, then placed by him, hurt and knocked flying on its
    back */
-void enemy_thrown_by_michelangelo(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_thrown_by_michelangelo(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A374_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hidden in Michelangelo's hands for the 18 frames of his swing */
@@ -4996,27 +4848,27 @@ void enemy_thrown_by_michelangelo_start(uint32_t object)
 }
 
 /* when the swing ends: placed by Michelangelo, hurt, shown again and knocked flying on its back */
-void enemy_thrown_by_michelangelo_swing(uint32_t object, uint32_t player_slot, uint32_t *p_damage, uint32_t *p_placement)
+uint32_t enemy_thrown_by_michelangelo_swing(uint32_t object, uint32_t player_slot, uint32_t placement)
 {
-	uint32_t damage = *p_damage;
-	uint32_t object_2 = 0;
+	uint16_t damage = 0;
+	uint32_t a5 = 0, object_2 = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy.move_time;
 	OBJECT(object)->enemy.move_time = move_time - 1u;
 	if (move_time != 1u)
-		return;
+		return placement;
 	object_2 = 0x60000u | OBJECT(object)->attacker;
 	OBJECT(object)->flags &= 0xBFu;
 	if ((int8_t)OBJECT(object)->enemy.facing >= 0)
 		OBJECT(object)->flags |= 0x40u;
-	*p_placement = thrown_by_michelangelo_placement_ADDRESS;
-	enemy_place_by(object, *p_placement, object_2);
-	damage = (damage & ~0xFFFFu) | 0x306u;
-	enemy_take_damage((uint16_t)damage, object);
+	a5 = thrown_by_michelangelo_placement_ADDRESS;
+	enemy_place_by(object, a5, object_2);
+	damage = 0x306u;
+	enemy_take_damage(damage, object);
 	OBJECT(object)->flags |= 0x80u;
-	damage = enemy_knocked_back_start(damage, object, player_slot);
-	*p_damage = damage;
+	enemy_knocked_back_start(object, player_slot);
+	return a5;
 }
 
 /* let go by Michelangelo: placed by him, shown, hittable and back to thinking */
@@ -5037,12 +4889,12 @@ uint32_t enemy_let_go_by_michelangelo(uint32_t object, uint32_t player_slot)
 }
 
 /* thrown by Raphael: hidden while he swings it, then placed by him, hurt and knocked flying on its back */
-void enemy_thrown_by_raphael(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_thrown_by_raphael(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A432_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hidden in Raphael's hands for the 16 frames of his swing */
@@ -5054,27 +4906,27 @@ void enemy_thrown_by_raphael_start(uint32_t object)
 }
 
 /* when the swing ends: placed by Raphael, hurt, shown again and knocked flying on its back */
-void enemy_thrown_by_raphael_swing(uint32_t object, uint32_t player_slot, uint32_t *p_damage, uint32_t *p_placement)
+uint32_t enemy_thrown_by_raphael_swing(uint32_t object, uint32_t player_slot, uint32_t placement)
 {
-	uint32_t damage = *p_damage;
-	uint32_t object_2 = 0;
+	uint16_t damage = 0;
+	uint32_t a5 = 0, object_2 = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy.move_time;
 	OBJECT(object)->enemy.move_time = move_time - 1u;
 	if (move_time != 1u)
-		return;
+		return placement;
 	object_2 = 0x60000u | OBJECT(object)->attacker;
 	OBJECT(object)->flags &= 0xBFu;
 	if ((int8_t)OBJECT(object)->enemy.facing >= 0)
 		OBJECT(object)->flags |= 0x40u;
-	*p_placement = thrown_by_raphael_placement_ADDRESS;
-	enemy_place_by(object, *p_placement, object_2);
-	damage = (damage & ~0xFFFFu) | 0x306u;
-	enemy_take_damage((uint16_t)damage, object);
+	a5 = thrown_by_raphael_placement_ADDRESS;
+	enemy_place_by(object, a5, object_2);
+	damage = 0x306u;
+	enemy_take_damage(damage, object);
 	OBJECT(object)->flags |= 0x80u;
-	damage = enemy_knocked_back_start(damage, object, player_slot);
-	*p_damage = damage;
+	enemy_knocked_back_start(object, player_slot);
+	return a5;
 }
 
 /* let go by Raphael: placed by him, shown, hittable and back to thinking */
@@ -5095,12 +4947,12 @@ uint32_t enemy_let_go_by_raphael(uint32_t object, uint32_t player_slot)
 }
 
 /* thrown by Leonardo: hidden while he swings it, then placed by him, hurt and knocked flying on its back */
-void enemy_thrown_by_leonardo(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_thrown_by_leonardo(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A4F0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hidden in Leonardo's hands for the 20 frames of his swing */
@@ -5112,27 +4964,27 @@ void enemy_thrown_by_leonardo_start(uint32_t object)
 }
 
 /* when the swing ends: placed by Leonardo, hurt, shown again and knocked flying on its back */
-void enemy_thrown_by_leonardo_swing(uint32_t object, uint32_t player_slot, uint32_t *p_damage, uint32_t *p_placement)
+uint32_t enemy_thrown_by_leonardo_swing(uint32_t object, uint32_t player_slot, uint32_t placement)
 {
-	uint32_t damage = *p_damage;
-	uint32_t object_2 = 0;
+	uint16_t damage = 0;
+	uint32_t a5 = 0, object_2 = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy.move_time;
 	OBJECT(object)->enemy.move_time = move_time - 1u;
 	if (move_time != 1u)
-		return;
+		return placement;
 	object_2 = 0x60000u | OBJECT(object)->attacker;
 	OBJECT(object)->flags &= 0xBFu;
 	if ((int8_t)OBJECT(object)->enemy.facing >= 0)
 		OBJECT(object)->flags |= 0x40u;
-	*p_placement = thrown_by_leonardo_placement_ADDRESS;
-	enemy_place_by(object, *p_placement, object_2);
-	damage = (damage & ~0xFFFFu) | 0x306u;
-	enemy_take_damage((uint16_t)damage, object);
+	a5 = thrown_by_leonardo_placement_ADDRESS;
+	enemy_place_by(object, a5, object_2);
+	damage = 0x306u;
+	enemy_take_damage(damage, object);
 	OBJECT(object)->flags |= 0x80u;
-	damage = enemy_knocked_back_start(damage, object, player_slot);
-	*p_damage = damage;
+	enemy_knocked_back_start(object, player_slot);
+	return a5;
 }
 
 /* let go by Leonardo: placed by him, shown, hittable and back to thinking */
@@ -5153,31 +5005,30 @@ uint32_t enemy_let_go_by_leonardo(uint32_t object, uint32_t player_slot)
 }
 
 /* knocked down on its back: lies 30 frames and gets up, or dies with no bar left */
-void enemy_knocked_back(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_knocked_back(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A5AE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked down backwards along its arc, its side by the turtle given up */
-uint32_t enemy_knocked_back_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_knocked_back_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
 	arc = enemy_knocked_back_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_knocked_back_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	enemy_leave_side(object, player_slot);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing it lies down */
-uint32_t enemy_knocked_back_fly(uint32_t d7, uint32_t object)
+void enemy_knocked_back_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -5186,14 +5037,13 @@ uint32_t enemy_knocked_back_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_knocked_back_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knocked_back_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop; 30 frames on the ground, or its death with no bar left */
@@ -5247,12 +5097,12 @@ void enemy_knocked_back_get_up(uint32_t object)
 }
 
 /* dies: its sound, its death animation, and it is gone */
-void enemy_die(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_die(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A6BE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the death's sound and animation; it can no longer hit or be hit */
@@ -5286,12 +5136,12 @@ void enemy_die_vanish(uint32_t object)
 }
 
 /* dies on its back: its sound, its death animation, and it is gone */
-void enemy_die_on_back(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_die_on_back(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04A710_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the death on its back: its sound and animation; it can no longer hit or be hit */
@@ -5502,24 +5352,28 @@ void falling_debris_start(uint32_t object)
 }
 
 /* the debris falls when a turtle comes under it */
-void falling_debris_wait(uint32_t object, uint32_t routine_entry, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t falling_debris_wait(uint32_t object, uint32_t a5, uint32_t routine_entry)
 {
 	uint32_t dx = 0, dy = 0;
 
 	if (OBJECT(object)->screen_x >= 0x100u)
 	{
-		enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &routine_entry);
+		enemy_nearest_turtles(object, &a5, &routine_entry);
 		enemy_look_at_target(object, routine_entry, &dx, &dy);
-		if ((uint16_t)dx > 0x10u || (uint16_t)dy > 0x10u)
+		if ((uint16_t)dx <= 0x10u && (uint16_t)dy <= 0x10u)
 		{
-			falling_debris_burn(object);
-			return;
+			OBJECT(object)->flags = 0x85u;
+			OBJECT(object)->height_speed = -0x100;
+			OBJECT(object)->routine++;
 		}
+		falling_debris_burn(object);
+		return a5;
 	}
 	OBJECT(object)->flags = 0x85u;
 	OBJECT(object)->height_speed = -0x100;
 	OBJECT(object)->routine++;
 	falling_debris_burn(object);
+	return a5;
 }
 
 /* the debris falls and burns on the floor */
@@ -5582,7 +5436,7 @@ void motorbike_start(uint32_t object)
 }
 
 /* the motorbike rides on and rears up at a turtle in its way */
-void motorbike_ride(uint32_t object, uint32_t target_turtle, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t motorbike_ride(uint32_t object, uint32_t a5, uint32_t target_turtle)
 {
 	uint32_t animation = 0, dx = 0, dy = 0;
 	uint8_t aim_time = 0;
@@ -5592,7 +5446,7 @@ void motorbike_ride(uint32_t object, uint32_t target_turtle, uint32_t *p_d5, uin
 	if (aim_time == 1u)
 	{
 		OBJECT(object)->motorbike.aim_time = 8u;
-		enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &target_turtle);
+		enemy_nearest_turtles(object, &a5, &target_turtle);
 		OBJECT(object)->motorbike.target_turtle = target_turtle;
 	}
 	target_turtle = OBJECT(object)->motorbike.target_turtle;
@@ -5600,12 +5454,13 @@ void motorbike_ride(uint32_t object, uint32_t target_turtle, uint32_t *p_d5, uin
 	if ((uint16_t)dy >= 8u || (uint16_t)dx >= 0x40u)
 	{
 		motorbike_ride_off(object);
-		return;
+		return a5;
 	}
 	OBJECT(object)->motorbike.wheelie = 1u;
 	animation = motorbike_ride_animation_ADDRESS;
 	set_animation(dx, object, animation);
 	motorbike_ride_off(object);
+	return a5;
 }
 
 /* the riderless motorbike rides on off the screen */
@@ -5656,11 +5511,11 @@ uint32_t motorbike_struck(uint32_t object)
 }
 
 /* kind 01, the sword soldier: its turtle, health, colour, definition and shadow, straight to thinking */
-void enemy_sword_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_sword_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -5681,14 +5536,15 @@ void enemy_sword_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *
 	OBJECT(object)->routine += 2u;
 	animation = animations_055722_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* kind 02, the hammer soldier: its turtle, health, colour, definition and shadow, straight to thinking */
-void enemy_hammer_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_hammer_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -5709,15 +5565,16 @@ void enemy_hammer_soldier_start(uint32_t object, uint32_t player_slot, uint32_t 
 	OBJECT(object)->routine += 2u;
 	animation = animations_057B46_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* walks to its turtle with the sword */
-void enemy_walk_to_target_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ADB8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the sword's animations, facing its turtle; it aims again in 8 frames */
@@ -5737,12 +5594,12 @@ uint32_t enemy_walk_to_target_sword_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its side of its turtle with the sword */
-void enemy_walk_to_side_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ADFA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the sword, facing it */
@@ -5792,12 +5649,12 @@ uint32_t enemy_walk_to_side_sword_turn(uint32_t object, uint32_t player_slot, ui
 }
 
 /* walks across past its turtle while off its row, then up or down to it */
-void enemy_walk_past_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_past_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04AE84_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 180 frames of walking past its turtle with the sword, facing it */
@@ -5852,20 +5709,19 @@ uint32_t enemy_walk_past_sword_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks away with the sword, crouches and waits while its turtle is down */
-void enemy_back_off_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04AF30_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 40 frames of walking backwards away from its turtle with the sword, still facing it */
-void enemy_back_off_sword_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_back_off_sword_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_back_off.move_time = 0x40u;
 	OBJECT(object)->enemy_back_off.time = 0x28u;
@@ -5874,11 +5730,13 @@ void enemy_back_off_sword_start(uint32_t object, uint32_t player_slot, uint32_t 
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while its turtle is down; when the time runs out, a crouch */
@@ -5917,12 +5775,12 @@ void enemy_back_off_sword_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* walks up or down the screen toward its turtle's row for 16 frames */
-void enemy_walk_to_line_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_line_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04AFCA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 16 frames of walking up or down toward its turtle's row, facing it */
@@ -5965,12 +5823,12 @@ uint32_t enemy_walk_to_line_sword_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its turtle with the hammer */
-void enemy_walk_to_target_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B03E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the hammer's animations, facing its turtle; it aims again in 8 frames */
@@ -5990,12 +5848,12 @@ uint32_t enemy_walk_to_target_hammer_start(uint32_t object, uint32_t player_slot
 }
 
 /* walks to its side of its turtle with the hammer, stopping 0x40 across */
-void enemy_walk_to_side_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B080_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the hammer, facing it */
@@ -6059,12 +5917,12 @@ uint32_t enemy_walk_to_side_far_hold(uint32_t object, uint32_t player_slot)
 
 /* the hammer soldier closes in across, then waits with the hammer up and steps to its turtle's row by
    turns */
-void enemy_stalk_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_stalk_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B13A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* up to 255 frames of stalking its turtle with the hammer, facing it */
@@ -6164,12 +6022,12 @@ uint32_t enemy_stalk_hammer_step(uint32_t object, uint32_t player_slot, uint32_t
 }
 
 /* walks away for 64 frames, then waits with the hammer up while its turtle is down */
-void enemy_walk_away_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_away_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B244_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 64 frames of walking away from its turtle across, facing it */
@@ -6224,12 +6082,12 @@ void enemy_walk_away_hammer_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* a slash with the sword */
-void enemy_slash_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_slash_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B2E6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the slash's animation and damage, facing its turtle */
@@ -6248,12 +6106,12 @@ void enemy_slash_sword_start(uint32_t object)
 }
 
 /* a low slash with the sword */
-void enemy_low_slash_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_low_slash_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B322_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the low slash's animation and damage, facing its turtle */
@@ -6272,12 +6130,12 @@ void enemy_low_slash_sword_start(uint32_t object)
 }
 
 /* a leap at its turtle, as far as the turtle is, slashing */
-void enemy_leaping_slash_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_leaping_slash_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B35E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* readies the leaping slash: its animation and damage, facing its turtle */
@@ -6296,16 +6154,16 @@ void enemy_leaping_slash_sword_start(uint32_t object)
 }
 
 /* when the pose ends, leaps along its arc, faster across the farther its turtle is */
-uint32_t enemy_leaping_slash_sword_leap(uint32_t d7, uint32_t object)
+void enemy_leaping_slash_sword_leap(uint32_t object)
 {
 	uint16_t distance = 0;
 	uint32_t animation = 0, arc = 0, x_speed = 0;
 	uint16_t target_dx = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_leaping_slash_sword_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	target_dx = OBJECT(object)->enemy.target_dx;
 	distance = (uint16_t)(target_dx - 0x10u);
 	if (target_dx < 0x10u)
@@ -6318,11 +6176,10 @@ uint32_t enemy_leaping_slash_sword_leap(uint32_t d7, uint32_t object)
 	OBJECT(object)->state++;
 	animation = enemy_leaping_slash_sword_leap_animation_ADDRESS;
 	set_animation(x_speed, object, animation);
-	return d7;
 }
 
 /* a frame of the leap along its arc, following stairs; on landing its last pose */
-uint32_t enemy_leaping_slash_sword_fly(uint32_t d7, uint32_t object)
+void enemy_leaping_slash_sword_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -6331,23 +6188,22 @@ uint32_t enemy_leaping_slash_sword_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_leaping_slash_sword_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_leaping_slash_sword_fly_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a jump slashing with the sword */
-void enemy_jump_slash_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_jump_slash_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B436_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* readies the jumping slash: the sword up and its damage, facing its turtle */
@@ -6366,23 +6222,22 @@ void enemy_jump_slash_sword_start(uint32_t object)
 }
 
 /* when the pose ends, jumps along its arc slashing */
-uint32_t enemy_jump_slash_sword_leap(uint32_t d7, uint32_t object)
+void enemy_jump_slash_sword_leap(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_jump_slash_sword_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_jump_slash_sword_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the jump along its arc, following stairs; on landing the sword up again */
-uint32_t enemy_jump_slash_sword_fly(uint32_t d7, uint32_t object)
+void enemy_jump_slash_sword_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -6391,23 +6246,22 @@ uint32_t enemy_jump_slash_sword_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_jump_slash_sword_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_sword_ready_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a long leap slashing, turning over in the air */
-void enemy_flying_slash_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flying_slash_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B4EC_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* readies the flying slash: the sword up and its damage, facing its turtle */
@@ -6426,16 +6280,16 @@ void enemy_flying_slash_sword_start(uint32_t object)
 }
 
 /* when the pose ends, leaps along its arc, faster across the farther its turtle is */
-uint32_t enemy_flying_slash_sword_leap(uint32_t d7, uint32_t object)
+void enemy_flying_slash_sword_leap(uint32_t object)
 {
 	uint16_t distance = 0;
 	uint32_t animation = 0, arc = 0, x_speed = 0;
 	uint16_t target_dx = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_flying_slash_sword_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	target_dx = OBJECT(object)->enemy_flying_slash_sword.target_dx;
 	distance = (uint16_t)(target_dx - 0x10u);
 	if (target_dx < 0x10u)
@@ -6449,11 +6303,10 @@ uint32_t enemy_flying_slash_sword_leap(uint32_t d7, uint32_t object)
 	OBJECT(object)->state++;
 	animation = enemy_flying_slash_sword_leap_animation_ADDRESS;
 	set_animation(x_speed, object, animation);
-	return d7;
 }
 
 /* a frame of the leap, turning over after 72 frames, following stairs; on landing a crouch */
-uint32_t enemy_flying_slash_sword_fly(uint32_t d7, uint32_t object)
+void enemy_flying_slash_sword_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0, ignored = 0;
@@ -6470,23 +6323,22 @@ uint32_t enemy_flying_slash_sword_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_flying_slash_sword_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_sword_crouch_walk_animation_ADDRESS;
 	set_animation(ignored, object, animation);
-	return d7;
 }
 
 /* a blow with the hammer, 58 frames */
-void enemy_smash_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_smash_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B5E2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the blow's animation, damage and sound, facing its turtle */
@@ -6520,12 +6372,12 @@ void enemy_smash_hammer_end(uint32_t object)
 }
 
 /* hit: the sword soldier flinches with its head thrown back */
-void enemy_flinch_back_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B63E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the sword soldier's flinch with its head thrown back */
@@ -6539,12 +6391,12 @@ void enemy_flinch_back_sword_start(uint32_t object)
 }
 
 /* hit: the sword soldier flinches bent over */
-void enemy_flinch_bent_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B662_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the sword soldier's flinch bent over */
@@ -6558,12 +6410,12 @@ void enemy_flinch_bent_sword_start(uint32_t object)
 }
 
 /* hit: the sword soldier flinches reeling */
-void enemy_flinch_reel_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_reel_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B686_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the sword soldier's flinch reeling */
@@ -6577,12 +6429,12 @@ void enemy_flinch_reel_sword_start(uint32_t object)
 }
 
 /* hit: the sword soldier flinches hunched */
-void enemy_flinch_hunched_sword(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_hunched_sword(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B6AA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the sword soldier's flinch hunched */
@@ -6596,12 +6448,12 @@ void enemy_flinch_hunched_sword_start(uint32_t object)
 }
 
 /* hit: the hammer soldier flinches with its head thrown back */
-void enemy_flinch_back_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B6CE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the hammer soldier's flinch with its head thrown back */
@@ -6615,12 +6467,12 @@ void enemy_flinch_back_hammer_start(uint32_t object)
 }
 
 /* hit: the hammer soldier flinches bent over */
-void enemy_flinch_bent_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B6F2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the hammer soldier's flinch bent over */
@@ -6634,12 +6486,12 @@ void enemy_flinch_bent_hammer_start(uint32_t object)
 }
 
 /* hit hunched: the hammer soldier runs the same flinch as with its head thrown back */
-void enemy_flinch_hunched_hammer(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_hunched_hammer(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04B6CE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* Unused: a second start of the hammer soldier's flinch bent over */
@@ -6653,7 +6505,7 @@ void unreached_04B716(uint32_t object)
 }
 
 /* Rodney's whip arm, whose grab holds a turtle */
-void whip_arm_start(uint16_t routine_offset, uint32_t object, uint32_t *p_d7, uint32_t *p_a1)
+uint32_t whip_arm_start(uint16_t routine_offset, uint32_t object)
 {
 	OBJECT(object)->damage = 0u;
 	OBJECT(object)->depth = 4u;
@@ -6663,99 +6515,97 @@ void whip_arm_start(uint16_t routine_offset, uint32_t object, uint32_t *p_d7, ui
 		OBJECT(object)->attack &= 0x7Fu;
 	OBJECT(object)->routine++;
 	OBJECT(object)->whip_arm.unused_cleared = 0u;
-	whip_arm_follow(routine_offset, object, p_d7, p_a1);
+	return whip_arm_follow(routine_offset, object);
 }
 
 /* the arm reaches out, is drawn in or put away as Rodney does it */
-void whip_arm_follow(uint32_t routine_offset, uint32_t object, uint32_t *p_d7, uint32_t *p_rodney)
+uint32_t whip_arm_follow(uint32_t routine_offset, uint32_t object)
 {
 	uint32_t animation_entry = 0, animations = 0, offsets = 0, rodney = 0;
 
 	rodney = OBJECT(object)->whip_arm.rodney;
-	if ((mem_read8(rodney + 0x4Au) & 0x80u) == 0u)
-	{
-		if ((mem_read8(rodney + 0x4Au) & 0x40u) == 0u)
-		{
-			if ((mem_read8(rodney + 0x4Au) & 0x20u) == 0u)
-			{
-				offsets = whip_arm_x_offsets_ADDRESS;
-				whip_arm_place(object, rodney, offsets, &routine_offset, p_d7);
-				animations = whip_arm_follow_animations_ADDRESS;
-			}
-			else
-			{
-				OBJECT(object)->routine = 3u;
-				OBJECT(object)->flags &= ~0xEu;
-				offsets = whip_arm_x_offsets_2_ADDRESS;
-				whip_arm_place(object, rodney, offsets, &routine_offset, p_d7);
-				animations = whip_arm_animations_2_ADDRESS;
-			}
-		}
-		else
-		{
-			OBJECT(object)->flags &= ~0xEu;
-			offsets = whip_arm_x_offsets_ADDRESS;
-			whip_arm_place(object, rodney, offsets, &routine_offset, p_d7);
-			animations = whip_arm_follow_animations_ADDRESS;
-		}
-		animation_entry = ANIMATION_ENTRY(animations + (IN_PAGE(routine_offset, mem_read8(rodney + 0x46u)) & 0x3FFFu) * 0x4u);
-		set_animation(0u, object, animation_entry);
-	}
-	else
+	if ((mem_read8(rodney + 0x4Au) & 0x80u) != 0u)
 	{
 		OBJECT(object)->flags = 0u;
 		OBJECT(object)->contacts = 0u;
+		return rodney;
 	}
-	*p_rodney = rodney;
+	if ((mem_read8(rodney + 0x4Au) & 0x40u) != 0u)
+	{
+		OBJECT(object)->flags &= ~0xEu;
+		offsets = whip_arm_x_offsets_ADDRESS;
+		routine_offset = whip_arm_place(routine_offset, object, rodney, offsets);
+		animations = whip_arm_follow_animations_ADDRESS;
+		animation_entry = ANIMATION_ENTRY(animations + (IN_PAGE(routine_offset, mem_read8(rodney + 0x46u)) & 0x3FFFu) * 0x4u);
+		set_animation(0u, object, animation_entry);
+		return rodney;
+	}
+	if ((mem_read8(rodney + 0x4Au) & 0x20u) == 0u)
+	{
+		offsets = whip_arm_x_offsets_ADDRESS;
+		routine_offset = whip_arm_place(routine_offset, object, rodney, offsets);
+		animations = whip_arm_follow_animations_ADDRESS;
+	}
+	else
+	{
+		OBJECT(object)->routine = 3u;
+		OBJECT(object)->flags &= ~0xEu;
+		offsets = whip_arm_x_offsets_2_ADDRESS;
+		routine_offset = whip_arm_place(routine_offset, object, rodney, offsets);
+		animations = whip_arm_animations_2_ADDRESS;
+	}
+	animation_entry = ANIMATION_ENTRY(animations + (IN_PAGE(routine_offset, mem_read8(rodney + 0x46u)) & 0x3FFFu) * 0x4u);
+	set_animation(0u, object, animation_entry);
+	return rodney;
 }
 
 /* the turtle broke free of the arm */
-void whip_arm_let_go(uint32_t object, uint32_t *p_d7, uint32_t *p_a1)
+uint32_t whip_arm_let_go(uint32_t object)
 {
 	uint32_t rodney = 0;
 
 	rodney = OBJECT(object)->whip_arm.rodney;
 	mem_write8(rodney + 0x4Au, mem_read8(rodney + 0x4Au) | 4u);
 	OBJECT(object)->routine = 1u;
-	whip_arm_drag(object, p_d7, p_a1);
+	return whip_arm_drag(object);
 }
 
 /* the arm drags the turtle it caught */
-void whip_arm_drag(uint32_t object, uint32_t *p_turtle, uint32_t *p_rodney)
+uint32_t whip_arm_drag(uint32_t object)
 {
-	uint32_t rodney = 0, screen_y = 0, turtle_2 = 0, x_offset = 0;
+	uint32_t d7 = 0, rodney = 0, screen_y = 0, turtle = 0, x_offset = 0;
 
 	rodney = OBJECT(object)->whip_arm.rodney;
-	*p_turtle = 0x60000u | OBJECT(object)->hit_object;
-	turtle_2 = *p_turtle;
-	if (mem_read8(rodney + 4u) != 5u)
+	d7 = 0x60000u | OBJECT(object)->hit_object;
+	turtle = d7;
+	if (mem_read8(rodney + 4u) == 5u)
 	{
-		screen_y = OBJECT(object)->screen_y;
-		OBJECT(turtle_2)->y = (uint32_t)(uint16_t)(screen_y - 2u) << 8;
-		x_offset = (uint16_t)whip_arm_offsets[mem_read8(rodney + 0x46u)];
-		if ((OBJECT(object)->flags & 0x40u) != 0u)
-			x_offset = (uint16_t)(0u - x_offset);
-		OBJECT(turtle_2)->x = (uint32_t)(uint16_t)(x_offset + OBJECT(object)->screen_x) << 8;
-	}
-	else
-	{
-		OBJECT(turtle_2)->turtle.escape_presses = 0x10u;
+		OBJECT(turtle)->turtle.escape_presses = 0x10u;
 		OBJECT(object)->flags = 0u;
 		OBJECT(object)->contacts = 0u;
+		offset_high_word = d7;
+		return rodney;
 	}
-	*p_rodney = rodney;
+	screen_y = OBJECT(object)->screen_y;
+	OBJECT(turtle)->y = (uint32_t)(uint16_t)(screen_y - 2u) << 8;
+	x_offset = (uint16_t)whip_arm_offsets[mem_read8(rodney + 0x46u)];
+	if ((OBJECT(object)->flags & 0x40u) != 0u)
+		x_offset = (uint16_t)(0u - x_offset);
+	OBJECT(turtle)->x = (uint32_t)(uint16_t)(x_offset + OBJECT(object)->screen_x) << 8;
+	offset_high_word = d7;
+	return rodney;
 }
 
 /* a turtle's attack hits the arm, which lets go of a turtle it holds */
-void whip_arm_struck(uint32_t routine_offset, uint32_t object, uint32_t *p_turtle, uint32_t *p_rodney)
+uint32_t whip_arm_struck(uint32_t routine_offset, uint32_t object)
 {
-	uint32_t animation = 0, offsets = 0, rodney = 0, turtle_2 = 0;
+	uint32_t animation = 0, offsets = 0, rodney = 0, turtle = 0;
 
 	if ((OBJECT(object)->flags & 8u) != 0u)
 	{
-		*p_turtle = 0x60000u | OBJECT(object)->hit_object;
-		turtle_2 = *p_turtle;
-		OBJECT(turtle_2)->turtle.escape_presses = 0x10u;
+		offset_high_word = OBJECT_ADDRESS(0);
+		turtle = OBJECT(object)->hit_object | 0x60000u;
+		OBJECT(turtle)->turtle.escape_presses = 0x10u;
 		rodney = OBJECT(object)->whip_arm.rodney;
 		mem_write8(rodney + 0x4Au, mem_read8(rodney + 0x4Au) | 4u);
 	}
@@ -6764,40 +6614,38 @@ void whip_arm_struck(uint32_t routine_offset, uint32_t object, uint32_t *p_turtl
 	mem_write8(rodney + 0x4Au, mem_read8(rodney + 0x4Au) | 2u);
 	OBJECT(object)->routine = 1u;
 	offsets = whip_arm_x_offsets_ADDRESS;
-	whip_arm_place(object, rodney, offsets, &routine_offset, p_turtle);
+	routine_offset = whip_arm_place(routine_offset, object, rodney, offsets);
 	animation = whip_arm_follow_animations[IN_PAGE(routine_offset, mem_read8(rodney + 0x46u)) & 0x3FFFu];
 	set_animation(0u, object, animation);
-	*p_rodney = rodney;
+	return rodney;
 }
 
 /* the arm at Rodney's side, as long as Rodney stretches it */
-void whip_arm_place(uint32_t object, uint32_t rodney, uint32_t offsets, uint32_t *p_step_offset, uint32_t *p_turtle)
+uint32_t whip_arm_place(uint32_t routine_offset, uint32_t object, uint32_t rodney, uint32_t offsets)
 {
-	uint16_t step_offset = (uint16_t)*p_step_offset;
 	uint16_t x_offset = 0;
-	uint32_t turtle = 0;
+	uint32_t step_offset = 0, turtle = 0;
 
 	if (mem_read8(rodney + 4u) != 5u)
 	{
-		step_offset = (uint16_t)((uint32_t)mem_read8(rodney + 0x46u) << 1);
-		x_offset = (uint16_t)WHIP_OFFSET(offsets + (step_offset / 2u) * 0x2u);
+		step_offset = mem_read8(rodney + 0x46u);
+		step_offset = (uint16_t)(step_offset << 1);
+		x_offset = (uint16_t)WHIP_OFFSET(offsets + ((int32_t)(step_offset / 2u)) * 0x2u);
 		if ((OBJECT(object)->flags & 0x40u) != 0u)
 			x_offset = (uint16_t)(0u - x_offset);
 		OBJECT(object)->x = (int16_t)x_offset + mem_read32(rodney + 0x12u);
 		OBJECT(object)->y = mem_read32(rodney + 0x16u);
+		return step_offset;
 	}
-	else
+	if ((OBJECT(object)->flags & 8u) != 0u)
 	{
-		if ((OBJECT(object)->flags & 8u) != 0u)
-		{
-			*p_turtle = 0x60000u | OBJECT(object)->hit_object;
-			turtle = *p_turtle;
-			OBJECT(turtle)->turtle.escape_presses = 0x10u;
-		}
-		OBJECT(object)->flags = 0u;
-		OBJECT(object)->contacts = 0u;
+		offset_high_word = OBJECT_ADDRESS(0);
+		turtle = OBJECT(object)->hit_object | 0x60000u;
+		OBJECT(turtle)->turtle.escape_presses = 0x10u;
 	}
-	*p_step_offset = (*p_step_offset & 0xFFFF0000u) | step_offset;
+	OBJECT(object)->flags = 0u;
+	OBJECT(object)->contacts = 0u;
+	return routine_offset;
 }
 
 /* a laser bolt flies the way Rodney faces */
@@ -7356,11 +7204,11 @@ void shuriken_struck(uint32_t object)
 }
 
 /* Rocksteady's bullet flies level, or up at a turtle in the air */
-void rocksteady_bullet_start(uint32_t object, uint32_t *p_aim_number, uint32_t *p_height_speed, uint32_t *p_animations)
+uint32_t rocksteady_bullet_start(uint32_t object)
 {
 	uint8_t aim = 0;
 	uint16_t aim_number = 0;
-	uint32_t aims = 0, animation = 0, ignored = 0, speed = 0, x_speed = 0;
+	uint32_t a5 = 0, aims = 0, animation = 0, ignored = 0, speed = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->damage = 0x101u;
 	OBJECT(object)->depth = 2u;
@@ -7376,16 +7224,18 @@ void rocksteady_bullet_start(uint32_t object, uint32_t *p_aim_number, uint32_t *
 	}
 	aim = AIM(aims + aim_number);
 	speed = 0x600u;
-	speeds_from_direction(aim, (uint16_t)speed, &x_speed, p_height_speed, &ignored);
+	screen_x_high = 0x600u;
+	speeds_from_direction(aim, (uint8_t)speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->height_speed = *p_height_speed;
+	OBJECT(object)->height_speed = y_speed;
 	OBJECT(object)->y_speed = 0;
 	aim_number = (uint16_t)((uint32_t)aim_number << 3);
-	*p_animations = rocksteady_bullet_animations_ADDRESS;
+	a5 = rocksteady_bullet_animations_ADDRESS;
 	animation = rocksteady_bullet_animations[aim_number / 4u];
 	OBJECT(object)->rocksteady_bullet.burst = TABLE32(rocksteady_bullet_animations, 0x4u + aim_number);
+	distance_low_byte = aim_number;
 	set_animation(speed, object, animation);
-	*p_aim_number = (*p_aim_number & 0xFFFF0000u) | aim_number;
+	return a5;
 }
 
 /* the bullet flies until it hits a turtle or leaves the screen */
@@ -7510,7 +7360,7 @@ void shredder_piece_start(uint32_t object)
 }
 
 /* the piece bounces lower and lower until it leaves the screen */
-uint32_t shredder_piece_bounce(uint32_t d7, uint32_t object)
+void shredder_piece_bounce(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -7518,7 +7368,7 @@ uint32_t shredder_piece_bounce(uint32_t d7, uint32_t object)
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero)
 	{
 		OBJECT(object)->height_speed = (int16_t)(0u - OBJECT(object)->height_speed) >> 1;
@@ -7535,7 +7385,6 @@ uint32_t shredder_piece_bounce(uint32_t d7, uint32_t object)
 		OBJECT(object)->flags = 0u;
 		OBJECT(object)->contacts = 0u;
 	}
-	return d7;
 }
 
 /* Shredder's ray */
@@ -7602,25 +7451,25 @@ void rocket_start(uint32_t object)
 }
 
 /* the rocket comes down and explodes */
-uint32_t rocket_fly(uint32_t d7, uint32_t object)
+void rocket_fly(uint32_t object)
 {
 	uint32_t zero = 0;
+	uint8_t sound = 0;
 	uint32_t animation = 0;
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x80u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero)
 	{
-		d7 = (d7 & ~0xFFu) | 0x13u;
-		queue_sound((uint8_t)d7);
+		sound = 0x13u;
+		queue_sound(sound);
 		animation = rocket_animations[0];
 		set_animation(0u, object, animation);
 		OBJECT(object)->damage = 0x303u;
 		OBJECT(object)->attack |= 7u;
 		OBJECT(object)->routine++;
 	}
-	return d7;
 }
 
 /* the explosion ends and the rocket is gone */
@@ -7650,34 +7499,36 @@ void dynamite_start(uint32_t object)
 }
 
 /* the dynamite is thrown at the nearest turtle */
-void dynamite_throw(uint32_t object, uint32_t routine_entry, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t dynamite_throw(uint32_t object, uint32_t next_closest, uint32_t routine_entry)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, ignored = 0, x_speed = 0, y_speed = 0;
+	uint8_t speed = 0;
+	uint32_t a5 = 0, direction = 0, x_speed = 0, y_speed = 0;
 
-	enemy_nearest_turtles(object, p_d5, &ignored, p_a5, &routine_entry);
+	enemy_nearest_turtles(object, &next_closest, &routine_entry);
 	direction = direction_to_object(0u, object, routine_entry);
-	speed = 0x100u;
-	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, p_a5);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
 	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->height_speed = 0x400;
 	OBJECT(object)->routine++;
-	y_speed = dynamite_bounce(y_speed, object);
-	*p_d7 = y_speed;
+	dynamite_bounce(object);
+	return a5;
 }
 
 /* the dynamite bounces, flashing, and explodes on its last bounce */
-uint32_t dynamite_bounce(uint32_t d7, uint32_t object)
+void dynamite_bounce(uint32_t object)
 {
 	uint32_t zero = 0;
+	uint8_t sound = 0;
 	uint32_t animation = 0;
 	uint8_t bounces_left = 0;
 
 	OBJECT(object)->colour = dynamite_flash_colours[(uint8_t)frame_count & 4u];
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero)
 	{
 		OBJECT(object)->height_speed = (int16_t)(0u - OBJECT(object)->height_speed) >> 1;
@@ -7685,8 +7536,8 @@ uint32_t dynamite_bounce(uint32_t d7, uint32_t object)
 		OBJECT(object)->dynamite.bounces_left = bounces_left - 1u;
 		if (bounces_left == 1u)
 		{
-			d7 = (d7 & ~0xFFu) | 0x11u;
-			queue_sound((uint8_t)d7);
+			sound = 0x11u;
+			queue_sound(sound);
 			animation = animations_05CEEE_ADDRESS;
 			set_animation(0u, object, animation);
 			OBJECT(object)->colour = 0xFFu;
@@ -7694,7 +7545,6 @@ uint32_t dynamite_bounce(uint32_t d7, uint32_t object)
 			OBJECT(object)->routine++;
 		}
 	}
-	return d7;
 }
 
 /* the explosion ends and the dynamite is gone */
@@ -7770,11 +7620,11 @@ void kicked_door_become_foot_soldier(uint32_t object)
 }
 
 /* a piece of the kicked door flies off */
-void door_piece_start(uint32_t object, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t door_piece_start(uint32_t object)
 {
-	uint8_t direction = 0;
-	uint16_t piece_offset = 0, speed = 0;
-	uint32_t animation = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint16_t piece_offset = 0;
+	uint32_t a5 = 0, animation = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->flags = 0x81u;
 	OBJECT(object)->contacts = 0u;
@@ -7783,11 +7633,13 @@ void door_piece_start(uint32_t object, uint32_t *p_y_speed, uint32_t *p_sines)
 	set_animation(0u, object, animation);
 	OBJECT(object)->height_speed = TABLE16(door_piece_speeds, 0x2u + (uint32_t)(int16_t)piece_offset);
 	direction = (uint8_t)TABLE16(door_piece_speeds, (uint32_t)(int16_t)piece_offset);
-	speed = 0x500u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x500u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->routine++;
+	return a5;
 }
 
 /* the door's piece flies until it leaves the screen */
@@ -7963,21 +7815,20 @@ void tire_soldier_jump(uint32_t object)
 }
 
 /* the soldier's jump comes down until it lands */
-uint32_t tire_soldier_fly(uint32_t d7, uint32_t object)
+void tire_soldier_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->routine++;
 	OBJECT(object)->contacts &= 0x7Fu;
 	animation = tire_soldier_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* the soldier throws the tire */
@@ -8321,24 +8172,25 @@ void enemy_walk_in_on_ledge_start(uint32_t object)
 
 /* walks along the ledge; on the screen it crouches to jump down, or thinks up there if the nearest
    turtle is too */
-void enemy_walk_in_on_ledge_walk(uint32_t object, uint32_t object_2, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_in_on_ledge_walk(uint32_t object, uint32_t a5, uint32_t object_2)
 {
 	uint32_t animation = 0;
 
 	move_object_blocked(object);
 	if (OBJECT(object)->screen_x >= 0x120u)
-		return;
-	enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &object_2);
+		return a5;
+	enemy_nearest_turtles(object, &a5, &object_2);
 	if (OBJECT(object_2)->floor_height != 0x50u)
 	{
 		OBJECT(object)->state++;
 		animation = animations_04CF3E_ADDRESS;
 		set_animation(0u, object, animation);
-		return;
+		return a5;
 	}
 	OBJECT(object)->enemy_walk.move_time = 0u;
 	OBJECT(object)->routine = 2u;
 	OBJECT(object)->state = 0u;
+	return a5;
 }
 
 /* when the crouch ends, jumps down off the ledge */
@@ -8358,14 +8210,14 @@ void enemy_jump_down_leap(uint32_t object)
 }
 
 /* a frame of the jump down, following stairs */
-uint32_t enemy_jump_down_fall_stairs(uint32_t d7, uint32_t object)
+void enemy_jump_down_fall_stairs(uint32_t object)
 {
 	enemy_follow_stairs_down(object);
-	return enemy_jump_down_fall(d7, object);
+	enemy_jump_down_fall(object);
 }
 
 /* a frame of the fall off the ledge; on landing a drop pose */
-uint32_t enemy_jump_down_fall(uint32_t d7, uint32_t object)
+void enemy_jump_down_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -8374,14 +8226,13 @@ uint32_t enemy_jump_down_fall(uint32_t d7, uint32_t object)
 	OBJECT(object)->height_speed -= 0x40u;
 	if (OBJECT(object)->height_speed < -0x4000)
 		OBJECT(object)->height_speed = -0x400;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
 	OBJECT(object)->contacts &= 0x7Fu;
 	animation = enemy_drop_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the landing pose ends, to thinking */
@@ -8543,7 +8394,7 @@ void enemy_leap_out_start(uint32_t object)
 }
 
 /* a frame of the leap; on landing a crouch */
-uint32_t enemy_leap_out_fly(uint32_t d7, uint32_t object)
+void enemy_leap_out_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -8551,14 +8402,13 @@ uint32_t enemy_leap_out_fly(uint32_t d7, uint32_t object)
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
 	OBJECT(object)->floor_height = 0u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
 	OBJECT(object)->contacts &= 0x7Fu;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the crouch ends, to thinking */
@@ -8573,18 +8423,19 @@ void enemy_leap_out_land(uint32_t object)
 }
 
 /* a Foot soldier behind cover with a stick of dynamite */
-void bomber_start(uint32_t object, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t bomber_start(uint32_t object)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, x_speed = 0, y_speed = 0;
 
 	direction = 0x10u;
-	speed = 0x180u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0x80u;
+	screen_x_high = 0x180u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->routine++;
+	return a5;
 }
 
 /* on the screen, the soldier leans out */
@@ -8686,7 +8537,7 @@ void enemy_rocket_soldier_start(uint32_t object)
 }
 
 /* comes in, moving up or down to the nearest turtle's row; on the screen and level with it, aims */
-void enemy_rocket_soldier_line_up(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocket_soldier_line_up(uint32_t object, uint32_t a5)
 {
 	uint32_t animation = 0, ignored = 0, ignored_2 = 0, turtle = 0;
 	uint8_t aim_time = 0;
@@ -8697,7 +8548,7 @@ void enemy_rocket_soldier_line_up(uint32_t object, uint32_t *p_d5, uint32_t *p_d
 	if (aim_time == 1u)
 	{
 		OBJECT(object)->enemy_rocket_soldier.aim_time = 8u;
-		enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &turtle);
+		enemy_nearest_turtles(object, &a5, &turtle);
 		OBJECT(object)->enemy_rocket_soldier.turtle = turtle;
 	}
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
@@ -8705,12 +8556,12 @@ void enemy_rocket_soldier_line_up(uint32_t object, uint32_t *p_d5, uint32_t *p_d
 	if ((int8_t)OBJECT(object)->enemy_rocket_soldier.target_direction >= 0)
 		OBJECT(object)->y_speed = 0u - OBJECT(object)->y_speed;
 	move_object_blocked(object);
-	if (OBJECT(object)->screen_x < 0x170u && OBJECT(object)->enemy_rocket_soldier.target_dy < 0x10u)
-	{
-		OBJECT(object)->routine++;
-		animation = enemy_rocket_soldier_line_up_animation_ADDRESS;
-		set_animation(ignored, object, animation);
-	}
+	if (OBJECT(object)->screen_x >= 0x170u || OBJECT(object)->enemy_rocket_soldier.target_dy >= 0x10u)
+		return a5;
+	OBJECT(object)->routine++;
+	animation = enemy_rocket_soldier_line_up_animation_ADDRESS;
+	set_animation(ignored, object, animation);
+	return a5;
 }
 
 /* when the aim ends, fires the rocket with its sound; it can no longer be hit */
@@ -8754,21 +8605,21 @@ void enemy_rocket_soldier_unarmed(uint32_t object)
 }
 
 /* hit with the rocket on: drops it and takes the hit as a bare-handed soldier */
-void enemy_rocket_soldier_struck(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_record)
+void enemy_rocket_soldier_struck(uint32_t object, uint32_t *p_a1, uint32_t *p_record)
 {
 	uint32_t zero = 0;
-	uint32_t ignored = 0, object_2 = 0;
+	uint32_t a5 = 0, object_2 = 0;
 	uint8_t t1 = 0;
 
-	*p_record = dropped_rocket_shot_record_ADDRESS;
-	start_shot(object, *p_record, &object_2, &zero);
+	a5 = dropped_rocket_shot_record_ADDRESS;
+	start_shot(object, a5, &object_2, &zero);
 	if (zero)
 		OBJECT(object_2)->parameter = 1u;
 	t1 = enemies_on_screen - 1u;
 	enemies_on_screen = t1;
 	if ((int8_t)t1 < 0)
 		enemies_on_screen = 0u;
-	enemy_foot_soldier_start(object, object_2, p_d5, &ignored, p_record);
+	a5 = enemy_foot_soldier_start(object, a5, object_2);
 	OBJECT(object)->kind = 0u;
 	OBJECT(object)->parameter = 0u;
 	OBJECT(object)->routine = 4u;
@@ -8778,7 +8629,8 @@ void enemy_rocket_soldier_struck(uint32_t object, uint32_t *p_d5, uint32_t *p_d7
 		OBJECT(object)->health_bars = 0u;
 		OBJECT(object)->health = 0u;
 	}
-	enemy_hit(object, p_d5, p_d7, p_a1, p_record);
+	*p_record = a5;
+	enemy_hit(object, p_a1, p_record);
 }
 
 /* two closed doors */
@@ -8937,7 +8789,7 @@ void enemy_hang_in_move(uint32_t object)
 }
 
 /* a frame of the drop; on landing a drop pose */
-uint32_t enemy_hang_in_drop(uint32_t d7, uint32_t object)
+void enemy_hang_in_drop(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -8945,13 +8797,12 @@ uint32_t enemy_hang_in_drop(uint32_t d7, uint32_t object)
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
 	OBJECT(object)->floor_height = 0u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
 	animation = enemy_drop_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the landing pose ends, to thinking */
@@ -9004,24 +8855,23 @@ void enemy_kick_in_run(uint32_t object)
 }
 
 /* when the crouch ends, flies in with a kick along its arc, attacking */
-uint32_t enemy_kick_in_leap(uint32_t d7, uint32_t object)
+void enemy_kick_in_leap(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_kick_in_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->flags |= 4u;
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_jump_kick_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the flying kick; on landing a crouch, no longer attacking */
-uint32_t enemy_kick_in_fly(uint32_t d7, uint32_t object)
+void enemy_kick_in_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -9029,15 +8879,14 @@ uint32_t enemy_kick_in_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_kick_in_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags &= ~4u;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the crouch ends, to thinking */
@@ -9102,16 +8951,16 @@ void enemy_dive_in_start(uint32_t object)
 
 /* runs along the ledge; on the screen it crouches to dive off, and thinks if the nearest turtle is up
    there */
-void enemy_dive_in_run(uint32_t object, uint32_t object_2, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_dive_in_run(uint32_t object, uint32_t a5, uint32_t object_2)
 {
 	uint32_t animation = 0;
 
 	if (OBJECT(object)->screen_x >= 0x120u)
 	{
 		move_object_blocked(object);
-		return;
+		return a5;
 	}
-	enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &object_2);
+	enemy_nearest_turtles(object, &a5, &object_2);
 	if (OBJECT(object_2)->floor_height == 0x50u)
 	{
 		OBJECT(object)->enemy_dive_in.move_time = 0u;
@@ -9121,6 +8970,7 @@ void enemy_dive_in_run(uint32_t object, uint32_t object_2, uint32_t *p_d5, uint3
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* when the crouch ends, leaps off the ledge */
@@ -9198,7 +9048,7 @@ void enemy_dive_in_uncurl(uint32_t object)
 }
 
 /* a frame of the fall, following stairs; on landing a crouch */
-uint32_t enemy_dive_in_land(uint32_t d7, uint32_t object)
+void enemy_dive_in_land(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -9206,14 +9056,13 @@ uint32_t enemy_dive_in_land(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_down(object);
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x38u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* way in 9: walks in across for 26 frames */
@@ -9268,11 +9117,11 @@ void enemy_walk_in_ready(uint32_t object)
 }
 
 /* a Foot soldier with knives: its definition, colour, bars and first move by its parameter */
-void enemy_knife_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_knife_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -9294,14 +9143,15 @@ void enemy_knife_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *
 	OBJECT(object)->routine += 2u;
 	animation = animations_056F42_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* a Foot soldier with a spear, and the hits it lands before it throws the spear */
-void enemy_spear_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_spear_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy_spear.target = player_slot;
 	OBJECT(object)->enemy_spear.retarget_time = 0x10u;
@@ -9323,15 +9173,16 @@ void enemy_spear_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *
 	OBJECT(object)->routine += 2u;
 	animation = enemy_spear_soldier_animation_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* walks to its turtle with the spear */
-void enemy_walk_to_target_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DD40_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the spear's animations, facing its turtle; it aims again in 8 frames */
@@ -9351,12 +9202,12 @@ uint32_t enemy_walk_to_target_spear_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its side of its turtle with the spear */
-void enemy_walk_to_side_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DD82_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the spear, facing it */
@@ -9376,12 +9227,12 @@ uint32_t enemy_walk_to_side_spear_start(uint32_t object, uint32_t player_slot)
 }
 
 /* keeps off its turtle's line, crossing the screen */
-void enemy_walk_off_line_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_off_line_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DDC0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 180 frames of walking off its turtle's row with the spear, facing it */
@@ -9436,12 +9287,12 @@ uint32_t enemy_walk_off_line_spear_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks away, crouches and waits while its turtle is down */
-void enemy_back_off_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DE6C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 32 frames of walking away across with the spear, facing its turtle */
@@ -9488,20 +9339,19 @@ uint32_t enemy_back_off_spear_walk(uint32_t object, uint32_t player_slot)
 }
 
 /* steps up or down out of the way of its turtle's attack */
-void enemy_step_aside_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_step_aside_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DEEE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 16 frames of stepping up or down and away out of its turtle's attack, facing it */
-void enemy_step_aside_spear_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_animations)
+uint32_t enemy_step_aside_spear_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0, target_direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0, target_direction = 0;
+	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time = 0x10u;
 	OBJECT(object)->state++;
@@ -9510,15 +9360,15 @@ void enemy_step_aside_spear_start(uint32_t object, uint32_t player_slot, uint32_
 		direction = (uint8_t)(0u - direction);
 	if ((int8_t)(OBJECT(object)->enemy.target_direction - 0x40u) < 0)
 		direction ^= 0x40u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, &ignored);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	target_direction = OBJECT(object)->enemy.target_direction;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	animations = animations_04DD48_ADDRESS;
-	animations = enemy_face_object(target_direction, object, animations, turtle);
-	*p_animations = animations;
+	return enemy_face_object(target_direction, object, animations, turtle);
 }
 
 /* a frame of the step aside; at its end, back to its first approach */
@@ -9541,12 +9391,12 @@ uint32_t enemy_step_aside_spear_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its turtle with the knife */
-void enemy_walk_to_target_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DF70_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the knife's animations, facing its turtle; it aims again in 8 frames */
@@ -9566,12 +9416,12 @@ uint32_t enemy_walk_to_target_knife_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its side of its turtle with the knife */
-void enemy_walk_to_side_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DFB2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the knife, facing it */
@@ -9591,16 +9441,16 @@ uint32_t enemy_walk_to_side_knife_start(uint32_t object, uint32_t player_slot)
 }
 
 /* runs round its turtle with the knife */
-void enemy_circle_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04DFF0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 180 frames of running round its turtle with the knife, one way round or the other at random */
-void enemy_circle_knife_start(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle_knife_start(uint32_t object)
 {
 	uint32_t animations = 0, direction = 0;
 
@@ -9610,69 +9460,62 @@ void enemy_circle_knife_start(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
 	direction = enemy_face_target_animation(0u, object, animations);
 	OBJECT(object)->enemy_circle.clockwise = 0u;
 	if ((int8_t)(uint8_t)(random_seed >> 8u) >= 0)
-	{
-		enemy_circle_knife_aim((uint8_t)direction, object, p_d7, p_a5);
-		return;
-	}
+		return enemy_circle_knife_aim((uint8_t)direction, object);
 	OBJECT(object)->enemy_circle.clockwise = 1u;
-	enemy_circle_knife_aim((uint8_t)direction, object, p_d7, p_a5);
+	return enemy_circle_knife_aim((uint8_t)direction, object);
 }
 
 /* its speeds for running round its turtle with the knife the way it goes */
-void enemy_circle_knife_aim(uint8_t direction, uint32_t object, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_circle_knife_aim(uint8_t direction, uint32_t object)
 {
-	uint16_t speed = 0;
-	uint32_t x_speed = 0;
+	uint8_t speed = 0;
+	uint32_t a5 = 0, x_speed = 0, y_speed = 0;
 
 	if (OBJECT(object)->enemy_circle.clockwise != 0u)
 		direction += 0x50u;
 	else
 		direction -= 0x30u;
-	speed = 0x140u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0x40u;
+	screen_x_high = 0x140u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
+	return a5;
 }
 
 /* a frame of the run round its turtle: the other way when it bumps into something, aiming again as its
    turtle moves */
-void enemy_circle_knife_step(uint32_t object, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_circle_knife_step(uint32_t object, uint32_t a5)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t animations = 0, d7_2 = 0, direction = 0;
-	uint8_t t1 = 0;
+	uint32_t animations = 0, direction = 0;
 
 	OBJECT(object)->enemy_circle.move_time--;
-	d7_2 = (d7 & ~0xFFu) | OBJECT(object)->contacts;
-	t1 = d7_2 & 0x1Eu;
-	d7_2 = (d7_2 & ~0xFFu) | t1;
-	if (t1 != 0u)
+	if ((OBJECT(object)->contacts & 0x1Eu) != 0u)
 	{
 		OBJECT(object)->enemy_circle.clockwise ^= 1u;
 		animations = animations_04DFF8_ADDRESS;
 		direction = enemy_face_target_animation(0u, object, animations);
-		enemy_circle_knife_aim((uint8_t)direction, object, &d7_2, p_a5);
+		a5 = enemy_circle_knife_aim((uint8_t)direction, object);
 		move_object_blocked(object);
-		*p_d7 = d7_2;
-		return;
+		return a5;
 	}
 	if (OBJECT(object)->enemy_circle.target_direction != OBJECT(object)->enemy_circle.facing)
 	{
 		animations = animations_04DFF8_ADDRESS;
 		direction = enemy_face_target_animation(0u, object, animations);
-		enemy_circle_knife_aim((uint8_t)direction, object, &d7_2, p_a5);
+		a5 = enemy_circle_knife_aim((uint8_t)direction, object);
 	}
 	move_object_blocked(object);
-	*p_d7 = d7_2;
+	return a5;
 }
 
 /* keeps its distance from its turtle with the knife */
-void enemy_keep_distance_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_keep_distance_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E0B4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the knife, for up to 255 frames of keeping its distance */
@@ -9688,11 +9531,10 @@ void enemy_keep_distance_knife_start(uint32_t object)
 }
 
 /* stands facing its turtle with the knife; too near it backs off, too far it closes in */
-void enemy_keep_distance_knife_watch(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_sines)
+uint32_t enemy_keep_distance_knife_watch(uint32_t object, uint32_t player_slot, uint32_t a5)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, animations_2 = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5_2 = 0, animations = 0, animations_2 = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time--;
 	if (OBJECT(object)->enemy.target_direction != OBJECT(object)->enemy.facing)
@@ -9704,27 +9546,30 @@ void enemy_keep_distance_knife_watch(uint32_t object, uint32_t player_slot, uint
 	if (OBJECT(object)->enemy.target_dx >= 0x50u || OBJECT(object)->enemy.target_dy >= 0x20u)
 	{
 		if (OBJECT(object)->enemy.target_dx < 0x70u && OBJECT(object)->enemy.target_dy < 0x40u)
-			return;
+			return a5;
 		OBJECT(object)->state = 3u;
 		direction = OBJECT(object)->enemy.target_direction;
 		animations_2 = animations_04DF78_ADDRESS;
 		turtle = PLAYER_SLOT(player_slot)->turtle;
 		enemy_face_object(direction, object, animations_2, turtle);
-		speed = 0x100u;
-		speeds_from_direction(direction, speed, &x_speed, p_d7, p_sines);
+		speed = 0u;
+		screen_x_high = 0x100u;
+		speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5_2);
 		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_d7;
-		return;
+		OBJECT(object)->y_speed = y_speed;
+		return a5_2;
 	}
 	OBJECT(object)->state = 2u;
 	direction = (uint8_t)(OBJECT(object)->enemy.target_direction - 0x80u);
 	animations_2 = animations_04DF78_ADDRESS;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations_2, turtle);
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_d7, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5_2);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_d7;
+	OBJECT(object)->y_speed = y_speed;
+	return a5_2;
 }
 
 /* walks away from its turtle with the knife until far enough, then watches again */
@@ -9760,20 +9605,19 @@ uint32_t enemy_keep_distance_knife_close_in(uint32_t object, uint32_t player_slo
 }
 
 /* walks away, turns and waits while its turtle is down */
-void enemy_back_off_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E1C4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 30 frames of walking backwards away from its turtle with the knife, still facing it */
-void enemy_back_off_knife_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_back_off_knife_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_back_off.move_time = 0x40u;
 	OBJECT(object)->enemy_back_off.time = 0x1Eu;
@@ -9782,11 +9626,13 @@ void enemy_back_off_knife_start(uint32_t object, uint32_t player_slot, uint32_t 
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x140u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0x40u;
+	screen_x_high = 0x140u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while its turtle is down; at its end it turns to the turtle */
@@ -9826,12 +9672,12 @@ void enemy_back_off_knife_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* steps up or down out of the way of its turtle's attack */
-void enemy_step_aside_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_step_aside_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E260_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 8 frames of stepping up or down out of its turtle's attack, facing it */
@@ -9874,12 +9720,12 @@ uint32_t enemy_step_aside_knife_step(uint32_t object, uint32_t player_slot)
 }
 
 /* thrusts the spear; enough hits and it throws it next */
-void enemy_spear_thrust(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_spear_thrust(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E2D0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the thrust's animation and damage, facing its turtle */
@@ -9921,12 +9767,12 @@ void enemy_spear_thrust_end(uint32_t object)
 }
 
 /* throws its spear and fights on bare-handed */
-void enemy_spear_throw(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_spear_throw(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E342_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the throw's animation; the spear goes in 20 frames */
@@ -9963,26 +9809,28 @@ uint32_t enemy_spear_throw_release(uint32_t object, uint32_t record)
 }
 
 /* when the throw ends, it starts again as a bare-handed soldier, thinking */
-void enemy_spear_throw_end(uint32_t object, uint32_t player_slot, uint32_t player_slot_2, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_spear_throw_end(uint32_t object, uint32_t player_slot, uint32_t a5, uint32_t player_slot_2)
 {
-	if (OBJECT(object)->frame_time != 0u)
-		return;
-	enemy_leave_side(object, player_slot);
-	PLAYER_SLOT(player_slot)->enemies--;
-	OBJECT(object)->kind = 0u;
-	OBJECT(object)->parameter = 0u;
-	enemy_foot_soldier_setup(object, player_slot_2, p_d5, p_d7, p_a5);
-	OBJECT(object)->routine = 2u;
-	OBJECT(object)->state = 0u;
+	if (OBJECT(object)->frame_time == 0u)
+	{
+		enemy_leave_side(object, player_slot);
+		PLAYER_SLOT(player_slot)->enemies--;
+		OBJECT(object)->kind = 0u;
+		OBJECT(object)->parameter = 0u;
+		a5 = enemy_foot_soldier_setup(object, a5, player_slot_2);
+		OBJECT(object)->routine = 2u;
+		OBJECT(object)->state = 0u;
+	}
+	return a5;
 }
 
 /* stabs with the knife */
-void enemy_knife_stab(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_knife_stab(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E3D0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the stab's animation and damage, facing its turtle */
@@ -10001,12 +9849,12 @@ void enemy_knife_stab_start(uint32_t object)
 }
 
 /* a high kick */
-void enemy_high_kick_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_high_kick_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E40C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the high kick's animation and damage, facing its turtle */
@@ -10025,12 +9873,12 @@ void enemy_high_kick_knife_start(uint32_t object)
 }
 
 /* a flying kick */
-void enemy_jump_kick_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_jump_kick_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E448_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* crouches for the flying kick, its damage set, facing its turtle */
@@ -10049,23 +9897,22 @@ void enemy_jump_kick_knife_crouch(uint32_t object)
 }
 
 /* when the crouch ends, leaps along the kick's arc */
-uint32_t enemy_jump_kick_knife_leap(uint32_t d7, uint32_t object)
+void enemy_jump_kick_knife_leap(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	arc = enemy_jump_kick_knife_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_jump_kick_knife_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the flying kick along its arc, following stairs; on landing a crouch */
-uint32_t enemy_jump_kick_knife_fly(uint32_t d7, uint32_t object)
+void enemy_jump_kick_knife_fly(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -10074,23 +9921,22 @@ uint32_t enemy_jump_kick_knife_fly(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_jump_kick_knife_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_knife_crouch_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* throws a knife */
-void enemy_throw_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_throw_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E4FE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the throw's animation; the knife goes in 20 frames */
@@ -10133,12 +9979,12 @@ void enemy_throw_knife_end(uint32_t object)
 }
 
 /* hit: its head thrown back */
-void enemy_flinch_back_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E572_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the spear soldier's flinch with its head thrown back */
@@ -10152,12 +9998,12 @@ void enemy_flinch_back_spear_start(uint32_t object)
 }
 
 /* hit: bent over */
-void enemy_flinch_bent_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E596_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the spear soldier's flinch bent over */
@@ -10171,12 +10017,12 @@ void enemy_flinch_bent_spear_start(uint32_t object)
 }
 
 /* hit: reeling */
-void enemy_flinch_reel_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_reel_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E5BA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the spear soldier's flinch reeling */
@@ -10190,12 +10036,12 @@ void enemy_flinch_reel_spear_start(uint32_t object)
 }
 
 /* hit: hunched */
-void enemy_flinch_hunched_spear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_hunched_spear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E5DE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the spear soldier's flinch hunched */
@@ -10209,12 +10055,12 @@ void enemy_flinch_hunched_spear_start(uint32_t object)
 }
 
 /* hit: the knife soldier flinches with its head thrown back */
-void enemy_flinch_back_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E602_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the knife soldier's flinch with its head thrown back */
@@ -10228,12 +10074,12 @@ void enemy_flinch_back_knife_start(uint32_t object)
 }
 
 /* hit: the knife soldier flinches bent over */
-void enemy_flinch_bent_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E626_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the knife soldier's flinch bent over */
@@ -10247,12 +10093,12 @@ void enemy_flinch_bent_knife_start(uint32_t object)
 }
 
 /* hit: the knife soldier flinches reeling */
-void enemy_flinch_reel_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_reel_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E64A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the knife soldier's flinch reeling */
@@ -10266,12 +10112,12 @@ void enemy_flinch_reel_knife_start(uint32_t object)
 }
 
 /* hit: the knife soldier flinches hunched */
-void enemy_flinch_hunched_knife(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_hunched_knife(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E66E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the knife soldier's flinch hunched */
@@ -10285,11 +10131,11 @@ void enemy_flinch_hunched_knife_start(uint32_t object)
 }
 
 /* a Foot soldier with throwing axes */
-void enemy_axe_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_axe_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -10310,14 +10156,15 @@ void enemy_axe_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_
 	OBJECT(object)->routine += 2u;
 	animation = enemy_axe_soldier_animation_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* a Foot soldier with a gun */
-void enemy_gun_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_gun_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -10338,15 +10185,16 @@ void enemy_gun_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_
 	OBJECT(object)->routine += 2u;
 	animation = enemy_gun_soldier_animation_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* walks to its turtle with the gun */
-void enemy_walk_to_target_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E7BA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the gun's animations, facing its turtle; it aims again in 8 frames */
@@ -10366,12 +10214,12 @@ uint32_t enemy_walk_to_target_gun_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its side of its turtle with the gun */
-void enemy_walk_to_side_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E800_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the gun, facing it */
@@ -10391,12 +10239,12 @@ uint32_t enemy_walk_to_side_gun_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its turtle's row at shooting distance and stands there */
-void enemy_walk_to_range_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_range_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E83E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to shooting distance from its turtle, facing it */
@@ -10469,20 +10317,19 @@ uint32_t enemy_walk_to_range_hold(uint32_t object, uint32_t player_slot, uint32_
 }
 
 /* walks away, crouches and waits while its turtle is down */
-void enemy_back_off_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E906_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 32 frames of walking backwards away from its turtle with the gun, still facing it */
-void enemy_back_off_gun_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_back_off_gun_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_back_off.move_time = 0x40u;
 	OBJECT(object)->enemy_back_off.time = 0x20u;
@@ -10491,11 +10338,13 @@ void enemy_back_off_gun_start(uint32_t object, uint32_t player_slot, uint32_t *p
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while its turtle is down; when the time runs out, a crouch */
@@ -10534,33 +10383,33 @@ void enemy_back_off_gun_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* runs straight away from its turtle for a moment */
-void enemy_run_away_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_run_away_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04E99E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 8 frames of running straight away from its turtle with the gun, still facing it */
-void enemy_run_away_gun_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_run_away_gun_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0, target_direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0, target_direction = 0;
+	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time = 8u;
 	direction = (uint8_t)(OBJECT(object)->enemy.target_direction - 0x80u);
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, &ignored);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
 	target_direction = OBJECT(object)->enemy.target_direction;
 	animations = animations_04E7C2_ADDRESS;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(target_direction, object, animations, turtle);
-	*p_a5 = enemy_run_away_gun_step(object, player_slot);
+	return enemy_run_away_gun_step(object, player_slot);
 }
 
 /* a frame of running away; at its end, back to its first approach and a new move */
@@ -10586,12 +10435,12 @@ uint32_t enemy_run_away_gun_step(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its turtle with the axes */
-void enemy_walk_to_target_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_target_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EA12_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk with the axes' animations, facing its turtle; it aims again in 8 frames */
@@ -10611,12 +10460,12 @@ uint32_t enemy_walk_to_target_axe_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its side of its turtle with the axes */
-void enemy_walk_to_side_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_side_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EA58_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to its turtle's side with the axes, facing it */
@@ -10636,12 +10485,12 @@ uint32_t enemy_walk_to_side_axe_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to its turtle's row at throwing distance and stands there */
-void enemy_walk_to_range_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_walk_to_range_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EA96_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to throwing distance from its turtle, facing it */
@@ -10661,20 +10510,19 @@ uint32_t enemy_walk_to_range_axe_start(uint32_t object, uint32_t player_slot)
 }
 
 /* walks away, crouches and waits while its turtle is down */
-void enemy_back_off_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_back_off_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EAD4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 40 frames of walking backwards away from its turtle with the axes, still facing it */
-void enemy_back_off_axe_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_back_off_axe_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_back_off.move_time = 0x40u;
 	OBJECT(object)->enemy_back_off.time = 0x28u;
@@ -10683,11 +10531,13 @@ void enemy_back_off_axe_start(uint32_t object, uint32_t player_slot, uint32_t *p
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while its turtle is down; when the time runs out, a crouch */
@@ -10726,33 +10576,33 @@ void enemy_back_off_axe_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* runs straight away from its turtle for a moment */
-void enemy_run_away_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_run_away_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EB6E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 8 frames of running straight away from its turtle with the axes, still facing it */
-void enemy_run_away_axe_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_run_away_axe_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0, target_direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0, target_direction = 0;
+	uint32_t animations = 0, ignored = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy.move_time = 8u;
 	direction = (uint8_t)(OBJECT(object)->enemy.target_direction - 0x80u);
-	speed = 0x180u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, &ignored);
+	speed = 0x80u;
+	screen_x_high = 0x180u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
 	target_direction = OBJECT(object)->enemy.target_direction;
 	animations = animations_04EA1A_ADDRESS;
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(target_direction, object, animations, turtle);
-	*p_a5 = enemy_run_away_axe_step(object, player_slot);
+	return enemy_run_away_axe_step(object, player_slot);
 }
 
 /* a frame of running away; at its end, back to its first approach and a new move */
@@ -10778,12 +10628,12 @@ uint32_t enemy_run_away_axe_step(uint32_t object, uint32_t player_slot)
 }
 
 /* throws three axes */
-void enemy_throw_axes(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_throw_axes(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EBE2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the throw's animation: three axes to go, 16 frames apart */
@@ -10832,12 +10682,12 @@ uint32_t enemy_throw_axes_release(uint32_t object, uint32_t record)
 }
 
 /* a high kick */
-void enemy_high_kick_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_high_kick_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EC6A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the high kick's animation and damage, facing its turtle */
@@ -10856,12 +10706,12 @@ void enemy_high_kick_axe_start(uint32_t object)
 }
 
 /* swings the gun like a club */
-void enemy_gun_swing(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_gun_swing(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ECA6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the swing's animation and damage, facing its turtle */
@@ -10880,12 +10730,12 @@ void enemy_gun_swing_start(uint32_t object)
 }
 
 /* fires four shots */
-void enemy_shoot_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shoot_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ECE2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the gun up: four shots to go, 8 frames apart */
@@ -10934,12 +10784,12 @@ uint32_t enemy_shoot_gun_fire(uint32_t object, uint32_t record)
 }
 
 /* hit: the gun soldier flinches with its head thrown back */
-void enemy_flinch_back_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ED6A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the gun soldier's flinch with its head thrown back */
@@ -10953,12 +10803,12 @@ void enemy_flinch_back_gun_start(uint32_t object)
 }
 
 /* hit: the gun soldier flinches bent over */
-void enemy_flinch_bent_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04ED8E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the gun soldier's flinch bent over */
@@ -10972,12 +10822,12 @@ void enemy_flinch_bent_gun_start(uint32_t object)
 }
 
 /* hit: the axe soldier flinches with its head thrown back */
-void enemy_flinch_back_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_back_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EDB2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the axe soldier's flinch with its head thrown back */
@@ -10991,12 +10841,12 @@ void enemy_flinch_back_axe_start(uint32_t object)
 }
 
 /* hit: the axe soldier flinches bent over */
-void enemy_flinch_bent_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_bent_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EDD6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the axe soldier's flinch bent over */
@@ -11010,12 +10860,12 @@ void enemy_flinch_bent_axe_start(uint32_t object)
 }
 
 /* hit: the axe soldier flinches reeling */
-void enemy_flinch_reel_axe(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_flinch_reel_axe(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04EDFA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the axe soldier's flinch reeling */
@@ -11029,11 +10879,11 @@ void enemy_flinch_reel_axe_start(uint32_t object)
 }
 
 /* a bare-handed Foot soldier that also throws a boomerang */
-void enemy_boomerang_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_boomerang_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy_boomerang.target = player_slot;
 	OBJECT(object)->enemy_boomerang.retarget_time = 0x10u;
@@ -11055,14 +10905,15 @@ void enemy_boomerang_soldier_start(uint32_t object, uint32_t player_slot, uint32
 	OBJECT(object)->routine += 2u;
 	animation = animations_0547C6_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* a bare-handed Foot soldier that also throws shuriken */
-void enemy_shuriken_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shuriken_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -11083,15 +10934,16 @@ void enemy_shuriken_soldier_start(uint32_t object, uint32_t player_slot, uint32_
 	OBJECT(object)->routine += 2u;
 	animation = animations_0547C6_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* a gun, axe or knife soldier on a rocket skateboard, by its parameter */
-void enemy_skateboard_soldier_start(uint32_t object, uint32_t player_slot, uint32_t *p_next_distance, uint32_t *p_count, uint32_t *p_next_closest)
+uint32_t enemy_skateboard_soldier_start(uint32_t object, uint32_t next_closest, uint32_t player_slot)
 {
 	uint16_t variant_offset = 0;
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_next_distance, p_count, p_next_closest, &player_slot);
+	enemy_nearest_slots(object, &next_closest, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy.target = player_slot;
 	OBJECT(object)->enemy.retarget_time = 0x10u;
@@ -11111,12 +10963,13 @@ void enemy_skateboard_soldier_start(uint32_t object, uint32_t player_slot, uint3
 	OBJECT(object)->shadow = skateboard_shadow_ADDRESS;
 	OBJECT(object)->flags |= 0x82u;
 	OBJECT(object)->routine += 2u;
+	return next_closest;
 }
 
 /* the thinking, carried along with the ride, standing on the board */
-void enemy_skateboard_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_skateboard_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5)
 {
-	enemy_think(object, second_slot, p_d5, p_d7, p_slot, p_a5);
+	enemy_think(object, second_slot, p_slot, p_a5);
 	OBJECT(object)->x += 0x600u;
 	enemy_skateboard_stand(object);
 	OBJECT(object)->contacts |= 0x80u;
@@ -11127,9 +10980,9 @@ void enemy_skateboard_think(uint32_t object, uint32_t second_slot, uint32_t *p_d
 }
 
 /* the attack, carried along with the ride */
-void enemy_skateboard_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_skateboard_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
-	enemy_attack(object, p_d5, p_d7, p_slot, p_a5);
+	enemy_attack(object, p_slot, p_a5);
 	OBJECT(object)->x += 0x600u;
 	OBJECT(object)->contacts |= 0x80u;
 	if ((frame_count & 4u) == 0u)
@@ -11139,9 +10992,9 @@ void enemy_skateboard_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, ui
 }
 
 /* the hit, carried along with the ride */
-void enemy_skateboard_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_skateboard_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	enemy_hit(object, p_d5, p_d7, p_a1, p_a5);
+	enemy_hit(object, p_a1, p_a5);
 	OBJECT(object)->x += 0x600u;
 	OBJECT(object)->contacts |= 0x80u;
 	if ((frame_count & 4u) == 0u)
@@ -11151,10 +11004,10 @@ void enemy_skateboard_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint3
 }
 
 /* the reaction to a hit, carried along with the ride */
-void enemy_skateboard_react(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_skateboard_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
 	OBJECT(object)->x += 0x600u;
-	enemy_react(object, p_d5, p_d7, p_slot, p_a5);
+	enemy_react(object, p_slot, p_a5);
 	OBJECT(object)->contacts |= 0x80u;
 	if ((frame_count & 4u) == 0u)
 		OBJECT(object)->shadow = skateboard_shadow_ADDRESS;
@@ -11172,12 +11025,12 @@ void enemy_skateboard_stand(uint32_t object)
 }
 
 /* throws a shuriken */
-void enemy_throw_shuriken(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_throw_shuriken(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F082_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* faces its turtle with the throw's animation; the shuriken goes in 20 frames */
@@ -11215,12 +11068,12 @@ uint32_t enemy_throw_shuriken_release(uint32_t object, uint32_t record)
 }
 
 /* throws a boomerang and waits for it to come back */
-void enemy_boomerang_throw(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_boomerang_throw(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F0F0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* winds up for the boomerang throw */
@@ -11298,11 +11151,12 @@ void enemy_boomerang_throw_wait(uint32_t object)
 }
 
 /* Rocksteady comes in alone or beside Bebop, counted as a boss */
-void enemy_rocksteady_start(uint32_t object, uint32_t target, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_start(uint32_t object, uint32_t a5, uint32_t target)
 {
+	uint8_t sound = 0;
 	uint32_t animation = 0;
 
-	enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &target);
+	enemy_nearest_turtles(object, &a5, &target);
 	OBJECT(object)->enemy_rocksteady.target = target;
 	OBJECT(object)->enemy_rocksteady.retarget_time = 0x10u;
 	OBJECT(object)->enemy_rocksteady.move_time = 0u;
@@ -11325,26 +11179,27 @@ void enemy_rocksteady_start(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 		OBJECT(object)->flags |= 0x80u;
 		animation = enemy_rocksteady_raise_fist_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		return;
+		return a5;
 	}
 	OBJECT(object)->parameter = 0xCu;
-	*p_d7 = (*p_d7 & ~0xFFFFu) | 0xFEu;
-	music = *p_d7;
-	queue_sound((uint8_t)*p_d7);
+	sound = 0xFEu;
+	music = 0xFEu;
+	queue_sound(sound);
 	OBJECT(object)->enemy_rocksteady.timer = 0xAu;
 	OBJECT(object)->routine++;
 	OBJECT(object)->flags |= 0x80u;
 	animation = enemy_rocksteady_animation_ADDRESS;
 	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* his way in: a laugh and his taunt, or waiting for Bebop, then walking in */
-void enemy_rocksteady_enter(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_enter(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F296_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* waits a moment, then his laugh */
@@ -11364,10 +11219,9 @@ void enemy_rocksteady_enter_wait(uint32_t object)
 }
 
 /* after the laugh, the boss music and his taunt in a balloon, on his row, laughing on */
-void enemy_rocksteady_enter_taunt(uint16_t state_offset, uint32_t object, uint32_t *p_d5, uint32_t *p_sound)
+void enemy_rocksteady_enter_taunt(uint16_t state_offset, uint32_t object)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t sound = *p_sound;
+	uint8_t sound = 0;
 	uint16_t on_right = 0, screen_y = 0;
 	uint32_t animation = 0, screen_x = 0;
 	uint8_t timer = 0;
@@ -11376,20 +11230,19 @@ void enemy_rocksteady_enter_taunt(uint16_t state_offset, uint32_t object, uint32
 	OBJECT(object)->enemy_rocksteady.timer = timer - 1u;
 	if (timer != 1u)
 		return;
-	sound = (sound & ~0xFFFFu) | 0x64u;
-	music = sound;
-	queue_sound((uint8_t)sound);
+	sound = 0x64u;
+	music = 0x64u;
+	queue_sound(sound);
 	on_right = (uint16_t)((state_offset & ~0xFFu) | 0xFFu);
 	screen_x = (uint16_t)(OBJECT(object)->screen_x - 0x10u);
+	screen_x_high = screen_x;
 	screen_y = OBJECT(object)->screen_y;
-	say_your_prayers_toitles(on_right, screen_x, screen_y, &d5, &sound);
+	say_your_prayers_toitles(on_right, (uint8_t)screen_x, screen_y);
 	OBJECT(object)->y = 0x6C00u;
 	OBJECT(object)->enemy_rocksteady.timer = 0x78u;
 	OBJECT(object)->state++;
 	animation = enemy_rocksteady_laugh_animation_ADDRESS;
 	set_animation(screen_x, object, animation);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
-	*p_sound = sound;
 }
 
 /* after the taunt, his health by the difficulty and his walk */
@@ -11465,15 +11318,16 @@ uint32_t enemy_rocksteady_enter_walk_in_with_bebop(uint32_t object, uint32_t a5)
 
 /* his thinking: the gun drawn or put away in turns, blows close by, shots from afar, the pincer charge
    with Bebop */
-void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_turtle, uint32_t *p_a5)
+void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_turtle, uint32_t *p_a5)
 {
+	uint8_t parameter = 0;
 	uint16_t armed_offset = 0, count = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, move_table = 0, moves = 0, turtle = 0;
+	uint32_t d7 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, move_table = 0, moves = 0, range = 0, turtle = 0;
 	uint8_t retarget_time = 0, far_attack_wait = 0, close_attack_wait = 0, move_choice = 0, t1 = 0;
 	uint16_t mode_time = 0, t2 = 0;
 
-	*p_d7 = (*p_d7 & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)*p_d7, object);
+	parameter = OBJECT(object)->parameter;
+	enemy_flash_when_weak(parameter, object);
 	retarget_time = OBJECT(object)->enemy_rocksteady.retarget_time;
 	OBJECT(object)->enemy_rocksteady.retarget_time = retarget_time - 1u;
 	if (retarget_time == 1u)
@@ -11481,7 +11335,7 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 		OBJECT(object)->enemy_rocksteady.retarget_time = 0x10u;
 		if (turtles_in_play != 0u)
 		{
-			enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &target);
+			enemy_nearest_turtles(object, p_a5, &target);
 			OBJECT(object)->enemy_rocksteady.target = target;
 		}
 	}
@@ -11489,7 +11343,7 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 	turtle = *p_turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	if (pincer_charge != 0u)
 	{
@@ -11513,8 +11367,8 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 				{
 					moves = rocksteady_far_attacks_ADDRESS;
 					*p_a5 = rocksteady_far_attack_waits_ADDRESS;
-					enemy_rocksteady_pick_attack(object, moves, p_d7, p_a5);
-					OBJECT(object)->enemy_rocksteady.far_attack_wait = mem_read8(*p_a5 + *p_d7);
+					enemy_rocksteady_pick_attack(object, moves, &range, p_a5);
+					OBJECT(object)->enemy_rocksteady.far_attack_wait = mem_read8(*p_a5 + range);
 					OBJECT(object)->routine = 3u;
 					OBJECT(object)->state = 0u;
 					OBJECT(object)->flags &= ~8u;
@@ -11529,8 +11383,8 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 				{
 					moves = rocksteady_close_attacks_ADDRESS;
 					*p_a5 = rocksteady_close_attack_waits_ADDRESS;
-					enemy_rocksteady_pick_attack(object, moves, p_d7, p_a5);
-					OBJECT(object)->enemy_rocksteady.close_attack_wait = mem_read8(*p_a5 + *p_d7);
+					enemy_rocksteady_pick_attack(object, moves, &range, p_a5);
+					OBJECT(object)->enemy_rocksteady.close_attack_wait = mem_read8(*p_a5 + range);
 					OBJECT(object)->routine = 3u;
 					OBJECT(object)->state = 0u;
 					OBJECT(object)->flags &= ~8u;
@@ -11541,22 +11395,22 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 		if (OBJECT(object)->enemy_rocksteady.move_time == 0u)
 		{
 			move_table = rocksteady_move_choices_ADDRESS + (uint16_t)((uint32_t)OBJECT(object)->enemy_rocksteady.armed << 3);
-			*p_d7 = 0x64u;
-			*p_d7 = random_below((uint16_t)*p_d7, object);
+			d7 = 0x64u;
+			d7 = random_below((uint16_t)d7, object);
 			count = 3u;
 			for (;;)
 			{
 				move_choice = MOVE_CHOICE(move_table + ((int32_t)((int16_t)count + 4u)));
-				t1 = *p_d7;
-				*p_d7 = (*p_d7 & ~0xFFu) | (uint8_t)(t1 - move_choice);
+				t1 = d7;
+				d7 = (uint8_t)(t1 - move_choice);
 				if (t1 < move_choice)
 					break;
 				t2 = count - 1u;
 				count = t2;
 				if (t2 != 0xFFFFu)
 					continue;
-				*p_d7 = 0x64u;
-				*p_d7 = random_below((uint16_t)*p_d7, object);
+				d7 = 0x64u;
+				d7 = random_below((uint16_t)d7, object);
 				count = 3u;
 			}
 			OBJECT(object)->enemy_rocksteady.move = ((count & ~0xFFu) | MOVE_CHOICE(move_table + (int16_t)count)) << 2;
@@ -11577,199 +11431,199 @@ void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_d5, ui
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_rocksteady.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_turtle, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_turtle, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_turtle, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_turtle, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_turtle, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_turtle, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_turtle, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_turtle, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_turtle, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_turtle, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_turtle, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_turtle, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_turtle, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_turtle, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_turtle, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_turtle, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_turtle, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_turtle, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_turtle, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_turtle, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_turtle, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_turtle, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_turtle, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_turtle, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_turtle, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_turtle, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_turtle, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_turtle, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_turtle, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_turtle, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_turtle, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_turtle, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_turtle, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_turtle, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_turtle, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_turtle, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_turtle, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_turtle, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_turtle, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_turtle, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_turtle, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_turtle, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_turtle, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_turtle, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_turtle, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_turtle, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_turtle, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_turtle, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_turtle, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_turtle, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_turtle, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_turtle, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_turtle, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_turtle, *p_a5);
 		return;
 	}
 }
@@ -11790,18 +11644,17 @@ void enemy_rocksteady_pick_attack(uint32_t object, uint32_t moves, uint32_t *p_r
 }
 
 /* his attack, flashing when weak */
-void enemy_rocksteady_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_colour, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_rocksteady_attack(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t colour = *p_colour;
+	uint8_t colour = 0;
 
-	colour = (colour & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)colour, object);
-	*p_colour = colour;
-	enemy_boss_attack_move(object, p_d5, p_colour, p_a1, p_a5);
+	colour = OBJECT(object)->parameter;
+	enemy_flash_when_weak(colour, object);
+	enemy_boss_attack_move(object, p_a1, p_a5);
 }
 
 /* Rocksteady's and Bebop's attack by their move */
-void enemy_boss_attack_move(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_turtle, uint32_t *p_a5)
+void enemy_boss_attack_move(uint32_t object, uint32_t *p_turtle, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, turtle = 0;
 	uint32_t jump_target = 0;
@@ -11810,28 +11663,28 @@ void enemy_boss_attack_move(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uin
 	turtle = *p_turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	jump_target = TABLE32(enemy_attacks, (uint32_t)(int16_t)OBJECT(object)->enemy.move);
 	switch (jump_target)
 	{
 	case 0x049A06u:
-		enemy_jab(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jab(object, *p_turtle, *p_a5);
 		return;
 	case 0x049A52u:
-		enemy_chop(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_chop(object, *p_turtle, *p_a5);
 		return;
 	case 0x049A8Eu:
-		enemy_swing(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_swing(object, *p_turtle, *p_a5);
 		return;
 	case 0x049ACAu:
-		enemy_high_kick(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick(object, *p_turtle, *p_a5);
 		return;
 	case 0x049B06u:
-		enemy_jump_kick(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick(object, *p_turtle, *p_a5);
 		return;
 	case 0x049BBCu:
-		enemy_long_jump_kick(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_long_jump_kick(object, *p_turtle, *p_a5);
 		return;
 	case 0x049C72u:
 		enemy_attack_none_after_long_jump_kick();
@@ -11840,123 +11693,122 @@ void enemy_boss_attack_move(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uin
 		enemy_attack_none_before_grab();
 		return;
 	case 0x049C76u:
-		enemy_grab(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_grab(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B2DAu:
-		enemy_slash_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_slash_sword(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B316u:
-		enemy_low_slash_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_low_slash_sword(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B352u:
-		enemy_leaping_slash_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_leaping_slash_sword(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B42Au:
-		enemy_jump_slash_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_slash_sword(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B4E0u:
-		enemy_flying_slash_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flying_slash_sword(object, *p_turtle, *p_a5);
 		return;
 	case 0x04B5D6u:
-		enemy_smash_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_smash_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E2C4u:
-		enemy_spear_thrust(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_thrust(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E336u:
-		enemy_spear_throw(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_throw(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E3C4u:
-		enemy_knife_stab(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knife_stab(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E400u:
-		enemy_high_kick_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_knife(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E43Cu:
-		enemy_jump_kick_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick_knife(object, *p_turtle, *p_a5);
 		return;
 	case 0x04E4F2u:
-		enemy_throw_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_knife(object, *p_turtle, *p_a5);
 		return;
 	case 0x04EBD6u:
-		enemy_throw_axes(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_axes(object, *p_turtle, *p_a5);
 		return;
 	case 0x04EC5Eu:
-		enemy_high_kick_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_axe(object, *p_turtle, *p_a5);
 		return;
 	case 0x04EC9Au:
-		enemy_gun_swing(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_gun_swing(object, *p_turtle, *p_a5);
 		return;
 	case 0x04ECD6u:
-		enemy_shoot_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shoot_gun(object, *p_turtle, *p_a5);
 		return;
 	case 0x04F076u:
-		enemy_throw_shuriken(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_shuriken(object, *p_turtle, *p_a5);
 		return;
 	case 0x04F0E4u:
-		enemy_boomerang_throw(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_boomerang_throw(object, *p_turtle, *p_a5);
 		return;
 	case 0x04FA96u:
-		enemy_rocksteady_pincer_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_pincer_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0x04FC04u:
-		enemy_rocksteady_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0x04FCD4u:
-		enemy_rocksteady_punch(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_punch(object, *p_turtle, *p_a5);
 		return;
 	case 0x04FD4Cu:
-		enemy_rocksteady_gun_butt(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_gun_butt(object, *p_turtle, *p_a5);
 		return;
 	case 0x04FD88u:
-		enemy_rocksteady_shoot(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot(object, *p_turtle, *p_a5);
 		return;
 	case 0x0508A0u:
-		enemy_bebop_pincer_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_pincer_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0x050ADCu:
-		enemy_bebop_punch(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_punch(object, *p_turtle, *p_a5);
 		return;
 	case 0x050B8Cu:
-		enemy_bebop_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0x050C68u:
-		enemy_bebop_shoot(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_shoot(object, *p_turtle, *p_a5);
 		return;
 	case 0x052306u:
-		enemy_rodney_shoot(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_shoot(object, *p_turtle, *p_a5);
 		return;
 	case 0x052422u:
-		enemy_rodney_whip(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_whip(object, *p_turtle, *p_a5);
 		return;
 	case 0x0534C4u:
-		enemy_shredder_kick(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_kick(object, *p_turtle, *p_a5);
 		return;
 	case 0x053524u:
-		enemy_shredder_thrust(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_thrust(object, *p_turtle, *p_a5);
 		return;
 	case 0x05356Eu:
-		enemy_shredder_slash(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_slash(object, *p_turtle, *p_a5);
 		return;
 	case 0x0535B8u:
-		enemy_shredder_sweep(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_sweep(object, *p_turtle, *p_a5);
 		return;
 	case 0x053602u:
-		enemy_shredder_ray(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_ray(object, *p_turtle, *p_a5);
 		return;
 	}
 }
 
 /* hit: his reaction by what is left of his health and where the hit came from */
-void enemy_rocksteady_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_sound, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_rocksteady_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t sound = *p_sound;
-	uint8_t hit = 0;
+	uint8_t hit = 0, sound = 0;
 	uint16_t facing_bit = 0, move = 0;
 
 	rocksteady_hits_to_strike_back--;
-	sound = (sound & ~0xFFu) | 0x82u;
-	queue_sound((uint8_t)sound);
+	sound = 0x82u;
+	queue_sound(sound);
 	pincer_charge = 0u;
 	move = 0x9Cu;
 	if ((OBJECT(object)->health_bars | OBJECT(object)->health) != 0u)
@@ -11975,208 +11827,206 @@ void enemy_rocksteady_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_sound, ui
 	}
 	OBJECT(object)->enemy_rocksteady.move = move;
 	OBJECT(object)->routine++;
-	*p_sound = sound;
-	enemy_rocksteady_react(object, p_d5, p_sound, p_a1, p_a5);
+	enemy_rocksteady_react(object, p_a1, p_a5);
 }
 
 /* his reaction to a hit, flashing when weak */
-void enemy_rocksteady_react(uint32_t object, uint32_t *p_d5, uint32_t *p_colour, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_rocksteady_react(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t colour = *p_colour;
+	uint8_t colour = 0;
 
-	colour = (colour & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)colour, object);
-	*p_colour = colour;
-	enemy_boss_react_move(object, p_d5, p_colour, p_a1, p_a5);
+	colour = OBJECT(object)->parameter;
+	enemy_flash_when_weak(colour, object);
+	enemy_boss_react_move(object, p_a1, p_a5);
 }
 
 /* Rocksteady's and Bebop's reaction by their move */
-void enemy_boss_react_move(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_attacker, uint32_t *p_a5)
+void enemy_boss_react_move(uint32_t object, uint32_t *p_attacker, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0;
 
 	*p_attacker = 0x60000u | OBJECT(object)->attacker;
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy.move)
 	{
 	case 228:
-		enemy_crash_into_scenery(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery(object, *p_attacker, *p_a5);
 		return;
 	case 232:
-		enemy_crash_into_scenery_low(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery_low(object, *p_attacker, *p_a5);
 		return;
 	case 0:
-		enemy_flinch_back(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back(object, *p_attacker, *p_a5);
 		return;
 	case 4:
-		enemy_flinch_bent(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent(object, *p_attacker, *p_a5);
 		return;
 	case 8:
-		enemy_flinch_reel(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel(object, *p_attacker, *p_a5);
 		return;
 	case 12:
-		enemy_flinch_hunched(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched(object, *p_attacker, *p_a5);
 		return;
 	case 36:
-		enemy_killed_back(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_back(object, *p_attacker, *p_a5);
 		return;
 	case 32:
-		enemy_killed_forward(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_forward(object, *p_attacker, *p_a5);
 		return;
 	case 16:
-		enemy_knocked_forward(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_forward(object, *p_attacker, *p_a5);
 		return;
 	case 128:
-		enemy_thrown_by_donatello(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_donatello(object, *p_attacker, *p_a5);
 		return;
 	case 132:
 		*p_a5 = enemy_let_go_by_donatello(object, *p_attacker);
 		return;
 	case 136:
-		enemy_thrown_by_michelangelo(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_michelangelo(object, *p_attacker, *p_a5);
 		return;
 	case 140:
 		*p_a5 = enemy_let_go_by_michelangelo(object, *p_attacker);
 		return;
 	case 188:
-		enemy_thrown_by_raphael(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_raphael(object, *p_attacker, *p_a5);
 		return;
 	case 192:
 		*p_a5 = enemy_let_go_by_raphael(object, *p_attacker);
 		return;
 	case 196:
-		enemy_thrown_by_leonardo(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_leonardo(object, *p_attacker, *p_a5);
 		return;
 	case 200:
 		*p_a5 = enemy_let_go_by_leonardo(object, *p_attacker);
 		return;
 	case 20:
-		enemy_knocked_back(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_back(object, *p_attacker, *p_a5);
 		return;
 	case 24:
-		enemy_die(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die(object, *p_attacker, *p_a5);
 		return;
 	case 28:
-		enemy_die_on_back(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die_on_back(object, *p_attacker, *p_a5);
 		return;
 	case 40:
-		enemy_flinch_back_sword(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_sword(object, *p_attacker, *p_a5);
 		return;
 	case 44:
-		enemy_flinch_bent_sword(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_sword(object, *p_attacker, *p_a5);
 		return;
 	case 48:
-		enemy_flinch_reel_sword(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_sword(object, *p_attacker, *p_a5);
 		return;
 	case 52:
-		enemy_flinch_hunched_sword(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_sword(object, *p_attacker, *p_a5);
 		return;
 	case 56:
-		enemy_flinch_back_hammer(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_hammer(object, *p_attacker, *p_a5);
 		return;
 	case 60:
-		enemy_flinch_bent_hammer(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_hammer(object, *p_attacker, *p_a5);
 		return;
 	case 68:
-		enemy_flinch_hunched_hammer(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_hammer(object, *p_attacker, *p_a5);
 		return;
 	case 72:
-		enemy_flinch_back_spear(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_spear(object, *p_attacker, *p_a5);
 		return;
 	case 76:
-		enemy_flinch_bent_spear(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_spear(object, *p_attacker, *p_a5);
 		return;
 	case 80:
-		enemy_flinch_reel_spear(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_spear(object, *p_attacker, *p_a5);
 		return;
 	case 84:
-		enemy_flinch_hunched_spear(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_spear(object, *p_attacker, *p_a5);
 		return;
 	case 88:
-		enemy_flinch_back_knife(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_knife(object, *p_attacker, *p_a5);
 		return;
 	case 92:
-		enemy_flinch_bent_knife(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_knife(object, *p_attacker, *p_a5);
 		return;
 	case 96:
-		enemy_flinch_reel_knife(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_knife(object, *p_attacker, *p_a5);
 		return;
 	case 100:
-		enemy_flinch_hunched_knife(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_knife(object, *p_attacker, *p_a5);
 		return;
 	case 120:
-		enemy_flinch_back_gun(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_gun(object, *p_attacker, *p_a5);
 		return;
 	case 124:
-		enemy_flinch_bent_gun(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_gun(object, *p_attacker, *p_a5);
 		return;
 	case 104:
-		enemy_flinch_back_axe(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_axe(object, *p_attacker, *p_a5);
 		return;
 	case 108:
-		enemy_flinch_bent_axe(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_axe(object, *p_attacker, *p_a5);
 		return;
 	case 112:
-		enemy_flinch_reel_axe(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_axe(object, *p_attacker, *p_a5);
 		return;
 	case 164:
-		enemy_rocksteady_flinch(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch(object, *p_attacker, *p_a5);
 		return;
 	case 168:
-		enemy_rocksteady_reel(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_reel(object, *p_attacker, *p_a5);
 		return;
 	case 160:
-		enemy_rocksteady_flinch_from_behind(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch_from_behind(object, *p_attacker, *p_a5);
 		return;
 	case 152:
-		enemy_rocksteady_knocked_down(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_knocked_down(object, *p_attacker, *p_a5);
 		return;
 	case 156:
-		enemy_rocksteady_defeated(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_defeated(object, *p_attacker, *p_a5);
 		return;
 	case 172:
-		enemy_bebop_flinch(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch(object, *p_attacker, *p_a5);
 		return;
 	case 176:
-		enemy_bebop_flinch_from_behind(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch_from_behind(object, *p_attacker, *p_a5);
 		return;
 	case 180:
-		enemy_bebop_knocked_down(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_knocked_down(object, *p_attacker, *p_a5);
 		return;
 	case 184:
-		enemy_bebop_defeated(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_defeated(object, *p_attacker, *p_a5);
 		return;
 	case 148:
-		enemy_mouser_thrown_off(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_thrown_off(object, *p_attacker, *p_a5);
 		return;
 	case 224:
-		enemy_mouser_break_down(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_break_down(object, *p_attacker, *p_a5);
 		return;
 	case 144:
-		enemy_mouser_knocked_flying(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_knocked_flying(object, *p_attacker, *p_a5);
 		return;
 	case 64:
-		enemy_rodney_knocked_back(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_knocked_back(object, *p_attacker, *p_a5);
 		return;
 	case 116:
-		enemy_rodney_destroyed(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_destroyed(object, *p_attacker, *p_a5);
 		return;
 	case 204:
-		enemy_shredder_lose_bar(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_lose_bar(object, *p_attacker, *p_a5);
 		return;
 	case 208:
-		enemy_shredder_flinch(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch(object, *p_attacker, *p_a5);
 		return;
 	case 212:
-		enemy_shredder_flinch_from_behind(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch_from_behind(object, *p_attacker, *p_a5);
 		return;
 	case 216:
-		enemy_shredder_defeated(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_defeated(object, *p_attacker, *p_a5);
 		return;
 	case 220:
-		enemy_shredder_vanish(object, *p_attacker, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_vanish(object, *p_attacker, *p_a5);
 		return;
 	}
 }
@@ -12208,12 +12058,12 @@ void start_rocksteady(void)
 }
 
 /* raises his fist at his turtle */
-void enemy_rocksteady_raise_fist(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_raise_fist(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F72E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* raises his fist at his turtle */
@@ -12229,12 +12079,12 @@ void enemy_rocksteady_raise_fist_start(uint32_t object, uint32_t target)
 }
 
 /* laughs at his turtle */
-void enemy_rocksteady_laugh(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_laugh(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F75C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* laughs at his turtle for 136 frames */
@@ -12250,12 +12100,12 @@ void enemy_rocksteady_laugh_start(uint32_t object, uint32_t target)
 }
 
 /* shakes his fist at his turtle */
-void enemy_rocksteady_shake_fist(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_shake_fist(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F78A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* shakes his fist at his turtle for 64 frames */
@@ -12277,12 +12127,12 @@ void enemy_rocksteady_hold_pose(uint32_t object)
 }
 
 /* draws his gun */
-void enemy_rocksteady_draw_gun(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_draw_gun(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F7BE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* draws his gun, facing his turtle */
@@ -12305,12 +12155,12 @@ void enemy_rocksteady_pose_end(uint32_t object)
 }
 
 /* puts his gun away */
-void enemy_rocksteady_put_gun_away(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_put_gun_away(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F7FA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* puts his gun away, facing his turtle */
@@ -12326,16 +12176,16 @@ void enemy_rocksteady_put_gun_away_start(uint32_t object, uint32_t target)
 }
 
 /* walks round his turtle */
-void enemy_rocksteady_circle(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_circle(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F828_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 180 frames of walking round his turtle, one way or the other at random */
-void enemy_rocksteady_circle_start(uint32_t object, uint32_t target, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_circle_start(uint32_t object, uint32_t target, uint32_t a5)
 {
 	uint32_t animation = 0;
 
@@ -12347,15 +12197,14 @@ void enemy_rocksteady_circle_start(uint32_t object, uint32_t target, uint32_t *p
 	OBJECT(object)->state++;
 	animation = animations_0596BA_ADDRESS;
 	set_animation(0u, object, animation);
-	enemy_rocksteady_circle_step(object, target, p_d7, p_a5);
+	return enemy_rocksteady_circle_step(object, target, a5);
 }
 
 /* a frame of the walk round his turtle, aiming again every 8 frames */
-void enemy_rocksteady_circle_step(uint32_t object, uint32_t target, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_circle_step(uint32_t object, uint32_t target, uint32_t a5)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t x_speed = 0, y_speed = 0;
 	uint8_t aim_time = 0;
 
 	OBJECT(object)->enemy_rocksteady_circle.move_time--;
@@ -12366,21 +12215,23 @@ void enemy_rocksteady_circle_step(uint32_t object, uint32_t target, uint32_t *p_
 		OBJECT(object)->enemy_rocksteady_circle.aim_time = 8u;
 		enemy_boss_face_target(object, target);
 		direction = (uint8_t)((OBJECT(object)->enemy_rocksteady_circle.target_direction & 0xC0u) + OBJECT(object)->enemy_rocksteady_circle.turn);
-		speed = 0x160u;
-		speeds_from_direction(direction, speed, &x_speed, p_d7, p_a5);
+		speed = 0x60u;
+		screen_x_high = 0x160u;
+		speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_d7;
+		OBJECT(object)->y_speed = y_speed;
 	}
 	move_object_blocked(object);
+	return a5;
 }
 
 /* lines up with his turtle with the gun up */
-void enemy_rocksteady_line_up(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_line_up(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F8A8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* with the gun up, 240 frames of lining up with his turtle */
@@ -12424,16 +12275,16 @@ void enemy_rocksteady_line_up_step(uint32_t object, uint32_t target)
 }
 
 /* walks up to his turtle with the gun level */
-void enemy_rocksteady_close_in(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_close_in(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F92E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* with the gun level, 128 frames of closing in on his turtle */
-void enemy_rocksteady_close_in_start(uint32_t object, uint32_t turtle, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_close_in_start(uint32_t object, uint32_t turtle, uint32_t a5)
 {
 	uint32_t animation = 0;
 
@@ -12442,14 +12293,15 @@ void enemy_rocksteady_close_in_start(uint32_t object, uint32_t turtle, uint32_t 
 	OBJECT(object)->state++;
 	animation = animations_059618_ADDRESS;
 	set_animation(0u, object, animation);
-	enemy_rocksteady_close_in_step(object, turtle, p_d7, p_a5);
+	return enemy_rocksteady_close_in_step(object, turtle, a5);
 }
 
 /* a frame of closing in, aiming every 8 frames at a place just in front of his turtle */
-void enemy_rocksteady_close_in_step(uint32_t object, uint32_t turtle, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_close_in_step(uint32_t object, uint32_t turtle, uint32_t a5)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, target_x = 0, target_y = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint16_t target_x = 0, target_y = 0;
+	uint32_t direction = 0, x_speed = 0, y_speed = 0;
 	uint8_t aim_time = 0;
 
 	OBJECT(object)->enemy_rocksteady_close_in.move_time--;
@@ -12458,21 +12310,23 @@ void enemy_rocksteady_close_in_step(uint32_t object, uint32_t turtle, uint32_t *
 	if (aim_time != 1u)
 	{
 		move_object_blocked(object);
-		return;
+		return a5;
 	}
 	enemy_boss_face_target(object, turtle);
 	target_x = 0x20u;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
 		target_x = (uint16_t)(0u - target_x);
-	target_x = (uint16_t)(target_x + OBJECT(turtle)->screen_x);
+	target_x += OBJECT(turtle)->screen_x;
 	target_y = OBJECT(turtle)->screen_y;
-	direction_to(object, &direction, &target_x, &target_y);
-	speed = 0x180u;
-	speeds_from_direction((uint8_t)direction, speed, &x_speed, p_d7, p_a5);
+	direction = direction_to(0u, target_x, target_y, object);
+	speed = 0x80u;
+	screen_x_high = 0x180u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = (int16_t)x_speed >> 1;
-	OBJECT(object)->y_speed = *p_d7;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->enemy_rocksteady_close_in.aim_time = 8u;
 	move_object_blocked(object);
+	return a5;
 }
 
 /* looks at its turtle and turns to it */
@@ -12488,12 +12342,12 @@ void enemy_boss_face_target(uint32_t object, uint32_t target)
 }
 
 /* fires three shots each way round */
-void enemy_rocksteady_shoot_around(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_shoot_around(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04F9CC_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* six aims to go round, three shots each */
@@ -12565,12 +12419,12 @@ uint32_t enemy_rocksteady_shoot_around_fire(uint32_t object, uint32_t record)
 }
 
 /* charges across from his edge while Bebop charges from the other */
-void enemy_rocksteady_pincer_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_pincer_charge(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FACE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	if (pincer_charge == 0u && pincer_charge_crash == 0u)
 	{
 		OBJECT(object)->flags &= ~4u;
@@ -12579,6 +12433,7 @@ void enemy_rocksteady_pincer_charge(uint32_t object, uint32_t slot, uint32_t *p_
 		OBJECT(object)->state = 0u;
 		OBJECT(object)->enemy_rocksteady.move_time = 0u;
 	}
+	return a5;
 }
 
 /* the pincer charge with Bebop: gun out or not, he runs to his edge of the screen */
@@ -12678,12 +12533,12 @@ void enemy_rocksteady_pincer_charge_crash(uint32_t object)
 }
 
 /* charges across the screen */
-void enemy_rocksteady_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_charge(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FC10_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the charge's animation and damage, facing his turtle, not hittable; 30 frames to get ready */
@@ -12769,12 +12624,12 @@ void enemy_rocksteady_charge_run(uint32_t object)
 }
 
 /* punches */
-void enemy_rocksteady_punch(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_punch(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FCE0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the punch's animation and damage, facing his turtle; hittable, unless he was not and two or more
@@ -12812,12 +12667,12 @@ void enemy_rocksteady_blow_end(uint32_t object)
 }
 
 /* hits with the gun's butt */
-void enemy_rocksteady_gun_butt(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_gun_butt(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FD58_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a blow with the gun's butt: its animation and damage, facing his turtle */
@@ -12836,12 +12691,12 @@ void enemy_rocksteady_gun_butt_start(uint32_t object)
 }
 
 /* shoots, up at a turtle in the air */
-void enemy_rocksteady_shoot(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_shoot(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FD94_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* four shots at his turtle, level, or up at one high in the air */
@@ -12900,12 +12755,12 @@ uint32_t enemy_rocksteady_shoot_fire(uint32_t object, uint32_t record)
 }
 
 /* hit from the front */
-void enemy_rocksteady_flinch(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_flinch(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FE4E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* his flinch, gun out or not */
@@ -12936,12 +12791,12 @@ void enemy_rocksteady_flinch_end(uint32_t object)
 }
 
 /* hit from the front, the other way */
-void enemy_rocksteady_reel(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_reel(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FEB6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* his reel, gun out or not */
@@ -12955,12 +12810,12 @@ void enemy_rocksteady_reel_start(uint32_t object)
 }
 
 /* hit from behind */
-void enemy_rocksteady_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FEEE_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* his flinch from a hit from behind, gun out or not */
@@ -12974,22 +12829,22 @@ void enemy_rocksteady_flinch_from_behind_start(uint32_t object)
 }
 
 /* knocked down, lies, gets up with his health back */
-void enemy_rocksteady_knocked_down(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_knocked_down(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_04FF26_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked down along his arc, gun out or not, facing his turtle */
-uint32_t enemy_rocksteady_knocked_down_start(uint32_t d7, uint32_t object, uint32_t target)
+void enemy_rocksteady_knocked_down_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation_entry = 0, animations = 0;
 
 	enemy_boss_face_target(object, target);
 	animations = rocksteady_knocked_down_animations_2_ADDRESS;
-	d7 = enemy_start_arc(d7, object, animations);
+	enemy_start_arc(object, animations);
 	animations = rocksteady_knocked_down_animations_ADDRESS;
 	if (OBJECT(object)->enemy_rocksteady_knocked_down.armed != 0u)
 		animations += 0xCu;
@@ -12998,11 +12853,10 @@ uint32_t enemy_rocksteady_knocked_down_start(uint32_t d7, uint32_t object, uint3
 	set_animation(0u, object, animation_entry);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing he slides */
-uint32_t enemy_rocksteady_knocked_down_fall(uint32_t d7, uint32_t object)
+void enemy_rocksteady_knocked_down_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -13010,14 +12864,13 @@ uint32_t enemy_rocksteady_knocked_down_fall(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = rocksteady_knocked_down_animations_2_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = mem_read32(OBJECT(object)->enemy_rocksteady_knocked_down.animations + 4u);
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop, then lies 30 frames */
@@ -13073,23 +12926,23 @@ void enemy_rocksteady_knocked_down_get_up(uint32_t object)
 }
 
 /* defeated: falls, the last boss clears the area, blinks and is gone */
-void enemy_rocksteady_defeated(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rocksteady_defeated(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050082_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* defeated: no more pincer charge, thrown along his arc, gun out or not */
-uint32_t enemy_rocksteady_defeated_start(uint32_t d7, uint32_t object, uint32_t target)
+void enemy_rocksteady_defeated_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation_entry = 0, animations = 0;
 
 	no_pincer_charge = 0xFFu;
 	enemy_boss_face_target(object, target);
 	animations = rocksteady_defeated_animations_2_ADDRESS;
-	d7 = enemy_start_arc(d7, object, animations);
+	enemy_start_arc(object, animations);
 	animations = rocksteady_defeated_animations_ADDRESS;
 	if (OBJECT(object)->enemy_rocksteady_defeated.armed != 0u)
 		animations += 8u;
@@ -13098,38 +12951,37 @@ uint32_t enemy_rocksteady_defeated_start(uint32_t d7, uint32_t object, uint32_t 
 	set_animation(0u, object, animation_entry);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing a sound and one boss less, the last one ending the fight and the music */
-uint32_t enemy_rocksteady_defeated_fall(uint32_t d7, uint32_t object)
+void enemy_rocksteady_defeated_fall(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0, arc = 0;
 	uint8_t t1 = 0;
 
 	move_object_with_height_blocked(object);
 	arc = rocksteady_defeated_animations_2_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	t1 = bosses_left;
 	bosses_left = t1 - 1u;
 	if (t1 == 1u)
 	{
 		boss_defeated = 1u;
-		d7 &= ~0xFFFFu;
-		music = d7;
-		queue_sound((uint8_t)d7);
+		sound = 0u;
+		music = 0u;
+		queue_sound(sound);
 	}
-	sound = (d7 & ~0xFFu) | 0x8Bu;
-	queue_sound((uint8_t)sound);
+	sound = 0x8Bu;
+	queue_sound(sound);
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = mem_read32(OBJECT(object)->enemy_rocksteady_defeated.animations + 4u);
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* slides to a stop, then blinks 120 frames */
@@ -13171,11 +13023,12 @@ void enemy_rocksteady_defeated_blink(uint32_t object)
 }
 
 /* Bebop comes in alone or beside Rocksteady, counted as a boss */
-void enemy_bebop_start(uint32_t object, uint32_t target, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_start(uint32_t object, uint32_t a5, uint32_t target)
 {
+	uint16_t kind = 0;
 	uint32_t animation = 0, data = 0;
 
-	enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &target);
+	enemy_nearest_turtles(object, &a5, &target);
 	OBJECT(object)->enemy_bebop.target = target;
 	OBJECT(object)->enemy_bebop.retarget_time = 0x10u;
 	OBJECT(object)->enemy_bebop.move_time = 0u;
@@ -13197,7 +13050,7 @@ void enemy_bebop_start(uint32_t object, uint32_t target, uint32_t *p_d5, uint32_
 		OBJECT(object)->flags |= 0x80u;
 		animation = enemy_bebop_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		return;
+		return a5;
 	}
 	OBJECT(object)->flags |= 0x80u;
 	animation = enemy_bebop_raise_gun_animation_ADDRESS;
@@ -13208,17 +13061,17 @@ void enemy_bebop_start(uint32_t object, uint32_t target, uint32_t *p_d5, uint32_
 	OBJECT(object)->routine++;
 	OBJECT(object)->parameter = 0xCu;
 	data = 0xD094u;
-	*p_d7 = (*p_d7 & ~0xFFFFu) | 0x43Cu;
-	*p_a5 = post_palette_request((uint16_t)*p_d7, data);
+	kind = 0x43Cu;
+	return post_palette_request(kind, data);
 }
 
 /* his way in: drops in, then jumps forward to the ground, or waits for Rocksteady and walks in */
-void enemy_bebop_enter(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_enter(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050286_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* waits until the scroll reaches him, then the music fades out and his health is set */
@@ -13255,55 +13108,55 @@ void enemy_bebop_enter_wait(uint32_t object)
 }
 
 /* drops onto his floor; on landing a sound and his landing pose */
-uint32_t enemy_bebop_enter_drop(uint32_t d7, uint32_t object)
+void enemy_bebop_enter_drop(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0;
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x60u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
-	sound = (d7 & ~0xFFu) | 0x3Eu;
-	queue_sound((uint8_t)sound);
+		return;
+	sound = 0x3Eu;
+	queue_sound(sound);
 	OBJECT(object)->state++;
 	animation = enemy_bebop_enter_drop_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* when the pose ends, jumps forward off his floor */
-uint32_t enemy_bebop_enter_jump(uint32_t d7, uint32_t object)
+void enemy_bebop_enter_jump(uint32_t object)
 {
 	if (OBJECT(object)->frame_time != 0u)
-		return d7;
+		return;
 	OBJECT(object)->height_speed = 0x600;
 	OBJECT(object)->x_speed = 0x100;
 	OBJECT(object)->y_speed = -0x100;
 	OBJECT(object)->floor_height = 0u;
 	OBJECT(object)->state++;
-	return enemy_bebop_enter_in_air(d7, object);
+	enemy_bebop_enter_in_air(object);
 }
 
 /* a frame of the jump; on landing a sound and a pose, then he gets ready */
-uint32_t enemy_bebop_enter_in_air(uint32_t d7, uint32_t object)
+void enemy_bebop_enter_in_air(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0;
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x60u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
-	sound = (d7 & ~0xFFu) | 0x3Fu;
-	queue_sound((uint8_t)sound);
+		return;
+	sound = 0x3Fu;
+	queue_sound(sound);
 	OBJECT(object)->state++;
 	animation = enemy_bebop_enter_in_air_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	enemy_bebop_enter_ready(object);
-	return sound;
 }
 
 /* when the pose ends, hittable and thinking, with the boss music */
@@ -13360,17 +13213,17 @@ uint32_t enemy_bebop_enter_walk_in(uint32_t object, uint32_t a5)
 
 /* his thinking: his two taunts, the pincer charge with Rocksteady, a punch when close, an attack or a
    move by plan */
-void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_turtle, uint32_t *p_a5)
+void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target, uint32_t *p_turtle, uint32_t *p_a5)
 {
 	uint32_t zero = 0;
-	uint8_t plan = 0;
+	uint8_t parameter = 0, plan = 0;
 	uint16_t on_right = 0, screen_x = 0, screen_y = 0;
-	uint32_t attack = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, move = 0, turtle = 0;
+	uint32_t attack = 0, chance = 0, d7 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, move = 0, turtle = 0;
 	uint8_t retarget_time = 0;
-	uint16_t t1 = 0, chance = 0, t2 = 0;
+	uint16_t t1 = 0, chance_2 = 0, t2 = 0;
 
-	*p_d7 = (*p_d7 & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)*p_d7, object);
+	parameter = OBJECT(object)->parameter;
+	enemy_flash_when_weak(parameter, object);
 	if (area == 2u)
 	{
 		if (bebop_exchange_lines == 0u && time_since_balloon >= 0x80u)
@@ -13380,7 +13233,7 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 				routine_offset &= ~0xFFu;
 			screen_x = OBJECT(object)->screen_x;
 			screen_y = OBJECT(object)->screen_y;
-			say_youre_dead_shell_brain(screen_x, screen_y, &routine_offset, p_d5, p_d7, &target);
+			say_youre_dead_shell_brain(screen_x, screen_y, &routine_offset, &target);
 		}
 		if (bebop_exchange_lines == 2u && time_since_balloon >= 0x60u)
 		{
@@ -13389,7 +13242,7 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 				on_right &= ~0xFFu;
 			screen_x = OBJECT(object)->screen_x;
 			screen_y = OBJECT(object)->screen_y;
-			say_watch_your_mouth(on_right, screen_x, screen_y, p_d5, p_d7, &target);
+			target = say_watch_your_mouth(on_right, screen_x, screen_y, target);
 		}
 	}
 	retarget_time = OBJECT(object)->enemy_bebop.retarget_time;
@@ -13399,7 +13252,7 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 		OBJECT(object)->enemy_bebop.retarget_time = 0x10u;
 		if (turtles_in_play != 0u)
 		{
-			enemy_nearest_turtles(object, p_d5, p_d7, p_a5, &target);
+			enemy_nearest_turtles(object, p_a5, &target);
 			OBJECT(object)->enemy_bebop.target = target;
 		}
 	}
@@ -13407,7 +13260,7 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 	turtle = *p_turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	if (no_pincer_charge == 0u)
 	{
@@ -13429,15 +13282,15 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 	}
 	if (OBJECT(*p_turtle)->routine != 4u || hit_reaction_down[OBJECT(*p_turtle)->turtle.hit_reaction] != 0u)
 	{
-		enemy_on_screen(object, p_d7, &zero);
+		zero = enemy_on_screen(object);
 		if (zero)
 		{
 			if (OBJECT(object)->enemy_bebop.target_dx >= 0x28u)
 			{
 				attack = bebop_attacks_ADDRESS + (uint16_t)((OBJECT(object)->enemy_bebop.plan & 3u) << 3);
-				*p_d7 = 0x64u;
-				*p_d7 = random_below((uint16_t)*p_d7, object);
-				if (*p_d7 < BEBOP_ATTACK(attack)->chance && OBJECT(object)->enemy_bebop.target_dy <= BEBOP_ATTACK(attack)->reach_y && OBJECT(object)->enemy_bebop.target_dx <= BEBOP_ATTACK(attack)->reach_x)
+				chance = 0x64u;
+				chance = random_below((uint16_t)chance, object);
+				if (chance < BEBOP_ATTACK(attack)->chance && OBJECT(object)->enemy_bebop.target_dy <= BEBOP_ATTACK(attack)->reach_y && OBJECT(object)->enemy_bebop.target_dx <= BEBOP_ATTACK(attack)->reach_x)
 				{
 					OBJECT(object)->enemy_bebop.move = BEBOP_ATTACK(attack)->move;
 					OBJECT(object)->routine = 3u;
@@ -13459,15 +13312,15 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 	if (OBJECT(object)->enemy_bebop.move_time == 0u)
 	{
 		move = bebop_far_moves_ADDRESS;
-		*p_d7 = 0x64u;
-		*p_d7 = random_below((uint16_t)*p_d7, object);
+		d7 = 0x64u;
+		d7 = random_below((uint16_t)d7, object);
 		plan = 0u;
 		for (;;)
 		{
-			chance = RANDOM_MOVE(move)->chance;
-			t2 = *p_d7;
-			*p_d7 = (uint16_t)(t2 - chance);
-			if (t2 < chance)
+			chance_2 = RANDOM_MOVE(move)->chance;
+			t2 = d7;
+			d7 = (uint16_t)(t2 - chance_2);
+			if (t2 < chance_2)
 				break;
 			plan++;
 			move += 4u;
@@ -13485,222 +13338,221 @@ void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_bebop.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_turtle, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_turtle, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_turtle, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_turtle, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_turtle, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_turtle, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_turtle, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_turtle, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_turtle, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_turtle, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_turtle, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_turtle, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_turtle, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_turtle, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_turtle, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_turtle, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_turtle, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_turtle, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_turtle, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_turtle, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_turtle, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_turtle, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_turtle, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_turtle, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_turtle, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_turtle, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_turtle, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_turtle, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_turtle, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_turtle, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_turtle, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_turtle, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_turtle, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_turtle, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_turtle, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_turtle, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_turtle, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_turtle, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_turtle, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_turtle, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_turtle, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_turtle, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_turtle, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_turtle, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_turtle, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_turtle, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_turtle, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_turtle, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_turtle, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_turtle, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_turtle, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_turtle, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_turtle, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_turtle, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_turtle, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_turtle, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_turtle, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_turtle, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_turtle, *p_a5);
 		return;
 	}
 }
 
 /* his attack, flashing when weak */
-void enemy_bebop_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_colour, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_bebop_attack(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t colour = *p_colour;
+	uint8_t colour = 0;
 
-	colour = (colour & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)colour, object);
-	*p_colour = colour;
-	enemy_boss_attack_move(object, p_d5, p_colour, p_a1, p_a5);
+	colour = OBJECT(object)->parameter;
+	enemy_flash_when_weak(colour, object);
+	enemy_boss_attack_move(object, p_a1, p_a5);
 }
 
 /* hit: his reaction by what is left of his health and where the hit came from */
-void enemy_bebop_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_sound, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_bebop_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t sound = *p_sound;
+	uint8_t sound = 0;
 	uint16_t move = 0;
 
-	sound = (sound & ~0xFFu) | 0x82u;
-	queue_sound((uint8_t)sound);
+	sound = 0x82u;
+	queue_sound(sound);
 	pincer_charge = 0u;
 	move = 0xB8u;
 	if ((OBJECT(object)->health_bars | OBJECT(object)->health) != 0u)
@@ -13716,32 +13568,30 @@ void enemy_bebop_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_sound, uint32_
 	}
 	OBJECT(object)->enemy_bebop.move = move;
 	OBJECT(object)->routine++;
-	*p_sound = sound;
-	enemy_bebop_react(object, p_d5, p_sound, p_a1, p_a5);
+	enemy_bebop_react(object, p_a1, p_a5);
 }
 
 /* his reaction to a hit, flashing when weak */
-void enemy_bebop_react(uint32_t object, uint32_t *p_d5, uint32_t *p_colour, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_bebop_react(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
-	uint32_t colour = *p_colour;
+	uint8_t colour = 0;
 
-	colour = (colour & ~0xFFu) | OBJECT(object)->parameter;
-	enemy_flash_when_weak((uint8_t)colour, object);
-	*p_colour = colour;
-	enemy_boss_react_move(object, p_d5, p_colour, p_a1, p_a5);
+	colour = OBJECT(object)->parameter;
+	enemy_flash_when_weak(colour, object);
+	enemy_boss_react_move(object, p_a1, p_a5);
 }
 
 /* stands facing his turtle */
-void enemy_bebop_stand(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_stand(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05068A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 120 frames standing facing his turtle, in one of four poses at random */
-uint32_t enemy_bebop_stand_start(uint32_t object, uint32_t target)
+void enemy_bebop_stand_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation = 0, range = 0;
 
@@ -13750,11 +13600,8 @@ uint32_t enemy_bebop_stand_start(uint32_t object, uint32_t target)
 	OBJECT(object)->state++;
 	range = 4u;
 	range = random_below((uint16_t)range, object);
-	range = range & 3u;
-	range = (uint16_t)(range << 2);
-	animation = enemy_bebop_stand_animations[range / 4u];
+	animation = enemy_bebop_stand_animations[range & 3u];
 	set_animation(0u, object, animation);
-	return range;
 }
 
 /* stands while the move's time runs out */
@@ -13764,16 +13611,16 @@ void enemy_bebop_stand_wait(uint32_t object)
 }
 
 /* walks to his turtle's front */
-void enemy_bebop_walk_to_front(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_walk_to_front(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0506E4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to a place 0x50 in front of his turtle */
-void enemy_bebop_walk_to_front_start(uint32_t object, uint32_t turtle, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_walk_to_front_start(uint32_t object, uint32_t turtle, uint32_t a5)
 {
 	uint32_t animation = 0;
 
@@ -13782,14 +13629,15 @@ void enemy_bebop_walk_to_front_start(uint32_t object, uint32_t turtle, uint32_t 
 	OBJECT(object)->state++;
 	animation = animations_05A430_ADDRESS;
 	set_animation(0u, object, animation);
-	enemy_bebop_walk_to_front_step(object, turtle, p_d7, p_a5);
+	return enemy_bebop_walk_to_front_step(object, turtle, a5);
 }
 
 /* a frame of the walk, aiming every 4 frames, slower when near or level with his turtle */
-void enemy_bebop_walk_to_front_step(uint32_t object, uint32_t turtle, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_walk_to_front_step(uint32_t object, uint32_t turtle, uint32_t a5)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, target_x = 0, target_y = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint16_t target_x = 0, target_y = 0;
+	uint32_t direction = 0, x_speed = 0, y_speed = 0;
 	uint8_t timer = 0;
 
 	OBJECT(object)->enemy_bebop.move_time--;
@@ -13798,35 +13646,37 @@ void enemy_bebop_walk_to_front_step(uint32_t object, uint32_t turtle, uint32_t *
 	if (timer != 1u)
 	{
 		move_object_blocked(object);
-		return;
+		return a5;
 	}
 	enemy_boss_face_target(object, turtle);
 	target_x = 0x50u;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
 		target_x = (uint16_t)(0u - target_x);
-	target_x = (uint16_t)(target_x + OBJECT(turtle)->screen_x);
+	target_x += OBJECT(turtle)->screen_x;
 	target_y = OBJECT(turtle)->screen_y;
-	direction_to(object, &direction, &target_x, &target_y);
-	speed = 0x200u;
-	speeds_from_direction((uint8_t)direction, speed, &x_speed, p_d7, p_a5);
+	direction = direction_to(0u, target_x, target_y, object);
+	speed = 0u;
+	screen_x_high = 0x200u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5);
 	x_speed = (uint16_t)((int16_t)x_speed >> 1);
 	if (OBJECT(object)->enemy_bebop.target_dx <= 0x50u)
 		x_speed = (uint16_t)((int16_t)x_speed >> 1);
 	if (OBJECT(object)->enemy_bebop.target_dy <= 2u)
-		*p_d7 = (uint16_t)((int16_t)*p_d7 >> 1);
+		y_speed = (uint16_t)((int16_t)y_speed >> 1);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_d7;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->enemy_bebop.timer = 4u;
 	move_object_blocked(object);
+	return a5;
 }
 
 /* walks level with his turtle, then to it */
-void enemy_bebop_walk_level(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_walk_level(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05077C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a frame of the walk: up or down to his turtle's row, then across toward it, faster when far */
@@ -13869,16 +13719,16 @@ void enemy_bebop_walk_level_step(uint32_t object, uint32_t target)
 }
 
 /* walks up close to his turtle */
-void enemy_bebop_close_in(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_close_in(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0507FA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* starts one of his walks */
-void enemy_bebop_walk_start(uint32_t object, uint32_t turtle, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_bebop_walk_start(uint32_t object, uint32_t turtle, uint32_t a5)
 {
 	uint32_t animation = 0;
 
@@ -13887,15 +13737,16 @@ void enemy_bebop_walk_start(uint32_t object, uint32_t turtle, uint32_t *p_y_spee
 	OBJECT(object)->state++;
 	animation = animations_05A430_ADDRESS;
 	set_animation(0u, object, animation);
-	enemy_bebop_close_in_step(object, turtle, p_y_speed, p_a5);
+	return enemy_bebop_close_in_step(object, turtle, a5);
 }
 
 /* a frame of closing in on a place 0x30 in front of his turtle, aiming every 4 frames; level with it he
    stands */
-void enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t a5)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, target_x = 0, target_y = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint16_t target_x = 0, target_y = 0;
+	uint32_t direction = 0, x_speed = 0, y_speed = 0;
 	uint8_t timer = 0;
 
 	OBJECT(object)->enemy_bebop.move_time--;
@@ -13904,7 +13755,7 @@ void enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t *p_y_s
 	if (timer != 1u)
 	{
 		move_object_blocked(object);
-		return;
+		return a5;
 	}
 	enemy_boss_face_target(object, turtle);
 	if (OBJECT(object)->enemy_bebop.target_dy > 4u)
@@ -13912,13 +13763,14 @@ void enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t *p_y_s
 		target_x = 0x30u;
 		if ((OBJECT(object)->flags & 0x40u) != 0u)
 			target_x = (uint16_t)(0u - target_x);
-		target_x = (uint16_t)(target_x + OBJECT(turtle)->screen_x);
+		target_x += OBJECT(turtle)->screen_x;
 		target_y = OBJECT(turtle)->screen_y;
-		direction_to(object, &direction, &target_x, &target_y);
-		speed = 0x180u;
-		speeds_from_direction((uint8_t)direction, speed, &x_speed, p_y_speed, p_a5);
+		direction = direction_to(0u, target_x, target_y, object);
+		speed = 0x80u;
+		screen_x_high = 0x180u;
+		speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &a5);
 		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_y_speed;
+		OBJECT(object)->y_speed = y_speed;
 	}
 	else
 	{
@@ -13933,15 +13785,16 @@ void enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t *p_y_s
 	}
 	OBJECT(object)->enemy_bebop.timer = 4u;
 	move_object_blocked(object);
+	return a5;
 }
 
 /* charges across from his edge while Rocksteady charges from the other, crashing into him */
-void enemy_bebop_pincer_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_pincer_charge(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0508D8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	if (pincer_charge == 0u && pincer_charge_crash == 0u)
 	{
 		OBJECT(object)->flags &= ~4u;
@@ -13950,6 +13803,7 @@ void enemy_bebop_pincer_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, u
 		OBJECT(object)->state = 0u;
 		OBJECT(object)->enemy_bebop.move_time = 0u;
 	}
+	return a5;
 }
 
 /* the pincer charge with Rocksteady: he runs to his edge of the screen */
@@ -14113,12 +13967,12 @@ void enemy_bebop_pincer_charge_crash(uint32_t object)
 }
 
 /* punches, lunging when he strikes back */
-void enemy_bebop_punch(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_punch(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050AE8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the punch, slowed by his punch delay, facing his turtle; hittable, unless he was not and two or more
@@ -14179,12 +14033,12 @@ void enemy_bebop_punch_end(uint32_t object)
 }
 
 /* charges across the screen */
-void enemy_bebop_charge(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_charge(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050B98_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the charge's animation and damage, facing his turtle, not hittable; 30 frames to get ready */
@@ -14267,12 +14121,12 @@ void enemy_bebop_charge_run(uint32_t object)
 }
 
 /* fires three shots */
-void enemy_bebop_shoot(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_shoot(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050C74_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* three shots at his turtle: he faces it, the first in 20 frames */
@@ -14320,12 +14174,12 @@ uint32_t enemy_bebop_shoot_fire(uint32_t object, uint32_t record)
 }
 
 /* hit from the front, then strikes back */
-void enemy_bebop_flinch(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_flinch(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050CF2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* his flinch, knocked back */
@@ -14352,12 +14206,12 @@ void enemy_bebop_strike_back(uint32_t object)
 }
 
 /* hit from behind, then strikes back */
-void enemy_bebop_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050D38_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hit from behind, he staggers forward for 48 frames */
@@ -14389,31 +14243,30 @@ void enemy_bebop_flinch_from_behind_end(uint32_t object)
 }
 
 /* knocked down, lies, gets up with his health back and strikes back */
-void enemy_bebop_knocked_down(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_knocked_down(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050D84_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked down along his arc, facing his turtle */
-uint32_t enemy_bebop_knocked_down_start(uint32_t d7, uint32_t object, uint32_t target)
+void enemy_bebop_knocked_down_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation = 0, arc = 0;
 
 	enemy_boss_face_target(object, target);
 	arc = enemy_bebop_knocked_down_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	animation = enemy_bebop_knocked_down_start_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* a frame of the fall; on landing he slides */
-uint32_t enemy_bebop_knocked_down_fall(uint32_t d7, uint32_t object)
+void enemy_bebop_knocked_down_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -14421,14 +14274,13 @@ uint32_t enemy_bebop_knocked_down_fall(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_bebop_knocked_down_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_bebop_knocked_down_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop, then lies 20 frames */
@@ -14469,59 +14321,58 @@ void enemy_bebop_knocked_down_lie(uint32_t object)
 }
 
 /* defeated: falls, the last boss clears the area, blinks and is gone */
-void enemy_bebop_defeated(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_bebop_defeated(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_050E72_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* defeated: no more pincer charge, thrown along his arc */
-uint32_t enemy_bebop_defeated_start(uint32_t d7, uint32_t object, uint32_t target)
+void enemy_bebop_defeated_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation = 0, arc = 0;
 
 	no_pincer_charge = 0xFFu;
 	enemy_boss_face_target(object, target);
 	arc = enemy_bebop_defeated_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_bebop_defeated_start_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing a sound and one boss less, the last one ending the fight and the music */
-uint32_t enemy_bebop_defeated_fall(uint32_t d7, uint32_t object)
+void enemy_bebop_defeated_fall(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0, arc = 0;
 	uint8_t t1 = 0;
 
 	move_object_with_height_blocked(object);
 	arc = enemy_bebop_defeated_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	t1 = bosses_left;
 	bosses_left = t1 - 1u;
 	if (t1 == 1u)
 	{
 		boss_defeated = 1u;
-		d7 &= ~0xFFFFu;
-		music = d7;
-		queue_sound((uint8_t)d7);
+		sound = 0u;
+		music = 0u;
+		queue_sound(sound);
 	}
-	sound = (d7 & ~0xFFu) | 0x8Bu;
-	queue_sound((uint8_t)sound);
+	sound = 0x8Bu;
+	queue_sound(sound);
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_bebop_defeated_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* slides to a stop, then blinks 120 frames */
@@ -14563,12 +14414,12 @@ void enemy_bebop_defeated_blink(uint32_t object)
 }
 
 /* a Mouser: one bar, thinking at once, hopping in or on the floor by its parameter */
-void enemy_mouser_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 	uint8_t parameter = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy_mouser.target = player_slot;
 	OBJECT(object)->enemy_mouser.retarget_time = 0x10u;
@@ -14587,26 +14438,28 @@ void enemy_mouser_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, u
 		OBJECT(object)->routine += 2u;
 		animation = enemy_mouser_animation_ADDRESS;
 		set_animation(0u, object, animation);
+		return a5;
 	}
-	else if (OBJECT(object)->parameter == 0u)
+	if (OBJECT(object)->parameter != 0u)
 	{
-		enemy_set_floor(object);
-		OBJECT(object)->flags |= 0x82u;
-		OBJECT(object)->routine += 2u;
-		animation = enemy_mouser_animation_ADDRESS;
-		set_animation(0u, object, animation);
-	}
-	else
 		OBJECT(object)->routine++;
+		return a5;
+	}
+	enemy_set_floor(object);
+	OBJECT(object)->flags |= 0x82u;
+	OBJECT(object)->routine += 2u;
+	animation = enemy_mouser_animation_ADDRESS;
+	set_animation(0u, object, animation);
+	return a5;
 }
 
 /* hops in from its parameter's height onto the floor */
-void enemy_mouser_enter(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_enter(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05100E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a Mouser's way in: its floor and first pose by its parameter */
@@ -14645,22 +14498,22 @@ void enemy_mouser_enter_hop(uint32_t object)
 }
 
 /* a frame of the hop; on landing a sound and its landing pose */
-uint32_t enemy_mouser_enter_fall(uint32_t d7, uint32_t object)
+void enemy_mouser_enter_fall(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0;
 
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
-	sound = (d7 & ~0xFFu) | 0x39u;
-	queue_sound((uint8_t)sound);
+	sound = 0x39u;
+	queue_sound(sound);
 	animation = enemy_mouser_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* when the pose ends, to thinking */
@@ -14674,7 +14527,7 @@ void enemy_mouser_enter_land(uint32_t object)
 }
 
 /* goes after the turtle with the fewest enemies and bites it; breaks down when the boss is beaten */
-void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5)
 {
 	bool L_051210 = false;
 	uint32_t zero = 0;
@@ -14692,7 +14545,7 @@ void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 		if (turtles_in_play != 0u)
 		{
 			mem_write8(*p_slot + 4u, mem_read8(*p_slot + 4u) - 1u);
-			enemy_nearest_slots(object, p_d5, p_d7, p_a5, &second_slot);
+			enemy_nearest_slots(object, p_a5, &second_slot);
 			enemies = enemies_per_turtle;
 			if (enemies <= PLAYER_SLOT(second_slot)->enemies)
 			{
@@ -14710,8 +14563,7 @@ void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 					}
 				}
 			}
-			*p_d7 = (*p_d7 & ~0xFFFFu) | (uint16_t)second_slot;
-			if ((uint16_t)*p_d7 != OBJECT(object)->enemy_mouser.target)
+			if ((uint16_t)second_slot != OBJECT(object)->enemy_mouser.target)
 				enemy_mouser_leave_side(object, *p_slot);
 			OBJECT(object)->enemy_mouser.target = second_slot;
 			*p_slot = second_slot;
@@ -14742,8 +14594,8 @@ void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 	}
 	turtle = mem_read32(*p_slot);
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &floor_right, &floor_left, &floor_up, &floor_down, p_d5, p_d7, p_a5);
+	*p_a5 = enemy_collide_with_objects(object, *p_a5);
+	enemy_floor_contacts(object, &floor_right, &floor_left, &floor_up, &floor_down, p_a5);
 	zero = enemy_check_floor_edge((uint8_t)floor_right, (uint8_t)floor_left, (uint8_t)floor_up, (uint8_t)floor_down, object, *p_slot);
 	if (zero == 0u)
 	{
@@ -14813,7 +14665,7 @@ void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 			}
 		} while (L_051210);
 	}
-	enemy_on_screen(object, p_d7, &zero);
+	zero = enemy_on_screen(object);
 	if (zero && mem_read8(mem_read32(*p_slot) + 4u) != 4u && OBJECT(object)->enemy_mouser.target_dy < 4u && OBJECT(object)->enemy_mouser.target_dx < 0x30u)
 	{
 		OBJECT(object)->routine = 3u;
@@ -14829,199 +14681,199 @@ void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_mouser.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_slot, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_slot, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_slot, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_slot, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_slot, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_slot, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_slot, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_slot, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_slot, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_slot, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_slot, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_slot, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_slot, *p_a5);
 		return;
 	}
 }
@@ -15051,42 +14903,44 @@ void enemy_mouser_give_side_back(uint32_t object, uint32_t player_slot)
 }
 
 /* leaps at its turtle and hangs on to it, gone when the turtle is free */
-void enemy_mouser_bite(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_mouser_bite(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
+	uint32_t a5 = *p_a5;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, slot = 0, states = 0, turtle = 0;
 
 	slot = 0x60000u | OBJECT(object)->enemy_mouser.target;
 	turtle = PLAYER_SLOT(slot)->turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	a5 = enemy_collide_with_objects(object, a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, &a5);
 	states = indexed_table_of_32_bit_values_051340_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	*p_slot = slot;
+	*p_a5 = a5;
 }
 
 /* the bite: leaps at its turtle along its arc, attacking */
-uint32_t enemy_mouser_bite_start(uint32_t d7, uint32_t object)
+void enemy_mouser_bite_start(uint32_t object)
 {
-	uint32_t animation = 0, arc = 0, attack = 0;
+	uint8_t attack = 0;
+	uint32_t animation = 0, arc = 0;
 
 	animation = enemy_mouser_hop_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->damage = 0x103u;
-	attack = (d7 & ~0xFFu) | 0x10u;
-	enemy_face_target((uint8_t)attack, object);
+	attack = 0x10u;
+	enemy_face_target(attack, object);
 	arc = enemy_mouser_bite_arc_ADDRESS;
-	attack = enemy_start_arc(attack, object, arc);
+	enemy_start_arc(object, arc);
 	OBJECT(object)->flags |= 4u;
 	OBJECT(object)->flags &= ~8u;
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
 	OBJECT(object)->enemy_mouser.move = 0xA0u;
-	return attack;
 }
 
 /* a frame of the leap; biting, it hides and hangs on; missing, it lands and waits 16 frames */
-uint32_t enemy_mouser_bite_fly(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_mouser_bite_fly(uint32_t object, uint32_t player_slot)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -15103,18 +14957,17 @@ uint32_t enemy_mouser_bite_fly(uint32_t d7, uint32_t object, uint32_t player_slo
 		OBJECT(object)->contacts = (uint8_t)flags_halfword;
 		OBJECT(object)->state = 3u;
 		enemy_mouser_leave_side(object, player_slot);
-		return d7;
+		return;
 	}
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->flags &= ~4u;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->enemy_mouser.move_time = 0x10u;
 	OBJECT(object)->state = 2u;
 	animation = animations_058076_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* waits after the missed bite, then back to thinking */
@@ -15146,7 +14999,7 @@ void enemy_mouser_bite_hold(uint32_t object)
 }
 
 /* hit: lets go of the turtle it held and is knocked flying */
-void enemy_mouser_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_mouser_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
 	uint8_t sound = 0;
 	uint32_t turtle = 0;
@@ -15165,22 +15018,24 @@ void enemy_mouser_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t 
 	OBJECT(object)->enemy_mouser.move = 0x90u;
 	OBJECT(object)->enemy_mouser.move_time = 0u;
 	OBJECT(object)->routine++;
-	enemy_react(object, p_d5, p_d7, p_a1, p_a5);
+	enemy_react(object, p_a1, p_a5);
 }
 
 /* a step over the floor's edge */
-void enemy_mouser_step_over_edge(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_mouser_step_over_edge(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
+	uint32_t a5 = *p_a5;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, slot = 0, states = 0, turtle = 0;
 
 	slot = 0x60000u | OBJECT(object)->enemy_mouser.target;
 	turtle = PLAYER_SLOT(slot)->turtle;
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	a5 = enemy_collide_with_objects(object, a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, &a5);
 	states = TABLE32(mouser_edge_steps, (uint32_t)(int16_t)OBJECT(object)->enemy_mouser.move);
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	a5 = run_object_state(object, slot, a5, states);
 	*p_slot = slot;
+	*p_a5 = a5;
 }
 
 /* hops over an edge above or below it on the screen, as high as the area says */
@@ -15199,7 +15054,7 @@ void enemy_mouser_hop_down(uint32_t object)
 }
 
 /* a frame of the hop, its floor raised by stairs; on landing a pose and 16 frames still */
-uint32_t enemy_mouser_hop_fall(uint32_t d7, uint32_t object)
+void enemy_mouser_hop_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -15207,16 +15062,15 @@ uint32_t enemy_mouser_hop_fall(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_up(object);
 	move_object_with_height_blocked(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy_mouser.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = animations_058076_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* still for a moment after landing, then back to thinking */
@@ -15281,7 +15135,7 @@ void enemy_mouser_hop_up(uint32_t object)
 }
 
 /* a frame of the jump, its floor lowered by stairs; on landing a pose and 16 frames still */
-uint32_t enemy_mouser_hop_up_fall(uint32_t d7, uint32_t object)
+void enemy_mouser_hop_up_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -15289,16 +15143,15 @@ uint32_t enemy_mouser_hop_up_fall(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_down(object);
 	move_object_with_height(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy_mouser.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = enemy_mouser_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* jumps over an edge to the right */
@@ -15319,7 +15172,7 @@ void enemy_mouser_hop_up_right(uint32_t object)
 
 /* a frame of the jump, not into walls, its floor lowered by stairs; on landing a pose and 16 frames
    still */
-uint32_t enemy_mouser_hop_up_fall_blocked(uint32_t d7, uint32_t object)
+void enemy_mouser_hop_up_fall_blocked(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0;
@@ -15327,16 +15180,15 @@ uint32_t enemy_mouser_hop_up_fall_blocked(uint32_t d7, uint32_t object)
 	enemy_follow_stairs_down(object);
 	move_object_with_height_blocked(object);
 	OBJECT(object)->height_speed -= 0x40u;
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->enemy_mouser.move_time = 0x10u;
 	OBJECT(object)->state++;
 	animation = animations_058076_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* jumps over an edge to the left */
@@ -15356,16 +15208,16 @@ void enemy_mouser_hop_up_left(uint32_t object)
 }
 
 /* chases its turtle, sitting now and then */
-void enemy_mouser_chase(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_chase(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05175C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* chases its turtle for a random time under 240 frames */
-void enemy_mouser_chase_start(uint8_t direction, uint32_t object, uint32_t *p_chase_time, uint32_t *p_animations)
+uint32_t enemy_mouser_chase_start(uint8_t direction, uint32_t object)
 {
 	uint32_t animations = 0, chase_time = 0;
 
@@ -15376,60 +15228,55 @@ void enemy_mouser_chase_start(uint8_t direction, uint32_t object, uint32_t *p_ch
 	OBJECT(object)->enemy_mouser.chase_time = chase_time;
 	OBJECT(object)->state++;
 	animations = animations_05176C_ADDRESS;
-	animations = enemy_face_direction(direction, object, animations);
-	*p_chase_time = chase_time;
-	*p_animations = animations;
+	return enemy_face_direction(direction, object, animations);
 }
 
 /* a frame of the chase, aiming every 8 frames; close to its turtle or the time up, it sits */
-void enemy_mouser_chase_run(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_animations)
+uint32_t enemy_mouser_chase_run(uint32_t object, uint32_t player_slot, uint32_t animations)
 {
-	uint32_t d7 = *p_d7;
-	uint16_t speed = 0;
-	uint32_t direction = 0, turtle = 0, x_speed = 0;
-	uint8_t chase_time = 0, timer = 0;
+	uint8_t speed = 0;
+	uint32_t chase_time = 0, direction = 0, turtle = 0, x_speed = 0, y_speed = 0;
+	uint8_t chase_time_2 = 0, timer = 0;
 
-	if (OBJECT(object)->enemy_mouser.target_dx >= 0x3Eu || OBJECT(object)->enemy_mouser.target_dy >= 0x1Eu)
+	if (OBJECT(object)->enemy_mouser.target_dx < 0x3Eu && OBJECT(object)->enemy_mouser.target_dy < 0x1Eu)
 	{
-		chase_time = OBJECT(object)->enemy_mouser.chase_time;
-		OBJECT(object)->enemy_mouser.chase_time = chase_time - 1u;
-		if (chase_time != 1u)
-		{
-			timer = OBJECT(object)->enemy_mouser.timer;
-			OBJECT(object)->enemy_mouser.timer = timer - 1u;
-			if (timer == 1u)
-			{
-				turtle = PLAYER_SLOT(player_slot)->turtle;
-				direction = direction_to_object(0u, object, turtle);
-				*p_animations = animations_05176C_ADDRESS;
-				enemy_turn_to_direction((uint8_t)direction, object, *p_animations);
-				speed = 0xC0u;
-				speeds_from_direction((uint8_t)direction, speed, &x_speed, &d7, p_animations);
-				OBJECT(object)->x_speed = x_speed;
-				d7 = (uint16_t)((int16_t)d7 >> 1);
-				OBJECT(object)->y_speed = d7;
-				OBJECT(object)->enemy_mouser.timer = 8u;
-			}
-			move_object_blocked(object);
-		}
-		else
-		{
-			d7 = 0xF0u;
-			d7 = random_below((uint16_t)d7, object);
-			OBJECT(object)->enemy_mouser.chase_time = d7;
-			OBJECT(object)->state++;
-		}
-	}
-	else
 		OBJECT(object)->state++;
-	*p_d7 = d7;
+		return animations;
+	}
+	chase_time_2 = OBJECT(object)->enemy_mouser.chase_time;
+	OBJECT(object)->enemy_mouser.chase_time = chase_time_2 - 1u;
+	if (chase_time_2 == 1u)
+	{
+		chase_time = 0xF0u;
+		chase_time = random_below((uint16_t)chase_time, object);
+		OBJECT(object)->enemy_mouser.chase_time = chase_time;
+		OBJECT(object)->state++;
+		return animations;
+	}
+	timer = OBJECT(object)->enemy_mouser.timer;
+	OBJECT(object)->enemy_mouser.timer = timer - 1u;
+	if (timer == 1u)
+	{
+		turtle = PLAYER_SLOT(player_slot)->turtle;
+		direction = direction_to_object(0u, object, turtle);
+		animations = animations_05176C_ADDRESS;
+		enemy_turn_to_direction((uint8_t)direction, object, animations);
+		speed = 0xC0u;
+		screen_x_high = 0xC0u;
+		speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &animations);
+		OBJECT(object)->x_speed = x_speed;
+		OBJECT(object)->y_speed = (int16_t)y_speed >> 1;
+		OBJECT(object)->enemy_mouser.timer = 8u;
+	}
+	move_object_blocked(object);
+	return animations;
 }
 
 /* sits for 120 frames */
-uint32_t enemy_mouser_chase_pause(uint32_t object)
+void enemy_mouser_chase_pause(uint32_t object)
 {
 	OBJECT(object)->enemy_mouser.timer = 0x78u;
-	return enemy_mouser_sit(object);
+	enemy_mouser_sit(object);
 }
 
 /* sits, then chases again */
@@ -15444,12 +15291,12 @@ void enemy_mouser_chase_wait(uint32_t object)
 }
 
 /* creeps to its side of its turtle */
-void enemy_mouser_creep_to_side(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_creep_to_side(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_051836_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* creeps to its side of its turtle, aiming in 8 frames */
@@ -15465,10 +15312,11 @@ uint32_t enemy_mouser_creep_to_side_start(uint8_t direction, uint32_t object)
 }
 
 /* a frame of creeping to 0x20 beside its turtle, aiming every 8 frames */
-void enemy_mouser_creep_to_side_step(uint32_t object, uint32_t player_slot, uint32_t *p_d7, uint32_t *p_animations)
+uint32_t enemy_mouser_creep_to_side_step(uint32_t object, uint32_t player_slot, uint32_t animations)
 {
-	uint16_t speed = 0;
-	uint32_t direction = 0, object_2 = 0, target_x = 0, target_y = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint16_t target_x = 0, target_y = 0;
+	uint32_t direction = 0, object_2 = 0, x_speed = 0, y_speed = 0;
 	uint8_t timer = 0;
 
 	timer = OBJECT(object)->enemy_mouser.timer;
@@ -15476,40 +15324,41 @@ void enemy_mouser_creep_to_side_step(uint32_t object, uint32_t player_slot, uint
 	if (timer != 1u)
 	{
 		move_object_blocked(object);
-		return;
+		return animations;
 	}
 	object_2 = PLAYER_SLOT(player_slot)->turtle;
 	target_x = 0x20u;
 	if ((OBJECT(object)->enemy_mouser.side & 0x80u) != 0u)
 		target_x = (uint16_t)(0u - target_x);
-	target_x = (uint16_t)(target_x + OBJECT(object_2)->screen_x);
+	target_x += OBJECT(object_2)->screen_x;
 	target_y = OBJECT(object_2)->screen_y;
-	direction_to(object, &direction, &target_x, &target_y);
-	*p_animations = animations_05176C_ADDRESS;
-	enemy_turn_to_direction((uint8_t)direction, object, *p_animations);
+	direction = direction_to(0u, target_x, target_y, object);
+	animations = animations_05176C_ADDRESS;
+	enemy_turn_to_direction((uint8_t)direction, object, animations);
 	speed = 0x80u;
-	speeds_from_direction((uint8_t)direction, speed, &x_speed, p_d7, p_animations);
+	screen_x_high = 0x80u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &animations);
 	OBJECT(object)->x_speed = x_speed;
-	*p_d7 = (uint16_t)((int16_t)*p_d7 >> 1);
-	OBJECT(object)->y_speed = *p_d7;
+	OBJECT(object)->y_speed = (int16_t)y_speed >> 1;
 	OBJECT(object)->enemy_mouser.timer = 8u;
 	move_object_blocked(object);
+	return animations;
 }
 
 /* runs away, sits and waits while its turtle is down */
-void enemy_mouser_back_off(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_back_off(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0518BC_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 32 frames of running away from its turtle */
-void enemy_mouser_back_off_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_animations)
+uint32_t enemy_mouser_back_off_start(uint32_t object, uint32_t player_slot)
 {
-	uint16_t speed = 0;
-	uint32_t animations = 0, direction = 0, ignored = 0, turtle = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint32_t animations = 0, direction = 0, ignored = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_mouser.move_time = 0xFFu;
 	OBJECT(object)->state++;
@@ -15517,13 +15366,13 @@ void enemy_mouser_back_off_start(uint32_t object, uint32_t player_slot, uint32_t
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	direction = direction_to_object(0u, object, turtle);
 	direction = (uint8_t)(direction - 0x80u);
-	speed = 0x100u;
-	speeds_from_direction((uint8_t)direction, speed, &x_speed, p_y_speed, &ignored);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &ignored);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	animations = animations_05176C_ADDRESS;
-	animations = enemy_face_direction((uint8_t)direction, object, animations);
-	*p_animations = animations;
+	return enemy_face_direction((uint8_t)direction, object, animations);
 }
 
 /* a frame of running away; at its end it sits */
@@ -15543,17 +15392,15 @@ uint32_t enemy_mouser_back_off_run(uint8_t direction, uint32_t object)
 }
 
 /* sits in one of two poses */
-uint32_t enemy_mouser_sit(uint32_t object)
+void enemy_mouser_sit(uint32_t object)
 {
 	uint32_t animation = 0, range = 0;
 
 	OBJECT(object)->state++;
 	range = 2u;
 	range = random_below((uint16_t)range, object);
-	range = (uint16_t)(range << 2);
-	animation = enemy_mouser_sit_animations[range / 4u];
+	animation = TABLE32(enemy_mouser_sit_animations, (uint16_t)(range << 2));
 	set_animation(0u, object, animation);
-	return range;
 }
 
 /* sits while its turtle is down; when it is up again, back to thinking with a new move */
@@ -15569,16 +15416,16 @@ void enemy_mouser_back_off_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* thrown off by the turtle it held */
-void enemy_mouser_thrown_off(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_thrown_off(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_051974_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* thrown off by the turtle it held: shown again, tumbling along its arc the way it faced */
-uint32_t enemy_mouser_thrown_off_start(uint32_t d7, uint32_t object)
+void enemy_mouser_thrown_off_start(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
@@ -15587,48 +15434,46 @@ uint32_t enemy_mouser_thrown_off_start(uint32_t d7, uint32_t object)
 	if ((OBJECT(object)->enemy_mouser.facing & 0x80u) != 0u)
 		OBJECT(object)->flags |= 0x40u;
 	arc = enemy_mouser_knocked_flying_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_mouser_tumble_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* hops away and breaks when the boss is beaten */
-void enemy_mouser_break_down(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_break_down(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0519CC_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* its boss down, it hops off tumbling along its arc and breaks */
-uint32_t enemy_mouser_break_down_start(uint32_t d7, uint32_t object)
+void enemy_mouser_break_down_start(uint32_t object)
 {
 	uint32_t animation = 0, arc = 0;
 
 	arc = enemy_mouser_break_down_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_mouser_tumble_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* knocked flying by a hit */
-void enemy_mouser_knocked_flying(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_mouser_knocked_flying(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_051A14_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked flying by a hit, tumbling along its arc, its side given up */
-uint32_t enemy_mouser_knocked_flying_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_mouser_knocked_flying_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
@@ -15637,34 +15482,33 @@ uint32_t enemy_mouser_knocked_flying_start(uint32_t d7, uint32_t object, uint32_
 	if ((int8_t)(OBJECT(object)->enemy_mouser.target_direction - 0x40u) < 0)
 		OBJECT(object)->flags |= 0x40u;
 	arc = enemy_mouser_knocked_flying_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_mouser_tumble_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* flies until it hits the floor and breaks */
-uint32_t enemy_mouser_fly_and_crash(uint32_t d7, uint32_t object)
+void enemy_mouser_fly_and_crash(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0, arc = 0;
 
 	enemy_follow_stairs(object);
 	move_object_with_height(object);
 	arc = enemy_mouser_knocked_flying_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
-	sound = (d7 & ~0xFFu) | 0xFu;
-	queue_sound((uint8_t)sound);
+	sound = 0xFu;
+	queue_sound(sound);
 	OBJECT(object)->state++;
 	animation = enemy_mouser_fly_and_crash_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* gone when its wreck's animation ends */
@@ -15758,11 +15602,11 @@ uint32_t mouser_hole_let_out(uint32_t object, uint32_t record)
 }
 
 /* a Roadkill Rodney: one bar, coming up through the floor */
-void enemy_rodney_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_start(uint32_t object, uint32_t a5, uint32_t player_slot)
 {
 	uint32_t animation = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy_rodney.target = player_slot;
 	OBJECT(object)->enemy_rodney.retarget_time = 0x10u;
@@ -15780,20 +15624,21 @@ void enemy_rodney_start(uint32_t object, uint32_t player_slot, uint32_t *p_d5, u
 		OBJECT(object)->routine += 2u;
 		animation = animations_0585C4_ADDRESS;
 		set_animation(0u, object, animation);
-		return;
+		return a5;
 	}
 	OBJECT(object)->frame_time = 0u;
 	OBJECT(object)->routine++;
 	OBJECT(object)->enemy_rodney.wait = 0xB4u;
+	return a5;
 }
 
 /* comes up through the floor with a jump and lands */
-void enemy_rodney_enter(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_enter(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_051CB8_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* once on the screen, or when its wait runs out, a sound and the floor cracks */
@@ -15865,13 +15710,13 @@ void enemy_rodney_enter_land(uint32_t object)
 
 /* goes after the turtle with the fewest enemies: rushes at it, whips or shoots it; gone when the area is
    cleared */
-void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5)
 {
 	bool L_051E78 = false;
 	uint32_t zero = 0;
 	uint8_t enemies = 0;
 	uint16_t approach = 0, count = 0;
-	uint32_t attack = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, turtle = 0;
+	uint32_t attack = 0, chance = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, turtle = 0;
 	uint8_t retarget_time = 0, t3 = 0, t4 = 0, t5 = 0;
 	uint16_t t6 = 0;
 	uint32_t t1 = 0, t2 = 0;
@@ -15885,7 +15730,7 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 		if (turtles_in_play != 0u)
 		{
 			mem_write8(*p_slot + 4u, mem_read8(*p_slot + 4u) - 1u);
-			enemy_nearest_slots(object, p_d5, p_d7, p_a5, &second_slot);
+			enemy_nearest_slots(object, p_a5, &second_slot);
 			enemies = enemies_per_turtle;
 			if (enemies <= PLAYER_SLOT(second_slot)->enemies)
 			{
@@ -15903,8 +15748,7 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 					}
 				}
 			}
-			*p_d7 = (*p_d7 & ~0xFFFFu) | (uint16_t)second_slot;
-			if ((uint16_t)*p_d7 != OBJECT(object)->enemy_rodney.target)
+			if ((uint16_t)second_slot != OBJECT(object)->enemy_rodney.target)
 				enemy_rodney_leave_side(object, *p_slot);
 			OBJECT(object)->enemy_rodney.target = second_slot;
 			*p_slot = second_slot;
@@ -15935,8 +15779,8 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 	}
 	turtle = mem_read32(*p_slot);
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
-	enemy_collide_with_objects(object, p_d5, p_d7, p_a5);
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	*p_a5 = enemy_collide_with_objects(object, *p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	if (OBJECT(object)->enemy_rodney.approach != 0u)
 	{
 		if (OBJECT(object)->enemy_rodney.approach == 1u && ((int16_t)OBJECT(object)->screen_x < 0x70 || (int16_t)OBJECT(object)->screen_x >= 0x190))
@@ -15984,16 +15828,16 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 	}
 	if (OBJECT(object)->enemy_rodney.approach != 1u)
 	{
-		enemy_on_screen(object, p_d7, &zero);
+		zero = enemy_on_screen(object);
 		if (zero && OBJECT(object)->enemy_rodney.approach == 1u && mem_read8(mem_read32(*p_slot) + 4u) != 4u && OBJECT(object)->enemy_rodney.target_dy < 6u)
 		{
-			*p_d7 = 0x64u;
-			*p_d7 = random_below((uint16_t)*p_d7, object);
+			chance = 0x64u;
+			chance = random_below((uint16_t)chance, object);
 			count = 1u;
 			attack = rodney_attacks_ADDRESS;
 			do
 			{
-				if (RODNEY_ATTACK(attack)->reach <= OBJECT(object)->enemy_rodney.target_dx && (uint8_t)*p_d7 < RODNEY_ATTACK(attack)->chance)
+				if (RODNEY_ATTACK(attack)->reach <= OBJECT(object)->enemy_rodney.target_dx && (uint8_t)chance < RODNEY_ATTACK(attack)->chance)
 				{
 					OBJECT(object)->enemy_rodney.move = (uint32_t)RODNEY_ATTACK(attack)->move << 2;
 					OBJECT(object)->routine = 3u;
@@ -16012,16 +15856,16 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 		turtle = mem_read32(*p_slot);
 		if (OBJECT(turtle)->routine != 4u || hit_reaction_down[OBJECT(turtle)->turtle.hit_reaction] != 0u)
 		{
-			enemy_on_screen(object, p_d7, &zero);
+			zero = enemy_on_screen(object);
 			if (zero && OBJECT(object)->enemy_rodney.approach == 1u && mem_read8(mem_read32(*p_slot) + 4u) != 4u && OBJECT(object)->enemy_rodney.target_dy < 6u)
 			{
-				*p_d7 = 0x64u;
-				*p_d7 = random_below((uint16_t)*p_d7, object);
+				chance = 0x64u;
+				chance = random_below((uint16_t)chance, object);
 				count = 1u;
 				attack = rodney_attacks_ADDRESS;
 				do
 				{
-					if (RODNEY_ATTACK(attack)->reach <= OBJECT(object)->enemy_rodney.target_dx && (uint8_t)*p_d7 < RODNEY_ATTACK(attack)->chance)
+					if (RODNEY_ATTACK(attack)->reach <= OBJECT(object)->enemy_rodney.target_dx && (uint8_t)chance < RODNEY_ATTACK(attack)->chance)
 					{
 						OBJECT(object)->enemy_rodney.move = (uint32_t)RODNEY_ATTACK(attack)->move << 2;
 						OBJECT(object)->routine = 3u;
@@ -16051,205 +15895,205 @@ void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, u
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_rodney.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_slot, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_slot, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_slot, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_slot, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_slot, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_slot, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_slot, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_slot, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_slot, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_slot, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_slot, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_slot, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* hit: knocked back, or destroyed with no health left */
-void enemy_rodney_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_rodney_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
 	uint8_t sound = 0;
 	uint16_t move = 0;
@@ -16262,7 +16106,7 @@ void enemy_rodney_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t 
 	OBJECT(object)->enemy_rodney.move = move;
 	OBJECT(object)->enemy_rodney.move_time = 0u;
 	OBJECT(object)->routine++;
-	enemy_react(object, p_d5, p_d7, p_a1, p_a5);
+	enemy_react(object, p_a1, p_a5);
 }
 
 /* gives its side of its turtle back when it stands by it */
@@ -16290,18 +16134,19 @@ void enemy_rodney_give_side_back(uint32_t object, uint32_t player_slot)
 }
 
 /* rushes at and past its turtle, then brakes */
-void enemy_rodney_rush(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_rush(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052002_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* rushes at its turtle for 180 frames, aiming just off its row when it is close to it */
-void enemy_rodney_rush_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_a5)
+uint32_t enemy_rodney_rush_start(uint32_t object, uint32_t player_slot)
 {
-	uint32_t animation = 0, direction = 0, object_2 = 0, screen_x = 0, speed = 0, target_y = 0, x_speed = 0;
+	uint16_t screen_x = 0, target_y = 0;
+	uint32_t a5 = 0, animation = 0, direction = 0, object_2 = 0, speed = 0, x_speed = 0, y_speed = 0;
 
 	direction = 0x80u;
 	OBJECT(object)->flags &= 0xBFu;
@@ -16317,50 +16162,54 @@ void enemy_rodney_rush_start(uint32_t object, uint32_t player_slot, uint32_t *p_
 			target_y = (uint16_t)(0u - target_y);
 		object_2 = PLAYER_SLOT(player_slot)->turtle;
 		screen_x = OBJECT(object_2)->screen_x;
-		target_y = (uint16_t)(target_y + OBJECT(object_2)->screen_y);
-		direction_to(object, &direction, &screen_x, &target_y);
+		target_y += OBJECT(object_2)->screen_y;
+		direction = direction_to(direction, screen_x, target_y, object);
 	}
 	speed = 0x300u;
-	speeds_from_direction((uint8_t)direction, (uint16_t)speed, &x_speed, p_y_speed, p_a5);
+	screen_x_high = 0x300u;
+	speeds_from_direction((uint8_t)direction, (uint8_t)speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->enemy_rodney.move_time = 0xB4u;
 	OBJECT(object)->state++;
 	animation = animations_0585C4_ADDRESS;
 	set_animation(speed, object, animation);
+	return a5;
 }
 
 /* a frame of the rush, sliding along walls; well past its turtle it brakes, or stops at a wall */
-uint32_t enemy_rodney_rush_run(uint32_t object)
+void enemy_rodney_rush_run(uint32_t object)
 {
-	uint32_t animation = 0, clear_ahead = 0;
+	uint8_t clear_ahead = 0;
+	uint32_t animation = 0;
 
 	OBJECT(object)->enemy_rodney.move_time--;
-	clear_ahead = 0xFFFFFFFFu;
+	clear_ahead = 0xFFu;
+	offset_high_word = 0xFFFFFFFFu;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
 	{
 		if ((OBJECT(object)->contacts & 8u) != 0u)
 		{
 			OBJECT(object)->y -= 0x100u;
-			clear_ahead &= ~0xFFu;
+			clear_ahead = 0u;
 		}
 	}
 	else if ((OBJECT(object)->contacts & 0x10u) != 0u)
 	{
 		OBJECT(object)->y -= 0x100u;
-		clear_ahead &= ~0xFFu;
+		clear_ahead = 0u;
 	}
 	if ((int8_t)((OBJECT(object)->enemy_rodney.target_direction - 0x40u) ^ ((uint32_t)OBJECT(object)->flags << 1)) >= 0)
 	{
 		move_object_blocked(object);
-		return clear_ahead;
+		return;
 	}
 	if ((int8_t)clear_ahead >= 0)
 		OBJECT(object)->enemy_rodney.move_time = 0u;
 	if (OBJECT(object)->enemy_rodney.target_dx < 0x50u)
 	{
 		move_object_blocked(object);
-		return clear_ahead;
+		return;
 	}
 	OBJECT(object)->state++;
 	OBJECT(object)->enemy_rodney.brake = 0x20;
@@ -16374,7 +16223,6 @@ uint32_t enemy_rodney_rush_run(uint32_t object)
 		animation = enemy_rodney_rush_dust_animation_ADDRESS;
 	}
 	set_animation(0u, object, animation);
-	return clear_ahead;
 }
 
 /* brakes to a stop, then thinks */
@@ -16391,12 +16239,12 @@ void enemy_rodney_brake(uint32_t object)
 }
 
 /* rushes across past its turtle, then brakes toward its row */
-void enemy_rodney_rush_across(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_rush_across(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052142_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* rushes straight across at its turtle for 180 frames */
@@ -16419,36 +16267,38 @@ void enemy_rodney_rush_across_start(uint32_t object)
 }
 
 /* a frame of the rush across, sliding along walls; well past its turtle it brakes toward its row */
-uint32_t enemy_rodney_rush_across_run(uint32_t object)
+void enemy_rodney_rush_across_run(uint32_t object)
 {
-	uint32_t animation = 0, clear_ahead = 0;
+	uint8_t clear_ahead = 0;
+	uint32_t animation = 0;
 
 	OBJECT(object)->enemy_rodney.move_time--;
-	clear_ahead = 0xFFFFFFFFu;
+	clear_ahead = 0xFFu;
+	offset_high_word = 0xFFFFFFFFu;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
 	{
 		if ((OBJECT(object)->contacts & 8u) != 0u)
 		{
 			OBJECT(object)->y -= 0x100u;
-			clear_ahead &= ~0xFFu;
+			clear_ahead = 0u;
 		}
 	}
 	else if ((OBJECT(object)->contacts & 0x10u) != 0u)
 	{
 		OBJECT(object)->y -= 0x100u;
-		clear_ahead &= ~0xFFu;
+		clear_ahead = 0u;
 	}
 	if ((int8_t)((OBJECT(object)->enemy_rodney.target_direction - 0x40u) ^ ((uint32_t)OBJECT(object)->flags << 1)) >= 0)
 	{
 		move_object_blocked(object);
-		return clear_ahead;
+		return;
 	}
 	if ((int8_t)clear_ahead >= 0)
 		OBJECT(object)->enemy_rodney.move_time = 0u;
 	if (OBJECT(object)->enemy_rodney.target_dx < 0x50u)
 	{
 		move_object_blocked(object);
-		return clear_ahead;
+		return;
 	}
 	OBJECT(object)->state++;
 	OBJECT(object)->enemy_rodney.brake = 0x20;
@@ -16462,16 +16312,15 @@ uint32_t enemy_rodney_rush_across_run(uint32_t object)
 		animation = enemy_rodney_rush_animation_ADDRESS;
 	}
 	set_animation(0u, object, animation);
-	return clear_ahead;
 }
 
 /* slides back and waits while its turtle is down */
-void enemy_rodney_back_off(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_back_off(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052234_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* slides back from its turtle with a sound */
@@ -16497,9 +16346,8 @@ void enemy_rodney_back_off_start(uint32_t object)
 }
 
 /* slows its slide to a stop, saying "Do not resist us" once */
-void enemy_rodney_slide_to_stop(uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
+void enemy_rodney_slide_to_stop(uint32_t object)
 {
-	uint32_t d5 = *p_d5;
 	uint16_t brake = 0, on_right = 0, screen_y = 0;
 	uint32_t animation = 0, screen_x = 0;
 	uint16_t t1 = 0;
@@ -16508,22 +16356,21 @@ void enemy_rodney_slide_to_stop(uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
 	t1 = OBJECT(object)->x_speed + brake;
 	OBJECT(object)->x_speed = t1;
 	if (t1 != 0u)
-		move_object_blocked(object);
-	else
 	{
-		OBJECT(object)->state++;
-		if (rodney_line_said == 0u)
-		{
-			on_right = (uint16_t)((brake & ~0xFFu) | 0xFFu);
-			screen_x = OBJECT(object)->screen_x;
-			screen_y = OBJECT(object)->screen_y;
-			say_do_not_resist_us(on_right, screen_x, screen_y, &d5, p_d7);
-			rodney_line_said = 0xFFu;
-		}
-		animation = enemy_rodney_slide_to_stop_animation_ADDRESS;
-		set_animation(screen_x, object, animation);
+		move_object_blocked(object);
+		return;
 	}
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	OBJECT(object)->state++;
+	if (rodney_line_said == 0u)
+	{
+		on_right = (uint16_t)((brake & ~0xFFu) | 0xFFu);
+		screen_x = OBJECT(object)->screen_x;
+		screen_y = OBJECT(object)->screen_y;
+		say_do_not_resist_us(on_right, (uint16_t)screen_x, screen_y);
+		rodney_line_said = 0xFFu;
+	}
+	animation = enemy_rodney_slide_to_stop_animation_ADDRESS;
+	set_animation(screen_x, object, animation);
 }
 
 /* when the slide ends, turns to its turtle */
@@ -16548,12 +16395,12 @@ void enemy_rodney_back_off_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* slides back, turns and fires three laser bolts */
-void enemy_rodney_shoot(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_shoot(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052312_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the laser: slides back from its turtle with a sound */
@@ -16651,12 +16498,12 @@ void enemy_rodney_shoot_end(uint32_t object)
 }
 
 /* throws its whip arm at its turtle and lashes it with it */
-void enemy_rodney_whip(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_whip(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05242E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the whip: following its turtle's row, it slides back */
@@ -16667,13 +16514,10 @@ void enemy_rodney_whip_start(uint32_t object)
 }
 
 /* slides to a stop, following its turtle's row */
-void enemy_rodney_whip_slow_down(uint32_t object, uint32_t *p_d5, uint32_t *p_d7)
+void enemy_rodney_whip_slow_down(uint32_t object)
 {
-	uint32_t d5 = *p_d5;
-
 	enemy_rodney_follow_row(object);
-	enemy_rodney_slide_to_stop(object, &d5, p_d7);
-	*p_d5 = (*p_d5 & 0xFFFFFF00u) | (d5 & 0xFFu);
+	enemy_rodney_slide_to_stop(object);
 }
 
 /* when the slide ends, faces its turtle and winds up with a sound */
@@ -16739,7 +16583,7 @@ void enemy_rodney_follow_row(uint32_t object)
 
 /* the arm reaches on up to its full length and is drawn in; when it hits, the lash at the turtle's
    distance */
-uint32_t enemy_rodney_whip_reach(uint32_t d7, uint32_t object)
+void enemy_rodney_whip_reach(uint32_t object)
 {
 	uint8_t arm_length = 0, x_distance = 0;
 	uint32_t animation = 0, arm = 0, caught = 0;
@@ -16753,14 +16597,14 @@ uint32_t enemy_rodney_whip_reach(uint32_t d7, uint32_t object)
 		if ((OBJECT(object)->enemy_rodney_whip.arm_flags & 2u) != 0u)
 		{
 			enemy_rodney_whip_pull_in(object);
-			return d7;
+			return;
 		}
 		OBJECT(object)->enemy_rodney_whip.arm_length++;
 		if (OBJECT(object)->enemy_rodney_whip.arm_length != 0xDu)
-			return d7;
+			return;
 		OBJECT(object)->enemy_rodney_whip.arm_length--;
 		enemy_rodney_whip_pull_in(object);
-		return d7;
+		return;
 	}
 	caught = 0x60000u | mem_read16(arm + 0x4Eu);
 	t1 = OBJECT(caught)->screen_x - OBJECT(object)->screen_x;
@@ -16778,8 +16622,8 @@ uint32_t enemy_rodney_whip_reach(uint32_t d7, uint32_t object)
 	OBJECT(object)->enemy_rodney_whip.arm_flags |= 0x20u;
 	OBJECT(object)->state = 5u;
 	animation = enemy_rodney_whip_animation_ADDRESS;
+	offset_high_word = caught;
 	set_animation(0u, object, animation);
-	return caught;
 }
 
 /* the arm drawn in, its pose by how far out it is */
@@ -16794,17 +16638,14 @@ void enemy_rodney_whip_pull_in(uint32_t object)
 }
 
 /* the lash; when it is over, the arm drawn in */
-uint32_t enemy_rodney_whip_lash(uint32_t object)
+void enemy_rodney_whip_lash(uint32_t object)
 {
-	uint32_t struck = 0;
-
-	struck = 0x60000u | OBJECT(object)->hit_object;
+	offset_high_word = OBJECT_ADDRESS(0);
 	if ((OBJECT(object)->enemy_rodney_whip.arm_flags & 4u) != 0u)
 	{
 		enemy_rodney_whip_pull_in(object);
-		return struck;
+		return;
 	}
-	return struck;
 }
 
 /* the arm shortened every frame; drawn in, back to thinking with a new move and target */
@@ -16825,16 +16666,16 @@ void enemy_rodney_whip_retract(uint32_t object)
 }
 
 /* knocked back by a hit */
-void enemy_rodney_knocked_back(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_knocked_back(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05260C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* knocked back along its arc, facing its turtle, its side given up */
-uint32_t enemy_rodney_knocked_back_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_rodney_knocked_back_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
@@ -16842,16 +16683,15 @@ uint32_t enemy_rodney_knocked_back_start(uint32_t d7, uint32_t object, uint32_t 
 	if ((int8_t)(OBJECT(object)->enemy_rodney.target_direction - 0x40u) < 0)
 		OBJECT(object)->flags |= 0x40u;
 	arc = enemy_rodney_destroyed_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_rodney_knocked_back_start_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->state++;
 	enemy_rodney_leave_side(object, player_slot);
-	return d7;
 }
 
 /* a frame of the fall; on landing its pose */
-uint32_t enemy_rodney_knocked_back_fall(uint32_t d7, uint32_t object)
+void enemy_rodney_knocked_back_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -16859,13 +16699,12 @@ uint32_t enemy_rodney_knocked_back_fall(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_rodney_knocked_back_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->state++;
 	animation = enemy_rodney_knocked_back_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* when the pose ends, back to thinking, hittable */
@@ -16881,16 +16720,16 @@ void enemy_rodney_knocked_back_end(uint32_t object)
 }
 
 /* destroyed: falls, lands as a wreck, gone */
-void enemy_rodney_destroyed(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_rodney_destroyed(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0526B0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* destroyed: thrown along its arc, facing its turtle, its side given up */
-uint32_t enemy_rodney_destroyed_start(uint32_t d7, uint32_t object, uint32_t player_slot)
+void enemy_rodney_destroyed_start(uint32_t object, uint32_t player_slot)
 {
 	uint32_t animation = 0, arc = 0;
 
@@ -16898,32 +16737,31 @@ uint32_t enemy_rodney_destroyed_start(uint32_t d7, uint32_t object, uint32_t pla
 	if ((int8_t)(OBJECT(object)->enemy_rodney.target_direction - 0x40u) < 0)
 		OBJECT(object)->flags |= 0x40u;
 	arc = enemy_rodney_destroyed_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_rodney_destroyed_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->state++;
 	enemy_rodney_leave_side(object, player_slot);
-	return d7;
 }
 
 /* a frame of the fall; on landing a sound and its wreck */
-uint32_t enemy_rodney_destroyed_fall(uint32_t d7, uint32_t object)
+void enemy_rodney_destroyed_fall(uint32_t object)
 {
 	uint32_t zero = 0;
-	uint32_t animation = 0, arc = 0, sound = 0;
+	uint8_t sound = 0;
+	uint32_t animation = 0, arc = 0;
 
 	move_object_with_height_blocked(object);
 	arc = enemy_rodney_destroyed_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
-	sound = (d7 & ~0xFFu) | 0xFu;
-	queue_sound((uint8_t)sound);
+		return;
+	sound = 0xFu;
+	queue_sound(sound);
 	OBJECT(object)->state++;
 	animation = enemy_rodney_destroyed_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return sound;
 }
 
 /* when the pose ends, the wreck again */
@@ -16956,11 +16794,11 @@ void enemy_rodney_destroyed_end(uint32_t object, uint32_t player_slot)
 }
 
 /* Shredder or one of his clones, by the parameter */
-void enemy_shredder_start(uint32_t object, uint32_t slot, uint32_t player_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_start(uint32_t object, uint32_t slot, uint32_t a5, uint32_t player_slot)
 {
 	uint16_t difficulty_level = 0;
 
-	enemy_nearest_slots(object, p_d5, p_d7, p_a5, &player_slot);
+	enemy_nearest_slots(object, &a5, &player_slot);
 	PLAYER_SLOT(player_slot)->enemies++;
 	OBJECT(object)->enemy_shredder.target = player_slot;
 	OBJECT(object)->enemy_shredder.retarget_time = 0x10u;
@@ -16981,220 +16819,156 @@ void enemy_shredder_start(uint32_t object, uint32_t slot, uint32_t player_slot, 
 	{
 		OBJECT(object)->flags |= 0x80u;
 		OBJECT(object)->enemy_shredder.move = 0xA8u;
-		enemy_shredder_enter(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_enter(object, slot, a5);
 	}
 	shredder_beaten = 0u;
 	shredder_firing_ray = 0u;
 	shredder_clones_made = 0u;
 	OBJECT(object)->enemy_shredder.move = 0xECu;
+	return a5;
 }
 
 /* his first move, without thinking */
-void enemy_shredder_enter(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_enter(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_shredder.move)
 	{
 	case 20:
-		enemy_shuffle(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shuffle(object, slot, a5);
 	case 28:
-		enemy_circle(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_circle(object, slot, a5);
 	case 36:
-		enemy_charge(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_charge(object, slot, a5);
 	case 0:
-		enemy_walk_to_target(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target(object, slot, a5);
 	case 4:
-		enemy_walk_to_side(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side(object, slot, a5);
 	case 8:
-		enemy_keep_distance(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_keep_distance(object, slot, a5);
 	case 12:
-		enemy_back_off(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off(object, slot, a5);
 	case 16:
-		enemy_run_away(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_run_away(object, slot, a5);
 	case 44:
-		enemy_walk_across(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_across(object, slot, a5);
 	case 48:
-		enemy_walk_to_target_sword(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_sword(object, slot, a5);
 	case 52:
-		enemy_walk_to_side_sword(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_sword(object, slot, a5);
 	case 24:
-		enemy_walk_past_sword(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_past_sword(object, slot, a5);
 	case 32:
-		enemy_back_off_sword(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off_sword(object, slot, a5);
 	case 40:
-		enemy_walk_to_line_sword(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_line_sword(object, slot, a5);
 	case 56:
-		enemy_walk_to_target_hammer(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_hammer(object, slot, a5);
 	case 60:
-		enemy_walk_to_side_hammer(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_hammer(object, slot, a5);
 	case 68:
-		enemy_stalk_hammer(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_stalk_hammer(object, slot, a5);
 	case 64:
-		enemy_walk_away_hammer(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_away_hammer(object, slot, a5);
 	case 72:
-		enemy_walk_to_target_spear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_spear(object, slot, a5);
 	case 76:
-		enemy_walk_to_side_spear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_spear(object, slot, a5);
 	case 104:
-		enemy_walk_off_line_spear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_off_line_spear(object, slot, a5);
 	case 108:
-		enemy_back_off_spear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off_spear(object, slot, a5);
 	case 112:
-		enemy_step_aside_spear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_step_aside_spear(object, slot, a5);
 	case 80:
-		enemy_walk_to_target_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_knife(object, slot, a5);
 	case 84:
-		enemy_walk_to_side_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_knife(object, slot, a5);
 	case 116:
-		enemy_circle_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_circle_knife(object, slot, a5);
 	case 124:
-		enemy_keep_distance_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_keep_distance_knife(object, slot, a5);
 	case 120:
-		enemy_back_off_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off_knife(object, slot, a5);
 	case 128:
-		enemy_step_aside_knife(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_step_aside_knife(object, slot, a5);
 	case 88:
-		enemy_walk_to_target_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_gun(object, slot, a5);
 	case 92:
-		enemy_walk_to_side_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_gun(object, slot, a5);
 	case 152:
-		enemy_walk_to_range_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_range_gun(object, slot, a5);
 	case 140:
-		enemy_back_off_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off_gun(object, slot, a5);
 	case 144:
-		enemy_run_away_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_run_away_gun(object, slot, a5);
 	case 96:
-		enemy_walk_to_target_axe(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_target_axe(object, slot, a5);
 	case 100:
-		enemy_walk_to_side_axe(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_side_axe(object, slot, a5);
 	case 148:
-		enemy_walk_to_range_axe(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_walk_to_range_axe(object, slot, a5);
 	case 132:
-		enemy_back_off_axe(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_back_off_axe(object, slot, a5);
 	case 136:
-		enemy_run_away_axe(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_run_away_axe(object, slot, a5);
 	case 196:
-		enemy_rocksteady_raise_fist(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_raise_fist(object, slot, a5);
 	case 200:
-		enemy_rocksteady_laugh(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_laugh(object, slot, a5);
 	case 192:
-		enemy_rocksteady_shake_fist(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_shake_fist(object, slot, a5);
 	case 184:
-		enemy_rocksteady_draw_gun(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_draw_gun(object, slot, a5);
 	case 188:
-		enemy_rocksteady_put_gun_away(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_put_gun_away(object, slot, a5);
 	case 204:
-		enemy_rocksteady_circle(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_circle(object, slot, a5);
 	case 208:
-		enemy_rocksteady_line_up(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_line_up(object, slot, a5);
 	case 212:
-		enemy_rocksteady_close_in(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_close_in(object, slot, a5);
 	case 232:
-		enemy_rocksteady_shoot_around(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rocksteady_shoot_around(object, slot, a5);
 	case 228:
-		enemy_bebop_stand(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_bebop_stand(object, slot, a5);
 	case 216:
-		enemy_bebop_walk_to_front(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_bebop_walk_to_front(object, slot, a5);
 	case 224:
-		enemy_bebop_walk_level(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_bebop_walk_level(object, slot, a5);
 	case 220:
-		enemy_bebop_close_in(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_bebop_close_in(object, slot, a5);
 	case 156:
-		enemy_mouser_chase(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_mouser_chase(object, slot, a5);
 	case 164:
-		enemy_mouser_creep_to_side(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_mouser_creep_to_side(object, slot, a5);
 	case 160:
-		enemy_mouser_back_off(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_mouser_back_off(object, slot, a5);
 	case 172:
-		enemy_rodney_rush(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rodney_rush(object, slot, a5);
 	case 176:
-		enemy_rodney_rush_across(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rodney_rush_across(object, slot, a5);
 	case 180:
-		enemy_rodney_back_off(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_rodney_back_off(object, slot, a5);
 	case 236:
-		enemy_shredder_appear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_appear(object, slot, a5);
 	case 240:
-		enemy_shredder_split(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_split(object, slot, a5);
 	case 168:
-		enemy_shredder_clone_appear(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_clone_appear(object, slot, a5);
 	case 244:
-		enemy_shredder_walk_to_side(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_walk_to_side(object, slot, a5);
 	case 248:
-		enemy_shredder_walk_to_target(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_walk_to_target(object, slot, a5);
 	case 252:
-		enemy_shredder_guard(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_guard(object, slot, a5);
 	case 256:
-		enemy_shredder_back_off(object, slot, p_d5, p_d7, p_a5);
-		return;
+		return enemy_shredder_back_off(object, slot, a5);
 	}
+	unreachable();
 }
 
 /* his thinking: clones, guards, blows by the distance and his ray */
-void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5)
 {
 	bool L_052920 = false, L_052992 = false, L_052A68 = false;
 	uint8_t enemies = 0, turtles = 0;
@@ -17213,7 +16987,7 @@ void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5,
 		if (turtles_in_play != 0u)
 		{
 			mem_write8(*p_slot + 4u, mem_read8(*p_slot + 4u) - 1u);
-			enemy_nearest_slots(object, p_d5, p_d7, p_a5, &second_slot);
+			enemy_nearest_slots(object, p_a5, &second_slot);
 			enemies = enemies_per_turtle;
 			if (enemies <= PLAYER_SLOT(second_slot)->enemies)
 			{
@@ -17231,8 +17005,7 @@ void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5,
 					}
 				}
 			}
-			*p_d7 = (*p_d7 & ~0xFFFFu) | (uint16_t)second_slot;
-			if ((uint16_t)*p_d7 != OBJECT(object)->enemy_shredder.target)
+			if ((uint16_t)second_slot != OBJECT(object)->enemy_shredder.target)
 				enemy_leave_side(object, *p_slot);
 			OBJECT(object)->enemy_shredder.target = second_slot;
 			*p_slot = second_slot;
@@ -17242,7 +17015,7 @@ void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5,
 	turtle = mem_read32(*p_slot);
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	if ((OBJECT(object)->flags & 2u) != 0u)
 	{
@@ -17397,205 +17170,205 @@ void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_d5,
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_shredder.move)
 	{
 	case 20:
-		enemy_shuffle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shuffle(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_charge(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_keep_distance(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_run_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_walk_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_across(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_walk_to_target_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_walk_to_side_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_sword(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_walk_past_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_past_sword(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_back_off_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_sword(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_walk_to_line_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_line_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_walk_to_target_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_walk_to_side_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_stalk_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_stalk_hammer(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_walk_away_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_away_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_walk_to_target_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_walk_to_side_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_spear(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_walk_off_line_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_off_line_spear(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_back_off_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_spear(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_step_aside_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_walk_to_target_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_knife(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_walk_to_side_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_knife(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_circle_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_circle_knife(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_keep_distance_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_keep_distance_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_back_off_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_knife(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_step_aside_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_step_aside_knife(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_walk_to_target_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_gun(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_walk_to_side_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_gun(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_walk_to_range_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_gun(object, *p_slot, *p_a5);
 		return;
 	case 140:
-		enemy_back_off_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_gun(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_run_away_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_gun(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_walk_to_target_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_target_axe(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_walk_to_side_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_side_axe(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_walk_to_range_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_walk_to_range_axe(object, *p_slot, *p_a5);
 		return;
 	case 132:
-		enemy_back_off_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_back_off_axe(object, *p_slot, *p_a5);
 		return;
 	case 136:
-		enemy_run_away_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_run_away_axe(object, *p_slot, *p_a5);
 		return;
 	case 196:
-		enemy_rocksteady_raise_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_raise_fist(object, *p_slot, *p_a5);
 		return;
 	case 200:
-		enemy_rocksteady_laugh(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_laugh(object, *p_slot, *p_a5);
 		return;
 	case 192:
-		enemy_rocksteady_shake_fist(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shake_fist(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_rocksteady_draw_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_draw_gun(object, *p_slot, *p_a5);
 		return;
 	case 188:
-		enemy_rocksteady_put_gun_away(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_put_gun_away(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_rocksteady_circle(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_circle(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_rocksteady_line_up(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_line_up(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_rocksteady_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_close_in(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_rocksteady_shoot_around(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot_around(object, *p_slot, *p_a5);
 		return;
 	case 228:
-		enemy_bebop_stand(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_stand(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_bebop_walk_to_front(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_to_front(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_bebop_walk_level(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_walk_level(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_bebop_close_in(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_close_in(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_mouser_chase(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_chase(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_mouser_creep_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_creep_to_side(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_mouser_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_back_off(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_rodney_rush(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_rodney_rush_across(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_rush_across(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_rodney_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_back_off(object, *p_slot, *p_a5);
 		return;
 	case 236:
-		enemy_shredder_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_appear(object, *p_slot, *p_a5);
 		return;
 	case 240:
-		enemy_shredder_split(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_split(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_shredder_clone_appear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_clone_appear(object, *p_slot, *p_a5);
 		return;
 	case 244:
-		enemy_shredder_walk_to_side(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_side(object, *p_slot, *p_a5);
 		return;
 	case 248:
-		enemy_shredder_walk_to_target(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_walk_to_target(object, *p_slot, *p_a5);
 		return;
 	case 252:
-		enemy_shredder_guard(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_guard(object, *p_slot, *p_a5);
 		return;
 	case 256:
-		enemy_shredder_back_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_back_off(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* his attack, keeping his ray's time */
-void enemy_shredder_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_shredder_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, turtle = 0;
 	uint16_t ray_wait = 0;
@@ -17609,28 +17382,28 @@ void enemy_shredder_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint
 	turtle = mem_read32(*p_slot);
 	enemy_look_at_target(object, turtle, &ignored, &ignored_2);
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored_3, &ignored, &ignored_2, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	jump_target = TABLE32(enemy_attacks, (uint32_t)(int16_t)OBJECT(object)->enemy_shredder.move);
 	switch (jump_target)
 	{
 	case 0x049A06u:
-		enemy_jab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jab(object, *p_slot, *p_a5);
 		return;
 	case 0x049A52u:
-		enemy_chop(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_chop(object, *p_slot, *p_a5);
 		return;
 	case 0x049A8Eu:
-		enemy_swing(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_swing(object, *p_slot, *p_a5);
 		return;
 	case 0x049ACAu:
-		enemy_high_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049B06u:
-		enemy_jump_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049BBCu:
-		enemy_long_jump_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_long_jump_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x049C72u:
 		enemy_attack_none_after_long_jump_kick();
@@ -17639,120 +17412,121 @@ void enemy_shredder_attack(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint
 		enemy_attack_none_before_grab();
 		return;
 	case 0x049C76u:
-		enemy_grab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_grab(object, *p_slot, *p_a5);
 		return;
 	case 0x04B2DAu:
-		enemy_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B316u:
-		enemy_low_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_low_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B352u:
-		enemy_leaping_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_leaping_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B42Au:
-		enemy_jump_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B4E0u:
-		enemy_flying_slash_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flying_slash_sword(object, *p_slot, *p_a5);
 		return;
 	case 0x04B5D6u:
-		enemy_smash_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_smash_hammer(object, *p_slot, *p_a5);
 		return;
 	case 0x04E2C4u:
-		enemy_spear_thrust(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_thrust(object, *p_slot, *p_a5);
 		return;
 	case 0x04E336u:
-		enemy_spear_throw(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_spear_throw(object, *p_slot, *p_a5);
 		return;
 	case 0x04E3C4u:
-		enemy_knife_stab(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knife_stab(object, *p_slot, *p_a5);
 		return;
 	case 0x04E400u:
-		enemy_high_kick_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04E43Cu:
-		enemy_jump_kick_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_jump_kick_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04E4F2u:
-		enemy_throw_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_knife(object, *p_slot, *p_a5);
 		return;
 	case 0x04EBD6u:
-		enemy_throw_axes(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_axes(object, *p_slot, *p_a5);
 		return;
 	case 0x04EC5Eu:
-		enemy_high_kick_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_high_kick_axe(object, *p_slot, *p_a5);
 		return;
 	case 0x04EC9Au:
-		enemy_gun_swing(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_gun_swing(object, *p_slot, *p_a5);
 		return;
 	case 0x04ECD6u:
-		enemy_shoot_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shoot_gun(object, *p_slot, *p_a5);
 		return;
 	case 0x04F076u:
-		enemy_throw_shuriken(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_throw_shuriken(object, *p_slot, *p_a5);
 		return;
 	case 0x04F0E4u:
-		enemy_boomerang_throw(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_boomerang_throw(object, *p_slot, *p_a5);
 		return;
 	case 0x04FA96u:
-		enemy_rocksteady_pincer_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_pincer_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x04FC04u:
-		enemy_rocksteady_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x04FCD4u:
-		enemy_rocksteady_punch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_punch(object, *p_slot, *p_a5);
 		return;
 	case 0x04FD4Cu:
-		enemy_rocksteady_gun_butt(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_gun_butt(object, *p_slot, *p_a5);
 		return;
 	case 0x04FD88u:
-		enemy_rocksteady_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x0508A0u:
-		enemy_bebop_pincer_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_pincer_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x050ADCu:
-		enemy_bebop_punch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_punch(object, *p_slot, *p_a5);
 		return;
 	case 0x050B8Cu:
-		enemy_bebop_charge(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_charge(object, *p_slot, *p_a5);
 		return;
 	case 0x050C68u:
-		enemy_bebop_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x052306u:
-		enemy_rodney_shoot(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_shoot(object, *p_slot, *p_a5);
 		return;
 	case 0x052422u:
-		enemy_rodney_whip(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_whip(object, *p_slot, *p_a5);
 		return;
 	case 0x0534C4u:
-		enemy_shredder_kick(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_kick(object, *p_slot, *p_a5);
 		return;
 	case 0x053524u:
-		enemy_shredder_thrust(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_thrust(object, *p_slot, *p_a5);
 		return;
 	case 0x05356Eu:
-		enemy_shredder_slash(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_slash(object, *p_slot, *p_a5);
 		return;
 	case 0x0535B8u:
-		enemy_shredder_sweep(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_sweep(object, *p_slot, *p_a5);
 		return;
 	case 0x053602u:
-		enemy_shredder_ray(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_ray(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* hit: shrugged off in the air, else his reaction by his health */
-void enemy_shredder_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1, uint32_t *p_a5)
+void enemy_shredder_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5)
 {
+	uint8_t sound = 0;
 	uint8_t side = 0;
 
-	*p_d7 = (*p_d7 & ~0xFFu) | 0x92u;
-	queue_sound((uint8_t)*p_d7);
+	sound = 0x92u;
+	queue_sound(sound);
 	side = OBJECT(object)->enemy_shredder.side;
 	OBJECT(object)->enemy_shredder.side = side & ~1u;
 	if ((side & 1u) != 0u)
@@ -17767,11 +17541,10 @@ void enemy_shredder_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_
 		{
 			OBJECT(object)->enemy_shredder.move = 0xCCu;
 			OBJECT(object)->routine++;
-			enemy_shredder_react(object, p_d5, p_d7, p_a1, p_a5);
+			enemy_shredder_react(object, p_a1, p_a5);
 			return;
 		}
-		*p_d7 = ((*p_d7 & ~0xFFFFu) | (((uint32_t)OBJECT(object)->floor_height << 8u) | OBJECT(object)->frame_time)) & ~0xFFu;
-		if ((uint16_t)*p_d7 != OBJECT(object)->height)
+		if (((((uint32_t)OBJECT(object)->floor_height << 8u) | OBJECT(object)->frame_time) & ~0xFFu) != OBJECT(object)->height)
 		{
 			OBJECT(object)->colour = 0xBu;
 			OBJECT(object)->routine = 2u;
@@ -17787,207 +17560,207 @@ void enemy_shredder_hit(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_
 	else
 		OBJECT(object)->enemy_shredder.move = 0xDCu;
 	OBJECT(object)->routine++;
-	enemy_shredder_react(object, p_d5, p_d7, p_a1, p_a5);
+	enemy_shredder_react(object, p_a1, p_a5);
 }
 
 /* his reaction to a hit */
-void enemy_shredder_react(uint32_t object, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_slot, uint32_t *p_a5)
+void enemy_shredder_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5)
 {
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0;
 
 	*p_slot = 0x60000u | OBJECT(object)->enemy_shredder.target;
 	OBJECT(object)->contacts &= 0xE0u;
-	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_d5, p_d7, p_a5);
+	enemy_floor_contacts(object, &ignored, &ignored_2, &ignored_3, &ignored_4, p_a5);
 	enemy_keep_on_screen(object);
 	switch ((uint32_t)(int16_t)OBJECT(object)->enemy_shredder.move)
 	{
 	case 228:
-		enemy_crash_into_scenery(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery(object, *p_slot, *p_a5);
 		return;
 	case 232:
-		enemy_crash_into_scenery_low(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_crash_into_scenery_low(object, *p_slot, *p_a5);
 		return;
 	case 0:
-		enemy_flinch_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back(object, *p_slot, *p_a5);
 		return;
 	case 4:
-		enemy_flinch_bent(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent(object, *p_slot, *p_a5);
 		return;
 	case 8:
-		enemy_flinch_reel(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel(object, *p_slot, *p_a5);
 		return;
 	case 12:
-		enemy_flinch_hunched(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched(object, *p_slot, *p_a5);
 		return;
 	case 36:
-		enemy_killed_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_back(object, *p_slot, *p_a5);
 		return;
 	case 32:
-		enemy_killed_forward(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_killed_forward(object, *p_slot, *p_a5);
 		return;
 	case 16:
-		enemy_knocked_forward(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_forward(object, *p_slot, *p_a5);
 		return;
 	case 128:
-		enemy_thrown_by_donatello(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_donatello(object, *p_slot, *p_a5);
 		return;
 	case 132:
 		*p_a5 = enemy_let_go_by_donatello(object, *p_slot);
 		return;
 	case 136:
-		enemy_thrown_by_michelangelo(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_michelangelo(object, *p_slot, *p_a5);
 		return;
 	case 140:
 		*p_a5 = enemy_let_go_by_michelangelo(object, *p_slot);
 		return;
 	case 188:
-		enemy_thrown_by_raphael(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_raphael(object, *p_slot, *p_a5);
 		return;
 	case 192:
 		*p_a5 = enemy_let_go_by_raphael(object, *p_slot);
 		return;
 	case 196:
-		enemy_thrown_by_leonardo(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_thrown_by_leonardo(object, *p_slot, *p_a5);
 		return;
 	case 200:
 		*p_a5 = enemy_let_go_by_leonardo(object, *p_slot);
 		return;
 	case 20:
-		enemy_knocked_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_knocked_back(object, *p_slot, *p_a5);
 		return;
 	case 24:
-		enemy_die(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die(object, *p_slot, *p_a5);
 		return;
 	case 28:
-		enemy_die_on_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_die_on_back(object, *p_slot, *p_a5);
 		return;
 	case 40:
-		enemy_flinch_back_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_sword(object, *p_slot, *p_a5);
 		return;
 	case 44:
-		enemy_flinch_bent_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_sword(object, *p_slot, *p_a5);
 		return;
 	case 48:
-		enemy_flinch_reel_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_sword(object, *p_slot, *p_a5);
 		return;
 	case 52:
-		enemy_flinch_hunched_sword(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_sword(object, *p_slot, *p_a5);
 		return;
 	case 56:
-		enemy_flinch_back_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_hammer(object, *p_slot, *p_a5);
 		return;
 	case 60:
-		enemy_flinch_bent_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_hammer(object, *p_slot, *p_a5);
 		return;
 	case 68:
-		enemy_flinch_hunched_hammer(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_hammer(object, *p_slot, *p_a5);
 		return;
 	case 72:
-		enemy_flinch_back_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_spear(object, *p_slot, *p_a5);
 		return;
 	case 76:
-		enemy_flinch_bent_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_spear(object, *p_slot, *p_a5);
 		return;
 	case 80:
-		enemy_flinch_reel_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_spear(object, *p_slot, *p_a5);
 		return;
 	case 84:
-		enemy_flinch_hunched_spear(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_spear(object, *p_slot, *p_a5);
 		return;
 	case 88:
-		enemy_flinch_back_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_knife(object, *p_slot, *p_a5);
 		return;
 	case 92:
-		enemy_flinch_bent_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_knife(object, *p_slot, *p_a5);
 		return;
 	case 96:
-		enemy_flinch_reel_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_knife(object, *p_slot, *p_a5);
 		return;
 	case 100:
-		enemy_flinch_hunched_knife(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_hunched_knife(object, *p_slot, *p_a5);
 		return;
 	case 120:
-		enemy_flinch_back_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_gun(object, *p_slot, *p_a5);
 		return;
 	case 124:
-		enemy_flinch_bent_gun(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_gun(object, *p_slot, *p_a5);
 		return;
 	case 104:
-		enemy_flinch_back_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_back_axe(object, *p_slot, *p_a5);
 		return;
 	case 108:
-		enemy_flinch_bent_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_bent_axe(object, *p_slot, *p_a5);
 		return;
 	case 112:
-		enemy_flinch_reel_axe(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_flinch_reel_axe(object, *p_slot, *p_a5);
 		return;
 	case 164:
-		enemy_rocksteady_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch(object, *p_slot, *p_a5);
 		return;
 	case 168:
-		enemy_rocksteady_reel(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_reel(object, *p_slot, *p_a5);
 		return;
 	case 160:
-		enemy_rocksteady_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 152:
-		enemy_rocksteady_knocked_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_knocked_down(object, *p_slot, *p_a5);
 		return;
 	case 156:
-		enemy_rocksteady_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rocksteady_defeated(object, *p_slot, *p_a5);
 		return;
 	case 172:
-		enemy_bebop_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch(object, *p_slot, *p_a5);
 		return;
 	case 176:
-		enemy_bebop_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 180:
-		enemy_bebop_knocked_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_knocked_down(object, *p_slot, *p_a5);
 		return;
 	case 184:
-		enemy_bebop_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_bebop_defeated(object, *p_slot, *p_a5);
 		return;
 	case 148:
-		enemy_mouser_thrown_off(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_thrown_off(object, *p_slot, *p_a5);
 		return;
 	case 224:
-		enemy_mouser_break_down(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_break_down(object, *p_slot, *p_a5);
 		return;
 	case 144:
-		enemy_mouser_knocked_flying(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_mouser_knocked_flying(object, *p_slot, *p_a5);
 		return;
 	case 64:
-		enemy_rodney_knocked_back(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_knocked_back(object, *p_slot, *p_a5);
 		return;
 	case 116:
-		enemy_rodney_destroyed(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_rodney_destroyed(object, *p_slot, *p_a5);
 		return;
 	case 204:
-		enemy_shredder_lose_bar(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_lose_bar(object, *p_slot, *p_a5);
 		return;
 	case 208:
-		enemy_shredder_flinch(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch(object, *p_slot, *p_a5);
 		return;
 	case 212:
-		enemy_shredder_flinch_from_behind(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_flinch_from_behind(object, *p_slot, *p_a5);
 		return;
 	case 216:
-		enemy_shredder_defeated(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_defeated(object, *p_slot, *p_a5);
 		return;
 	case 220:
-		enemy_shredder_vanish(object, *p_slot, p_d5, p_d7, p_a5);
+		*p_a5 = enemy_shredder_vanish(object, *p_slot, *p_a5);
 		return;
 	}
 }
 
 /* comes out of the screen when he is the last enemy, with his music */
-void enemy_shredder_appear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_appear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052CA2_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* when he is the only enemy left, he is shown with a sound in his first pose */
@@ -18047,12 +17820,12 @@ void enemy_shredder_appear_walk_in(uint32_t object)
 }
 
 /* makes a clone of himself, blinking */
-void enemy_shredder_split(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_split(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052D52_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* splits: not hittable, a clone of him with his bars and a sound, and he moves aside blinking 32 frames */
@@ -18096,12 +17869,12 @@ void enemy_shredder_split_blink(uint32_t object)
 }
 
 /* a clone comes in blinking */
-void enemy_shredder_clone_appear(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_clone_appear(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052DDC_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a clone's way in: shown, moving back for 32 frames */
@@ -18145,12 +17918,12 @@ void enemy_shredder_clone_appear_blink(uint32_t object)
 }
 
 /* walks to his side of his turtle */
-void enemy_shredder_walk_to_side(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_walk_to_side(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052E60_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 240 frames of walking to his turtle's side, facing it */
@@ -18274,12 +18047,12 @@ uint32_t enemy_shredder_walk_to_side_hold(uint32_t object, uint32_t player_slot)
 }
 
 /* walks to his turtle */
-void enemy_shredder_walk_to_target(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_walk_to_target(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_052FE4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the walk to his turtle, facing it, aiming at once */
@@ -18299,41 +18072,50 @@ uint32_t enemy_shredder_walk_to_target_start(uint32_t object, uint32_t player_sl
 }
 
 /* a frame of the walk to his turtle, aiming every 8 frames, standing when close */
-void enemy_shredder_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_animations)
+uint32_t enemy_shredder_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t animations)
 {
-	uint32_t animations = *p_animations;
-	uint16_t speed = 0;
-	uint32_t direction = 0, turtle = 0, x_speed = 0;
+	uint8_t speed = 0;
+	uint32_t direction = 0, turtle = 0, x_speed = 0, y_speed = 0;
 	uint8_t move_time = 0;
 
 	move_time = OBJECT(object)->enemy_shredder.move_time;
 	OBJECT(object)->enemy_shredder.move_time = move_time - 1u;
-	if (move_time == 1u)
+	if (move_time != 1u)
 	{
-		turtle = PLAYER_SLOT(player_slot)->turtle;
-		direction = direction_to_object(0u, object, turtle);
-		animations = shredder_walk_animations_ADDRESS;
-		if ((int8_t)OBJECT(object)->health_bars >= 0)
-			animations = shredder_walk_hurt_animations_ADDRESS;
-		enemy_turn_to_object((uint8_t)direction, object, animations, turtle);
-		speed = 0x180u;
-		speeds_from_direction((uint8_t)direction, speed, &x_speed, p_y_speed, &animations);
-		OBJECT(object)->x_speed = x_speed;
-		OBJECT(object)->y_speed = *p_y_speed;
-		OBJECT(object)->enemy_shredder.move_time = 8u;
+		if (OBJECT(object)->enemy_shredder.target_dx >= 0x3Cu || OBJECT(object)->enemy_shredder.target_dy >= 0x20u)
+		{
+			move_object_blocked(object);
+			return animations;
+		}
+		return animations;
 	}
+	turtle = PLAYER_SLOT(player_slot)->turtle;
+	direction = direction_to_object(0u, object, turtle);
+	animations = shredder_walk_animations_ADDRESS;
+	if ((int8_t)OBJECT(object)->health_bars >= 0)
+		animations = shredder_walk_hurt_animations_ADDRESS;
+	enemy_turn_to_object((uint8_t)direction, object, animations, turtle);
+	speed = 0x80u;
+	screen_x_high = 0x180u;
+	speeds_from_direction((uint8_t)direction, speed, &x_speed, &y_speed, &animations);
+	OBJECT(object)->x_speed = x_speed;
+	OBJECT(object)->y_speed = y_speed;
+	OBJECT(object)->enemy_shredder.move_time = 8u;
 	if (OBJECT(object)->enemy_shredder.target_dx >= 0x3Cu || OBJECT(object)->enemy_shredder.target_dy >= 0x20u)
+	{
 		move_object_blocked(object);
-	*p_animations = animations;
+		return animations;
+	}
+	return animations;
 }
 
 /* guards against his turtle's attack, then strikes back */
-void enemy_shredder_guard(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_guard(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05307C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* guards against his turtle's attack, not hittable, for 30 frames */
@@ -18381,20 +18163,19 @@ void enemy_shredder_guard_counter(uint32_t object)
 }
 
 /* walks away and waits while his turtle is down */
-void enemy_shredder_back_off(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_back_off(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0530F6_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* 40 frames of walking backwards away from his turtle, still facing it */
-void enemy_shredder_back_off_start(uint32_t object, uint32_t player_slot, uint32_t *p_y_speed, uint32_t *p_sines)
+uint32_t enemy_shredder_back_off_start(uint32_t object, uint32_t player_slot)
 {
-	uint8_t direction = 0;
-	uint16_t speed = 0;
-	uint32_t animations = 0, turtle = 0, x_speed = 0;
+	uint8_t direction = 0, speed = 0;
+	uint32_t a5 = 0, animations = 0, turtle = 0, x_speed = 0, y_speed = 0;
 
 	OBJECT(object)->enemy_shredder.move_time = 0x40u;
 	OBJECT(object)->enemy_shredder.timer = 0x28u;
@@ -18405,11 +18186,13 @@ void enemy_shredder_back_off_start(uint32_t object, uint32_t player_slot, uint32
 	turtle = PLAYER_SLOT(player_slot)->turtle;
 	enemy_face_object(direction, object, animations, turtle);
 	direction -= 0x80u;
-	speed = 0x100u;
-	speeds_from_direction(direction, speed, &x_speed, p_y_speed, p_sines);
+	speed = 0u;
+	screen_x_high = 0x100u;
+	speeds_from_direction(direction, speed, &x_speed, &y_speed, &a5);
 	OBJECT(object)->x_speed = x_speed;
-	OBJECT(object)->y_speed = *p_y_speed;
+	OBJECT(object)->y_speed = y_speed;
 	OBJECT(object)->state++;
+	return a5;
 }
 
 /* a frame of walking away while his turtle is down; when the time runs out, his standing pose */
@@ -18452,12 +18235,12 @@ void enemy_shredder_back_off_wait(uint32_t object, uint32_t player_slot)
 }
 
 /* a bar gone: a piece of him flies off, his health back */
-void enemy_shredder_lose_bar(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_lose_bar(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0531BA_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a health bar lost: he flashes in its pose */
@@ -18511,12 +18294,12 @@ void enemy_shredder_flash(uint32_t object)
 }
 
 /* hit from the front, knocked back every third hit */
-void enemy_shredder_flinch(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_flinch(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05324E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hit from the front: he flashes, and every third hit knocks him back for 16 frames */
@@ -18562,12 +18345,12 @@ void enemy_shredder_flinch_end(uint32_t object)
 }
 
 /* hit from behind, knocked back every third hit */
-void enemy_shredder_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0532E0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* hit from behind: he flashes, and every third hit knocks him forward for 16 frames */
@@ -18597,32 +18380,31 @@ void enemy_shredder_flinch_from_behind_start(uint32_t object)
 }
 
 /* beaten: falls, the music stops, his clones vanish */
-void enemy_shredder_defeated(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_defeated(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_053348_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* beaten: thrown along his arc, flashing, facing his turtle */
-uint32_t enemy_shredder_defeated_start(uint32_t d7, uint32_t object, uint32_t target)
+void enemy_shredder_defeated_start(uint32_t object, uint32_t target)
 {
 	uint32_t animation = 0, arc = 0;
 
 	OBJECT(object)->colour = 0xBu;
 	enemy_boss_face_target(object, target);
 	arc = enemy_shredder_defeated_arc_ADDRESS;
-	d7 = enemy_start_arc(d7, object, arc);
+	enemy_start_arc(object, arc);
 	animation = enemy_shredder_defeated_start_animation_ADDRESS;
 	set_animation(0u, object, animation);
 	OBJECT(object)->contacts |= 0x80u;
 	OBJECT(object)->state++;
-	return d7;
 }
 
 /* a frame of the fall; on landing he slides */
-uint32_t enemy_shredder_defeated_fall(uint32_t d7, uint32_t object)
+void enemy_shredder_defeated_fall(uint32_t object)
 {
 	uint32_t zero = 0;
 	uint32_t animation = 0, arc = 0;
@@ -18631,14 +18413,13 @@ uint32_t enemy_shredder_defeated_fall(uint32_t d7, uint32_t object)
 	move_object_with_height_blocked(object);
 	arc = enemy_shredder_defeated_arc_ADDRESS;
 	enemy_arc_step(object, arc);
-	enemy_landed(object, &d7, &zero);
+	zero = enemy_landed(object);
 	if (zero == 0u)
-		return d7;
+		return;
 	OBJECT(object)->contacts &= 0x7Fu;
 	OBJECT(object)->state++;
 	animation = enemy_shredder_defeated_fall_animation_ADDRESS;
 	set_animation(0u, object, animation);
-	return d7;
 }
 
 /* slides to a stop, then the music stops, a sound, his clones told to vanish */
@@ -18694,12 +18475,12 @@ void enemy_shredder_defeated_stay(void)
 }
 
 /* a clone beaten or told to vanish blinks and is gone */
-void enemy_shredder_vanish(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_vanish(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05344C_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* a clone beaten or told to vanish: gives up its side, in its flinch pose */
@@ -18747,12 +18528,12 @@ void enemy_shredder_vanish_blink(uint32_t object)
 }
 
 /* kicks */
-void enemy_shredder_kick(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_kick(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0534D0_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the kick's animation and damage, facing his turtle */
@@ -18782,12 +18563,12 @@ void enemy_shredder_blow_end(uint32_t object)
 }
 
 /* thrusts the sword */
-void enemy_shredder_thrust(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_thrust(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_053530_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the thrust's animation and damage, facing his turtle */
@@ -18808,12 +18589,12 @@ void enemy_shredder_thrust_start(uint32_t object)
 }
 
 /* slashes with the sword, knocking down */
-void enemy_shredder_slash(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_slash(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05357A_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the slash that knocks down: its animation and damage, facing his turtle */
@@ -18834,12 +18615,12 @@ void enemy_shredder_slash_start(uint32_t object)
 }
 
 /* sweeps low with the sword */
-void enemy_shredder_sweep(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_sweep(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_0535C4_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the low sweep's animation and damage, facing his turtle */
@@ -18860,12 +18641,12 @@ void enemy_shredder_sweep_start(uint32_t object)
 }
 
 /* lines up with his turtle and fires his ray */
-void enemy_shredder_ray(uint32_t object, uint32_t slot, uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a5)
+uint32_t enemy_shredder_ray(uint32_t object, uint32_t slot, uint32_t a5)
 {
 	uint32_t states = 0;
 
 	states = indexed_table_of_32_bit_values_05360E_ADDRESS;
-	run_object_state(object, slot, states, p_d5, p_d7, p_a5);
+	return run_object_state(object, slot, a5, states);
 }
 
 /* the ray: up to 240 frames of lining up with his turtle, facing it */

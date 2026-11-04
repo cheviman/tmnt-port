@@ -3,7 +3,7 @@
  *    Description: the game's variables, tables, board registers and structures
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -1028,7 +1028,7 @@ extern const void *player_box_places_data;
 #define player_box_places ((const uint32_t *)player_box_places_data)
 #define box_labels_ADDRESS 0x00332Au
 extern const void *box_labels_data;
-#define box_labels ((const uint32_t *)box_labels_data)
+#define box_labels (*(const uint32_t *)box_labels_data)
 #define lives_digit_top_ADDRESS 0x0033A2u
 extern const void *lives_digit_top_data;
 #define lives_digit_top ((const uint8_t *)lives_digit_top_data)

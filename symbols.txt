@@ -17850,3 +17850,39 @@ local direction_to_object 047D94 d2 target_y
 # ---- system/test_mode.c ----
 # 0019B8 "moveq #$0, D0" 0019C2 "move.l D0, (A0)+" the 0 the six sums of the mask ROMs start from
 local start_mask_rom_sums 0019B8 d0 cleared
+# ---- batch 8a2: what the routines leave in registers for later ones to read, kept as the game's state ----
+# A part of a register a routine reads before anything sets it is what the code before left there: all through the
+# frame from the VBLANK handler down, which finds the registers of the code it interrupted (003DC4 "movem.l
+# D0-D7/A0-A6, $60440.l", put back at 003E44 "movem.l $60440.l, D0-D7/A0-A6"). Those parts, and every value that
+# reaches them, are global variables of the C (core/decompiler/carried.py; the runtime puts them back when an
+# interrupt's handler returns); the rest of each register stays in the functions' locals and parameters.
+# 00FCE8 "move.w #$2000, D7" 00FCFA "add.l D7, ($12,A6)" hydrant_start_water adds all of D7 to the water's x having set
+# only its low word: the high word is what the routines before left (00EBD2 krang_start_fist, 048690 enemy_start_arc,
+# the billboard's soldier, the rock soldier's blast, the Technodrome's missile do the same); 002338 "btst D6, D7"
+# 009362 "btst D6, D7" the boxes and the palette requests test bits of D7 as a long
+register d7 offset_high_word
+comment offset_high_word the high word of what the code adds as an offset or tests as a long of flags in D7, whose low word only it sets: 0 after a count, a sound or a mask of its own (a moveq), FFFF where an enemy has not landed (enemy_landed 04863A "moveq #-$1, D7"), the sign of a step across (enemy_start_arc 048674 "ext.l D7"), what is left of a product (random_below 04847C "swap D7")
+# 03028A "cmpi.w #$130, D1" show_balloon takes D1's word for the speaker's x on the screen, 046FFC "cmpi.w #$1a0, D1"
+# draw_sprites for a sprite's x, and the area exits for a turtle's (02CE00 "move.w D1, ($c,A0)"): its high byte, and
+# the high word over it, are what the routines before left where they set only its low byte
+register d1 screen_x_high
+comment screen_x_high the high byte of the word the code takes for an x on the screen in D1, and the high word above it: what the area exits' routines put there for a speed or a place (turtle_exit_go_to_place 02CE0C "lsl.l #8, D1"), the high byte of a tile offset (draw_box_frame), of a job's word (the main loop), of a scroll step (auto_scroll 01ACEE "lsl.w #5, D1")
+# 047DD0 "exg D1, D2" direction_to swaps the distances across and up and down, and reads D2's high word with the one
+# across (the area exits' turtle_exit_go_to_place 02CE0E "lsl.l #8, D2" left a place in it)
+register d2 distance_high_word
+comment distance_high_word the high word of D2, which direction_to reads with a distance across after swapping it with D1: what the area exits leave there (a turtle's place times 256, turtle_exit_go_to_place 02CE0E "lsl.l #8, D2")
+# 013078 "tst.b D5" helicopter_fly takes D5's low byte for whether the turtle it aims at is in line, set only where it
+# finds one (013006 "moveq #$1, D5"); 00E890 "move.w ($e,A6), D5" 00E89E "cmpi.w #$b, D5" the routines that look for a
+# turtle close by work out a distance in D5's word and leave its low byte; 003D4E "abcd D5, D4" add_credit_lives adds
+# it to the lives
+register d5 distance_low_byte
+comment distance_low_byte the low byte of the distance up and down or across that the routines that look for a turtle close by work out in D5 (krang_find_close_turtle 00E89E "cmpi.w #$b, D5") and leave there; helicopter_fly takes it for whether a turtle is in line, the tile drawers for a tile's colour, add_credit_lives for the lives a credit adds
+# 00965C "move.w D6, $63418.l" fade_palettes_start keeps D6 for the fade's banks and rate; 0024AC "move.b ($1,A4,D6.w),
+# D0" player_box_colour reads D6's word for the player's number, whose high byte the routines before left
+register d6 fade_banks
+comment fade_banks D6's low word: the banks and the rate of a fade (fade_palettes_start 00965C "move.w D6, $63418.l": the ending's and the opening's fades put them there), the bank a palette request reached (palette_request_area), the board's control byte send_sound_command writes (00923A "move.b D6, $a0001.l"); the players' boxes read its high byte as the high byte of the player's number
+# 0095EA "move.b (A4)+, ($1,A5)" copy_palette_list writes colours where A5 points, 009662 "move.l A5, $63414.l"
+# fade_palettes_start keeps it for the palettes to fade to; 0094AC "movea.l (A5,D6.w), A5" the palette requests set it
+# to a bank's place in the palette RAM and leave it for the next request
+register a5 palette_place
+comment palette_place where A5 points in the palettes: the place in the palette RAM a palette request copies colours to (palette_request_list 0094AC "movea.l (A5,D6.w), A5", copy_palette_list moves it on), the palettes a fade goes to (fade_palettes_start 009662 "move.l A5, $63414.l": the ending's and the opening's fades put them there)

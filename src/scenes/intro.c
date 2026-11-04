@@ -3,7 +3,7 @@
  *    Description: the story before area 0: the rooftop, "Fire!!", the climb, the burning roof
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -45,7 +45,6 @@ void start_intro(void)
 void run_intro(void)
 {
 	uint16_t step_offset = 0;
-	uint32_t ignored = 0, ignored_2 = 0;
 	uint8_t t1 = 0;
 
 	if (balloon_time != 0u)
@@ -53,7 +52,7 @@ void run_intro(void)
 		t1 = balloon_time;
 		balloon_time = t1 - 1u;
 		if (t1 == 1u)
-			erase_balloon(&ignored, &ignored_2);
+			erase_balloon();
 	}
 	step_offset = (uint16_t)((uint32_t)cutscene_step << 2);
 	switch (step_offset)
@@ -279,8 +278,8 @@ void colour_tiles_8x4(uint8_t colour, uint32_t tile_place)
 void intro_rooftop(uint32_t height)
 {
 	uint8_t sound = 0, tile_attribute = 0, tile_code = 0;
-	uint16_t count = 0, count_2 = 0, kind = 0, line = 0, screen_y = 0;
-	uint32_t animation_entry = 0, animations = 0, data = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, ignored_6 = 0, object = 0, screen_x = 0, tile_place = 0;
+	uint16_t count = 0, count_2 = 0, kind = 0, line = 0, screen_x = 0, screen_y = 0;
+	uint32_t animation_entry = 0, animations = 0, data = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, object = 0, tile_place = 0;
 	uint8_t t1 = 0;
 	uint16_t height_2 = 0, x_speed = 0, t2 = 0, t3 = 0, t4 = 0;
 
@@ -340,7 +339,7 @@ void intro_rooftop(uint32_t height)
 			if (t1 == 1u)
 			{
 				animation_entry = ANIMATION_ENTRY(animations);
-				set_animation(ignored_6, object, animation_entry);
+				set_animation(ignored_4, object, animation_entry);
 			}
 		}
 		object += 0x50u;
@@ -385,8 +384,8 @@ void intro_rooftop(uint32_t height)
 		screen_x = 0x108u;
 		screen_y = 0x28u;
 		line = 0x41u;
-		show_balloon_beside(screen_y, line, &height, &screen_x, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
-		draw_balloon_pointer(ignored_5);
+		show_balloon_beside(screen_x, screen_y, line, &height, &ignored, &ignored_2, &ignored_3);
+		draw_balloon_pointer(ignored_3);
 		return;
 	}
 	if (cutscene_time == 0x90u)
@@ -401,8 +400,8 @@ void intro_rooftop(uint32_t height)
 	screen_x = 0xA8u;
 	screen_y = 0x28u;
 	line = 0u;
-	show_balloon_beside(screen_y, line, &height, &screen_x, &ignored, &ignored_2, &ignored_3, &ignored_4, &ignored_5);
-	draw_balloon_pointer(ignored_5);
+	show_balloon_beside(screen_x, screen_y, line, &height, &ignored, &ignored_2, &ignored_3);
+	draw_balloon_pointer(ignored_3);
 }
 
 /* the picture of a tall building seen from below with the turtles at its foot */
@@ -498,8 +497,8 @@ void intro_climb(void)
 /* the burning roof with the four turtles dropping onto it */
 void intro_roof_start(void)
 {
-	uint16_t routine_state = 0;
-	uint32_t drop_wait = 0, effect_lists = 0, ignored = 0, ignored_2 = 0, kind = 0, object = 0, screen_x = 0, tile_place = 0;
+	uint16_t d5 = 0, routine_state = 0;
+	uint32_t drop_wait = 0, effect_lists = 0, ignored = 0, kind = 0, object = 0, tile_place = 0;
 
 	if (palettes_busy != 0u)
 		return;
@@ -514,7 +513,8 @@ void intro_roof_start(void)
 	start_palette_effect_lists(effect_lists);
 	object = OBJECT_ADDRESS(44);
 	kind = 0u;
-	screen_x = 0xB0u;
+	d5 = 0xB0u;
+	distance_low_byte = 0xB0u;
 	drop_wait = 0x20u;
 	do
 	{
@@ -522,16 +522,17 @@ void intro_roof_start(void)
 		OBJECT(object)->contacts = 0u;
 		OBJECT(object)->kind = kind;
 		OBJECT(object)->height = 0xB000u;
-		OBJECT(object)->screen_x = screen_x;
+		OBJECT(object)->screen_x = (d5 & ~0xFFu) | (distance_low_byte & 0xFFu);
 		OBJECT(object)->screen_y = 0x50u;
 		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (drop_wait & 0xFFu);
 		OBJECT(object)->shadow = common_shadow_ADDRESS;
 		OBJECT(object)->colour = 0xFFu;
 		OBJECT(object)->animation_delay = 0u;
 		routine_state = 0x203u;
-		turtle_set_state(routine_state, object, &ignored, &kind, &screen_x, &drop_wait, &ignored_2);
+		turtle_set_state(routine_state, object, &ignored, &kind, &drop_wait);
 		kind = (uint8_t)(kind + 1u);
-		screen_x = (uint16_t)(screen_x - 0xCu);
+		d5 = (uint16_t)(((d5 & ~0xFFu) | (distance_low_byte & 0xFFu)) - 0xCu);
+		distance_low_byte = d5;
 		drop_wait = (uint8_t)(drop_wait + 0x10u);
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(48));
@@ -542,7 +543,7 @@ void intro_roof_start(void)
 void intro_roof_land(void)
 {
 	uint16_t routine_state = 0;
-	uint32_t animation = 0, ignored = 0, ignored_3 = 0, ignored_4 = 0, ignored_5 = 0, ignored_6 = 0, object = 0;
+	uint32_t animation = 0, ignored = 0, ignored_3 = 0, ignored_4 = 0, object = 0;
 	uint8_t t1 = 0;
 	uint16_t height = 0;
 
@@ -585,7 +586,7 @@ void intro_roof_land(void)
 						{
 							OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | 0xCu;
 							routine_state = 0x200u;
-							turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
+							turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4);
 						}
 					}
 				}
@@ -597,7 +598,7 @@ void intro_roof_land(void)
 				if (t1 == 1u && OBJECT(object)->height == 0u)
 				{
 					routine_state = 0x100u;
-					turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4, &ignored_5, &ignored_6);
+					turtle_set_state(routine_state, object, &ignored, &ignored_3, &ignored_4);
 				}
 			}
 		}

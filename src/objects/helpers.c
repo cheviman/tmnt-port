@@ -3,7 +3,7 @@
  *    Description: small routines the objects of these files share: their stats, moves, free objects, the bosses' targets
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -45,6 +45,7 @@ void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p
 		boss_aim_at_target(object, p_direction_offset, &choice_count, p_choices);
 		choice_count = IN_PAGE(choice_count, 1u);
 	}
+	offset_high_word = choice_count;
 	*p_picked = choice_count;
 }
 
@@ -83,7 +84,7 @@ void set_object_stats(uint32_t object, uint32_t stats)
 }
 
 /* moves the object by its speeds across, up or down the screen, and in height */
-uint32_t move_by_speeds(uint32_t object)
+void move_by_speeds(uint32_t object)
 {
 	uint32_t height_speed = 0, y_speed = 0;
 
@@ -92,7 +93,7 @@ uint32_t move_by_speeds(uint32_t object)
 	OBJECT(object)->y += y_speed;
 	height_speed = (y_speed & ~0xFFFFu) | (uint16_t)OBJECT(object)->height_speed;
 	OBJECT(object)->height += height_speed;
-	return height_speed;
+	offset_high_word = height_speed;
 }
 
 /* finds an object not in use among the next ones */

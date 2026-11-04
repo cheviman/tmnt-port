@@ -3,7 +3,7 @@
  *    Description: the attract mode's steps: the title, the coin's screen, the opening's steps, a character's profile, BEST 10 PLAYERS, its end
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -137,7 +137,7 @@ void title_background(void)
 /* the title's logo */
 void title_logo(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t ignored = 0;
 
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -154,8 +154,8 @@ void title_logo(void)
 		title_wait();
 		break;
 	}
-	build_draw_list(&ignored, &ignored_2);
-	draw_sprites(&ignored_3, &ignored_2);
+	build_draw_list();
+	draw_sprites(ignored);
 }
 
 /* the logo's pieces placed */
@@ -427,7 +427,7 @@ void profile_start_text(void)
 /* the profile's picture and text */
 void profile_show(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t ignored = 0;
 
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -444,8 +444,8 @@ void profile_show(void)
 		profile_wait();
 		break;
 	}
-	build_draw_list(&ignored, &ignored_2);
-	draw_sprites(&ignored_3, &ignored_2);
+	build_draw_list();
+	draw_sprites(ignored);
 }
 
 /* the character's picture placed */
@@ -643,7 +643,7 @@ void attract_begin(void)
 }
 
 /* the coin's screen, by its steps: the boxes, the players' turtles, PRESS START */
-void attract_coin_screen(uint32_t d1)
+void attract_coin_screen(void)
 {
 	switch ((uint32_t)(int8_t)scene)
 	{
@@ -651,7 +651,7 @@ void attract_coin_screen(uint32_t d1)
 		coin_screen_setup();
 		return;
 	case 1:
-		coin_screen_show(d1);
+		coin_screen_show();
 		return;
 	}
 }
@@ -742,7 +742,7 @@ void coin_screen_check_credits(void)
 }
 
 /* the coin's screen shown, by its steps */
-void coin_screen_show(uint32_t d1)
+void coin_screen_show(void)
 {
 	switch ((uint32_t)(int8_t)scene_step)
 	{
@@ -759,7 +759,7 @@ void coin_screen_show(uint32_t d1)
 		coin_screen_draw();
 		return;
 	case 4:
-		coin_screen_wait(d1);
+		coin_screen_wait();
 		return;
 	}
 }
@@ -820,14 +820,13 @@ void coin_screen_draw(void)
 }
 
 /* the coin's screen held until a player starts, redrawn when a coin comes in */
-void coin_screen_wait(uint32_t d1)
+void coin_screen_wait(void)
 {
 	uint8_t sound = 0;
 	uint16_t job = 0;
-	uint32_t ignored = 0, ignored_2 = 0;
 	uint8_t t1 = 0;
 
-	update_player_messages(d1, &ignored, &ignored_2);
+	update_player_messages();
 	if (new_credit != 0u)
 	{
 		job = (uint16_t)(0xB00u | 0x10u | players_credited);
@@ -947,7 +946,7 @@ void reset_layers_scroll(void)
 }
 
 /* the opening, by its steps, until a coin */
-void attract_opening(uint16_t d6, uint32_t a5)
+void attract_opening(void)
 {
 	uint8_t sound = 0;
 
@@ -964,7 +963,7 @@ void attract_opening(uint16_t d6, uint32_t a5)
 		opening_setup();
 		return;
 	case 1:
-		opening_show(d6, a5);
+		opening_show();
 		return;
 	}
 }
@@ -1045,9 +1044,9 @@ void opening_setup_start(void)
 }
 
 /* the opening played for its time, then the title */
-void opening_show(uint16_t d6, uint32_t a5)
+void opening_show(void)
 {
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t ignored = 0;
 	uint8_t t1 = 0;
 
 	if ((frame_count & 3u) == 0u)
@@ -1062,9 +1061,9 @@ void opening_show(uint16_t d6, uint32_t a5)
 			return;
 		}
 	}
-	run_opening(d6, a5);
-	build_draw_list(&ignored, &ignored_2);
-	draw_sprites(&ignored_3, &ignored_2);
+	run_opening();
+	build_draw_list();
+	draw_sprites(ignored);
 }
 
 /* BEST 10 PLAYERS, by its steps, until a coin */

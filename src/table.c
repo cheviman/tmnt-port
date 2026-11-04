@@ -3,13 +3,21 @@
  *    Description: the code the board runs by address (the vectors' handlers), the reset entry, and the tables the game loads by name
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
  *    tools/decompile.py, with the names of symbols.txt.
  */
 #include "game.h"
+
+/* what the code carries in its registers (game.h) */
+uint32_t screen_x_high = 0u, distance_high_word = 0u, distance_low_byte = 0u, fade_banks = 0u, offset_high_word = 0u, palette_place = 0u;
+
+/* the same, for the runtime to put back what an interrupt's handler found there when it returns, as the
+   handler does */
+uint32_t *const game_context[] = { &screen_x_high, &distance_high_word, &distance_low_byte, &fade_banks, &offset_high_word, &palette_place };
+const size_t game_context_count = 6;
 
 /* the handlers of the vectors (the reset, the exceptions, the interrupts), by address */
 const game_code_entry game_code[] =

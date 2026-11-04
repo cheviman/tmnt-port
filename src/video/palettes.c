@@ -3,7 +3,7 @@
  *    Description: the palettes: requests queued and done a frame later, the palette effects
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -46,89 +46,37 @@ void unreached_009264(uint32_t requests)
 }
 
 /* a bank of the palette requests a frame: the one under way, or the next one queued */
-void run_palette_requests(uint32_t *p_d5, uint32_t *p_d6, uint32_t *p_d7, uint32_t *p_a5)
+void run_palette_requests(uint16_t d7)
 {
-	uint32_t d5 = *p_d5;
-	uint32_t d7 = *p_d7;
-	uint16_t request_kind = 0;
-	uint32_t banks = 0, data = 0, palette_request = 0, palettes = 0;
+	uint16_t banks = 0, request_kind = 0, second_half_offset = 0;
+	uint32_t data = 0, palette_request = 0, palettes = 0;
 	uint16_t kind = 0;
 	uint32_t t1 = 0;
 
 	if (palette_area_banks != 0u)
 	{
-		banks = (d7 & ~0xFFu) | palette_area_banks;
-		palette_request_area(&d5, p_d6, &banks, p_a5);
+		banks = (uint16_t)((d7 & ~0xFFu) | palette_area_banks);
+		palette_request_area(banks);
+		return;
 	}
-	else if (palette_set_banks != 0u)
+	if (palette_set_banks != 0u)
 	{
-		banks = (d7 & ~0xFFu) | palette_set_banks;
+		banks = (uint16_t)((d7 & ~0xFFu) | palette_set_banks);
 		palettes = palette_set;
-		palette_request_set_next_bank(palettes, p_d6, &banks, p_a5);
+		palette_request_set_next_bank(banks, palettes);
+		return;
 	}
-	else if (palette_black_banks != 0u)
+	if (palette_black_banks != 0u)
 	{
-		banks = (d7 & ~0xFFu) | palette_black_banks;
-		palette_request_black(p_d6, &banks, p_a5);
+		banks = (uint16_t)((d7 & ~0xFFu) | palette_black_banks);
+		palette_request_black(banks);
+		return;
 	}
-	else if (palette_second_half == 0u)
+	if (palette_second_half != 0u)
 	{
-		palette_request = palette_queue_read;
-		kind = PALETTE_REQUEST(palette_request)->kind;
-		request_kind = kind;
-		if (kind != 0u)
-		{
-			banks = (uint8_t)request_kind;
-			data = PALETTE_REQUEST(palette_request)->data;
-			request_kind = (request_kind & 0x3F00u) >> 6;
-			PALETTE_REQUEST(palette_request)->kind = 0u;
-			palette_request += 2u;
-			PALETTE_REQUEST(palette_request - 0x2u)->data = 0u;
-			palette_request += 4u;
-			if (palette_request > 0x60BEFu)
-				palette_request = PALETTE_REQUEST_ADDRESS(0);
-			palette_queue_read = palette_request;
-			switch (request_kind)
-			{
-			case 0:
-			case 36:
-				palette_request_none();
-				break;
-			case 4:
-				palette_request_area(&d5, p_d6, &banks, p_a5);
-				break;
-			case 8:
-				palette_request_set(data, p_d6, &banks, p_a5);
-				break;
-			case 12:
-				palette_request_list(data, p_d6, &banks, p_a5);
-				break;
-			case 16:
-				palette_request_palette(banks, data, p_d6, p_a5);
-				break;
-			case 20:
-				palette_request_colours((uint8_t)banks, data, p_d6, p_a5);
-				break;
-			case 24:
-				palette_request_black(p_d6, &banks, p_a5);
-				break;
-			case 28:
-			case 32:
-				palette_request_spare();
-				break;
-			}
-		}
-		palettes_busy = 0u;
-		t1 = (((uint32_t)palette_area_banks << 24u) | ((uint32_t)palette_set_banks << 16u) | ((uint32_t)palette_black_banks << 8u) | palette_second_half);
-		banks = t1;
-		if (t1 != 0u)
-			palettes_busy = 1u;
-	}
-	else
-	{
-		banks = palette_second_half;
-		banks = (uint16_t)(banks << 2);
-		switch (banks)
+		offset_high_word = 0u;
+		second_half_offset = (uint16_t)((uint32_t)palette_second_half << 2);
+		switch (second_half_offset)
 		{
 		case 0:
 		case 16:
@@ -138,22 +86,78 @@ void run_palette_requests(uint32_t *p_d5, uint32_t *p_d6, uint32_t *p_d7, uint32
 			palette_request_none();
 			break;
 		case 4:
-			palette_request_area_second_half(&d5, p_d6, &banks, p_a5);
+			palette_request_area_second_half(second_half_offset);
 			break;
 		case 8:
-			palette_request_set_second_half(p_d6, &banks, p_a5);
+			palette_request_set_second_half(second_half_offset);
 			break;
 		case 12:
-			palette_request_list_second_half(p_d6, &banks, p_a5);
+			palette_request_list_second_half(second_half_offset);
 			break;
 		case 24:
-			palette_request_black_second_half(p_d6, &banks, p_a5);
+			palette_request_black_second_half(second_half_offset);
 			break;
 		}
 		palette_second_half = 0u;
+		return;
 	}
-	*p_d5 = (*p_d5 & 0xFFFF0000u) | (d5 & 0xFFFFu);
-	*p_d7 = banks;
+	palette_request = palette_queue_read;
+	kind = PALETTE_REQUEST(palette_request)->kind;
+	request_kind = kind;
+	if (kind == 0u)
+	{
+		palettes_busy = 0u;
+		t1 = (((uint32_t)palette_area_banks << 24u) | ((uint32_t)palette_set_banks << 16u) | ((uint32_t)palette_black_banks << 8u) | palette_second_half);
+		offset_high_word = t1;
+		if (t1 != 0u)
+			palettes_busy = 1u;
+		return;
+	}
+	offset_high_word = 0u;
+	banks = (uint8_t)request_kind;
+	data = PALETTE_REQUEST(palette_request)->data;
+	request_kind = (request_kind & 0x3F00u) >> 6;
+	PALETTE_REQUEST(palette_request)->kind = 0u;
+	palette_request += 2u;
+	PALETTE_REQUEST(palette_request - 0x2u)->data = 0u;
+	palette_request += 4u;
+	if (palette_request > 0x60BEFu)
+		palette_request = PALETTE_REQUEST_ADDRESS(0);
+	palette_queue_read = palette_request;
+	switch (request_kind)
+	{
+	case 0:
+	case 36:
+		palette_request_none();
+		break;
+	case 4:
+		palette_request_area(banks);
+		break;
+	case 8:
+		palette_request_set(banks, data);
+		break;
+	case 12:
+		palette_request_list(banks, data);
+		break;
+	case 16:
+		palette_request_palette(banks, data);
+		break;
+	case 20:
+		palette_request_colours((uint8_t)banks, data);
+		break;
+	case 24:
+		palette_request_black(banks);
+		break;
+	case 28:
+	case 32:
+		palette_request_spare();
+		break;
+	}
+	palettes_busy = 0u;
+	t1 = (((uint32_t)palette_area_banks << 24u) | ((uint32_t)palette_set_banks << 16u) | ((uint32_t)palette_black_banks << 8u) | palette_second_half);
+	offset_high_word = t1;
+	if (t1 != 0u)
+		palettes_busy = 1u;
 }
 
 /* a palette request that does nothing */
@@ -162,164 +166,158 @@ void palette_request_none(void)
 }
 
 /* the area's palettes into the banks asked for, a bank a frame */
-void palette_request_area(uint32_t *p_area_offset, uint32_t *p_bank, uint32_t *p_banks, uint32_t *p_a5)
+void palette_request_area(uint16_t banks)
 {
-	uint16_t area_offset = (uint16_t)*p_area_offset;
-	uint32_t banks = *p_banks;
 	uint8_t done_bank = 0;
-	uint32_t bank = 0, palettes = 0;
+	uint16_t area_offset = 0, bank = 0, palette_count = 0;
+	uint32_t a5 = 0, palettes = 0;
 
 	bank = 0u;
-	for (;;)
+	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
 	{
-		if ((banks & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
+		bank = (uint8_t)(bank + 1u);
+		if (bank >= 4u)
 		{
-			bank = (uint8_t)(bank + 1u);
-			if (bank < 4u)
-				continue;
 			palette_area_banks = 0u;
-			break;
+			fade_banks = bank;
+			return;
 		}
-		done_bank = (uint8_t)bank;
-		palette_area_banks = banks & ~shl32(1u, (int)(bank & 0x1Fu));
-		banks = palette_bank_counts[bank];
-		area_offset = (uint16_t)((uint32_t)stage << 2);
-		bank = (uint16_t)(bank << 2);
-		palettes = mem_read32(area_palettes[area_offset / 4u] + bank);
-		*p_a5 = palette_bank_addresses[bank / 4u];
-		if (palette_second_half != 0u)
-		{
-			*p_a5 += 0x200u;
-			palettes += 0x20u;
-		}
-		if (done_bank == 3u)
-			palette_second_half = 1u;
-		copy_palette_list((uint16_t)banks, palettes, &bank, p_a5);
-		break;
 	}
-	*p_area_offset = (*p_area_offset & 0xFFFF0000u) | area_offset;
-	*p_bank = bank;
-	*p_banks = banks;
+	done_bank = (uint8_t)bank;
+	palette_area_banks = ((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & ~shl32(1u, (int)(bank & 0x1Fu));
+	offset_high_word = 0u;
+	palette_count = palette_bank_counts[bank];
+	area_offset = (uint16_t)((uint32_t)stage << 2);
+	bank = (uint16_t)((uint32_t)bank << 2);
+	palettes = mem_read32(area_palettes[area_offset / 4u] + bank);
+	a5 = palette_bank_addresses[bank / 4u];
+	if (palette_second_half != 0u)
+	{
+		a5 += 0x200u;
+		palettes += 0x20u;
+	}
+	if (done_bank == 3u)
+		palette_second_half = 1u;
+	palette_place = a5;
+	copy_palette_list(palette_count, palettes);
+	distance_low_byte = area_offset;
 }
 
 /* the second half of the sprites' palettes of the area's set */
-void palette_request_area_second_half(uint32_t *p_area_offset, uint32_t *p_d6, uint32_t *p_d7, uint32_t *p_a5)
+void palette_request_area_second_half(uint16_t second_half_offset)
 {
-	uint32_t area_offset = *p_area_offset;
+	uint16_t banks = 0;
 
-	*p_d7 = (*p_d7 & ~0xFFu) | 8u;
-	palette_request_area(&area_offset, p_d6, p_d7, p_a5);
-	*p_area_offset = (*p_area_offset & 0xFFFF0000u) | (area_offset & 0xFFFFu);
+	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_area(banks);
 }
 
 /* a set of palettes into the banks asked for, a bank a frame */
-void palette_request_set(uint32_t bank_lists, uint32_t *p_d6, uint32_t *p_banks, uint32_t *p_a5)
+void palette_request_set(uint16_t banks, uint32_t bank_lists)
 {
 	palette_set = bank_lists;
-	palette_request_set_next_bank(bank_lists, p_d6, p_banks, p_a5);
+	palette_request_set_next_bank(banks, bank_lists);
 }
 
 /* the set's next bank */
-void palette_request_set_next_bank(uint32_t bank_lists, uint32_t *p_bank, uint32_t *p_banks, uint32_t *p_a5)
+void palette_request_set_next_bank(uint16_t banks, uint32_t bank_lists)
 {
-	uint32_t banks = *p_banks;
 	uint8_t done_bank = 0;
-	uint32_t bank = 0, palettes = 0;
+	uint16_t bank = 0, palette_count = 0;
+	uint32_t a5 = 0, palettes = 0;
 
 	bank = 0u;
-	for (;;)
+	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
 	{
-		if ((banks & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
+		bank = (uint8_t)(bank + 1u);
+		if (bank >= 4u)
 		{
-			bank = (uint8_t)(bank + 1u);
-			if (bank < 4u)
-				continue;
 			palette_set_banks = 0u;
 			palette_set = 0u;
-			break;
+			fade_banks = bank;
+			return;
 		}
-		done_bank = (uint8_t)bank;
-		palette_set_banks = banks & ~shl32(1u, (int)(bank & 0x1Fu));
-		banks = palette_bank_counts[bank];
-		bank = (uint16_t)(bank << 2);
-		palettes = PALETTE_LIST_POINTER(bank_lists + ((int32_t)(bank / 4u)) * 0x4u);
-		*p_a5 = palette_bank_addresses[bank / 4u];
-		if (palette_second_half != 0u)
-		{
-			*p_a5 += 0x200u;
-			palettes += 0x20u;
-		}
-		if (done_bank == 3u)
-			palette_second_half = 2u;
-		copy_palette_list((uint16_t)banks, palettes, &bank, p_a5);
-		break;
 	}
-	*p_bank = bank;
-	*p_banks = banks;
+	done_bank = (uint8_t)bank;
+	palette_set_banks = ((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & ~shl32(1u, (int)(bank & 0x1Fu));
+	offset_high_word = 0u;
+	palette_count = palette_bank_counts[bank];
+	bank = (uint16_t)((uint32_t)bank << 2);
+	palettes = PALETTE_LIST_POINTER(bank_lists + (bank / 4u) * 0x4u);
+	a5 = palette_bank_addresses[bank / 4u];
+	if (palette_second_half != 0u)
+	{
+		a5 += 0x200u;
+		palettes += 0x20u;
+	}
+	if (done_bank == 3u)
+		palette_second_half = 2u;
+	palette_place = a5;
+	copy_palette_list(palette_count, palettes);
 }
 
 /* the second half of the sprites' palettes of the set */
-void palette_request_set_second_half(uint32_t *p_d6, uint32_t *p_d7, uint32_t *p_a5)
+void palette_request_set_second_half(uint16_t second_half_offset)
 {
+	uint16_t banks = 0;
 	uint32_t bank_lists = 0;
 
 	bank_lists = palette_set;
-	*p_d7 = (*p_d7 & ~0xFFu) | 8u;
-	palette_request_set(bank_lists, p_d6, p_d7, p_a5);
+	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_set(banks, bank_lists);
 }
 
 /* a list of palettes into one bank */
-void palette_request_list(uint32_t palettes, uint32_t *p_bank, uint32_t *p_banks, uint32_t *p_a5)
+void palette_request_list(uint16_t banks, uint32_t palettes)
 {
-	uint32_t banks = *p_banks;
 	uint8_t done_bank = 0;
-	uint32_t bank = 0;
+	uint16_t bank = 0, palette_count = 0;
+	uint32_t a5 = 0;
 
 	bank = 0u;
-	for (;;)
+	while (((banks | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
 	{
-		if ((banks & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
+		bank = (uint8_t)(bank + 1u);
+		if (bank >= 4u)
 		{
-			bank = (uint8_t)(bank + 1u);
-			if (bank >= 4u)
-				break;
-			continue;
+			fade_banks = bank;
+			return;
 		}
-		done_bank = (uint8_t)bank;
-		banks = palette_bank_counts[bank];
-		*p_a5 = palette_bank_addresses[bank & 0x3FFFu];
-		if (palette_second_half != 0u)
-		{
-			*p_a5 += 0x200u;
-			palettes += 0x20u;
-		}
-		if (done_bank == 3u)
-		{
-			palette_set = palettes;
-			palette_second_half = 3u;
-		}
-		copy_palette_list((uint16_t)banks, palettes, &bank, p_a5);
-		break;
 	}
-	*p_bank = bank;
-	*p_banks = banks;
+	done_bank = (uint8_t)bank;
+	offset_high_word = 0u;
+	palette_count = palette_bank_counts[bank];
+	a5 = palette_bank_addresses[bank & 0x3FFFu];
+	if (palette_second_half != 0u)
+	{
+		a5 += 0x200u;
+		palettes += 0x20u;
+	}
+	if (done_bank == 3u)
+	{
+		palette_set = palettes;
+		palette_second_half = 3u;
+	}
+	palette_place = a5;
+	copy_palette_list(palette_count, palettes);
 }
 
 /* the second half of the sprites' palettes of the list */
-void palette_request_list_second_half(uint32_t *p_d6, uint32_t *p_d7, uint32_t *p_a5)
+void palette_request_list_second_half(uint16_t second_half_offset)
 {
+	uint16_t banks = 0;
 	uint32_t palettes = 0;
 
 	palettes = palette_set;
-	*p_d7 = (*p_d7 & ~0xFFu) | 8u;
-	palette_request_list(palettes, p_d6, p_d7, p_a5);
+	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_list(banks, palettes);
 }
 
 /* sixteen colours into one palette */
-void palette_request_palette(uint32_t palette, uint32_t data, uint32_t *p_count, uint32_t *p_colour_place)
+void palette_request_palette(uint32_t palette, uint32_t data)
 {
-	uint16_t bank_offset = 0;
-	uint32_t colour_place = 0, count = 0;
+	uint16_t bank_offset = 0, count = 0;
+	uint32_t colour_place = 0;
 	uint16_t t1 = 0;
 
 	bank_offset = (uint16_t)palette;
@@ -337,75 +335,77 @@ void palette_request_palette(uint32_t palette, uint32_t data, uint32_t *p_count,
 		data++;
 		colour_place += 4u;
 	} while (t1 != 0xFFFFu);
-	*p_count = count;
-	*p_colour_place = colour_place;
+	fade_banks = count;
+	palette_place = colour_place;
 }
 
 /* single colours into a bank's palettes */
-void palette_request_colours(uint8_t bank, uint32_t data, uint32_t *p_d6, uint32_t *p_bank_place)
+void palette_request_colours(uint8_t bank, uint32_t data)
 {
 	uint16_t bank_offset = 0;
-	uint32_t colour_number = 0, colour_place = 0;
+	uint32_t a5 = 0, colour_number = 0, colour_place = 0, d6 = 0;
 	uint8_t colour_byte = 0;
 
 	bank_offset = (uint16_t)bank;
 	bank_offset = bank_offset & ~0xFu;
-	*p_bank_place = TABLE32(palette_bank_addresses, bank_offset >> 2);
+	a5 = TABLE32(palette_bank_addresses, bank_offset >> 2);
 	for (;;)
 	{
 		colour_byte = COLOUR_BYTE(data);
-		*p_d6 = colour_byte;
+		d6 = colour_byte;
 		data++;
 		if ((int8_t)colour_byte < 0)
 			break;
 		colour_number = COLOUR_BYTE(data);
-		colour_place = *p_bank_place + (uint16_t)(*p_d6 << 6) + (uint16_t)(colour_number << 2);
+		colour_place = a5 + (uint16_t)(d6 << 6) + (uint16_t)(colour_number << 2);
 		data++;
 		mem_write8(colour_place + 1u, COLOUR_BYTE(data));
 		data++;
 		mem_write8(colour_place + 3u, COLOUR_BYTE(data));
 		data++;
 	}
+	fade_banks = d6;
+	palette_place = a5;
 }
 
 /* the banks asked for turned black, a bank a frame */
-void palette_request_black(uint32_t *p_bank, uint32_t *p_banks, uint32_t *p_a5)
+void palette_request_black(uint16_t banks)
 {
-	uint32_t banks = *p_banks;
 	uint8_t done_bank = 0;
-	uint32_t bank = 0;
+	uint16_t bank = 0, palette_count = 0;
+	uint32_t a5 = 0;
 
 	bank = 0u;
-	for (;;)
+	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
 	{
-		if ((banks & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
+		bank = (uint8_t)(bank + 1u);
+		if (bank >= 4u)
 		{
-			bank = (uint8_t)(bank + 1u);
-			if (bank < 4u)
-				continue;
 			palette_black_banks = 0u;
-			break;
+			fade_banks = bank;
+			return;
 		}
-		done_bank = (uint8_t)bank;
-		palette_black_banks = banks & ~shl32(1u, (int)(bank & 0x1Fu));
-		banks = palette_bank_counts[bank];
-		*p_a5 = palette_bank_addresses[bank & 0x3FFFu];
-		if (palette_second_half != 0u)
-			*p_a5 += 0x200u;
-		if (done_bank == 3u)
-			palette_second_half = 6u;
-		blacken_palettes((uint16_t)banks, &bank, p_a5);
-		break;
 	}
-	*p_bank = bank;
-	*p_banks = banks;
+	done_bank = (uint8_t)bank;
+	palette_black_banks = ((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & ~shl32(1u, (int)(bank & 0x1Fu));
+	offset_high_word = 0u;
+	palette_count = palette_bank_counts[bank];
+	a5 = palette_bank_addresses[bank & 0x3FFFu];
+	if (palette_second_half != 0u)
+		a5 += 0x200u;
+	if (done_bank == 3u)
+		palette_second_half = 6u;
+	palette_place = a5;
+	blacken_palettes(palette_count);
 }
 
 /* the second half of the sprites' palettes turned black */
-void palette_request_black_second_half(uint32_t *p_d6, uint32_t *p_d7, uint32_t *p_a5)
+void palette_request_black_second_half(uint16_t second_half_offset)
 {
-	*p_d7 = (*p_d7 & ~0xFFu) | 8u;
-	palette_request_black(p_d6, p_d7, p_a5);
+	uint16_t banks = 0;
+
+	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_black(banks);
 }
 
 /* a spare palette request kind that does nothing */
@@ -414,66 +414,63 @@ void palette_request_spare(void)
 }
 
 /* 16 colours from each palette of a list into the palette RAM */
-void copy_palette_list(uint16_t count_2, uint32_t palettes, uint32_t *p_count, uint32_t *p_colour_place)
+void copy_palette_list(uint16_t count, uint32_t palettes)
 {
-	uint32_t colour_place = *p_colour_place;
-	uint32_t colours = 0, count = 0;
+	uint16_t count_2 = 0;
+	uint32_t colours = 0;
 	uint16_t t1 = 0, t2 = 0;
 
 	do
 	{
-		count = 0xFu;
+		count_2 = 0xFu;
 		colours = PALETTE_POINTER(palettes);
 		palettes += 4u;
 		do
 		{
-			mem_write8(colour_place + 1u, COLOUR_BYTE(colours));
+			mem_write8(palette_place + 1u, COLOUR_BYTE(colours));
 			colours++;
-			mem_write8(colour_place + 3u, COLOUR_BYTE(colours));
-			colour_place += 4u;
-			t1 = count - 1u;
-			count = t1;
+			mem_write8(palette_place + 3u, COLOUR_BYTE(colours));
+			palette_place += 4u;
+			t1 = count_2 - 1u;
+			count_2 = t1;
 			colours++;
 		} while (t1 != 0xFFFFu);
-		t2 = count_2 - 1u;
-		count_2 = t2;
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
-	*p_count = count;
-	*p_colour_place = colour_place;
+	fade_banks = count_2;
 }
 
 /* palettes turned black */
-void blacken_palettes(uint16_t count_2, uint32_t *p_count, uint32_t *p_colour_place)
+void blacken_palettes(uint16_t count)
 {
-	uint32_t colour_place = *p_colour_place;
-	uint32_t count = 0;
+	uint16_t count_2 = 0;
 	uint16_t t1 = 0, t2 = 0;
 
 	do
 	{
-		count = 0xFu;
+		count_2 = 0xFu;
 		do
 		{
-			mem_write8(colour_place + 1u, 0u);
-			mem_write8(colour_place + 3u, 0u);
-			t1 = count - 1u;
-			count = t1;
-			colour_place += 4u;
+			mem_write8(palette_place + 1u, 0u);
+			mem_write8(palette_place + 3u, 0u);
+			t1 = count_2 - 1u;
+			count_2 = t1;
+			palette_place += 4u;
 		} while (t1 != 0xFFFFu);
-		t2 = count_2 - 1u;
-		count_2 = t2;
+		t2 = count - 1u;
+		count = t2;
 	} while (t2 != 0xFFFFu);
-	*p_count = count;
-	*p_colour_place = colour_place;
+	fade_banks = count_2;
 }
 
 /* the palettes faded toward a list of palette sets, over the next frames */
-void copy_palette_sets(uint16_t fade, uint32_t target_palettes)
+void copy_palette_sets(void)
 {
 	switch ((uint32_t)(int8_t)fade_pass_step)
 	{
 	case 0:
-		fade_palettes_start(fade, target_palettes);
+		fade_palettes_start();
 		return;
 	case 1:
 		fade_palettes_read();
@@ -488,15 +485,15 @@ void copy_palette_sets(uint16_t fade, uint32_t target_palettes)
 }
 
 /* a fade toward a set of palettes starts */
-void fade_palettes_start(uint16_t fade, uint32_t target_palettes)
+void fade_palettes_start(void)
 {
 	fading = 1u;
 	fade_pass_step++;
 	fade_part = 0u;
 	fade_lists_left = 0u;
-	fade_part_mask = (uint8_t)(fade >> 8u);
-	fade_rate = (uint8_t)fade;
-	fade_target = target_palettes;
+	fade_part_mask = (uint8_t)(fade_banks >> 8u);
+	fade_rate = (uint8_t)fade_banks;
+	fade_target = palette_place;
 	fade_buffer_place = 0x63800u;
 	fade_palettes_read();
 }

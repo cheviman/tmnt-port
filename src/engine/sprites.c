@@ -3,7 +3,7 @@
  *    Description: the sprite engine: the objects' animations, their sprites into the K051960, their boxes
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    03-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -33,14 +33,15 @@ void hide_all_sprites(void)
 }
 
 /* every frame: the objects drawn sorted by their depth on the screen into the draw list */
-void build_draw_list(uint32_t *p_count, uint32_t *p_object)
+uint32_t build_draw_list(void)
 {
 	uint8_t drawn_count = 0;
-	uint16_t draw_depth = 0, first_slot = 0;
-	uint32_t count = 0, draw_list_place = 0, frame = 0, next_object = 0, object = 0, object_2 = 0;
+	uint16_t count = 0, draw_depth = 0, first_slot = 0;
+	uint32_t draw_list_place = 0, frame = 0, next_object = 0, object = 0, object_2 = 0;
 	uint16_t draw_next = 0, t1 = 0;
 
 	count = 0x31u;
+	offset_high_word = 0x31u;
 	drawn_count = 0u;
 	first_slot = 0x300u;
 	object = OBJECT_ADDRESS(0);
@@ -92,21 +93,18 @@ void build_draw_list(uint32_t *p_count, uint32_t *p_object)
 	} while (t1 != 0xFFFFu);
 	draw_first = first_slot;
 	draw_count = drawn_count;
-	*p_count = count;
-	*p_object = object;
+	return object;
 }
 
 /* every frame: the draw list's objects into the sprite chip with their shadows, their animations stepped
    on, the rest turned off */
-void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
+uint32_t draw_sprites(uint32_t object)
 {
-	uint16_t d1 = (uint16_t)*p_d1;
-	uint32_t object = *p_object;
 	bool L_047164 = false;
 	uint8_t flip = 0, flips = 0, frame_time = 0, object_colour = 0, objects_left = 0;
-	uint16_t bottom = 0, count = 0, shadow_y = 0;
+	uint16_t bottom = 0, count = 0, d1 = 0, shadow_y = 0;
 	uint32_t draw_list_place = 0, frame = 0, next_object = 0, size = 0, sprite = 0, sprite_place = 0;
-	uint8_t t2 = 0, colour = 0, frame_time_2 = 0, time = 0, last_sprite = 0, t5 = 0, t6 = 0;
+	uint8_t t2 = 0, colour = 0, frame_time_2 = 0, time = 0, t5 = 0, t6 = 0;
 	uint16_t t1 = 0, t3 = 0, t4 = 0, draw_next = 0;
 
 	draw_list_place = draw_list_ADDRESS + (int16_t)draw_first;
@@ -136,16 +134,21 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 				if ((int8_t)t2 < 0)
 					d1 = (uint16_t)(0u - d1 - SPRITE_SIZE(size)->width);
 				d1 += OBJECT(object)->screen_x;
-				if ((int16_t)d1 < 0x1A0 && SPRITE_SIZE(size)->left < (int16_t)d1)
+				screen_x_high = d1;
+				if ((int16_t)((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)) < 0x1A0 && SPRITE_SIZE(size)->left < (int16_t)((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)))
 				{
 					t3 = OBJECT(object)->height_whole + SPRITE(sprite)->y + OBJECT(object)->screen_y;
 					bottom = t3;
 					if ((int16_t)t3 >= 0 && (int16_t)bottom < SPRITE_SIZE(size)->bottom)
 					{
-						d1 &= 0x1FFu;
+						d1 = ((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)) & 0x1FFu;
+						screen_x_high = d1;
 						flips = SPRITE(sprite)->flips;
 						if ((int8_t)(flip ^ flips) < 0)
-							d1 |= 0x200u;
+						{
+							d1 = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u) | 0x200u;
+							screen_x_high = d1;
+						}
 						bottom &= 0x1FFu;
 						if ((flips & 0x40u) != 0u)
 							bottom |= 0x200u;
@@ -158,7 +161,7 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 							io_write8(sprite_place + 3u, SPRITE(sprite)->colour);
 						else
 							io_write8(sprite_place + 3u, object_colour | (SPRITE(sprite)->colour & 0x90u));
-						io_write16(sprite_place + 6u, d1);
+						io_write16(sprite_place + 6u, (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u));
 						io_write8(sprite_place + 7u, (uint8_t)d1);
 						io_write16(sprite_place + 4u, bottom);
 						io_write8(sprite_place + 5u, (uint8_t)bottom);
@@ -174,8 +177,12 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 				sprite = OBJECT(object)->shadow;
 				shadow_y = (uint16_t)(OBJECT(object)->floor_height + SPRITE(sprite)->y + OBJECT(object)->screen_y);
 				d1 = (SPRITE(sprite)->x + OBJECT(object)->screen_x) & 0x1FFu;
+				screen_x_high = d1;
 				if ((int8_t)SPRITE(sprite)->flips < 0)
-					d1 |= 0x200u;
+				{
+					d1 = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u) | 0x200u;
+					screen_x_high = d1;
+				}
 				shadow_y &= 0x1FFu;
 				if ((SPRITE(sprite)->flips & 0x40u) != 0u)
 					shadow_y |= 0x200u;
@@ -183,7 +190,7 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 				io_write8(sprite_place + 1u, SPRITE(sprite)->size_code);
 				io_write8(sprite_place + 2u, SPRITE(sprite)->code);
 				io_write8(sprite_place + 3u, SPRITE(sprite)->colour);
-				io_write16(sprite_place + 6u, d1);
+				io_write16(sprite_place + 6u, (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u));
 				io_write8(sprite_place + 7u, (uint8_t)d1);
 				io_write16(sprite_place + 4u, shadow_y);
 				io_write8(sprite_place + 5u, (uint8_t)shadow_y);
@@ -205,17 +212,12 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 						OBJECT(object)->frame = frame;
 						frame_time += OBJECT(object)->animation_delay;
 					}
-					else
+					else if (ANIMATION_FRAME(frame)->last_sprite != 0u)
 					{
-						last_sprite = ANIMATION_FRAME(frame)->last_sprite;
-						d1 = (uint16_t)((d1 & ~0xFFu) | last_sprite);
-						if (last_sprite != 0u)
-						{
-							frame = ANIMATION_FRAME(frame)->sprites;
-							frame_time = ANIMATION_FRAME(frame)->time;
-							OBJECT(object)->frame = frame;
-							frame_time += OBJECT(object)->animation_delay;
-						}
+						frame = ANIMATION_FRAME(frame)->sprites;
+						frame_time = ANIMATION_FRAME(frame)->time;
+						OBJECT(object)->frame = frame;
+						frame_time += OBJECT(object)->animation_delay;
 					}
 					OBJECT(object)->frame_time = frame_time;
 				}
@@ -239,8 +241,7 @@ void draw_sprites(uint32_t *p_d1, uint32_t *p_object)
 			break;
 		sprite_place += 8u;
 	}
-	*p_d1 = (*p_d1 & 0xFFFF0000u) | d1;
-	*p_object = object;
+	return object;
 }
 
 /* the object's animation stepped on to its next frame when the frame's time runs out, without drawing it */
@@ -737,18 +738,17 @@ void turtle_collide_with_objects(uint32_t object)
 }
 
 /* the enemy against the solid objects: blocked or standing on one */
-void enemy_collide_with_objects(uint32_t object, uint32_t *p_width_overlap, uint32_t *p_count, uint32_t *p_other_box)
+uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
 {
-	uint16_t width_overlap = (uint16_t)*p_width_overlap;
-	uint32_t other_box = *p_other_box;
 	uint8_t contact_bits = 0;
-	uint16_t depth_overlap = 0, height_difference = 0, height_overlap = 0, other_height = 0, x_distance = 0, y_distance = 0;
-	uint32_t box = 0, count = 0, object_2 = 0;
+	uint16_t count = 0, depth_overlap = 0, height_difference = 0, height_overlap = 0, other_height = 0, width_overlap = 0, x_distance = 0, y_distance = 0;
+	uint32_t box = 0, object_2 = 0;
 	uint8_t flags = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0;
 
 	object_2 = OBJECT_ADDRESS(4);
 	count = 7u;
+	offset_high_word = 7u;
 	OBJECT(object)->contacts &= 0xE0u;
 	flags = OBJECT(object)->flags;
 	OBJECT(object)->flags = flags & 0xEFu;
@@ -795,6 +795,7 @@ void enemy_collide_with_objects(uint32_t object, uint32_t *p_width_overlap, uint
 		}
 		t5 = x_distance + BODY_BOX(box)->half_width + BODY_BOX(other_box)->half_width;
 		width_overlap = t5;
+		distance_low_byte = width_overlap;
 		if ((int16_t)t5 < 0)
 		{
 			t1 = count - 1u;
@@ -804,7 +805,7 @@ void enemy_collide_with_objects(uint32_t object, uint32_t *p_width_overlap, uint
 				break;
 			continue;
 		}
-		if (depth_overlap < width_overlap)
+		if (depth_overlap < ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)))
 			contact_bits &= 0xE7u;
 		else
 			contact_bits &= ~6u;
@@ -813,24 +814,24 @@ void enemy_collide_with_objects(uint32_t object, uint32_t *p_width_overlap, uint
 		height_difference = t6;
 		if ((int16_t)t6 < 0)
 		{
-			if ((int16_t)(height_difference + BODY_BOX(box)->height) < 0)
+			if ((int16_t)(height_difference + BODY_BOX(box)->height) >= 0)
 			{
-				t1 = count - 1u;
-				count = t1;
-				object_2 += 0x50u;
-				if (t1 == 0xFFFFu)
-					break;
-				continue;
+				OBJECT(object)->contacts |= contact_bits;
+				break;
 			}
-			OBJECT(object)->contacts |= contact_bits;
-			break;
+			t1 = count - 1u;
+			count = t1;
+			object_2 += 0x50u;
+			if (t1 == 0xFFFFu)
+				break;
+			continue;
 		}
 		other_height += BODY_BOX(other_box)->height;
 		t7 = 0u - height_difference + BODY_BOX(other_box)->height;
 		height_overlap = t7;
 		if ((int16_t)t7 < 0)
 		{
-			if (depth_overlap >= 3u && width_overlap >= 3u)
+			if (depth_overlap >= 3u && ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 3u)
 			{
 				OBJECT(object)->floor_height = (uint8_t)other_height;
 				OBJECT(object)->flags |= 0x10u;
@@ -843,27 +844,25 @@ void enemy_collide_with_objects(uint32_t object, uint32_t *p_width_overlap, uint
 				break;
 			continue;
 		}
-		if (depth_overlap < 3u || width_overlap < 3u)
+		if (depth_overlap < 3u || ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)) < 3u)
 		{
 			OBJECT(object)->contacts |= contact_bits;
-			break;
+			return other_box;
 		}
 		OBJECT(object)->flags |= 0x10u;
 		if (height_overlap >= 5u)
 		{
 			OBJECT(object)->contacts |= contact_bits;
-			break;
+			return other_box;
 		}
 		OBJECT(object)->floor_height = (uint8_t)other_height;
 		OBJECT(object)->height_whole = (uint8_t)other_height;
 		OBJECT(object)->height &= 0xFF00u;
 		contact_bits = 1u;
 		OBJECT(object)->contacts |= contact_bits;
-		break;
+		return other_box;
 	}
-	*p_width_overlap = (*p_width_overlap & 0xFFFF0000u) | width_overlap;
-	*p_count = count;
-	*p_other_box = other_box;
+	return other_box;
 }
 
 /* the players' slots the enemies go after, set up for the area */
@@ -903,10 +902,8 @@ void start_player_slots(void)
 }
 
 /* the object loop: the enemies' spawns, the players' slots, and every object's routine and screen place */
-void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
+uint32_t run_objects(uint32_t a1)
 {
-	uint32_t d7 = *p_d7;
-	uint32_t a1 = *p_a1;
 	uint16_t routine_offset = 0;
 	uint32_t a5 = 0, object = 0, routine_entry = 0;
 
@@ -923,28 +920,28 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 			switch (routine_entry)
 			{
 			case 0x00DF7Eu:
-				krang_appear(object, &d7, &a5);
+				a5 = krang_appear(object, a5);
 				break;
 			case 0x00E03Cu:
-				krang_walk(object, p_d5, &d7, &a5);
+				a5 = krang_walk(object, a5);
 				break;
 			case 0x00E124u:
-				krang_melee(object, p_d5, &d7, &a5);
+				a5 = krang_melee(object, a5);
 				break;
 			case 0x00E1A8u:
-				krang_fire_lasers(object, p_d5, &d7, &a5);
+				a5 = krang_fire_lasers(object, a5);
 				break;
 			case 0x00E21Au:
 				krang_struck(object);
 				break;
 			case 0x00E2A8u:
-				krang_recoil(object, &d7, &a5);
+				a5 = krang_recoil(object, a5);
 				break;
 			case 0x00E2DCu:
-				krang_explode(object, &d7, &a5);
+				a5 = krang_explode(object, a5);
 				break;
 			case 0x00E39Cu:
-				krang_escape(routine_offset, object, p_d5, &d7);
+				krang_escape(routine_offset, object);
 				break;
 			case 0x00E962u:
 				krang_curtain_start(object);
@@ -956,13 +953,13 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				krang_curtain_end(object);
 				break;
 			case 0x00EAB6u:
-				d7 = krang_laser_start(object);
+				krang_laser_start(object);
 				break;
 			case 0x00EB2Au:
 				krang_laser_wait(object);
 				break;
 			case 0x00EB3Eu:
-				d7 = krang_laser_fly(object);
+				krang_laser_fly(object);
 				break;
 			case 0x00EB70u:
 				krang_laser_spark(object);
@@ -974,13 +971,13 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				krang_fist_launch(object);
 				break;
 			case 0x00EC76u:
-				d7 = krang_fist_fly(d7, object);
+				krang_fist_fly(object);
 				break;
 			case 0x00F8DAu:
 				ball_dropper_start(object);
 				break;
 			case 0x00F8F2u:
-				d7 = ball_dropper_wait(object);
+				ball_dropper_wait(object);
 				break;
 			case 0x00F96Au:
 				ball_start(object);
@@ -989,7 +986,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				ball_drop(object);
 				break;
 			case 0x00F9DCu:
-				d7 = ball_bounce(object);
+				ball_bounce(object);
 				break;
 			case 0x00FA1Cu:
 				road_barrier_start(object);
@@ -1010,7 +1007,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				technodrome_ball_drop(object);
 				break;
 			case 0x00FB34u:
-				d7 = technodrome_ball_bounce(object);
+				technodrome_ball_bounce(object);
 				break;
 			case 0x00FBB4u:
 				hydrant_start(object);
@@ -1019,7 +1016,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				hydrant_stay(object);
 				break;
 			case 0x00FBDEu:
-				d7 = hydrant_spray(d7, object);
+				hydrant_spray(object);
 				break;
 			case 0x00FC1Cu:
 				hydrant_struck(object);
@@ -1028,10 +1025,10 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				hydrant_recover(object);
 				break;
 			case 0x00FD3Au:
-				d7 = hydrant_water_start(object);
+				hydrant_water_start(object);
 				break;
 			case 0x00FDA4u:
-				d7 = hydrant_water_fly(object);
+				hydrant_water_fly(object);
 				break;
 			case 0x00FDF2u:
 				roadside_cone_start(object);
@@ -1043,7 +1040,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				roadside_stay(object);
 				break;
 			case 0x00FE4Cu:
-				d7 = roadside_fly(object);
+				roadside_fly(object);
 				break;
 			case 0x00FE5Eu:
 				roadside_speed_sign_struck(object);
@@ -1055,25 +1052,25 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				roadside_parking_meter_struck(object);
 				break;
 			case 0x00FEE2u:
-				d7 = rat_start(object);
+				rat_start(object);
 				break;
 			case 0x00FF70u:
 				rat_drop(object);
 				break;
 			case 0x00FFA0u:
-				d7 = rat_sit(d7, object);
+				rat_sit(object);
 				break;
 			case 0x00FFBEu:
-				d7 = rat_run(d7, object);
+				rat_run(object);
 				break;
 			case 0x010026u:
 				alligator_start(object);
 				break;
 			case 0x010058u:
-				d7 = alligator_swim(object);
+				alligator_swim(object);
 				break;
 			case 0x010080u:
-				d7 = alligator_snap(object);
+				alligator_snap(object);
 				break;
 			case 0x0100ACu:
 				skateboarder_start(object);
@@ -1082,16 +1079,16 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				skateboarder_idle();
 				break;
 			case 0x0100D6u:
-				d7 = skateboarder_glide(object);
+				skateboarder_glide(object);
 				break;
 			case 0x0100DAu:
 				skateboarder_struck(object);
 				break;
 			case 0x010108u:
-				d7 = pizza_start(object);
+				pizza_start(object);
 				break;
 			case 0x010158u:
-				pizza_wait(routine_offset, object, p_d5, &d7);
+				pizza_wait(routine_offset, object);
 				break;
 			case 0x0101DCu:
 				pizza_vanish(object);
@@ -1100,7 +1097,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				billboard_start(object);
 				break;
 			case 0x01023Au:
-				d7 = billboard_wait(d7, object);
+				billboard_wait(object);
 				break;
 			case 0x0102BCu:
 				billboard_fall(object);
@@ -1115,7 +1112,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				billboard_soldier_wait(object);
 				break;
 			case 0x0103C0u:
-				d7 = billboard_soldier_jump_down(object);
+				billboard_soldier_jump_down(object);
 				break;
 			case 0x0103F2u:
 				billboard_soldier_become_boomerang_soldier(object);
@@ -1139,28 +1136,28 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				oil_drum_recover(object);
 				break;
 			case 0x010554u:
-				d7 = turret_start(object);
+				turret_start(object);
 				break;
 			case 0x01059Eu:
-				d7 = turret_move(object);
+				turret_move(object);
 				break;
 			case 0x0105BCu:
-				d7 = turret_fire(object);
+				turret_fire(object);
 				break;
 			case 0x010602u:
-				turret_wreck(object, &d7, &a5);
+				a5 = turret_wreck(object, a5);
 				break;
 			case 0x010674u:
 				turret_struck(object);
 				break;
 			case 0x0106D6u:
-				d7 = turret_recover(object);
+				turret_recover(object);
 				break;
 			case 0x01080Au:
 				turret_shot_start(object);
 				break;
 			case 0x010880u:
-				d7 = turret_shot_fly(d7, object);
+				turret_shot_fly(object);
 				break;
 			case 0x0108B6u:
 				turret_shot_vanish(object);
@@ -1193,7 +1190,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				nozzle_row_start(object);
 				break;
 			case 0x0109F8u:
-				nozzle_row_run(object, p_d5, &d7, &a5);
+				a5 = nozzle_row_run(object, a5);
 				break;
 			case 0x010AD4u:
 				nozzle_row_done(object);
@@ -1205,31 +1202,31 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				freeze_nozzle_rise(object);
 				break;
 			case 0x010B6Au:
-				d7 = freeze_nozzle_spray(object);
+				freeze_nozzle_spray(object);
 				break;
 			case 0x010BE0u:
 				freeze_nozzle_sink(object);
 				break;
 			case 0x010BF8u:
-				d7 = freeze_nozzle_struck(d7, object);
+				freeze_nozzle_struck(object);
 				break;
 			case 0x010C46u:
 				freeze_nozzle_broken(object);
 				break;
 			case 0x010C56u:
-				electric_beam_start(object, &d7, &a5);
+				a5 = electric_beam_start(object);
 				break;
 			case 0x010C76u:
 				electric_beam_wait(object);
 				break;
 			case 0x010CB2u:
-				electric_beam_shine(object, &d7, &a5);
+				a5 = electric_beam_shine(object, a5);
 				break;
 			case 0x010CDAu:
-				electric_vent_start(object, &d7, &a5);
+				a5 = electric_vent_start(object);
 				break;
 			case 0x010CFAu:
-				electric_vent_wait(object, &d7, &a5);
+				a5 = electric_vent_wait(object, a5);
 				break;
 			case 0x010D36u:
 				electric_vent_wait_column(object);
@@ -1292,7 +1289,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				sewer_launcher_start(object);
 				break;
 			case 0x0112DAu:
-				sewer_launcher_wait(object, p_d5, &d7);
+				sewer_launcher_wait(object);
 				break;
 			case 0x01133Au:
 				sewer_launcher_fired(object);
@@ -1304,10 +1301,10 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				sewer_missile_start(object);
 				break;
 			case 0x0114C6u:
-				d7 = sewer_missile_rise(object);
+				sewer_missile_rise(object);
 				break;
 			case 0x0114F6u:
-				d7 = sewer_missile_fly(object);
+				sewer_missile_fly(object);
 				break;
 			case 0x0114FEu:
 				sewer_missile_remove(object);
@@ -1319,64 +1316,64 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				sewer_missile_vanish(object);
 				break;
 			case 0x01154Eu:
-				rock_soldier_site_enter(routine_offset, object, p_d5, &d7, &a5);
+				a5 = rock_soldier_site_enter(routine_offset, object, a5);
 				break;
 			case 0x0116CCu:
-				rock_soldier_site_think(object, p_d5, &d7, &a5);
+				a5 = rock_soldier_site_think(object, a5);
 				break;
 			case 0x01186Cu:
-				rock_soldier_site_fire(object, p_d5, &d7);
+				rock_soldier_site_fire(object);
 				break;
 			case 0x0118CAu:
-				rock_soldier_site_finish_attack(object, p_d5, &d7, &a5);
+				a5 = rock_soldier_site_finish_attack(object, a5);
 				break;
 			case 0x0118ECu:
 				a1 = rock_soldier_struck(object);
 				break;
 			case 0x0119A0u:
-				rock_soldier_recover(object, &d7, &a5);
+				a5 = rock_soldier_recover(object, a5);
 				break;
 			case 0x0119DEu:
-				rock_soldier_defeated(object, &d7, &a5);
+				a5 = rock_soldier_defeated(object, a5);
 				break;
 			case 0x012024u:
 				gun_blast_start(object);
 				break;
 			case 0x012076u:
-				d7 = gun_blast_fly(d7, object);
+				gun_blast_fly(object);
 				break;
 			case 0x012110u:
-				d7 = rubble_start(object);
+				rubble_start(object);
 				break;
 			case 0x01214Eu:
-				d7 = rubble_fall(object);
+				rubble_fall(object);
 				break;
 			case 0x01217Au:
 				rubble_stay();
 				break;
 			case 0x012198u:
-				rock_soldier_technodrome_enter(object, &d7, &a5);
+				a5 = rock_soldier_technodrome_enter(object, a5);
 				break;
 			case 0x0122C8u:
-				rock_soldier_technodrome_think(object, p_d5, &d7, &a5);
+				a5 = rock_soldier_technodrome_think(object, a5);
 				break;
 			case 0x012422u:
-				rock_soldier_technodrome_fire(object, p_d5, &d7, &a5);
+				a5 = rock_soldier_technodrome_fire(object, a5);
 				break;
 			case 0x012430u:
-				rock_soldier_technodrome_finish_blow(object, p_d5, &d7, &a5);
+				a5 = rock_soldier_technodrome_finish_blow(object, a5);
 				break;
 			case 0x0126A0u:
 				wall_slab_start(object);
 				break;
 			case 0x0126F0u:
-				d7 = wall_slab_fly(d7, object);
+				wall_slab_fly(object);
 				break;
 			case 0x01277Eu:
 				missile_start(object);
 				break;
 			case 0x0127D6u:
-				missile_fly(object, p_d5, &d7, &a5);
+				a5 = missile_fly(object, a5);
 				break;
 			case 0x012830u:
 				missile_explode(object);
@@ -1418,7 +1415,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				parked_car_wait(object);
 				break;
 			case 0x012AA6u:
-				parked_car_start_drive(object, &d7, &a5);
+				a5 = parked_car_start_drive(object, a5);
 				break;
 			case 0x012AE2u:
 				parked_car_drive_off(object);
@@ -1430,31 +1427,31 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				car_hit_box_start(object);
 				break;
 			case 0x012C58u:
-				d7 = car_hit_box_move(d7, object);
+				car_hit_box_move(object);
 				break;
 			case 0x012CB2u:
-				d7 = car_soldier_start(object);
+				car_soldier_start(object);
 				break;
 			case 0x012D06u:
-				d7 = car_soldier_leap(d7, object);
+				car_soldier_leap(object);
 				break;
 			case 0x012D4Eu:
-				d7 = helicopter_start(object);
+				helicopter_start(object);
 				break;
 			case 0x012DCEu:
-				helicopter_hover(object, p_d5, &d7);
+				helicopter_hover(object);
 				break;
 			case 0x012E06u:
-				helicopter_fire_bullets(object, p_d5, &d7);
+				helicopter_fire_bullets(object);
 				break;
 			case 0x012E50u:
-				helicopter_drop_missiles(object, p_d5, &d7);
+				helicopter_drop_missiles(object);
 				break;
 			case 0x012E9Au:
-				d7 = helicopter_struck(object);
+				helicopter_struck(object);
 				break;
 			case 0x012F10u:
-				d7 = helicopter_recover(object);
+				helicopter_recover(object);
 				break;
 			case 0x012F40u:
 				helicopter_destroyed(object);
@@ -1463,7 +1460,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				copter_bullet_start(object);
 				break;
 			case 0x01320Cu:
-				d7 = copter_bullet_fly(object);
+				copter_bullet_fly(object);
 				break;
 			case 0x013260u:
 				copter_bullet_burst(object);
@@ -1481,43 +1478,43 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				falling_missile_explode(object);
 				break;
 			case 0x0134B6u:
-				flying_drone_enter(object, &d7, &a5);
+				a5 = flying_drone_enter(object, a5);
 				break;
 			case 0x0135B4u:
-				flying_drone_fly(object, &d7, &a5);
+				a5 = flying_drone_fly(object, a5);
 				break;
 			case 0x01360Cu:
-				flying_drone_fire(object, &d7, &a5);
+				a5 = flying_drone_fire(object, a5);
 				break;
 			case 0x013656u:
 				flying_drone_struck(object);
 				break;
 			case 0x0136BAu:
-				d7 = flying_drone_recover(object);
+				flying_drone_recover(object);
 				break;
 			case 0x0136EAu:
 				flying_drone_destroyed(object);
 				break;
 			case 0x013AFCu:
-				d7 = drone_shot_start(object);
+				drone_shot_start(object);
 				break;
 			case 0x013B8Au:
-				d7 = drone_shot_flash(d7, object);
+				drone_shot_flash(object);
 				break;
 			case 0x013BB6u:
-				d7 = drone_shot_fly(object);
+				drone_shot_fly(object);
 				break;
 			case 0x013C0Cu:
 				drone_shot_vanish(object);
 				break;
 			case 0x013C32u:
-				stockman_enter(routine_offset, object, p_d5, &d7, &a5);
+				a5 = stockman_enter(routine_offset, object, a5);
 				break;
 			case 0x013DA8u:
-				stockman_fly(object, p_d5, &d7, &a5);
+				a5 = stockman_fly(object, a5);
 				break;
 			case 0x013E36u:
-				stockman_drop_mouser(object, p_d5, &d7, &a5);
+				a5 = stockman_drop_mouser(object, a5);
 				break;
 			case 0x013E64u:
 				stockman_idle();
@@ -1526,10 +1523,10 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				stockman_struck(object);
 				break;
 			case 0x013EC0u:
-				stockman_recover(object, p_d5, &d7, &a5);
+				a5 = stockman_recover(object, a5);
 				break;
 			case 0x013EF4u:
-				stockman_defeated(object, &d7, &a5);
+				a5 = stockman_defeated(object, a5);
 				break;
 			case 0x014336u:
 				falling_mouser_start(object);
@@ -1547,25 +1544,25 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				remove_object(object);
 				break;
 			case 0x0489E2u:
-				enemy_foot_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_foot_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x048A60u:
-				enemy_enter(object, p_d5, &d7, &a1, &a5);
+				enemy_enter(object, &a1, &a5);
 				break;
 			case 0x048A94u:
-				enemy_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x048D8Au:
-				enemy_attack(object, p_d5, &d7, &a1, &a5);
+				enemy_attack(object, &a1, &a5);
 				break;
 			case 0x048DBAu:
-				enemy_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_hit(object, &a1, &a5);
 				break;
 			case 0x048EDAu:
-				enemy_react(object, p_d5, &d7, &a1, &a5);
+				enemy_react(object, &a1, &a5);
 				break;
 			case 0x048F02u:
-				enemy_step_over_edge(object, p_d5, &d7, &a1, &a5);
+				enemy_step_over_edge(object, &a1, &a5);
 				break;
 			case 0x04A744u:
 				a5 = boss_shutter_start(object);
@@ -1604,7 +1601,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				falling_debris_start(object);
 				break;
 			case 0x04AAAAu:
-				falling_debris_wait(object, routine_entry, p_d5, &d7, &a5);
+				a5 = falling_debris_wait(object, a5, routine_entry);
 				break;
 			case 0x04AAE4u:
 				falling_debris_fall(object);
@@ -1616,7 +1613,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				motorbike_start(object);
 				break;
 			case 0x04ABCAu:
-				motorbike_ride(object, routine_entry, p_d5, &d7, &a5);
+				a5 = motorbike_ride(object, a5, routine_entry);
 				break;
 			case 0x04AC0Eu:
 				motorbike_ride_off(object);
@@ -1625,25 +1622,25 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				a5 = motorbike_struck(object);
 				break;
 			case 0x04ACB0u:
-				enemy_sword_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_sword_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04AD3Cu:
-				enemy_hammer_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_hammer_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04B7F8u:
-				whip_arm_start(routine_offset, object, &d7, &a1);
+				a1 = whip_arm_start(routine_offset, object);
 				break;
 			case 0x04B828u:
-				whip_arm_follow(routine_offset, object, &d7, &a1);
+				a1 = whip_arm_follow(routine_offset, object);
 				break;
 			case 0x04B88Eu:
-				whip_arm_let_go(object, &d7, &a1);
+				a1 = whip_arm_let_go(object);
 				break;
 			case 0x04B89Eu:
-				whip_arm_drag(object, &d7, &a1);
+				a1 = whip_arm_drag(object);
 				break;
 			case 0x04B900u:
-				whip_arm_struck(routine_offset, object, &d7, &a1);
+				a1 = whip_arm_struck(routine_offset, object);
 				break;
 			case 0x04B9C2u:
 				laser_bolt_start(object);
@@ -1739,7 +1736,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				shuriken_struck(object);
 				break;
 			case 0x04BFE6u:
-				rocksteady_bullet_start(object, p_d5, &d7, &a5);
+				a5 = rocksteady_bullet_start(object);
 				break;
 			case 0x04C054u:
 				rocksteady_bullet_fly(object);
@@ -1760,7 +1757,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				shredder_piece_start(object);
 				break;
 			case 0x04C1B6u:
-				d7 = shredder_piece_bounce(d7, object);
+				shredder_piece_bounce(object);
 				break;
 			case 0x04C204u:
 				shredder_ray_start(object);
@@ -1772,7 +1769,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				rocket_start(object);
 				break;
 			case 0x04C2CEu:
-				d7 = rocket_fly(d7, object);
+				rocket_fly(object);
 				break;
 			case 0x04C30Cu:
 				rocket_explode(object);
@@ -1781,10 +1778,10 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				dynamite_start(object);
 				break;
 			case 0x04C35Eu:
-				dynamite_throw(object, routine_entry, p_d5, &d7, &a5);
+				a5 = dynamite_throw(object, a5, routine_entry);
 				break;
 			case 0x04C386u:
-				d7 = dynamite_bounce(d7, object);
+				dynamite_bounce(object);
 				break;
 			case 0x04C3F2u:
 				dynamite_explode(object);
@@ -1802,7 +1799,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				kicked_door_become_foot_soldier(object);
 				break;
 			case 0x04C5F4u:
-				door_piece_start(object, &d7, &a5);
+				a5 = door_piece_start(object);
 				break;
 			case 0x04C63Au:
 				door_piece_fly(object);
@@ -1829,7 +1826,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				tire_soldier_jump(object);
 				break;
 			case 0x04C936u:
-				d7 = tire_soldier_fly(d7, object);
+				tire_soldier_fly(object);
 				break;
 			case 0x04C964u:
 				a5 = tire_soldier_throw(object, a5);
@@ -1898,7 +1895,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				sewer_ripple_swim_again(object);
 				break;
 			case 0x04D46Cu:
-				bomber_start(object, &d7, &a5);
+				a5 = bomber_start(object);
 				break;
 			case 0x04D488u:
 				bomber_wait(object);
@@ -1919,7 +1916,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				enemy_rocket_soldier_start(object);
 				break;
 			case 0x04D58Eu:
-				enemy_rocket_soldier_line_up(object, p_d5, &d7, &a5);
+				a5 = enemy_rocket_soldier_line_up(object, a5);
 				break;
 			case 0x04D5EEu:
 				a5 = enemy_rocket_soldier_fire(object, a5);
@@ -1928,7 +1925,7 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				enemy_rocket_soldier_unarmed(object);
 				break;
 			case 0x04D64Cu:
-				enemy_rocket_soldier_struck(object, p_d5, &d7, &a1, &a5);
+				enemy_rocket_soldier_struck(object, &a1, &a5);
 				break;
 			case 0x04D6C8u:
 				double_door_start(object);
@@ -1952,91 +1949,91 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				a5 = technodrome_door_let_out(object, a5);
 				break;
 			case 0x04DC04u:
-				enemy_knife_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_knife_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04DC9Eu:
-				enemy_spear_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_spear_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04E6A2u:
-				enemy_axe_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_axe_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04E736u:
-				enemy_gun_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_gun_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04EE2Eu:
-				enemy_boomerang_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_boomerang_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04EEC8u:
-				enemy_shuriken_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_shuriken_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04EF58u:
-				enemy_skateboard_soldier_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_skateboard_soldier_start(object, a5, routine_entry);
 				break;
 			case 0x04EFECu:
-				enemy_skateboard_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_skateboard_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x04F002u:
-				enemy_skateboard_attack(object, p_d5, &d7, &a1, &a5);
+				enemy_skateboard_attack(object, &a1, &a5);
 				break;
 			case 0x04F014u:
-				enemy_skateboard_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_skateboard_hit(object, &a1, &a5);
 				break;
 			case 0x04F026u:
-				enemy_skateboard_react(object, p_d5, &d7, &a1, &a5);
+				enemy_skateboard_react(object, &a1, &a5);
 				break;
 			case 0x04F1D2u:
-				enemy_rocksteady_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_rocksteady_start(object, a5, routine_entry);
 				break;
 			case 0x04F28Au:
-				enemy_rocksteady_enter(object, a1, p_d5, &d7, &a5);
+				a5 = enemy_rocksteady_enter(object, a1, a5);
 				break;
 			case 0x04F3BAu:
-				enemy_rocksteady_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_rocksteady_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x04F5E4u:
-				enemy_rocksteady_attack(object, p_d5, &d7, &a1, &a5);
+				enemy_rocksteady_attack(object, &a1, &a5);
 				break;
 			case 0x04F622u:
-				enemy_rocksteady_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_rocksteady_hit(object, &a1, &a5);
 				break;
 			case 0x04F680u:
-				enemy_rocksteady_react(object, p_d5, &d7, &a1, &a5);
+				enemy_rocksteady_react(object, &a1, &a5);
 				break;
 			case 0x0501C6u:
-				enemy_bebop_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_bebop_start(object, a5, routine_entry);
 				break;
 			case 0x05027Au:
-				enemy_bebop_enter(object, a1, p_d5, &d7, &a5);
+				a5 = enemy_bebop_enter(object, a1, a5);
 				break;
 			case 0x0503ECu:
-				enemy_bebop_think(routine_offset, object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_bebop_think(routine_offset, object, routine_entry, &a1, &a5);
 				break;
 			case 0x050612u:
-				enemy_bebop_attack(object, p_d5, &d7, &a1, &a5);
+				enemy_bebop_attack(object, &a1, &a5);
 				break;
 			case 0x050622u:
-				enemy_bebop_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_bebop_hit(object, &a1, &a5);
 				break;
 			case 0x05066Eu:
-				enemy_bebop_react(object, p_d5, &d7, &a1, &a5);
+				enemy_bebop_react(object, &a1, &a5);
 				break;
 			case 0x050F98u:
-				enemy_mouser_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_mouser_start(object, a5, routine_entry);
 				break;
 			case 0x051002u:
-				enemy_mouser_enter(object, a1, p_d5, &d7, &a5);
+				a5 = enemy_mouser_enter(object, a1, a5);
 				break;
 			case 0x0510F4u:
-				enemy_mouser_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_mouser_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x051314u:
-				enemy_mouser_bite(object, p_d5, &d7, &a1, &a5);
+				enemy_mouser_bite(object, &a1, &a5);
 				break;
 			case 0x05144Eu:
-				enemy_mouser_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_mouser_hit(object, &a1, &a5);
 				break;
 			case 0x051492u:
-				enemy_mouser_step_over_edge(object, p_d5, &d7, &a1, &a5);
+				enemy_mouser_step_over_edge(object, &a1, &a5);
 				break;
 			case 0x051B56u:
 				mouser_hole_start(object);
@@ -2051,42 +2048,41 @@ void run_objects(uint32_t *p_d5, uint32_t *p_d7, uint32_t *p_a1)
 				a5 = mouser_hole_let_out(object, a5);
 				break;
 			case 0x051C44u:
-				enemy_rodney_start(object, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_rodney_start(object, a5, routine_entry);
 				break;
 			case 0x051CACu:
-				enemy_rodney_enter(object, a1, p_d5, &d7, &a5);
+				a5 = enemy_rodney_enter(object, a1, a5);
 				break;
 			case 0x051D80u:
-				enemy_rodney_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_rodney_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x051FA0u:
-				enemy_rodney_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_rodney_hit(object, &a1, &a5);
 				break;
 			case 0x052790u:
-				enemy_shredder_start(object, a1, routine_entry, p_d5, &d7, &a5);
+				a5 = enemy_shredder_start(object, a1, a5, routine_entry);
 				break;
 			case 0x052830u:
-				enemy_shredder_enter(object, a1, p_d5, &d7, &a5);
+				a5 = enemy_shredder_enter(object, a1, a5);
 				break;
 			case 0x052840u:
-				enemy_shredder_think(object, routine_entry, p_d5, &d7, &a1, &a5);
+				enemy_shredder_think(object, routine_entry, &a1, &a5);
 				break;
 			case 0x052B84u:
-				enemy_shredder_attack(object, p_d5, &d7, &a1, &a5);
+				enemy_shredder_attack(object, &a1, &a5);
 				break;
 			case 0x052BC8u:
-				enemy_shredder_hit(object, p_d5, &d7, &a1, &a5);
+				enemy_shredder_hit(object, &a1, &a5);
 				break;
 			case 0x052C68u:
-				enemy_shredder_react(object, p_d5, &d7, &a1, &a5);
+				enemy_shredder_react(object, &a1, &a5);
 				break;
 			}
 			update_object_screen_place(object);
 		}
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(40));
-	*p_d7 = d7;
-	*p_a1 = a1;
+	return a1;
 }
 
 /* every frame: the players' slots counted and the least crowded one found */
@@ -2277,7 +2273,7 @@ uint32_t place_from_record(uint32_t object, uint32_t placement, uint32_t object_
 }
 
 /* the speeds across and up or down of a speed in a direction */
-void speeds_from_direction(uint8_t direction, uint16_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed, uint32_t *p_sines)
+void speeds_from_direction(uint8_t direction, uint8_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed, uint32_t *p_sines)
 {
 	uint16_t angle = 0;
 	uint32_t cosines = 0;
@@ -2293,10 +2289,11 @@ void speeds_from_direction(uint8_t direction, uint16_t speed, uint32_t *p_x_spee
 		cosines = t1;
 		angle = (uint16_t)(0u - angle);
 	}
-	*p_x_speed = ((uint32_t)SINE(*p_sines + (int16_t)angle) * (uint16_t)speed) >> 8;
+	*p_x_speed = (SINE(*p_sines + (int16_t)angle) * ((speed & ~0xFF00u) | (screen_x_high & 0xFF00u))) >> 8;
 	if ((int8_t)(direction + 0x40u) < 0)
 		*p_x_speed = (uint16_t)(0u - *p_x_speed);
-	*p_y_speed = ((uint32_t)SINE(cosines + ((int16_t)(0u - angle))) * (uint16_t)speed) >> 8;
+	*p_y_speed = (SINE(cosines + ((int16_t)(0u - angle))) * ((speed & ~0xFF00u) | (screen_x_high & 0xFF00u))) >> 8;
+	offset_high_word = *p_y_speed;
 	if ((int8_t)direction < 0)
 	{
 		return;
@@ -2312,10 +2309,9 @@ void unreached_047D0E(uint8_t direction)
 /* the direction from the object to another one */
 uint32_t direction_to_object(uint32_t direction, uint32_t object, uint32_t object_2)
 {
-	uint32_t target_x = 0, target_y = 0;
+	uint16_t target_x = 0, target_y = 0;
 
 	target_x = OBJECT(object_2)->screen_x;
 	target_y = OBJECT(object_2)->screen_y;
-	direction_to(object, &direction, &target_x, &target_y);
-	return direction;
+	return direction_to(direction, target_x, target_y, object);
 }
