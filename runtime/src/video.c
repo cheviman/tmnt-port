@@ -71,6 +71,11 @@ static layer g_layers[3];
 static uint8_t g_sprite_buffer[TMNT_SPRITE_RAM_SIZE];  /* the K051960's DMA copy */
 static uint16_t g_bitmap[BITMAP_HEIGHT * BITMAP_WIDTH];
 
+uint8_t *tmnt_video_tiles_shown = NULL;
+uint8_t *tmnt_video_sprites_shown = NULL;
+uint8_t *tmnt_video_tile_palettes = NULL;
+uint8_t *tmnt_video_sprite_palettes = NULL;
+
 void tmnt_video_reset(void)
 {
 	memset(g_layers, 0, sizeof(g_layers));
@@ -165,8 +170,9 @@ static int wrap(int value, int size)
 	return value < 0 ? value + size : value;
 }
 
-/* The pen of a map pixel (0-511, 0-255), and its colour (k052109.cpp's get_tile_info, tmnt.cpp's callback) */
-static int tile_pixel(int map, int x, int y, int *colour)
+/* The pen of a map pixel (0-511, 0-255), its colour and its tile's code (k052109.cpp's get_tile_info, tmnt.cpp's
+   callback) */
+static int tile_pixel(int map, int x, int y, int *colour, int *tile)
 {
 	const uint8_t *ram = tmnt_board.tile_ram;
 	const int index = (y >> 3) * 64 + (x >> 3);
@@ -184,6 +190,7 @@ static int tile_pixel(int map, int x, int y, int *colour)
 		row = 7 - row;
 	code |= ((attribute & 0x03) << 8) | ((attribute & 0x10) << 6) | ((attribute & 0x0C) << 9) | (bank << 13);
 	*colour = k_colour_base[map] + ((attribute & 0xE0) >> 5);
+	*tile = code % TILES;
 	data = &game_tiles[(size_t)(code % TILES) * 32u + (size_t)row * 4u];
 	return ((data[3] >> (7 - column)) & 1) << 3 | ((data[2] >> (7 - column)) & 1) << 2
 		| ((data[1] >> (7 - column)) & 1) << 1 | ((data[0] >> (7 - column)) & 1);
@@ -220,7 +227,7 @@ static void draw_layer(int map, bool opaque)
 
 		for (int x = CLIP_LEFT; x <= CLIP_RIGHT; x++)
 		{
-			int px, py, colour, pen;
+			int px, py, colour, pen, tile;
 
 			if (mixed)
 			{
@@ -252,9 +259,15 @@ static void draw_layer(int map, bool opaque)
 				px = MAP_WIDTH - 1 - px;
 				py = MAP_HEIGHT - 1 - py;
 			}
-			pen = tile_pixel(map, px, py, &colour);
+			pen = tile_pixel(map, px, py, &colour, &tile);
 			if (opaque || pen)
 				line[x] = (uint16_t)(colour * 16 + pen);
+			if (pen && tmnt_video_tiles_shown)
+			{
+				tmnt_video_tiles_shown[tile] |= (uint8_t)(1 << map);
+				if (tmnt_video_tile_palettes)
+					tmnt_video_tile_palettes[tile] = (uint8_t)colour;
+			}
 		}
 	}
 }
@@ -289,6 +302,12 @@ static void draw_cell(int code, int colour, bool flip_x, bool flip_y, int left, 
 			pen = sprite_pixel(code, flip_x ? 15 - x : x, flip_y ? 15 - y : y);
 			if (!pen)
 				continue;
+			if (tmnt_video_sprites_shown)
+			{
+				tmnt_video_sprites_shown[code % SPRITES] = 1;
+				if (tmnt_video_sprite_palettes)
+					tmnt_video_sprite_palettes[code % SPRITES] = (uint8_t)colour;
+			}
 			pixel = &g_bitmap[screen_y * BITMAP_WIDTH + screen_x];
 			if (pen == 15 && shadow)
 			{

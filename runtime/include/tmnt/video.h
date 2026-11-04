@@ -45,6 +45,15 @@ void tmnt_video_vblank_start(tmnt_frame *frame);
 /* FNV-1a hash of a frame's pixels (red, green, blue of each), as kref's --video-hashes */
 uint64_t tmnt_video_hash(const tmnt_frame *frame);
 
+/* What the frames drew, for the reference's --graphics-uses (NULL in the game, which draws the same either way):
+   when set, a tile code's byte gets bit 0, 1 or 2 when one of its pixels other than pen 0 is drawn on the fixed
+   layer, layer A or layer B (32768 codes), and a sprite cell's byte 1 when one of its pixels is (16384 codes) */
+extern uint8_t *tmnt_video_tiles_shown;
+extern uint8_t *tmnt_video_sprites_shown;
+/* and, when set too, the palette (0-63: the palette RAM's colour / 16) the last such pixel of the code showed with */
+extern uint8_t *tmnt_video_tile_palettes;
+extern uint8_t *tmnt_video_sprite_palettes;
+
 #ifdef __cplusplus
 }
 #endif

@@ -28,7 +28,9 @@ Every place a track jumps or calls to is walked too, as part of the music. The w
 byte the track reader and its commands read in the scenarios is in what it walked: the coverage's --reads
 (the reference's sound_rom_reads.txt, kref --sound-rom-reads) lists the bytes read that nothing describes.
 """
-TRACK = "music_track"           # the elements sound_symbols.txt's song table points at
+from collections import defaultdict
+
+TRACK = "music_track"          # the elements sound_symbols.txt's song table points at
 FIXED = {0xE0: 2, 0xE1: 2, 0xE2: 2, 0xE3: 2, 0xE4: 2, 0xE6: 2, 0xE7: 2, 0xE8: 2, 0xE9: 2, 0xEA: 2, 0xEB: 2,
          0xED: 3, 0xEE: 2, 0xEF: 2, 0xF2: 2, 0xF3: 1, 0xF4: 2, 0xF5: 1, 0xFC: 2, 0xFD: 2, 0xFE: 2}
 JUMPS = {0xEC: (6, 4), 0xF1: (4, 2)}        # command: (length, offset of the address), and it goes on
@@ -104,7 +106,9 @@ class Walk:
         return self.image[place] | (self.image[place + 1] << 8)
 
     def runs(self):
-        """The bytes walked, as [first, stop, the track or part they were first reached from] runs"""
+        """The bytes walked, as [first, stop, the track or part they were first reached from] runs; a part by its
+        number among the parts its track (or part) calls, in the order of their addresses ("songs[3].tracks[0]'s
+        part 2"), not by its address"""
         found = []
         for place in sorted(self.commands):
             length, source = self.commands[place]
@@ -112,7 +116,21 @@ class Walk:
                 found[-1][1] = max(found[-1][1], place + length)
             else:
                 found.append([place, place + length, source])
-        return found
+        # the parts each caller calls, numbered by their addresses
+        parts = defaultdict(set)
+        for _, source in self.commands.values():
+            caller = source
+            while "'s part " in caller:
+                caller, _, address = caller.rpartition("'s part ")
+                parts[caller].add(int(address, 16))
+
+        def numbered(source):
+            if "'s part " not in source:
+                return source
+            caller, _, address = source.rpartition("'s part ")
+            return f"{numbered(caller)}'s part {sorted(parts[caller]).index(int(address, 16)) + 1}"
+
+        return [[first, stop, numbered(source)] for first, stop, source in found]
 
 
 def spans(program, starts):

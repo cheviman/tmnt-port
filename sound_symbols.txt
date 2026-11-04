@@ -1945,12 +1945,12 @@ local   fm_effect_set_pitch 2B8D bc fm_write
 
 # Music no song reaches (sound_data_walk.py measures it from here): the sound coverage left these bytes
 # unknown inside the music, each between tracks the walk reaches; nothing in the scenarios reads them
-4721  data   unreached_end_4721 music_track[1]    # FF: song 63 channel 1's end mark, after the jump that loops it (F0 469F at 471E)
-5EB2  data   unused_part_5eb2 music_track[1]      # an F6 part (it ends with F7) no track calls, between song 66's parts
-5EC7  data   unused_part_5ec7 music_track[1]      # another, right after it (its first commands the same, other notes)
-63A5  data   unreached_end_63a5 music_track[1]    # FF: song 67 channel 9's end mark, after the jump that loops it (F0 6354 at 63A2)
-6D46  data   unreached_return_6d46 music_track[1] # F9: a return no track reaches, after song 6C channel 9's end (FF at 6D45)
-7CAA  data   unused_part_7caa music_track[1]      # an FA part (it ends with FB) no track calls, between two F8 parts
+4721  data   song_63_channel_1_unreached_end music_track[1]    # FF: song 63 channel 1's end mark, after the jump that loops it (F0 469F at 471E)
+5EB2  data   song_66_unused_part music_track[1]      # an F6 part (it ends with F7) no track calls, between song 66's parts
+5EC7  data   song_66_unused_part_2 music_track[1]    # another, right after it (its first commands the same, other notes)
+63A5  data   song_67_channel_9_unreached_end music_track[1]    # FF: song 67 channel 9's end mark, after the jump that loops it (F0 6354 at 63A2)
+6D46  data   song_6c_channel_9_unreached_return music_track[1] # F9: a return no track reaches, after song 6C channel 9's end (FF at 6D45)
+7CAA  data   song_6a_unused_part music_track[1]      # an FA part (it ends with FB) no track calls, between two F8 parts of song 6A (songs[10])
 
 # ======== the board and the RAM (names for the decompiled C) ========
 # The board's registers on the Z80's bus (MAME's tmnt_audio_map), which the C reads and writes through the bus

@@ -1,31 +1,33 @@
 """
 Name:        sound_data_assets.py
-Description: the Z80 sound program's data as text by name, the music a command a line, and back byte for byte
+Description: the Z80 sound program's data as text by name, the music as MIDI files, and back byte for byte
 Version:     0.1.0
 Created:     29-10-2026
-Modified:    29-10-2026
+Modified:    04-11-2026
 Author:      Sebastian Toyos
 
-For tools/extract_assets.py, which writes assets/sound_data.txt. Every byte of the sound program that is not
-code is in a piece: what sound_symbols.txt describes and the music tools/sound_data_walk.py walks
-(tools/core/sound_coverage.py's description), the fill, and what nothing explains (none today). A piece is
-written as lines of items, which give its bytes back in order (the Z80 is little endian):
+For tools/extract_assets.py, which writes assets/sound_data.txt and assets/sound/music. Every byte of the sound
+program that is not code is in a piece: what sound_symbols.txt describes and the music tools/sound_data_walk.py
+walks (tools/core/sound_coverage.py's description), the fill, and what nothing explains (none today). The music
+(the tracks and their parts) and the songs table are the songs' Standard MIDI Files, a song a file
+(tools/sound_music.py: assets/sound/music, music.txt the files). Every other piece is written in sound_data.txt
+as lines of items, which give its bytes back in order (the Z80 is little endian):
 
     u8 0x0A 0x00          bytes              u16 0x1234 ...     words
     ref NAME[+0xNN]       the 16-bit address of a piece or of a function (by its sound_symbols.txt name, or
                           sound_XXXX)
-    cmd E0 05             a command of a track, its bytes; @NAME[+0xNN] for an address it carries (2 bytes)
 
-and assets/sound_layout.txt says where each piece was (for --check only).
+and assets/sound_layout.txt says where each piece was, the music's too: the addresses the program's pointers
+hold, which the game's loader gives each piece by its name.
 """
 import re
 from bisect import bisect_right
 from collections import defaultdict
 from pathlib import Path
 
-import sound_data_walk
+import sound_music
 
-ADDRESS_AT = {0xEC: 4, 0xF1: 2, 0xF6: 2, 0xF8: 1, 0xFA: 1, 0xF0: 1}    # a track command's address, and where
+SONGS_TABLE = "songs"           # the songs table's piece: the MIDI files give it back
 
 
 def description(image):
@@ -87,8 +89,7 @@ def pieces_of(image, program, described):
                 run.append(address)
                 continue
             kind = piece.kind
-            name = piece.name if run[0] == piece.first else f"{piece.name}_{run[0]:04X}"
-            found.append((name, kind, run[0], run[-1] + 1))
+            found.append((by_subject(piece.name), kind, run[0], run[-1] + 1))
             taken.update(run)
             if address is not None:
                 run = [address]
@@ -96,53 +97,49 @@ def pieces_of(image, program, described):
     run = []
     for address in rest + [None]:
         if run and (address is None or address != run[-1] + 1):
-            found.append((f"unexplained_{run[0]:04X}", "unexplained", run[0], run[-1] + 1))
+            last = run[-1] + 1
+            whole_fill = last == program.code_end and set(image[run[0]:last]) == {0xFF}
+            found.append(("fill_to_the_program_end" if whole_fill else f"unexplained_{run[0]:04X}", "unexplained",
+                          run[0], last))
             run = []
         if address is not None:
             run.append(address)
     names = defaultdict(int)
     unique = []
     found = [(re.sub(r"[^0-9A-Za-z_]+", "_", name).strip("_"), kind, first, stop) for name, kind, first, stop in found]
+    # a name that comes back (a piece split by code, a part a song plays twice) takes its number: _2, _3...
     for name, kind, first, stop in sorted(found, key=lambda piece: piece[2]):
         names[name] += 1
-        unique.append((name if names[name] == 1 else f"{name}_{first:04X}", kind, first, stop))
+        unique.append((name if names[name] == 1 else f"{name}_{names[name]}", kind, first, stop))
     return unique
+
+
+# the tables of pointers whose records are a subject of their own, by the name of their entries
+HOLDER_NAMES = {"fm_voice_pointers": "fm_instrument"}
+
+
+def by_subject(name):
+    """A record's piece by what reaches it, not by its address: the core's coverage names one 'STRUCT ADDRESS
+    (SOURCE)', SOURCE the table entry that points at it (fm_voice_pointers[3]: 'fm_instrument_3') or the functions that
+    take it ('of fm_effect_01_note': 'fm_effect_01_note_voice')"""
+    match = re.fullmatch(r"(\w+) [0-9A-F]{4} \((.*)\)", name)
+    if not match:
+        return name.replace("'s part", " part")
+    struct, source = match.groups()
+    short = struct.split("_")[-1]
+    entry = re.fullmatch(r"(\w+)\[(\d+)\]", source)
+    if entry:
+        holder, index = entry.groups()
+        return f"{HOLDER_NAMES[holder]}_{index}" if holder in HOLDER_NAMES else f"{holder}_{index}_{short}"
+    if source.startswith("of "):
+        # (by the first of the functions that take it: others share it)
+        return f"{re.split(r'[ ,]+', source[3:])[0]}_{short}"
+    return f"{source}_{short}"
 
 
 def write_piece(image, kind, first, stop, names):
     lines = []
-    if kind.startswith("music"):
-        place = first
-        while place < stop:
-            command = image[place]
-            length = 1
-            if command >= 0xE0:
-                if command == 0xE5:
-                    length = sound_data_walk.Walk.held_note(type("held", (), {"image": image, "code_end": stop})(), place)
-                elif command in sound_data_walk.FIXED:
-                    length = sound_data_walk.FIXED[command]
-                elif command in sound_data_walk.JUMPS:
-                    length = sound_data_walk.JUMPS[command][0]
-                elif command in sound_data_walk.CALLS:
-                    length = sound_data_walk.CALLS[command][0]
-                elif command == 0xF0:
-                    length = 3
-            length = max(1, min(length, stop - place))
-            items = []
-            at = 0
-            while at < length:
-                offset = ADDRESS_AT.get(command)
-                if offset is not None and at == offset and at + 2 <= length:
-                    target = image[place + at] | image[place + at + 1] << 8
-                    name = names.name(target)
-                    items.append(f"@{name}" if name else f"{image[place + at]:02X} {image[place + at + 1]:02X}")
-                    at += 2
-                else:
-                    items.append(f"{image[place + at]:02X}")
-                    at += 1
-            lines.append("cmd " + " ".join(items))
-            place += length
-    elif kind == "code addresses":
+    if kind == "code addresses":
         for at in range(first, stop - 1, 2):
             value = image[at] | image[at + 1] << 8
             name = names.name(value)
@@ -172,9 +169,6 @@ def read_piece(lines, names, where):
             out += b"".join(int(value, 16).to_bytes(2, "little") for value in parts)
         elif token == "ref":
             out += names.value(parts[0], here).to_bytes(2, "little")
-        elif token == "cmd":
-            for part in parts:
-                out += names.value(part[1:], here).to_bytes(2, "little") if part.startswith("@") else bytes([int(part, 16)])
         else:
             raise SystemExit(f"{here}: '{token}' is no item of a piece")
     return bytes(out)
@@ -189,27 +183,39 @@ def function_names(program):
     return found
 
 
+def is_music(name, kind):
+    """A piece the songs' MIDI files give back: a track or a part, or the songs table"""
+    return kind.startswith("music") or name == SONGS_TABLE
+
+
 def extract(image, out):
+    """sound_data.txt, sound_layout.txt and sound_functions.txt, and the songs' MIDI files (sound/music); returns
+    the pieces' count and the files'"""
     program, described = description(image)
     pieces = pieces_of(image, program, described)
     functions = function_names(program)
     names = Names({first: (stop, name) for name, _, first, stop in pieces}, functions)
-    lines = ["# the sound program's data: its pieces by name"]
-    layout = ["# each piece and where the sound program had it (for --check)"]
+    lines = ["# the sound program's data: its pieces by name (the music and the songs table: sound/music)"]
+    layout = ["# each piece and where the sound program had it: the address the game gives it"]
     for name, kind, first, stop in pieces:
+        layout.append(f"{name} {first:04X}")
+        if is_music(name, kind):
+            continue
         lines.append(f"[{name}]  # {kind}")
         lines += ["  " + line for line in write_piece(image, kind, first, stop, names)]
-        layout.append(f"{name} {first:04X}")
     (out / "sound_data.txt").write_text("\n".join(lines) + "\n", encoding="ascii")
     (out / "sound_layout.txt").write_text("\n".join(layout) + "\n", encoding="ascii")
     (out / "sound_functions.txt").write_text("# the sound program's places in its code the data names, and their addresses\n"
                                              + "".join(f"{name} {address:04X}\n" for address, name in sorted(functions.items())),
                                              encoding="ascii")
-    return len(pieces)
+    files, _ = sound_music.write(image, pieces, out / "sound" / "music")
+    return len(pieces), files
 
 
 def check(image, out):
-    program, _ = description(image)
+    """What does not come back the same as the sound program 'image': the text's pieces, and the music and the
+    songs table from the MIDI files"""
+    program, described = description(image)
     layout = {}
     for line in (out / "sound_layout.txt").read_text(encoding="ascii").splitlines():
         if line and not line.startswith("#"):
@@ -225,7 +231,40 @@ def check(image, out):
     names = Names({address: (address, name) for name, address in layout.items()}, function_names(program))
     problems = []
     for name, address in layout.items():
-        data = read_piece(texts.get(name, []), names, f"sound_data.txt [{name}]")
-        if image[address:address + len(data)] != data:
-            problems.append(f"the sound program's {name} does not come back")
+        if name in texts:
+            data = read_piece(texts[name], names, f"sound_data.txt [{name}]")
+            if image[address:address + len(data)] != data:
+                problems.append(f"the sound program's {name} does not come back")
+    # the music: every byte of its pieces, from the MIDI files
+    places = sorted(layout.values())
+    stops = {address: (places[index + 1] if index + 1 < len(places) else program.code_end)
+             for index, address in enumerate(places)}
+    music_names = sound_music.Names({address: (stops[address], name) for name, address in layout.items()})
+    lengths = read_piece(texts.get("note_lengths", []), names, "sound_data.txt [note_lengths]")
+    try:
+        rebuilt = sound_music.read(out / "sound" / "music", music_names, lengths, layout[SONGS_TABLE])
+    except sound_music.MusicError as error:
+        return problems[:19] + [f"the music: {error}"]
+    music = [(name, first, stop) for name, kind, first, stop in pieces_of(image, program, described)
+             if is_music(name, kind)]
+    inside = set()
+    for _, first, stop in music:
+        inside.update(range(first, stop))
+    outside = sorted(set(rebuilt.bytes) - inside)
+    if outside:
+        problems.append(f"the MIDI files give {len(outside)} bytes outside the music, the first at "
+                        f"{music_names.name(outside[0])} ({rebuilt.bytes[outside[0]][1]})")
+    for name, first, stop in music:
+        if name not in layout or name in texts:
+            problems.append(f"the sound program's {name} is not the MIDI files' (sound_layout.txt, sound_data.txt)")
+            continue
+        missing = [address for address in range(first, stop) if address not in rebuilt.bytes]
+        differ = [address for address in range(first, stop)
+                  if address in rebuilt.bytes and rebuilt.bytes[address][0] != image[address]]
+        if missing:
+            problems.append(f"the sound program's {name}: no MIDI file gives {music_names.name(missing[0])} "
+                            f"({len(missing)} bytes)")
+        if differ:
+            problems.append(f"the sound program's {name} does not come back from the MIDI files "
+                            f"({music_names.name(differ[0])}, {rebuilt.bytes[differ[0]][1]})")
     return problems[:20]

@@ -68,9 +68,35 @@ tools verify it, extract the assets and build your own executable.
 - [x] Assets extracted (`python tools/extract_assets.py`, into `assets/`, outside the repository) and checked
       byte for byte against the ROM set (`--check`): tilesets by area and sprite sheets by the animations
       that show them (indexed PNGs that keep each pen), the title music, the K007232's samples and the
-      uPD7759's speech (WAV), and the data of both programs as text by subject, every piece by name
-- [ ] The assets by theme throughout: tiles no area uses yet are in sheets by bank, the music is text (not
-      MIDI yet), and many pieces are named by their kind and place
+      uPD7759's speech (WAV), the data of both programs as text by subject, every piece by name, and the
+      music as Standard MIDI Files
+- [x] Every tile and sprite in a sheet by subject, none by bank: after the areas' maps and the animations, what
+      each scene shows (`kref --graphics-uses` on every control script, `python tools/graphics_subjects.py` writes
+      `graphics_subjects.txt`): the fixed layer's fonts, logos and HUD, the speech balloons, the opening, each
+      area's story, play and exit pictures, the ending; a tile or sprite nothing uses or shows goes with its
+      neighbours in the ROM, and `tilesets.txt` and `sprites.txt` list those. The four turtles' animations have a
+      sheet each (`leonardo_animation_set`...). Every sheet shows with its own colours: each tile and sprite with
+      the palette it shows with, and the palette set its scene requests (`kidnap_picture_palettes`...)
+- [x] Every piece of data named by what it is, none by its address: by the table symbols.txt names, the routine
+      that reads it (`title_setup_routines`), the named piece that points at it (`game_texts_5`,
+      `enemy_rodney_animation_sprites`), or the routines a table of states holds (`krang_laser_routines`); in the
+      sound program, the effect a voice is for (`fm_effect_02_voice`), the music's instruments (`fm_instrument_3`)
+      and the parts of each track by number (`songs_10_tracks_0_part_2`)
+- [x] The music as Standard MIDI Files, a song a file (`assets/sound/music/`: an area's, `area_0.mid` to
+      `area_9.mid` with `area_4_and_7.mid`, `boss.mid`, `continue.mid`, `staff_roll.mid`... named by what the
+      game plays them for; `music.txt` lists them and the songs table's entries each plays), which the game
+      loads (`runtime/src/music.c`) and from which `--check` gets back every byte of the music and of the
+      songs table (`tools/sound_music.py`, whose docstring has the format). A track is a channel of the song,
+      the YM2151's seven and the K007232's two, with its loops and parts played as the driver plays them: one
+      tick of the file is one of the driver's (24 a quarter note), and tempo events give them the game's speed
+      (the tempo, the accelerando, and the main loop's passes: timer B's 14 x 1024 clocks, longer where a
+      pass's work runs past it, as the game's own sound board measures them: within 1% of its speed in every
+      song). A note is a Note On and a Note Off, at the key its pitch has (the drums on General MIDI's
+      percussion), and its byte comes back from its key and its length, given the octave and transpositions
+      before it; what MIDI has no event for (the octave, instruments, volumes, gate, detune, portamento, LFO,
+      loops, calls and returns, jumps, held notes, rests, the end, the bytes no track reaches) is in
+      sequencer-specific meta events with the driver's bytes. An edit the driver's bytes cannot take says what
+      failed
 - [x] The 68000's instructions lifted to the decompiler's IR (`tools/core/m68000/lift.py`), checked
       against MAME's 68000 core one instruction at a time from random states (`python
       tools/core/konami/reference/compare_lift_with_mame.py --c`): every opcode of the program and every
@@ -320,13 +346,19 @@ tools/coverage.py          every byte of the program as code, data or fill: buil
 tools/data_walk.py         the data the engines read, walked from the code: build/listing/data_walk.txt
 tools/sound_coverage.py    every byte of the sound program as code, data or fill (the core's)
 tools/extract_assets.py    the assets from the ROM set, and --check back (tmnt_graphics, sound_assets,
-                           data_assets, sound_data_assets)
+                           data_assets, sound_data_assets, sound_music)
+tools/sound_music.py       the songs as Standard MIDI Files (assets/sound/music), and back to the driver's bytes
+assets/             what the extractor writes (not in the repository): tiles/ and sprites/ (PNG sheets), sounds/
+                    (WAV), data/ and sound_data.txt (the programs' data as text), sound/music/ (MIDI, a song a file)
+tools/graphics_subjects.py what each scene of the scenarios shows, by subject: graphics_subjects.txt
+graphics_subjects.txt      the subject of each tile and sprite the scenarios show, for the assets' sheets
 tools/decompile.py         the 68000 program as C into src/ (the core's m68000/decompile.py)
 tools/decompile_sound.py   the Z80 sound program as C into src/sound/
 tools/check_structure.py   every function's ifs, loops and switches run against its jumps
 tools/noise_report.py      what the C still has of the CPU and of the ROM's places, against tools/noise_baseline.txt
 src/                the decompiled C (generated: change the tools or symbols.txt, not the C)
 runtime/src/game_program.c the runtime of the decompiled program: the frame, the interrupts, the tables by name
+runtime/src/assets.c       the assets into the board's memories and the programs' data by name (music.c: the MIDI files)
 runtime/replaced.txt       the program's functions the board puts its own in place of (the boot's ROM test)
 ports/              the game with no screen (headless, for the checks) and in a window (sdl2)
 sound_symbols.txt          the sound program's names, and what its analysis cannot work out alone

@@ -93,10 +93,12 @@ class Names:
         self.functions = functions              # address -> name
         self.addresses = {name: address for address, (_, name) in pieces.items()}
         self.addresses.update({name: address for address, name in functions.items()})
+        self.used = set()                       # the functions a piece names
 
     def name(self, value):
         """NAME or NAME+0xNN for an address a piece or a function holds, else None"""
         if value in self.functions:
+            self.used.add(value)
             return self.functions[value]
         from bisect import bisect_right
         index = bisect_right(self.starts, value) - 1
@@ -284,28 +286,139 @@ def partition(image, walk, analysis):
     return sorted(spans)
 
 
-def pieces_of(spans, symbols):
+def pieces_of(spans, symbols, image, tables=None):
     """[(name, family, [(first, stop, kind)])]: the spans of a family one right after the other, one piece,
-    broken where symbols.txt names a place"""
+    broken where symbols.txt names a place (a data line, or a table line in 'tables', {address: name}); a name of
+    None for a piece symbols.txt does not name (name_pieces). A byte of 00 or FF that nothing explains, right after
+    a piece and before an even address, is that piece's: the fill that puts what follows at an even address"""
     named = {address: symbol.name for address, symbol in symbols.items()}
+    named.update({address: name for address, name in (tables or {}).items() if address not in named})
     out = []
     for first, stop, kind in spans:
         group = family(kind)
+        if kind == "unexplained" and stop == first + 1 and stop % 2 == 0 and image[first] in (0x00, 0xFF) \
+                and out and out[-1][2][-1][1] == first and first not in named:
+            out[-1][2].append((first, stop, "alignment"))
+            continue
         if out and out[-1][1] == group and out[-1][2][-1][1] == first and first not in named:
             out[-1][2].append((first, stop, kind))
             continue
-        name = named.get(first) or f"{safe(group if group != 'tables' else kind)}_{first:06X}"
-        out.append([name, group, [(first, stop, kind)]])
+        out.append([named.get(first), group, [(first, stop, kind)]])
     return out
+
+
+# the word a piece's name ends with, after what names it, by its family (a table of routines: 'routines')
+ROLES = {"tables": "table", "texts": "text", "sprite_lists": "sprites", "animations": "animation",
+         "layers": "layer", "palettes": "palettes", "palette_effects": "palette_effects", "screens": "picture",
+         "enemies": "enemies", "scroll": "scroll", "demos": "demo"}
+
+
+def name_pieces(pieces, image, analysis, taken):
+    """Names for the pieces symbols.txt does not name, by what names them in the program: the function whose
+    instructions name the piece's address ('title_setup_routines'), else the named piece that holds its address
+    (an entry of a table, 'game_texts_5'; an animation's frame, 'enemy_hop_animation_sprites'), taken again until
+    nothing more gets a name; the rest by its kind and where the program had it. 'taken' are the names already in
+    use (functions, symbols.txt's), which a piece's name does not repeat"""
+    from bisect import bisect_right
+    from m68000 import analysis as m68000_analysis
+    names = {address: symbol.name for address, symbol in analysis.symbols.items()}
+    functions = sorted(analysis.functions | {address for address, symbol in analysis.symbols.items()
+                                             if symbol.kind == "func"})
+    used = set(taken) | {piece[0] for piece in pieces if piece[0]}
+
+    def unique(name):
+        name = safe(name)
+        candidate, count = name, 1
+        while candidate in used:
+            count += 1
+            candidate = f"{name}_{count}"
+        used.add(candidate)
+        return candidate
+
+    def role(group, kinds):
+        return "routines" if kinds[0][2] == "code table" else ROLES.get(group, safe(group))
+
+    # the functions whose instructions name an address
+    readers = defaultdict(set)
+    for address, instruction in analysis.instructions.items():
+        for value in m68000_analysis.data_places(instruction):
+            index = bisect_right(functions, address) - 1
+            if index >= 0 and functions[index] in names:
+                readers[value & 0xFFFFFF].add(names[functions[index]])
+    for piece in pieces:
+        name, group, kinds = piece
+        first, stop = kinds[0][0], kinds[-1][1]
+        if name is None and first == 0:
+            piece[0] = unique("vectors")
+        elif name is None and kinds[0][2] == "unexplained" and stop == len(image) and set(image[first:stop]) == {0xFF}:
+            piece[0] = unique("fill_to_the_program_end")
+        elif name is None and readers.get(first):
+            piece[0] = unique(f"{sorted(readers[first])[0]}_{role(group, kinds)}")
+        elif name is None and kinds[0][2] == "code table":
+            # a table of routines no instruction names (an object's, through object_routine_tables): by the words its
+            # routines' names begin with, when they share some
+            routines = [names.get(int.from_bytes(image[at:at + 4], "big") & 0xFFFFFF)
+                        for at in range(kinds[0][0], kinds[0][1] - 3, 4)]
+            words = [routine.split("_") for routine in routines if routine]
+            prefix = []
+            for parts in zip(*words) if words else ():
+                if len(set(parts)) != 1:
+                    break
+                prefix.append(parts[0])
+            if prefix and len(words) > 1:
+                piece[0] = unique("_".join(prefix) + "_routines")
+    # the longs that hold a piece's address, where they are
+    holders = defaultdict(list)
+    for at in range(0, len(image) - 3, 2):
+        holders[int.from_bytes(image[at:at + 4], "big")].append(at)
+    spans = sorted((kind_first, kind_stop, kind, piece) for piece in pieces for kind_first, kind_stop, kind in piece[2])
+    span_starts = [span[0] for span in spans]
+    changed = True
+    while changed:
+        changed = False
+        for piece in pieces:
+            name, group, kinds = piece
+            if name is not None:
+                continue
+            for place in holders.get(kinds[0][0], ()):
+                index = bisect_right(span_starts, place) - 1
+                if index < 0 or not spans[index][0] <= place < spans[index][1]:
+                    continue
+                first, stop, kind, holder = spans[index]
+                if holder[0] is None or holder is piece:
+                    continue
+                start = holder[2][0][0]
+                if kind in ("animation frame", "animation frame no animation reaches"):
+                    piece[0] = unique(f"{holder[0]}_{role(group, kinds)}")
+                elif kind in POINTER_KINDS or "32-bit" in kind or family(kind) == "tables":
+                    piece[0] = unique(f"{holder[0]}_{(place - start) // 4}")
+                else:
+                    piece[0] = unique(f"{holder[0]}_{role(group, kinds)}")
+                changed = True
+                break
+    # a piece right after a named one, which nothing else names: the rest of that one, where the walk took its other
+    # entries for another kind (intro_rooftop_animations: its first entry, then three)
+    for before, piece in zip(pieces, pieces[1:]):
+        if piece[0] is None and before[0] is not None and before[2][-1][1] == piece[2][0][0]:
+            piece[0] = unique(f"{before[0]}_rest")
+    for piece in pieces:
+        if piece[0] is None:
+            name, group, kinds = piece
+            piece[0] = unique(f"{safe(group if group != 'tables' else kinds[0][2])}_{kinds[0][0]:06X}")
+    return pieces
 
 
 def extract(image, walk, analysis, folder):
     folder.mkdir(parents=True, exist_ok=True)
+    import data_walk
     spans = partition(image, walk, analysis)
-    pieces = pieces_of(spans, analysis.symbols)
+    tables = {address: name for name, address in data_walk.table_places().items()}
+    pieces = pieces_of(spans, analysis.symbols, image, tables)
     functions = {address: symbol.name for address, symbol in analysis.symbols.items() if symbol.kind in ("func", "code")}
     for address in analysis.functions | analysis.labels:
         functions.setdefault(address, f"func_{address:06X}")
+    name_pieces(pieces, image, analysis, set(functions.values()) | {symbol.name for symbol in analysis.symbols.values()}
+                | set(tables.values()))
     names = Names({kinds[0][0]: (kinds[-1][1], name) for name, _, kinds in pieces}, functions)
     files = defaultdict(list)
     layout = ["# each piece and where the program had it (for --check)"]
@@ -321,7 +434,8 @@ def extract(image, walk, analysis, folder):
     (folder / "layout.txt").write_text("\n".join(layout) + "\n", encoding="ascii")
     # the code addresses the data holds, by name (the vectors, the tables of handlers)
     (folder / "functions.txt").write_text("# the program's places in its code the data names, and their addresses\n"
-                                          + "".join(f"{name} {address:06X}\n" for address, name in sorted(functions.items())),
+                                          + "".join(f"{name} {address:06X}\n" for address, name in sorted(functions.items())
+                                                    if address in names.used),
                                           encoding="ascii")
     return len(pieces), len(files)
 

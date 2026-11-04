@@ -451,12 +451,12 @@ extern const void *fm_voice_pointers_data;
 #define pcm_drums_ADDRESS 0x1012u
 #define songs_ADDRESS 0x145Du
 #define unused_note_hooks_ADDRESS 0x3794u
-#define unreached_end_4721_ADDRESS 0x4721u
-#define unused_part_5eb2_ADDRESS 0x5EB2u
-#define unused_part_5ec7_ADDRESS 0x5EC7u
-#define unreached_end_63a5_ADDRESS 0x63A5u
-#define unreached_return_6d46_ADDRESS 0x6D46u
-#define unused_part_7caa_ADDRESS 0x7CAAu
+#define song_63_channel_1_unreached_end_ADDRESS 0x4721u
+#define song_66_unused_part_ADDRESS 0x5EB2u
+#define song_66_unused_part_2_ADDRESS 0x5EC7u
+#define song_67_channel_9_unreached_end_ADDRESS 0x63A5u
+#define song_6c_channel_9_unreached_return_ADDRESS 0x6D46u
+#define song_6a_unused_part_ADDRESS 0x7CAAu
 
 /* where the code the program holds as values is (the handlers it stores and switches on) */
 #define speech_play_ADDRESS 0x0178u

@@ -4,15 +4,15 @@
  *                 into the board's memories and the program's data, by name
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
  *    What the game reads at start instead of the ROM: the tiles and the sprites (PNG sheets) into the video
  *    chips' memories (game/data.h's game_tiles, game_sprites, as the chips read them), the samples (WAV)
  *    into the sound chips' (game_pcm, game_speech, game_title), and the data of both programs (text pieces,
- *    each by name) into pieces the code finds by name or by the address the pieces' layout gives them (the
- *    places the data's own pointers hold).
+ *    each by name; the sound program's music and songs table from the songs' MIDI files) into pieces the code
+ *    finds by name or by the address the pieces' layout gives them (the places the data's own pointers hold).
  */
 #ifndef GAME_ASSETS_H
 #define GAME_ASSETS_H

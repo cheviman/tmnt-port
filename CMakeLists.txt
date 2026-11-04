@@ -2,7 +2,7 @@
 # Description: build of the TMNT runtime and its development tools
 # Version:     0.1.0
 # Created:     29-10-2026
-# Modified:    29-10-2026
+# Modified:    04-11-2026
 # Author:      Sebastian Toyos
 cmake_minimum_required(VERSION 3.20)
 project(tmnt C CXX)
@@ -34,6 +34,7 @@ add_library(tmnt_runtime STATIC
 	runtime/src/ym2151.c
 	runtime/src/sound_chips.c
 	runtime/src/assets.c
+	runtime/src/music.c
 	runtime/src/png.c
 )
 target_include_directories(tmnt_runtime PUBLIC runtime/include PRIVATE runtime/src)

@@ -3,7 +3,7 @@
  *    Description: the game's assets loaded into the board's memories and the programs' data, by name
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -19,12 +19,17 @@
  *                                                 address and file), the files' [NAME] sections of typed
  *                                                 items, functions.txt (the code places they name)
  *                                                 (tools/data_assets.py)
- *      sound_data.txt, sound_layout.txt, sound_functions.txt   the sound program's (tools/sound_data_assets.py)
+ *      sound_data.txt, sound_layout.txt, sound_functions.txt   the sound program's (tools/sound_data_assets.py),
+ *                                                 but its music and its songs table:
+ *      sound/music/                               music.txt and the songs' Standard MIDI Files, which give the
+ *                                                 sound program's pieces sound_data.txt has not
+ *                                                 (tools/sound_music.py; runtime/src/music.c reads them)
  *    Every name a piece gives for an address is a piece's or a function's, maybe with +0xNN.
  */
 #include "game/assets.h"
 
 #include "game/data.h"
+#include "music.h"
 #include "png.h"
 
 #include <ctype.h>
@@ -45,6 +50,7 @@ typedef struct
 	uint8_t *data;
 	size_t size;
 	uint8_t *reversed;      /* the 68000 program's: its bytes the other way round (assets_record_at) */
+	int texted;             /* a text file has its section (the sound program's others are the music's) */
 } piece;
 
 typedef struct
@@ -259,23 +265,6 @@ static int read_item(const data_region *region, writer *into, char *line, const 
 		}
 		return 1;
 	}
-	if (!strcmp(token, "cmd"))
-	{
-		while ((rest = strtok(NULL, " \t")) != NULL)
-		{
-			if (rest[0] == '@')
-			{
-				uint32_t value;
-
-				if (!address_item(region, rest + 1, &value))
-					goto unknown;
-				put(into, value, 2, little);
-			}
-			else
-				put(into, (uint32_t)strtoul(rest, NULL, 16), 1, little);
-		}
-		return 1;
-	}
 	if (!strcmp(token, "frame"))
 	{
 		/* duration, count, sprite list, box, attack, then the attack box's offsets if it has one */
@@ -443,6 +432,7 @@ static int read_sections(data_region *region, const char *text, const char *file
 					snprintf(g_problem, sizeof(g_problem), "%s: [%s] is in no layout", file, name);
 					return 0;
 				}
+				current->texted = 1;
 			}
 			continue;
 		}
@@ -501,6 +491,95 @@ static int read_program_data(const char *folder)
 	return ok;
 }
 
+/* ---- the sound program's music ---- */
+
+static int sound_address_of(void *host, const char *name, uint32_t *address)
+{
+	const int64_t found = address_of(&g_sound, name);
+
+	(void)host;
+	if (found < 0)
+		return 0;
+	*address = (uint32_t)found;
+	return 1;
+}
+
+/* the name of the piece an address is in (the last that starts at or before it), +0xNN */
+static void sound_name_of(void *host, uint32_t address, char *text, size_t size)
+{
+	const piece *found = NULL;
+
+	(void)host;
+	for (size_t index = 0; index < g_sound.count && g_sound.pieces[index].address <= address; index++)
+		found = &g_sound.pieces[index];
+	if (!found)
+		snprintf(text, size, "%04X", (unsigned)address);
+	else if (found->address == address)
+		snprintf(text, size, "%s", found->name);
+	else
+		snprintf(text, size, "%s+0x%X", found->name, (unsigned)(address - found->address));
+}
+
+/* The songs' MIDI files (runtime/src/music.c) give the sound program's pieces no text has: each one the music's
+   bytes from its address up to the next piece's */
+static int read_music(const char *folder)
+{
+	const piece *lengths = piece_named(&g_sound, "note_lengths"), *songs = piece_named(&g_sound, "songs");
+	uint8_t *image = calloc(MUSIC_SPACE, 1), *given = calloc(MUSIC_SPACE, 1);
+	music_places places;
+	char path[1024];
+	const char *problem;
+	int ok = 1;
+
+	if (!image || !given)
+	{
+		snprintf(g_problem, sizeof(g_problem), "no memory for the music");
+		ok = 0;
+	}
+	else if (!lengths || !lengths->data || !songs)
+	{
+		snprintf(g_problem, sizeof(g_problem), "the sound program's note_lengths or songs is in no layout");
+		ok = 0;
+	}
+	if (ok)
+	{
+		places.address_of = sound_address_of;
+		places.name_of = sound_name_of;
+		places.host = NULL;
+		places.lengths = lengths->data;
+		places.length_count = lengths->size;
+		places.songs_table = songs->address;
+		snprintf(path, sizeof(path), "%s/sound/music", folder);
+		if ((problem = music_read(path, &places, image, given)) != NULL)
+		{
+			snprintf(g_problem, sizeof(g_problem), "sound/music: %s", problem);
+			ok = 0;
+		}
+	}
+	for (size_t index = 0; index < g_sound.count && ok; index++)
+	{
+		piece *each = &g_sound.pieces[index];
+		const uint32_t stop = index + 1 < g_sound.count ? g_sound.pieces[index + 1].address : MUSIC_SPACE;
+		uint32_t length = 0;
+
+		if (each->texted)
+			continue;
+		while (each->address + length < stop && each->address + length < MUSIC_SPACE && given[each->address + length])
+			length++;
+		if (!length || !(each->data = malloc(length)))
+		{
+			snprintf(g_problem, sizeof(g_problem), "the sound program's %s is in no asset", each->name);
+			ok = 0;
+			break;
+		}
+		memcpy(each->data, image + each->address, length);
+		each->size = length;
+	}
+	free(image);
+	free(given);
+	return ok;
+}
+
 static int read_sound_data(const char *folder)
 {
 	char *layout = read_asset(folder, "sound_layout.txt"), *functions = read_asset(folder, "sound_functions.txt");
@@ -514,7 +593,7 @@ static int read_sound_data(const char *folder)
 	free(functions);
 	free(text);
 	qsort(g_sound.pieces, g_sound.count, sizeof(*g_sound.pieces), by_address);
-	return ok;
+	return ok && read_music(folder);
 }
 
 static const uint8_t *data_at(const data_region *region, uint32_t address)

@@ -9959,6 +9959,11 @@ local start_title_logo 004AD8,004AE8,004B06 a6 animations animation_entry
 # "adda.w #$8, A5", 04FDF6 "movea.l (A5)+, A6")
 local enemy_rocksteady_shoot_start 04FDDC a5 animations animation_entry
 04FDA8  data  rocksteady_shoot_animations
+# its records' other fields: the level shot's record (04FDF8 "move.l (A5), ($24,A0)" after 04FDF6 "movea.l (A5)+,
+# A6"), then the high shot's animation and record, 8 bytes on (04FDF2 "adda.w #$8, A5")
+04FDAC  data  rocksteady_level_shot_record_address
+04FDB0  data  rocksteady_high_shot_animation
+04FDB4  data  rocksteady_high_shot_record_address
 # the two shots' records rocksteady_shoot_animations holds, after enemy_rocksteady_shoot's table of routines
 # (04FD94-04FD9B): from x -0x36 at height 0x23, level (04FDA8's), and from x -0x23 at height 0x54, up at a turtle
 # 0x40 or more above the floor (04FDB0's: 04FDE2 "cmpi.b #$40, ($10,A1)", 04FDF2 "adda.w #$8, A5"); kind 5F, the bullet
@@ -11291,8 +11296,19 @@ local start_boot_screen 001712 a1 colour palette_colour
 01C08A  table  turtle_hit_animation_tables[4]  u32 animation_entry
 # 01B928 "lea $208c0.l, A6" (turtle_set_animation): the turtles' animations, by turtle, then routine, then state
 0208C0  table  turtle_animation_sets[4]  u32 animation_table_entry
+# its four entries, a turtle each by the players' slots: their sprites rendered with their colours (assets/sprites):
+# a blue bandana and katanas, an orange one and nunchakus, a purple one and the bo, sais
+0208D0  data  leonardo_animation_set
+0231F8  data  michelangelo_animation_set
+025CD4  data  donatello_animation_set
+02883E  data  raphael_animation_set
 # 051B80 "lea $51ae2.l, A6" (mouser_hole_start): the Mouser holes' animations
 051AE2  table  mouser_hole_animation_tables[3]  u32 animation_entry
+# after each hole's two animations, the object record of the Mouser it lets out (051BC2 "adda.w #$8, A4", 051BFC
+# "movea.l ($24,A0), A5", 051C00 "jsr $47c30.l")
+051B2E  data  mouser_hole_mouser_record_0
+051B3E  data  mouser_hole_mouser_record_1
+051B4E  data  mouser_hole_mouser_record_2
 
 # ---- tables of records ----
 # a palette fade the ending asks for: the banks it fades (006D3A "lea $71dc.l, A6", then copy_palette_sets with the
