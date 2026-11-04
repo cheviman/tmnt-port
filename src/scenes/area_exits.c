@@ -2531,16 +2531,6 @@ void exit_building_site_splinter_picture(void)
 	next_area_step();
 }
 
-/* Unused: four added to a counter one at a time */
-void add_four_to_counter(uint32_t counter)
-{
-	mem_write16(counter, mem_read16(counter) + 1u);
-	mem_write16(counter, mem_read16(counter) + 1u);
-	mem_write16(counter, mem_read16(counter) + 1u);
-	mem_write16(counter, mem_read16(counter) + 1u);
-	lost_stack(0x02D1DEu);
-}
-
 /* Splinter speaks his thanks, then the screen is cleared */
 void exit_building_site_splinter_thanks(void)
 {

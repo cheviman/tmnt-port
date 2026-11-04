@@ -29,22 +29,27 @@ tools verify it, extract the assets and build your own executable.
       pressed in its I/O test; its sound test through all 135 codes; games of one player (to GAME OVER, and
       one that continues) and of four; one with the DIP switches changed (the screen flipped among them);
       and a four-player game in each of the program's ten areas, started there by a poke and with the lives
-      kept up, four of them played until the boss falls and the next area starts. All 17 run to their end,
-      and between them they execute 20,197 addresses of the 68000 program and 4,481 of the Z80's
-      (`python tools/check_scenarios.py --reference-only --video --sound`)
-- [ ] The rest of the game in scenarios: the bosses of five areas and the ending (the scripted players do
-      not beat Shredder)
+      kept up, played until the boss falls and the next area starts (in the street the players walk down and
+      up too, or a soldier below them holds the scroll); in the last area they beat Krang, and as Shredder
+      and his copies outlast them the area is cleared by a poke during his fight: the ending, the staff
+      roll, GAME OVER and the attract mode run. All 17 run to their end (507,382 frames), and between them
+      they execute 25,328 addresses of the 68000 program and 4,486 of the Z80's (`python
+      tools/check_scenarios.py --reference-only --video --sound`)
+- [x] Every boss and the ending in scenarios (04-11-2026): playing them found a picture whose last 14 bytes
+      had been taken for a routine (Splinter's, drawn after the building site), which the game read as zeroes;
+      a record of the program's data the C reads where its assets have nothing now stops the game, as a byte
+      does
 - [x] 68000 frontend in the shared core (`tools/core/m68000/`): decoder and disassembler ported from MAME's,
       the same text as MAME's at every even offset of the program and of an image of every opcode
       (`python tools/core/konami/reference/compare_m68k_with_mame.py`), with each instruction's operands
       and control flow
 - [x] Recursive disassembly without traces (`python tools/disassemble.py`, the core's 68000 analysis, from
       the vectors and `symbols.txt`): it follows what the address registers can hold into the tables of
-      object handlers the program jumps through, and finds 27,892 instructions, all 20,197 addresses the
+      object handlers the program jumps through, and finds 27,892 instructions, all 25,328 addresses the
       scenarios execute among them and none of them inside another instruction
 - [x] Every byte of the program classified (`python tools/coverage.py --reads build/scenarios`, the core's,
       with the bytes the scenarios read as data: `kref --rom-reads`): 32.4% code, 65.8% data,
-      1.6% fill, and 242 bytes (0.06%) not explained yet
+      1.6% fill, and 236 bytes (0.06%) not explained yet
 - [x] The data the engines read, walked from where the code hands it over (`python tools/data_walk.py
       --reads build/scenarios`, no traces): the sprite engine's animations, sprite lists and boxes, the
       areas' layer maps and blocks, the palettes and their effects, the enemies' spawn lists and
@@ -52,7 +57,7 @@ tools verify it, extract the assets and build your own executable.
       by an index or through a register
 - [ ] Every table of data described with its layout, its types and a name by subject, before any C is
       generated: the C reads the game's data by name from its first build, never by an address of the ROM
-      (today 242 bytes are unexplained, and the tables the code loads with lea have no shape yet)
+      (today 236 bytes are unexplained, and 426 bytes the scenarios read are in no table described yet)
 - [x] The sound program classified the same way (`python tools/sound_coverage.py --trace build/scenarios
       --reads build/scenarios`): its analysis finds the 4,481 addresses the scenarios run without traces, and
       every byte is code (35.6%), described data (64.3%: the driver's tables and the music) or fill

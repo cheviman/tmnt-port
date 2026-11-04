@@ -2414,7 +2414,6 @@ void exit_building_site_free_splinter(void);
 void turtle_exit_building_site_walk(void);
 void turtle_exit_building_site_jump(void);
 void exit_building_site_splinter_picture(void);
-void add_four_to_counter(uint32_t counter);
 void exit_building_site_splinter_thanks(void);
 void turtle_exit_building_site_drop(void);
 void turtle_exit_building_site_land(void);

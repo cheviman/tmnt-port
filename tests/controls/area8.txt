@@ -1,6 +1,6 @@
 # Area 8, the Technodrome: a four-player game started there (the area poked at 060120), the turtles
 # walking right and jumping, their lives kept up
-# They finish it about frame 36000, and the next area starts
+# They beat its boss and the next area starts about frame 36000
 700 press coin1
 710 press coin2
 720 press coin3

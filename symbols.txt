@@ -263,7 +263,6 @@ comment copy_palette_sets the palettes faded toward a list of palette sets, over
 00E364  func  lone_return_before_krang_explode_next
 01845E  func  show_spawn_scroll_place
 01AC7E  func  jump_to_read_floor_cells
-02D1D6  func  add_four_to_counter
 047B1C  func  spawn_enemy_level_with_scroll
 047D0E  func  speeds_from_direction_unscaled
 048480  func  enemy_target_distance_band
@@ -9996,6 +9995,9 @@ elements nozzle_place u8
 # 01F906 "move.b (A3)+, (A1)+"), the screens' pictures (01F942 "lea $1faa8.l, A1", 01F952 "move.b (A1)+, D0")
 elements picture_tile u8
 local exit_building_site_splinter_picture 02D0F6 a1 tiles picture_tile
+# Splinter's picture: 16 columns of 8 rows, 128 bytes to 02D1E3, a column at a time (02D120 "move.b ($0,A1), ($1,A0)"
+# to 02D14A "move.b ($70,A1), ($381,A0)", 02D150 "addq.l #1, A1"); its last 14 bytes (02D1D6) decode as instructions
+# no code reaches, and were taken for a routine until area 7's exit was played (area7 scenario, frame 46165)
 02D164  data  splinter_picture_tiles
 local intro_rooftop_start 030AF6 a6 tiles picture_tile
 030B26  data  rooftop_picture_tiles
@@ -12432,7 +12434,6 @@ comment turtle_exit_go_to_place the turtle walks to its place for the van and st
 comment run_exit_building_site area 7's exit by its steps
 comment turtle_exit_building_site_walk after the wait, each turtle walks
 comment turtle_exit_building_site_jump each turtle walks to one spot and jumps off, hidden as it comes down; then the next picture's layers and palette
-comment add_four_to_counter Unused: four added to a counter one at a time
 comment turtle_exit_building_site_drop when the palettes are ready, each turtle placed high up to fall in, the Technodrome drawn, a sound
 comment turtle_exit_building_site_land each turtle falls in across and lands, then walks; when all have landed, a wait of 160 frames
 comment turtle_exit_building_site_wait the wait: a speech balloon by the first turtle, then crouching and jumping at its end
@@ -12805,8 +12806,6 @@ local exit_building_site_splinter_picture 02D0E4,02D0F0,02D152 a0 tile_place
 local exit_building_site_splinter_picture 02D0FC,02D154 d0 columns_left
 # 02D0FE "moveq #$37, D1" the attribute byte written down eight rows of each column
 local exit_building_site_splinter_picture 02D0FE d1 tile_attribute
-# 02D1D6 "addq.w #1, (A2)" the word it adds one to four times
-param add_four_to_counter a2 counter
 # 02D20E "move.b #$b4, D7" the sound for queue_sound with Splinter's thanks
 local exit_building_site_splinter_thanks 02D20E d7 sound
 # 02D2B2 "move.w #$203, D0" the turtle's new routine and state for turtle_set_state: falling in

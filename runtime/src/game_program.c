@@ -147,6 +147,14 @@ const void *data_record(uint32_t address, uint32_t size)
 			"(frame %llu)\n", (unsigned)size, (unsigned)address, (unsigned long long)tmnt_board.frame);
 		exit(3);
 	}
+	if (assets_data_at(address) == NULL)
+	{
+		/* (only a record's last bytes may lie past the pieces: one that starts where they have nothing is none) */
+		show_trace();
+		fprintf(stderr, "68000 stopped: the program read a record of %u bytes at %06X, where its assets have none "
+			"(frame %llu)\n", (unsigned)size, (unsigned)address, (unsigned long long)tmnt_board.frame);
+		exit(3);
+	}
 	copy = copies[next++ % RECORD_COPIES];
 	for (uint32_t at = 0; at < size; at++)
 	{

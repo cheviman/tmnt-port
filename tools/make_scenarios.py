@@ -2,10 +2,10 @@
 Name:        make_scenarios.py
 Description: writes the control scripts of tests/controls: the attract mode, the test mode and its sound
              test, games of one and four players, a game with the DIP switches changed, and a four-player
-             game in each of the program's ten areas
+             game in each of the program's ten areas, to its boss's end and, in the last, the ending
 Version:     0.1.0
 Created:     29-10-2026
-Modified:    30-10-2026
+Modified:    04-11-2026
 Author:      Sebastian Toyos
 
 Usage: python tools/make_scenarios.py
@@ -21,6 +21,11 @@ mode's demos, which play different areas, and of games losing their lives):
     area loads, some 800 frames later: a poke in between starts the game in another area.
   - each player's lives, at 060101 + 8 x the player's index (2 at the start, with the DIP switches as MAME
     sets them): a poke every 300 frames keeps them up, so a game goes on as long as the script says.
+With their lives kept up the players beat every area's boss but Shredder's: in area 2 only if they also walk down
+and up the street (a soldier below them holds the scroll), and Shredder and his copies outlast them. A third
+place ends the game:
+  - the area cleared, at 0600BD: FF is what the game sets once its clear check passes and no turtle is busy, and
+    the play goes on to the area's exit; in area 9, to the ending (the epilogue, the staff roll, GAME OVER).
 """
 from pathlib import Path
 
@@ -37,11 +42,20 @@ PLAY_FROM = 900
 JUMP_EVERY = 12
 ATTACK_EVERY = 240
 LIVES_EVERY = 300
-AREA_FRAMES = 9000              # each area's game
-# the areas these players finish (frames from the start of the game to the next area, measured on
-# build/bin/kref): their games go on 1500 frames past it, for the boss's end and the next area's start
-AREA_ENDS = {1: 32000, 3: 33000, 6: 8500, 8: 36000}
+WANDER_EVERY = 480              # down for WANDER_STEP frames, then up as long, in each of these
+WANDER_STEP = 60
+# the frame the next area starts at in each area's game, these players beating its boss (measured on build/bin/kref,
+# within 1000 frames or 2000 for areas 2 and 4): their games go on 1500 frames past it, for the boss's end and the
+# next area's start
+AREA_ENDS = {0: 34000, 1: 32000, 2: 62000, 3: 33000, 4: 80000, 5: 55000, 6: 8500, 7: 47000, 8: 36000}
 PAST_THE_END = 1500
+WANDER_AREAS = {2}              # the areas whose players walk down and up too (play's wander)
+AREA_CLEARED = 0x0600BD
+# area 9: Krang falls about frame 16000 and Shredder comes; at this frame the area is cleared by a poke and the
+# players let go of everything, so that the ending runs as it does with no one at the controls, then GAME OVER and
+# the attract mode
+ENDING_AT = 30000
+ENDING_FRAMES = 10000
 
 AREAS = [
     "the burning building",
@@ -53,7 +67,7 @@ AREAS = [
     "the highway on skateboards",
     "the building site",
     "the Technodrome",
-    "Krang's android body",
+    "Krang's android body and Shredder",
 ]
 
 
@@ -65,10 +79,19 @@ def start(lines, players):
         lines.append(f"{START_AT + 10 * (player - 1)} press jump{player}")
 
 
-def play(lines, players, first, last, keep_lives=False):
-    """the players walk right, jump and attack from frame 'first' to 'last'"""
+def play(lines, players, first, last, keep_lives=False, wander=False):
+    """the players walk right, jump and attack from frame 'first' to 'last'; with 'wander', they also walk down
+    and up the street in turn (WANDER_EVERY frames, each player a quarter of it later), so that an enemy above or
+    below them is in reach too"""
     for player in players:
         lines.append(f"{first} hold right{player}")
+    if wander:
+        for frame in range(first, last - WANDER_EVERY, WANDER_EVERY):
+            for player in players:
+                start = frame + (player - 1) * WANDER_EVERY // 4
+                lines += [f"{start} hold down{player}", f"{start + WANDER_STEP} release down{player}",
+                          f"{start + WANDER_EVERY // 2} hold up{player}",
+                          f"{start + WANDER_EVERY // 2 + WANDER_STEP} release up{player}"]
     for frame in range(first, last, JUMP_EVERY):
         for player in players:
             lines.append(f"{frame} press jump{player} 2")
@@ -161,13 +184,23 @@ def main():
         start(lines, [1, 2, 3, 4])
         lines += [f"{AREA_POKE_AT} poke {AREA:06X} {number:02X}    # the game starts in area {number}",
                   f"{AREA_POKE_AT} poke {AREA_COPY:06X} {number:02X}"]
-        last = AREA_ENDS[number] + PAST_THE_END if number in AREA_ENDS else PLAY_FROM + AREA_FRAMES
-        play(lines, [1, 2, 3, 4], PLAY_FROM, last, keep_lives=True)
+        wander = number in WANDER_AREAS
+        if number in AREA_ENDS:
+            last = AREA_ENDS[number] + PAST_THE_END
+            play(lines, [1, 2, 3, 4], PLAY_FROM, last, keep_lives=True, wander=wander)
+            ending = [f"They beat its boss and the next area starts about frame {AREA_ENDS[number]}"]
+        else:
+            # (area 9: the area cleared during Shredder's fight, then the ending with no one at the controls)
+            play(lines, [1, 2, 3, 4], PLAY_FROM, ENDING_AT, keep_lives=True)
+            lines.append(f"{ENDING_AT} poke {AREA_CLEARED:06X} FF    # the area cleared: on to the ending")
+            last = ENDING_AT + ENDING_FRAMES
+            ending = [f"They beat Krang; Shredder outlasts them, so the area is cleared at frame {ENDING_AT} (the area "
+                      f"cleared poked at {AREA_CLEARED:06X})", "and they let go of the controls: the ending, the staff "
+                      "roll, GAME OVER and the attract mode"]
         lines.append(f"{last + 100} end")
-        ending = [f"They finish it about frame {AREA_ENDS[number]}, and the next area starts"] if number in AREA_ENDS else []
+        moves = "walking right, down and up, and jumping" if wander else "walking right and jumping"
         write(f"area{number}", [f"Area {number}, {area}: a four-player game started there (the area poked at "
-                                f"{AREA:06X}), the turtles", "walking right and jumping, their lives kept up"] + ending,
-              lines)
+                                f"{AREA:06X}), the turtles", f"{moves}, their lives kept up"] + ending, lines)
 
 
 if __name__ == "__main__":

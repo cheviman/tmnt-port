@@ -10,11 +10,11 @@ temp_names 875
 stack_names 0
 flag_variables 357
 flag_helpers 0
-lost_stack 2
+lost_stack 1
 code_switches 0
 context_registers 0
 var_fields 0
-mem_access 468
+mem_access 460
 wide_access 301
 copy_backs 3
 invalid_jump 0
@@ -25,8 +25,8 @@ rom_reads 0
 rom_table_reads 0
 board_replaced 2
 address_names 0
-functions 2435
-lines 66202
+functions 2434
+lines 66192
 casts 2812
 partial_writes 140
 mixed_partial_writes 3
@@ -34,4 +34,4 @@ board_registers 813
 clean_functions 913
 clean_lines 980
 faithful_functions 993
-faithful_lines 998
+faithful_lines 999
