@@ -3,7 +3,7 @@
  *    Description: an unused colour editor for the palette RAM, worked with the first player's joystick
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -30,7 +30,7 @@ void palette_editor_start(void)
 {
 	uint32_t jobs = 0;
 
-	jobs = table_loaded_by_lea_009C5C_ADDRESS;
+	jobs = palette_editor_jobs_ADDRESS;
 	queue_jobs(jobs);
 	palette_editor_numbers(0) = 0u;
 	palette_editor_numbers(1) = 0u;
@@ -78,7 +78,8 @@ void palette_editor_frame(void)
 	if (palette_editor_pick >= 3u)
 	{
 		pick = palette_editor_pick;
-		palette_editor_part = palette_editor_parts[(uint8_t)(pick - 3u)];
+		pick = (uint8_t)(pick - 3u);
+		palette_editor_part = palette_editor_parts[pick];
 		colour_place = palette_editor_entry(numbers);
 		colour = (uint16_t)((uint32_t)io_read8(colour_place + 1u) << 8);
 		colour |= (uint8_t)(colour + io_read8(colour_place + 3u));
@@ -154,8 +155,8 @@ void palette_editor_draw(uint32_t numbers)
 	io_write8(tile_place + 1u, hex_digit_tiles[palette_number]);
 	tile_place = palette_editor_number_places[1];
 	colour_number = palette_editor_numbers(3);
-	mem_write8(tile_place, 0u);
-	mem_write8(tile_place + 1u, hex_digit_tiles[colour_number]);
+	io_write8(tile_place, 0u);
+	io_write8(tile_place + 1u, hex_digit_tiles[colour_number]);
 	tile_place = palette_editor_number_places[2];
 	colour = (uint16_t)((uint32_t)io_read8(PALETTE_08000D) << 8);
 	colour |= (uint8_t)(colour + io_read8(PALETTE_08000F));
@@ -189,11 +190,11 @@ void palette_editor_draw_part(uint8_t part, uint32_t tile_place)
 	part &= 0x1Fu;
 	if ((part & 0x10u) != 0u)
 		high_digit++;
-	mem_write8(tile_place, 0u);
-	mem_write8(tile_place + 1u, high_digit);
+	io_write8(tile_place, 0u);
+	io_write8(tile_place + 1u, high_digit);
 	low_digit_tile = hex_digit_tiles[part & 0xFu];
-	mem_write8(tile_place + 2u, 0u);
-	mem_write8(tile_place + 3u, low_digit_tile);
+	io_write8(tile_place + 2u, 0u);
+	io_write8(tile_place + 3u, low_digit_tile);
 }
 
 /* Unused: the palette entry the colour editor's numbers pick */

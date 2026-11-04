@@ -3,7 +3,7 @@
  *    Description: the continue's countdown and the GAME OVER after it
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -98,7 +98,7 @@ void continue_run(void)
 void continue_countdown(uint32_t count_left)
 {
 	uint8_t player_inputs_now = 0;
-	uint16_t count = 0, job = 0;
+	uint16_t job = 0, pattern_bits = 0;
 	uint32_t inputs = 0, player = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0, t3 = 0;
@@ -125,7 +125,8 @@ void continue_countdown(uint32_t count_left)
 		continue_count_time = 0x48u;
 		continue_count--;
 		count_left = continue_count;
-		count_left = draw_big_character((uint8_t)count_left);
+		pattern_bits = (uint16_t)(fade_banks & 0xFF00u);
+		count_left = draw_big_character(pattern_bits, (uint8_t)count_left);
 	}
 	if ((players_joining | players_in_play) != 0u)
 	{
@@ -145,22 +146,22 @@ void continue_countdown(uint32_t count_left)
 		check_joins();
 		return;
 	}
-	count = (uint16_t)((count_left & ~0xFFu) | 3u);
+	count_left = (count_left & ~0xFFu) | 3u;
 	inputs = player_inputs_ADDRESS;
 	player = PLAYER_ADDRESS(0);
 	for (;;)
 	{
-		player_inputs_now = mem_read8(inputs);
+		player_inputs_now = PLAYER_INPUT(inputs)->bits;
 		inputs++;
 		if ((player_inputs_now & 0x30u) != 0u && PLAYER(player)->lives == 0u)
 		{
 			t2 = frame_count & 7u;
-			count = t2;
+			count_left = t2;
 			if (t2 == 0u)
 				break;
 		}
-		t3 = count - 1u;
-		count = t3;
+		t3 = count_left - 1u;
+		count_left = t3;
 		player += 8u;
 		if (t3 == 0xFFFFu)
 		{
@@ -205,7 +206,7 @@ void game_over_start(void)
 {
 	uint8_t sound = 0;
 	uint16_t text_number = 0;
-	uint32_t palette_effect_pointer = 0;
+	uint32_t effect_list = 0;
 
 	if (jobs_pending != 0u)
 		return;
@@ -213,10 +214,10 @@ void game_over_start(void)
 	text_number = 1u;
 	print_colour_text(text_number);
 	clear_palette_effects();
-	palette_effect_pointer = 0xD2C4u;
-	start_palette_effects(palette_effect_pointer);
-	palette_effect_pointer = 0xD2E6u;
-	start_palette_effects(palette_effect_pointer);
+	effect_list = game_over_palette_effects_ADDRESS;
+	start_palette_effects(effect_list);
+	effect_list = game_over_palette_effects_2_ADDRESS;
+	start_palette_effects(effect_list);
 	fade_state = 0u;
 	scene_substep++;
 	sound = 0x6Du;
@@ -248,7 +249,7 @@ void game_over_dim(void)
 {
 	if (fading == 0u)
 	{
-		palette_place = 0xA08Eu;
+		palette_place = game_over_dim_palettes_ADDRESS;
 		fade_banks = 0x1E02u;
 		fade_state = 0u;
 	}

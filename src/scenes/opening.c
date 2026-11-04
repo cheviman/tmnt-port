@@ -3,7 +3,7 @@
  *    Description: the attract mode's opening: the city at night, the manhole, the turtles leap out, their four pictures
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -19,8 +19,8 @@ void start_opening(void)
 	fade_state = 0u;
 	saved_turtle = 0xE0000000u;
 	cutscene_step = 0u;
-	LAYER(LAYER_A)->map = layers_03F196_ADDRESS;
-	LAYER(LAYER_B)->map = layers_03E98A_ADDRESS;
+	LAYER(LAYER_A)->map = opening_layer_a_map_ADDRESS;
+	LAYER(LAYER_B)->map = opening_layer_b_map_ADDRESS;
 	LAYER(LAYER_A)->blocks = opening_layer_a_blocks_ADDRESS;
 	LAYER(LAYER_B)->blocks = opening_layer_b_blocks_ADDRESS;
 	LAYER(LAYER_A)->x = 0u;
@@ -110,7 +110,7 @@ void opening_city_fade_in(void)
 
 	if (fading == 0u)
 	{
-		palette_place = 0xA0AEu;
+		palette_place = opening_city_palettes_ADDRESS;
 		fade_banks = 0xC02u;
 		fade_state = 0u;
 	}

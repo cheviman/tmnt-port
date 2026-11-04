@@ -3,7 +3,7 @@
  *    Description: the areas' layers: their maps of blocks drawn as the scroll goes on
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -20,7 +20,8 @@ void draw_whole_layer_and_floor(uint32_t tile_place)
 
 	page_offset = LAYER(WORKING_LAYER)->x_page;
 	page_offset = (uint8_t)(page_offset << 4);
-	map = LAYER(WORKING_LAYER)->map + (uint16_t)(page_offset + (((uint32_t)LAYER(WORKING_LAYER)->y_page << 3) * LAYER(WORKING_LAYER)->map_width - LAYER(WORKING_LAYER)->map_width));
+	page_offset = (uint16_t)(page_offset + (((uint32_t)LAYER(WORKING_LAYER)->y_page << 3) * LAYER(WORKING_LAYER)->map_width - LAYER(WORKING_LAYER)->map_width));
+	map = LAYER(WORKING_LAYER)->map + page_offset;
 	floor_place = floor_map_ADDRESS;
 	block_rows_left = 8u;
 	do
@@ -39,10 +40,10 @@ void draw_whole_layer_and_floor(uint32_t tile_place)
 				io_write8(tile_place + 2u, block_byte);
 				io_write8(tile_place + 4u, block_byte);
 				io_write8(tile_place + 6u, block_byte);
-				mem_write8(floor_place, BLOCK_BYTE(block + 0x1u));
-				mem_write8(floor_place + 1u, BLOCK_BYTE(block + 0x2u));
-				mem_write8(floor_place + 2u, BLOCK_BYTE(block + 0x3u));
-				mem_write8(floor_place + 3u, BLOCK_BYTE(block + 0x4u));
+				FLOOR_MAP_CELL(floor_place)->cell = BLOCK_BYTE(block + 0x1u);
+				FLOOR_MAP_CELL(floor_place + 0x1u)->cell = BLOCK_BYTE(block + 0x2u);
+				FLOOR_MAP_CELL(floor_place + 0x2u)->cell = BLOCK_BYTE(block + 0x3u);
+				FLOOR_MAP_CELL(floor_place + 0x3u)->cell = BLOCK_BYTE(block + 0x4u);
 				io_write8(tile_place + 1u, BLOCK_BYTE(block + 0x11u));
 				io_write8(tile_place + 3u, BLOCK_BYTE(block + 0x12u));
 				io_write8(tile_place + 5u, BLOCK_BYTE(block + 0x13u));
@@ -70,15 +71,16 @@ void draw_whole_layer_and_floor(uint32_t tile_place)
 void draw_whole_layer(uint32_t tile_place)
 {
 	uint8_t block_rows_left = 0, blocks_left = 0, tile_rows_left = 0;
-	uint32_t r41 = 0, block = 0, entry = 0, map = 0, page_offset = 0, row_offset = 0;
+	uint32_t block = 0, entry = 0, map = 0, page_offset = 0, row_offset = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	page_offset = LAYER(WORKING_LAYER)->x_page;
 	page_offset = (uint8_t)(page_offset << 4);
 	row_offset = (uint32_t)(uint16_t)((uint32_t)LAYER(WORKING_LAYER)->y_page << 3) * LAYER(WORKING_LAYER)->map_width;
-	r41 = row_offset;
+	screen_x_high = row_offset;
 	row_offset = (uint16_t)(row_offset - LAYER(WORKING_LAYER)->map_width);
-	map = LAYER(WORKING_LAYER)->map + (uint16_t)(page_offset + row_offset);
+	page_offset = (uint16_t)(page_offset + row_offset);
+	map = LAYER(WORKING_LAYER)->map + page_offset;
 	block_rows_left = 8u;
 	do
 	{
@@ -114,7 +116,7 @@ void draw_whole_layer(uint32_t tile_place)
 		block_rows_left = (uint8_t)(t3 - 1u);
 		tile_place += 0x180u;
 	} while (t3 != 1u);
-	screen_x_high = (r41 & ~0xFF00u) | (row_offset & 0xFF00u);
+	screen_x_high = (screen_x_high & ~0xFF00u) | (row_offset & 0xFF00u);
 }
 
 /* the area's layers from its record: the floor map, the first scroll segment and the layers drawn */
@@ -143,10 +145,10 @@ void start_area_layers(void)
 	drill_arrival = 0;
 	drill_arrival_step = 0u;
 	drill_rumbling = 0u;
-	unused_area_frames_copy(0) = 0u;
-	unused_area_frames(0) = 0u;
-	unused_area_frames(1) = 0u;
-	unused_area_frames_copy(1) = 0u;
+	throw_timers_2(0) = 0u;
+	throw_timers(0) = 0u;
+	throw_timers(1) = 0u;
+	throw_timers_2(1) = 0u;
 	unused_area_start_byte = 0u;
 	tv_time = 0u;
 	bebop_exchange_lines = 0u;
@@ -211,7 +213,7 @@ void start_layers_building(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x47Fu)
 			continue;
@@ -237,7 +239,7 @@ void start_layers_apartment(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x4BFu)
 			continue;
@@ -257,7 +259,7 @@ void start_layers_apartment(void)
 		wall_column++;
 		do
 		{
-			mem_write8(wall_place, wall_cell);
+			FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
 			t1 = rows_left;
 			rows_left = (uint8_t)(t1 - 1u);
 			wall_place += 0x40u;
@@ -304,7 +306,7 @@ void start_layers_sewer(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x2FFu)
 			continue;
@@ -338,7 +340,7 @@ void start_layers_car_street(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x47Fu)
 			continue;
@@ -362,7 +364,7 @@ void start_layers_highway(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x1FFu)
 			continue;
@@ -386,7 +388,7 @@ void start_layers_skateboard(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x3BFu)
 			continue;
@@ -437,7 +439,7 @@ void start_layers_technodrome(void)
 	cells = 0xFFFFFFFFu;
 	for (;;)
 	{
-		mem_write32(floor_place, cells);
+		AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 		floor_place += 4u;
 		if (floor_place < floor_map_ADDRESS + 0x3FFu)
 			continue;
@@ -541,11 +543,11 @@ void save_layer_b(void)
 }
 
 /* the row and the column the scroll has brought into view, with their floor cells */
-uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place)
+void draw_new_row_and_column_and_floor(void)
 {
 	uint8_t blocks_left = 0, rows_left = 0, y_in_block = 0;
 	uint16_t block_column_x = 0;
-	uint32_t block_row_y = 0, blocks = 0, column_map_y = 0, column_x = 0, floor_row_start = 0, last_block = 0, last_tile_place = 0, layer_blocks = 0, map = 0, map_column_x = 0, map_entry = 0, map_row_y = 0, next_tile_place = 0, row_map_x = 0, row_y = 0, tile_place = 0, tile_row_start = 0, x_offset = 0, y_offset = 0;
+	uint32_t block_row_y = 0, blocks = 0, column_map_y = 0, column_x = 0, floor_place = 0, floor_row_start = 0, last_block = 0, last_tile_place = 0, layer_blocks = 0, map = 0, map_column_x = 0, map_entry = 0, map_row_y = 0, next_tile_place = 0, row_map_x = 0, row_y = 0, tile_place = 0, tile_row_start = 0, x_offset = 0, y_offset = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
 	if (LAYER(WORKING_LAYER)->new_row != 0u)
@@ -572,22 +574,23 @@ uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place)
 		{
 			layer_blocks = LAYER(WORKING_LAYER)->blocks;
 			map_entry = MAP_ENTRY(map);
-			mem_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 2u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 4u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 6u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 2u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 4u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 6u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
 			layer_blocks += map_entry;
-			mem_write8(floor_place, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 1u))));
-			mem_write8(floor_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 2u))));
-			mem_write8(floor_place + 2u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 3u))));
-			mem_write8(floor_place + 3u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 4u))));
-			mem_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 0x11u))));
-			mem_write8(tile_place + 3u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 0x12u))));
-			mem_write8(tile_place + 5u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 0x13u))));
-			mem_write8(tile_place + 7u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 0x14u))));
+			FLOOR_MAP_CELL(floor_place)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 1u)));
+			FLOOR_MAP_CELL(floor_place + 0x1u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 2u)));
+			FLOOR_MAP_CELL(floor_place + 0x2u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 3u)));
+			FLOOR_MAP_CELL(floor_place + 0x3u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 4u)));
+			io_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 0x11u))));
+			io_write8(tile_place + 3u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 0x12u))));
+			io_write8(tile_place + 5u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 0x13u))));
+			io_write8(tile_place + 7u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 0x14u))));
 			floor_row_start = floor_place;
 			last_tile_place = tile_place;
 			floor_place += 4u;
+			object_loop_slot = floor_place;
 			tile_row_start = last_tile_place & ~0x7Fu;
 			floor_row_start = floor_row_start & ~0x3Fu;
 			map += 2u;
@@ -596,13 +599,14 @@ uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place)
 			{
 				tile_place = tile_row_start;
 				floor_place = floor_row_start;
+				object_loop_slot = floor_place;
 			}
 			t1 = blocks_left;
 			blocks_left = (uint8_t)(t1 - 1u);
 		} while (t1 != 1u);
 	}
 	if (LAYER(WORKING_LAYER)->new_column == 0u)
-		return floor_place;
+		return;
 	column_x = LAYER(WORKING_LAYER)->new_column_x;
 	map_column_x = column_x;
 	block_column_x = (uint16_t)column_x;
@@ -622,23 +626,24 @@ uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place)
 	{
 		layer_blocks = LAYER(WORKING_LAYER)->blocks;
 		map_entry = MAP_ENTRY(map);
-		mem_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x80u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x100u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x180u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x80u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x100u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x180u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
 		layer_blocks += map_entry;
-		mem_write8(floor_place, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 1u))));
-		mem_write8(floor_place + 0x40u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 5u))));
-		mem_write8(floor_place + 0x80u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 9u))));
-		mem_write8(floor_place + 0xC0u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0xDu))));
-		mem_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x11u))));
-		mem_write8(tile_place + 0x81u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x15u))));
-		mem_write8(tile_place + 0x101u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x19u))));
-		mem_write8(tile_place + 0x181u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x1Du))));
+		FLOOR_MAP_CELL(floor_place)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 1u)));
+		FLOOR_MAP_CELL(floor_place + 0x40u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 5u)));
+		FLOOR_MAP_CELL(floor_place + 0x80u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 9u)));
+		FLOOR_MAP_CELL(floor_place + 0xC0u)->cell = BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0xDu)));
+		io_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x11u))));
+		io_write8(tile_place + 0x81u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x15u))));
+		io_write8(tile_place + 0x101u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x19u))));
+		io_write8(tile_place + 0x181u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0x1Du))));
 		map -= LAYER(WORKING_LAYER)->map_width;
 		floor_place = ((floor_place + 0x100u) & 0xFF1FFFu) | 0x61800u;
 		next_tile_place = LINKED(tile_place, (uint16_t)(tile_place + 0x200u));
-		tile_place = next_tile_place & ~0x9000u;
+		next_tile_place = next_tile_place & ~0x9000u;
+		tile_place = next_tile_place;
 		t2 = blocks_left;
 		blocks_left = (uint8_t)(t2 - 1u);
 	} while (t2 != 1u);
@@ -649,26 +654,26 @@ uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place)
 	if (t3 != 0u)
 	{
 		last_block = blocks + map_entry;
-		mem_write8(tile_place, BLOCK_BYTE(blocks + (int16_t)map_entry));
-		mem_write8(floor_place, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 1u))));
-		mem_write8(tile_place + 1u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x11u))));
+		io_write8(tile_place, BLOCK_BYTE(blocks + (int16_t)map_entry));
+		FLOOR_MAP_CELL(floor_place)->cell = BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 1u)));
+		io_write8(tile_place + 1u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x11u))));
 		t4 = 4u - (y_in_block >> 3);
 		rows_left = (uint8_t)(t4 - 1u);
 		if (t4 != 1u)
 		{
-			mem_write8(tile_place + 0x80u, BLOCK_BYTE(blocks + (int16_t)map_entry));
-			mem_write8(floor_place + 0x40u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 5u))));
-			mem_write8(tile_place + 0x81u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x15u))));
+			io_write8(tile_place + 0x80u, BLOCK_BYTE(blocks + (int16_t)map_entry));
+			FLOOR_MAP_CELL(floor_place + 0x40u)->cell = BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 5u)));
+			io_write8(tile_place + 0x81u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x15u))));
 			if (rows_left != 1u)
 			{
-				mem_write8(tile_place + 0x100u, BLOCK_BYTE(blocks + (int16_t)map_entry));
-				mem_write8(floor_place + 0x80u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 9u))));
-				mem_write8(tile_place + 0x101u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x19u))));
+				io_write8(tile_place + 0x100u, BLOCK_BYTE(blocks + (int16_t)map_entry));
+				FLOOR_MAP_CELL(floor_place + 0x80u)->cell = BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 9u)));
+				io_write8(tile_place + 0x101u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 0x19u))));
 			}
 		}
 	}
 	distance_low_byte = block_column_x;
-	return floor_place;
+	object_loop_slot = floor_place;
 }
 
 /* the row and the column of a layer the scroll has brought into view */
@@ -703,15 +708,15 @@ void draw_new_row_and_column(void)
 		{
 			layer_blocks = LAYER(WORKING_LAYER)->blocks;
 			map_entry = MAP_ENTRY(map);
-			mem_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 2u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 4u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 6u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 2u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 4u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+			io_write8(tile_place + 6u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
 			layer_blocks += map_entry;
-			mem_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 1u))));
-			mem_write8(tile_place + 3u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 2u))));
-			mem_write8(tile_place + 5u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 3u))));
-			mem_write8(tile_place + 7u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 4u))));
+			io_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 1u))));
+			io_write8(tile_place + 3u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 2u))));
+			io_write8(tile_place + 5u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 3u))));
+			io_write8(tile_place + 7u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_row_y + 4u))));
 			last_tile_place = tile_place;
 			tile_row_start = last_tile_place & ~0x7Fu;
 			map += 2u;
@@ -732,7 +737,7 @@ void draw_new_row_and_column(void)
 	screen_x_high = y_offset;
 	column_x = (column_x & 0x1F800u) << 6;
 	column_x = (column_x << 16) | (column_x >> 16);
-	tile_place = (uint16_t)(column_x + ((y_offset & ~0xFF00u) | (screen_x_high & 0xFF00u))) + working_layer_tiles;
+	tile_place = (uint16_t)(column_x + y_offset) + working_layer_tiles;
 	column_map_y = ((LAYER(WORKING_LAYER)->y - 0x800u) & 0xFFE000u) << 3;
 	map_column_x = (map_column_x & 0xFFE000u) << 4;
 	map = ((column_map_y << 16) | (column_map_y >> 16)) * LAYER(WORKING_LAYER)->map_width + ((map_column_x << 16) | (map_column_x >> 16)) + LAYER(WORKING_LAYER)->map;
@@ -744,18 +749,19 @@ void draw_new_row_and_column(void)
 	{
 		layer_blocks = LAYER(WORKING_LAYER)->blocks;
 		map_entry = MAP_ENTRY(map);
-		mem_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x80u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x100u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 0x180u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x80u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x100u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
+		io_write8(tile_place + 0x180u, BLOCK_BYTE(layer_blocks + (int16_t)map_entry));
 		layer_blocks += map_entry;
-		mem_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 1u))));
-		mem_write8(tile_place + 0x81u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 5u))));
-		mem_write8(tile_place + 0x101u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 9u))));
-		mem_write8(tile_place + 0x181u, BLOCK_BYTE(layer_blocks + ((int32_t)(distance_low_byte + 0xDu))));
+		io_write8(tile_place + 1u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 1u))));
+		io_write8(tile_place + 0x81u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 5u))));
+		io_write8(tile_place + 0x101u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 9u))));
+		io_write8(tile_place + 0x181u, BLOCK_BYTE(layer_blocks + ((int32_t)(block_column_x + 0xDu))));
 		map -= LAYER(WORKING_LAYER)->map_width;
 		next_tile_place = LINKED(tile_place, (uint16_t)(tile_place + 0x200u));
-		tile_place = next_tile_place & ~0x9000u;
+		next_tile_place = next_tile_place & ~0x9000u;
+		tile_place = next_tile_place;
 		t2 = blocks_left;
 		blocks_left = (uint8_t)(t2 - 1u);
 	} while (t2 != 1u);
@@ -766,18 +772,18 @@ void draw_new_row_and_column(void)
 	if (t3 != 0u)
 	{
 		last_block = blocks + map_entry;
-		mem_write8(tile_place, BLOCK_BYTE(blocks + (int16_t)map_entry));
-		mem_write8(tile_place + 1u, BLOCK_BYTE(last_block + ((int32_t)(distance_low_byte + 1u))));
+		io_write8(tile_place, BLOCK_BYTE(blocks + (int16_t)map_entry));
+		io_write8(tile_place + 1u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 1u))));
 		t4 = 4u - (y_in_block >> 3);
 		rows_left = (uint8_t)(t4 - 1u);
 		if (t4 != 1u)
 		{
-			mem_write8(tile_place + 0x80u, BLOCK_BYTE(blocks + (int16_t)map_entry));
-			mem_write8(tile_place + 0x81u, BLOCK_BYTE(last_block + ((int32_t)(distance_low_byte + 5u))));
+			io_write8(tile_place + 0x80u, BLOCK_BYTE(blocks + (int16_t)map_entry));
+			io_write8(tile_place + 0x81u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 5u))));
 			if (rows_left != 1u)
 			{
-				mem_write8(tile_place + 0x100u, BLOCK_BYTE(blocks + (int16_t)map_entry));
-				mem_write8(tile_place + 0x101u, BLOCK_BYTE(last_block + ((int32_t)(distance_low_byte + 9u))));
+				io_write8(tile_place + 0x100u, BLOCK_BYTE(blocks + (int16_t)map_entry));
+				io_write8(tile_place + 0x101u, BLOCK_BYTE(last_block + ((int32_t)(block_column_x + 9u))));
 				return;
 			}
 		}
@@ -785,45 +791,45 @@ void draw_new_row_and_column(void)
 }
 
 /* every frame of play: the area's layers, and the HURRY! sign and the missiles when the players dawdle */
-uint32_t update_area_layers(uint32_t a1)
+void update_area_layers(void)
 {
 	uint16_t stage_offset = 0;
 	uint32_t animation = 0, object = 0;
 
 	time_since_balloon++;
-	unused_area_frames_copy(0)++;
-	unused_area_frames(0)++;
-	unused_area_frames(1)++;
-	unused_area_frames_copy(1)++;
+	throw_timers_2(0)++;
+	throw_timers(0)++;
+	throw_timers(1)++;
+	throw_timers_2(1)++;
 	stage_offset = (uint16_t)((uint32_t)stage << 2);
 	switch (stage_offset)
 	{
 	case 0:
-		a1 = update_layers_building(stage_offset, a1);
+		update_layers_building(stage_offset);
 		break;
 	case 4:
-		a1 = update_layers_apartment(a1);
+		update_layers_apartment();
 		break;
 	case 8:
-		a1 = update_layers_street(stage_offset, a1);
+		update_layers_street(stage_offset);
 		break;
 	case 12:
-		a1 = update_layers_sewer(a1);
+		update_layers_sewer();
 		break;
 	case 16:
 		update_layers_car_street();
 		break;
 	case 20:
-		a1 = update_layers_highway(a1);
+		update_layers_highway();
 		break;
 	case 24:
 		update_layers_skateboard();
 		break;
 	case 28:
-		a1 = update_layers_building_site(a1);
+		update_layers_building_site();
 		break;
 	case 32:
-		a1 = update_layers_technodrome(a1);
+		update_layers_technodrome();
 		break;
 	case 36:
 		update_layers_final();
@@ -841,12 +847,12 @@ uint32_t update_area_layers(uint32_t a1)
 		{
 			hurry_time = 0u;
 			OBJECT(OBJECT_ADDRESS(49))->flags = 0u;
-			return a1;
+			return;
 		}
 		if ((uint8_t)(hurry_time >> 8u) == 0u)
 		{
 			OBJECT(OBJECT_ADDRESS(49))->flags = 0u;
-			return a1;
+			return;
 		}
 		object = OBJECT_ADDRESS(49);
 		if (OBJECT(OBJECT_ADDRESS(49))->flags == 0u)
@@ -866,17 +872,16 @@ uint32_t update_area_layers(uint32_t a1)
 		if (enemies_on_screen != 0u)
 		{
 			hurry_time = 0x100u;
-			return a1;
+			return;
 		}
 		if (hurry_time >= 0x600u)
 		{
 			rain_missiles_on_turtles();
 			hurry_time = 0u;
 			OBJECT(OBJECT_ADDRESS(49))->flags = 0u;
-			return a1;
+			return;
 		}
 	}
-	return a1;
 }
 
 /* the two layers' places into the scroll the frame shows */
@@ -889,11 +894,11 @@ void set_layers_scroll(void)
 }
 
 /* the burning building's layer, the first cry of attack, and the wall at its end */
-uint32_t update_layers_building(uint16_t on_right, uint32_t wall_place)
+void update_layers_building(uint16_t on_right)
 {
 	uint8_t columns_left = 0, rows_left = 0, wall_cell = 0, wall_height = 0;
 	uint16_t screen_x = 0, screen_y = 0;
-	uint32_t object = 0, wall_column = 0;
+	uint32_t object = 0, wall_column = 0, wall_place = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	if (balloons_said == 0u && time_since_balloon == 0x30u)
@@ -921,7 +926,7 @@ uint32_t update_layers_building(uint16_t on_right, uint32_t wall_place)
 	save_layer_b();
 	set_layers_scroll();
 	if (floor_end_walled != 0u || LAYER(LAYER_B)->x < 0x3C000u)
-		return wall_place;
+		return;
 	wall_column = floor_map_ADDRESS + 0x24u;
 	columns_left = 0xCu;
 	wall_height = 0x12u;
@@ -934,23 +939,23 @@ uint32_t update_layers_building(uint16_t on_right, uint32_t wall_place)
 		wall_column++;
 		do
 		{
-			mem_write8(wall_place, wall_cell);
+			FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
+			wall_place += 0x40u;
+			object_loop_slot = wall_place;
 			t1 = rows_left;
 			rows_left = (uint8_t)(t1 - 1u);
-			wall_place += 0x40u;
 		} while (t1 != 1u);
 		t2 = columns_left;
 		columns_left = (uint8_t)(t2 - 1u);
 	} while (t2 != 1u);
 	floor_end_walled--;
-	return wall_place;
 }
 
 /* the apartment's layer, the wall at its end, and April */
-uint32_t update_layers_apartment(uint32_t wall_place)
+void update_layers_apartment(void)
 {
 	uint8_t columns_left = 0, rows_left = 0, wall_cell = 0, wall_height = 0;
-	uint32_t wall_column = 0;
+	uint32_t wall_column = 0, wall_place = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	if (floor_end_walled == 0u && LAYER(LAYER_B)->x >= 0x2000u)
@@ -967,10 +972,11 @@ uint32_t update_layers_apartment(uint32_t wall_place)
 			wall_column++;
 			do
 			{
-				mem_write8(wall_place, wall_cell);
+				FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
+				wall_place += 0x40u;
+				object_loop_slot = wall_place;
 				t1 = rows_left;
 				rows_left = (uint8_t)(t1 - 1u);
-				wall_place += 0x40u;
 			} while (t1 != 1u);
 			t2 = columns_left;
 			columns_left = (uint8_t)(t2 - 1u);
@@ -983,9 +989,8 @@ uint32_t update_layers_apartment(uint32_t wall_place)
 	draw_new_row_and_column();
 	save_layer_b();
 	set_layers_scroll();
-	wall_place = run_drill_arrival(wall_place);
+	run_drill_arrival();
 	april_wait_for_rescue();
-	return wall_place;
 }
 
 /* April at the window cries for help and paces, kept at her place */
@@ -1018,13 +1023,13 @@ void april_wait_for_rescue(void)
 }
 
 /* the street's layers: the TV in the shop window shows April and Shredder, and a turtle's answer */
-uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
+void update_layers_street(uint32_t stage_offset)
 {
 	bool L_01EFA0 = false;
 	uint32_t carry = 0;
 	uint8_t space_tile = 0;
 	uint16_t count = 0, count_2 = 0, screen_x = 0, screen_y = 0;
-	uint32_t left_half_place = 0, object = 0, tiles = 0, tv_frame = 0;
+	uint32_t left_half_place = 0, object = 0, right_half_place = 0, tiles = 0, tv_frame = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
 	LAYER(LAYER_A)->x_direction = 0;
@@ -1049,7 +1054,7 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 					{
 						tiles = tv_picture_tiles_ADDRESS;
 						stage_offset = 8u;
-						right_half_place = draw_tv_picture((uint8_t)stage_offset, tiles);
+						draw_tv_picture((uint8_t)stage_offset, tiles);
 					}
 					else if (!L_01EFA0 && tv_time == 0xB0u)
 					{
@@ -1083,10 +1088,11 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 								right_half_place++;
 								left_half_place++;
 							} while (t1 != 0xFFFFu);
+							right_half_place += 0x78u;
+							object_loop_slot = right_half_place;
 							t2 = count - 1u;
 							count = t2;
 							left_half_place += 0x78u;
-							right_half_place += 0x78u;
 						} while (t2 != 0xFFFFu);
 					}
 					else if (tv_time >= 0x10u && tv_time < 0xA0u)
@@ -1096,15 +1102,15 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 						{
 							stage_offset = (stage_offset & 0x18u) >> 1;
 							tv_frame = TABLE32(street_tv_pictures, stage_offset);
-							right_half_place = animate_tv_picture(tv_frame);
+							animate_tv_picture(tv_frame);
 						}
 					}
 				}
 				else
 				{
-					tiles = record_01F0D8_ADDRESS;
+					tiles = april_tv_picture_ADDRESS;
 					stage_offset = 0x28u;
-					right_half_place = draw_tv_picture((uint8_t)stage_offset, tiles);
+					draw_tv_picture((uint8_t)stage_offset, tiles);
 				}
 				t3 = tv_time;
 				carry = (uint16_t)(t3 + 1u) < t3;
@@ -1123,10 +1129,10 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 	{
 		load_layer_b();
 		working_layer_tiles = TILE_RAM + 0x4000u;
-		right_half_place = draw_new_row_and_column_and_floor(right_half_place);
+		draw_new_row_and_column_and_floor();
 		save_layer_b();
 		set_layers_scroll();
-		return right_half_place;
+		return;
 	}
 	object = OBJECT_ADDRESS(0);
 	while ((OBJECT(object)->flags & 1u) == 0u)
@@ -1136,10 +1142,10 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 		{
 			load_layer_b();
 			working_layer_tiles = TILE_RAM + 0x4000u;
-			right_half_place = draw_new_row_and_column_and_floor(right_half_place);
+			draw_new_row_and_column_and_floor();
 			save_layer_b();
 			set_layers_scroll();
-			return right_half_place;
+			return;
 		}
 	}
 	screen_x = OBJECT(object)->screen_x;
@@ -1150,14 +1156,13 @@ uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place)
 	say_they_aint_getting_prettier(stage_offset, screen_x, screen_y);
 	load_layer_b();
 	working_layer_tiles = TILE_RAM + 0x4000u;
-	right_half_place = draw_new_row_and_column_and_floor(right_half_place);
+	draw_new_row_and_column_and_floor();
 	save_layer_b();
 	set_layers_scroll();
-	return right_half_place;
 }
 
 /* a picture on the TV in the shop window */
-uint32_t draw_tv_picture(uint8_t tile_attribute, uint32_t tiles)
+void draw_tv_picture(uint8_t tile_attribute, uint32_t tiles)
 {
 	uint16_t count = 0, count_2 = 0;
 	uint32_t left_half_place = 0, right_half_place = 0;
@@ -1192,11 +1197,11 @@ uint32_t draw_tv_picture(uint8_t tile_attribute, uint32_t tiles)
 		left_half_place += 0x78u;
 		right_half_place += 0x78u;
 	} while (t3 != 0xFFFFu);
-	return right_half_place;
+	object_loop_slot = right_half_place;
 }
 
 /* April talking on the TV */
-uint32_t animate_tv_picture(uint32_t tv_frame)
+void animate_tv_picture(uint32_t tv_frame)
 {
 	uint16_t count = 0;
 	uint32_t left_half_place = 0, right_half_place = 0;
@@ -1217,14 +1222,14 @@ uint32_t animate_tv_picture(uint32_t tv_frame)
 		left_half_place += 0x80u;
 		right_half_place += 0x80u;
 	} while (t1 != 0xFFFFu);
-	return right_half_place;
+	object_loop_slot = right_half_place;
 }
 
 /* the sewer's two layers and the wall at its end */
-uint32_t update_layers_sewer(uint32_t wall_column)
+void update_layers_sewer(void)
 {
 	uint8_t columns_left = 0, rows_left = 0, wall_cell = 0;
-	uint32_t tiles = 0, wall_place = 0;
+	uint32_t tiles = 0, wall_column = 0, wall_place = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	if (floor_end_walled == 0u && LAYER(LAYER_B)->x >= 0x30000u)
@@ -1237,12 +1242,13 @@ uint32_t update_layers_sewer(uint32_t wall_column)
 		do
 		{
 			wall_place = wall_column;
-			rows_left = PICTURE_TILE(tiles);
 			wall_column++;
+			object_loop_slot = wall_column;
+			rows_left = PICTURE_TILE(tiles);
 			tiles++;
 			do
 			{
-				mem_write8(wall_place, wall_cell);
+				FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
 				t1 = rows_left;
 				rows_left = (uint8_t)(t1 - 1u);
 				wall_place += 0x40u;
@@ -1267,7 +1273,6 @@ uint32_t update_layers_sewer(uint32_t wall_column)
 	draw_new_row_and_column();
 	save_layer_a();
 	set_layers_scroll();
-	return wall_column;
 }
 
 /* the street's layer, and April tied up at its end */
@@ -1298,7 +1303,7 @@ void update_layers_car_street(void)
 		OBJECT(object)->screen_y = 0xF0u;
 		animation = car_street_bystanders_animation_ADDRESS;
 		set_animation(0u, object, animation);
-		data = 0xCA04u;
+		data = tied_april_palette_ADDRESS;
 		kind = 0x43Du;
 		post_palette_request(kind, data);
 	}
@@ -1335,7 +1340,7 @@ void update_layers_final(void)
 }
 
 /* the building site's layers, and Splinter hanging tied at its end */
-uint32_t update_layers_building_site(uint32_t a1)
+void update_layers_building_site(void)
 {
 	uint8_t blank_attribute = 0;
 	uint16_t count = 0, x_speed = 0;
@@ -1345,7 +1350,7 @@ uint32_t update_layers_building_site(uint32_t a1)
 
 	load_layer_b();
 	working_layer_tiles = TILE_RAM + 0x4000u;
-	a1 = draw_new_row_and_column_and_floor(a1);
+	draw_new_row_and_column_and_floor();
 	save_layer_b();
 	x_direction = LAYER(LAYER_B)->x_direction;
 	LAYER(LAYER_A)->x_direction = x_direction;
@@ -1356,7 +1361,10 @@ uint32_t update_layers_building_site(uint32_t a1)
 	}
 	set_layers_scroll();
 	if (LAYER(LAYER_B)->x < 0x60000u)
-		return run_drill_arrival(a1);
+	{
+		run_drill_arrival();
+		return;
+	}
 	if (io_read16(TILES_102030) != 0x10u)
 	{
 		tile_place = TILES_102030;
@@ -1391,7 +1399,10 @@ uint32_t update_layers_building_site(uint32_t a1)
 		io_write8(TILES_102EB9, space_tile);
 	}
 	if (LAYER(LAYER_B)->x < 0x68800u)
-		return run_drill_arrival(a1);
+	{
+		run_drill_arrival();
+		return;
+	}
 	object = OBJECT_ADDRESS(44);
 	OBJECT(OBJECT_ADDRESS(44))->screen_x = (0x84000u - LAYER(LAYER_B)->x) >> 8;
 	if (OBJECT(OBJECT_ADDRESS(44))->flags == 0u)
@@ -1405,23 +1416,22 @@ uint32_t update_layers_building_site(uint32_t a1)
 		OBJECT(object)->shadow = common_shadow_ADDRESS;
 		animation = splinter_struggles_animation_ADDRESS;
 		set_animation(space_tile, object, animation);
-		return a1;
+		return;
 	}
 	if ((uint8_t)frame_count != 0u)
-		return a1;
+		return;
 	animation = splinter_tied_up_animation_ADDRESS;
 	if (OBJECT(object)->frame_time != 0u)
 	{
 		set_animation(space_tile, object, animation);
-		return a1;
+		return;
 	}
 	animation = splinter_struggles_animation_ADDRESS;
 	set_animation(space_tile, object, animation);
-	return a1;
 }
 
 /* the Technodrome's layers by the step: to the lift, the ride, off the lift */
-uint32_t update_layers_technodrome(uint32_t a1)
+void update_layers_technodrome(void)
 {
 	switch (layers_step)
 	{
@@ -1429,14 +1439,13 @@ uint32_t update_layers_technodrome(uint32_t a1)
 		technodrome_reach_lift();
 		break;
 	case 1:
-		a1 = technodrome_ride_lift(a1);
+		technodrome_ride_lift();
 		break;
 	case 2:
-		a1 = technodrome_leave_lift(a1);
+		technodrome_leave_lift();
 		break;
 	}
 	set_layers_scroll();
-	return a1;
 }
 
 /* the layers up to the lift, and the ride starts when every turtle is on it */
@@ -1486,10 +1495,10 @@ void technodrome_reach_lift(void)
 }
 
 /* the lift's ride: the scroll speeds up, loops the shaft, slows down and stops */
-uint32_t technodrome_ride_lift(uint32_t wall_place)
+void technodrome_ride_lift(void)
 {
 	uint8_t columns_left = 0, rows_left = 0, sound = 0, wall_cell = 0, wall_height = 0;
-	uint32_t wall_column = 0;
+	uint32_t wall_column = 0, wall_place = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	if (layer_loops < 0)
@@ -1570,7 +1579,7 @@ uint32_t technodrome_ride_lift(uint32_t wall_place)
 	save_layer_b();
 	place_lift_edge();
 	if (scroll_mode < 0)
-		return wall_place;
+		return;
 	sound = 0x2Bu;
 	queue_sound(sound);
 	wall_column = floor_map_ADDRESS + 0x30u;
@@ -1585,23 +1594,23 @@ uint32_t technodrome_ride_lift(uint32_t wall_place)
 		wall_column++;
 		do
 		{
-			mem_write8(wall_place, wall_cell);
+			FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
+			wall_place += 0x40u;
+			object_loop_slot = wall_place;
 			t2 = rows_left;
 			rows_left = (uint8_t)(t2 - 1u);
-			wall_place += 0x40u;
 		} while (t2 != 1u);
 		t3 = columns_left;
 		columns_left = (uint8_t)(t3 - 1u);
 	} while (t3 != 1u);
 	layers_step++;
-	return wall_place;
 }
 
 /* the layers after the ride, the floor map set again and the wall at the end */
-uint32_t technodrome_leave_lift(uint32_t a1)
+void technodrome_leave_lift(void)
 {
 	uint8_t columns_left = 0, rows = 0, rows_left = 0, wall_cell = 0, wall_height = 0;
-	uint32_t cells = 0, floor_row = 0, wall_column = 0, x = 0;
+	uint32_t cells = 0, floor_row = 0, wall_column = 0, wall_place = 0, x = 0;
 	uint8_t t1 = 0, t2 = 0;
 
 	load_layer_b();
@@ -1618,12 +1627,12 @@ uint32_t technodrome_leave_lift(uint32_t a1)
 	place_lift_edge();
 	x = LAYER(LAYER_B)->x;
 	if (x < 0xC0000u)
-		return a1;
+		return;
 	if (x < 0xC0200u)
 	{
 		floor_row = floor_map_ADDRESS + 0x30u;
 		if (floor_map(48) == 0xFFu)
-			return a1;
+			return;
 		cells = 0xFFFFFFFFu;
 		rows = 0x10u;
 		fill_floor_map_rows(rows, cells, floor_row);
@@ -1631,10 +1640,10 @@ uint32_t technodrome_leave_lift(uint32_t a1)
 		cells = 0x1010101u;
 		rows = 0x10u;
 		fill_floor_map_rows(rows, cells, floor_row);
-		return a1;
+		return;
 	}
 	if (floor_end_walled != 0u || LAYER(LAYER_B)->x < 0xC9000u)
-		return a1;
+		return;
 	wall_column = floor_map_ADDRESS + 0x38u;
 	columns_left = 0x10u;
 	wall_height = 0x10u;
@@ -1643,22 +1652,22 @@ uint32_t technodrome_leave_lift(uint32_t a1)
 	{
 		rows_left = (uint8_t)wall_height;
 		wall_height++;
-		a1 = wall_column;
+		wall_place = wall_column;
 		wall_column++;
 		if (wall_column >= floor_map_ADDRESS + 0x40u)
 			wall_column = floor_map_ADDRESS;
 		do
 		{
-			mem_write8(a1, wall_cell);
+			FLOOR_MAP_CELL(wall_place)->cell = wall_cell;
+			wall_place += 0x40u;
+			object_loop_slot = wall_place;
 			t1 = rows_left;
 			rows_left = (uint8_t)(t1 - 1u);
-			a1 += 0x40u;
 		} while (t1 != 1u);
 		t2 = columns_left;
 		columns_left = (uint8_t)(t2 - 1u);
 	} while (t2 != 1u);
 	floor_end_walled--;
-	return a1;
 }
 
 /* rows of the floor map filled with one kind of cell */
@@ -1672,7 +1681,7 @@ void fill_floor_map_rows(uint8_t rows, uint32_t cells, uint32_t floor_place)
 		longs_left = 4u;
 		do
 		{
-			mem_write32(floor_place, cells);
+			AT32(FLOOR_MAP_CELL(floor_place)->cell, -3) = cells;
 			t1 = longs_left;
 			longs_left = (uint8_t)(t1 - 1u);
 			floor_place += 4u;
@@ -1701,7 +1710,7 @@ void place_lift_edge(void)
 }
 
 /* the highway's layer and the cars full of Foot soldiers */
-uint32_t update_layers_highway(uint32_t a1)
+void update_layers_highway(void)
 {
 	load_layer_b();
 	working_layer_tiles = TILE_RAM + 0x4000u;
@@ -1711,87 +1720,101 @@ uint32_t update_layers_highway(uint32_t a1)
 	switch (layers_step)
 	{
 	case 0:
-		a1 = highway_first_car(a1);
+		highway_first_car();
 		break;
 	case 1:
-		a1 = highway_first_car_drive(a1);
+		highway_first_car_drive();
 		break;
 	case 2:
-		a1 = highway_second_car(a1);
+		highway_second_car();
 		break;
 	case 3:
-		a1 = highway_second_car_drive(a1);
+		highway_second_car_drive();
 		break;
 	case 4:
-		a1 = highway_third_car(a1);
+		highway_third_car();
 		break;
 	case 5:
-		a1 = highway_third_car_drive(a1);
+		highway_third_car_drive();
 		break;
 	case 6:
 		highway_cars_over();
 		break;
 	}
 	set_layers_scroll();
-	return a1;
 }
 
 /* the first car full of Foot soldiers comes */
-uint32_t highway_first_car(uint32_t a1)
+void highway_first_car(void)
 {
+	uint8_t colour_offset = 0;
+
 	if (LAYER(LAYER_B)->x >= 0x10000u)
 	{
 		distance_low_byte = 0u;
-		a1 = draw_screen_picture();
+		colour_offset = 0u;
+		draw_screen_picture(colour_offset);
 		start_foot_car();
 		layers_step++;
 	}
-	return a1;
 }
 
 /* the first car drives past */
-uint32_t highway_first_car_drive(uint32_t right_wheel_place)
+void highway_first_car_drive(void)
 {
+	uint8_t colour_offset = 0;
+
 	distance_low_byte = 0u;
-	return drive_foot_car(right_wheel_place);
+	colour_offset = 0u;
+	drive_foot_car(colour_offset);
 }
 
 /* the second car comes, in other colours */
-uint32_t highway_second_car(uint32_t a1)
+void highway_second_car(void)
 {
+	uint8_t colour_offset = 0;
+
 	if (LAYER(LAYER_B)->x < 0x30000u)
-		return a1;
+		return;
 	distance_low_byte = 0x40u;
-	a1 = draw_screen_picture();
+	colour_offset = 0x40u;
+	draw_screen_picture(colour_offset);
 	start_foot_car();
 	layers_step++;
-	return a1;
 }
 
 /* the second car drives past */
-uint32_t highway_second_car_drive(uint32_t right_wheel_place)
+void highway_second_car_drive(void)
 {
+	uint8_t colour_offset = 0;
+
 	distance_low_byte = 0x40u;
-	return drive_foot_car(right_wheel_place);
+	colour_offset = 0x40u;
+	drive_foot_car(colour_offset);
 }
 
 /* the third car comes, in other colours */
-uint32_t highway_third_car(uint32_t a1)
+void highway_third_car(void)
 {
+	uint8_t colour_offset = 0;
+
 	if (LAYER(LAYER_B)->x < 0x50000u)
-		return a1;
+		return;
 	distance_low_byte = 0xFFFFFF80u;
-	a1 = draw_screen_picture();
+	colour_offset = 0x80u;
+	draw_screen_picture(colour_offset);
 	start_foot_car();
 	layers_step++;
-	return a1;
 }
 
 /* the third car drives past */
-uint32_t highway_third_car_drive(uint32_t right_wheel_place)
+void highway_third_car_drive(void)
 {
+	uint8_t colour_offset = 0;
+
 	distance_low_byte = 0xFFFFFF80u;
-	return drive_foot_car(right_wheel_place);
+	colour_offset = 0x80u;
+	drive_foot_car(colour_offset);
 }
 
 /* no more cars */
@@ -1800,11 +1823,11 @@ void highway_cars_over(void)
 }
 
 /* the car's wheels turn and it drives across the screen */
-uint32_t drive_foot_car(uint32_t right_wheel_place)
+void drive_foot_car(uint8_t colour_offset)
 {
 	uint8_t tile_attribute = 0;
 	uint16_t count = 0, count_2 = 0;
-	uint32_t left_wheel_place = 0, tiles = 0, tiles_b = 0, x = 0;
+	uint32_t left_wheel_place = 0, right_wheel_place = 0, tiles = 0, tiles_b = 0, x = 0;
 	uint16_t t3 = 0, t4 = 0;
 	uint32_t x_2 = 0, t1 = 0, t2 = 0;
 
@@ -1814,10 +1837,10 @@ uint32_t drive_foot_car(uint32_t right_wheel_place)
 		x_2 = LAYER(LAYER_A)->x;
 		LAYER(LAYER_A)->x = x_2 - x;
 		if (x <= x_2)
-			return right_wheel_place;
+			return;
 		LAYER(LAYER_A)->x = 0x1FFFFu;
 		layers_step++;
-		return right_wheel_place;
+		return;
 	}
 	tile_attribute = 0x34u;
 	tiles = foot_car_tiles_ADDRESS;
@@ -1832,7 +1855,7 @@ uint32_t drive_foot_car(uint32_t right_wheel_place)
 	right_wheel_place = TILE_RAM + 0x2A6Cu;
 	count = 3u;
 	offset_high_word = 3u;
-	tile_attribute += distance_low_byte;
+	tile_attribute += colour_offset;
 	do
 	{
 		count_2 = 3u;
@@ -1853,23 +1876,23 @@ uint32_t drive_foot_car(uint32_t right_wheel_place)
 			left_wheel_place++;
 			right_wheel_place++;
 		} while (t3 != 0xFFFFu);
+		right_wheel_place += 0x78u;
+		object_loop_slot = right_wheel_place;
 		t4 = count - 1u;
 		count = t4;
 		left_wheel_place += 0x78u;
-		right_wheel_place += 0x78u;
 	} while (t4 != 0xFFFFu);
 	x = (uint16_t)(0x480u - LAYER(LAYER_B)->x_speed);
 	x_2 = LAYER(LAYER_A)->x;
 	LAYER(LAYER_A)->x = x_2 - x;
 	if (x <= x_2)
-		return right_wheel_place;
+		return;
 	LAYER(LAYER_A)->x = 0x1FFFFu;
 	layers_step++;
-	return right_wheel_place;
 }
 
 /* the picture of the Foot's car drawn into layer A in the colours given, with a sound */
-uint32_t draw_screen_picture(void)
+void draw_screen_picture(uint8_t colour_offset)
 {
 	uint8_t sound = 0;
 	uint16_t count = 0, count_2 = 0;
@@ -1887,7 +1910,7 @@ uint32_t draw_screen_picture(void)
 		count_2 = 0x17u;
 		do
 		{
-			io_write8(tile_place, PICTURE_TILE(colours) + distance_low_byte);
+			io_write8(tile_place, PICTURE_TILE(colours) + colour_offset);
 			t1 = tiles;
 			tiles++;
 			tile_place++;
@@ -1902,8 +1925,8 @@ uint32_t draw_screen_picture(void)
 		tile_place += 0x50u;
 	} while (t3 != 0xFFFFu);
 	sound = 0x15u;
+	object_loop_slot = colours;
 	queue_sound(sound);
-	return colours;
 }
 
 /* the skateboard ride: the far background and the road scroll by themselves */

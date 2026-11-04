@@ -3,7 +3,7 @@
  *    Description: the explosions other objects start
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -24,22 +24,20 @@ void start_small_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t o
 }
 
 /* one of the explosions of a defeated boss, with its sound */
-uint32_t boss_start_explosion(uint32_t object, uint32_t explosion)
+void boss_start_explosion(uint32_t object, uint32_t explosion)
 {
 	uint8_t sound = 0;
 	uint16_t explosion_offset = 0, height_offset = 0, sound_choice = 0, x_offset = 0;
-	uint32_t a5 = 0;
 
 	explosion_offset = (uint16_t)((uint32_t)OBJECT(object)->boss.explosions << 2);
 	x_offset = (uint16_t)boss_explosion_x[explosion_offset / 2u];
 	height_offset = (uint16_t)boss_explosion_height[explosion_offset / 2u];
 	start_big_explosion(x_offset, height_offset, object, explosion);
-	a5 = explosion_sounds_ADDRESS;
 	offset_high_word = 0u;
 	sound_choice = OBJECT(object)->boss.explosions;
 	sound = explosion_sounds[sound_choice & 1u];
+	object_loop_leftover = explosion_sounds_ADDRESS;
 	queue_sound(sound);
-	return a5;
 }
 
 /* a big explosion, harmless */

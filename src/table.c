@@ -3,7 +3,7 @@
  *    Description: the code the board runs by address (the vectors' handlers), the reset entry, and the tables the game loads by name
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,12 +12,12 @@
 #include "game.h"
 
 /* what the code carries in its registers (game.h) */
-uint32_t screen_x_high = 0u, distance_high_word = 0u, distance_low_byte = 0u, fade_banks = 0u, offset_high_word = 0u, palette_place = 0u;
+uint32_t screen_x_high = 0u, distance_high_word = 0u, distance_low_byte = 0u, fade_banks = 0u, offset_high_word = 0u, palette_place = 0u, object_loop_slot = 0u, object_loop_leftover = 0u;
 
 /* the same, for the runtime to put back what an interrupt's handler found there when it returns, as the
    handler does */
-uint32_t *const game_context[] = { &screen_x_high, &distance_high_word, &distance_low_byte, &fade_banks, &offset_high_word, &palette_place };
-const size_t game_context_count = 6;
+uint32_t *const game_context[] = { &screen_x_high, &distance_high_word, &distance_low_byte, &fade_banks, &offset_high_word, &palette_place, &object_loop_slot, &object_loop_leftover };
+const size_t game_context_count = 8;
 
 /* the handlers of the vectors (the reset, the exceptions, the interrupts), by address */
 const game_code_entry game_code[] =
@@ -36,7 +36,7 @@ void game_entry(void)
 	reset();
 }
 
-const void *indexed_table_of_32_bit_values_0013DE_data;
+const void *job_handlers_data;
 const void *lives_settings_data;
 const void *coinage_coins_data;
 const void *coinage_credits_data;
@@ -44,7 +44,7 @@ const void *coinage_2_coins_data;
 const void *coinage_2_credits_data;
 const void *boot_texts_data;
 const void *text_colours_data;
-const void *indexed_table_of_32_bit_values_002678_data;
+const void *player_message_handlers_data;
 const void *text_layer_places_data;
 const void *big_font_place_data;
 const void *big_font_tiles_data;
@@ -60,10 +60,10 @@ const void *lives_icon_bottom_data;
 const void *stage_titles_data;
 const void *positioned_texts_data;
 const void *tall_texts_data;
-const void *indexed_table_of_32_bit_values_003E60_data;
-const void *indexed_table_of_32_bit_values_003F8E_data;
-const void *indexed_table_of_32_bit_values_004100_data;
-const void *indexed_table_of_32_bit_values_00413A_data;
+const void *game_state_handlers_data;
+const void *startup_steps_data;
+const void *attract_steps_data;
+const void *game_scene_handlers_data;
 const void *demo_settings_table_data;
 const void *demo_input_streams_data;
 const void *color_test_places_data;
@@ -84,10 +84,6 @@ const void *fire_priority_flicker_data;
 const void *area_music_data;
 const void *technodrome_explosion_sounds_data;
 const void *ending_palette_fades_data;
-const void *rom_0071EE_data;
-const void *rom_0071F0_data;
-const void *rom_0071F4_data;
-const void *rom_0071F6_data;
 const void *technodrome_explosion_x_data;
 const void *technodrome_explosion_y_data;
 const void *staff_roll_portrait_places_data;
@@ -106,17 +102,17 @@ const void *turtle_picture_sprites_data;
 const void *ranking_turtle_picture_sprites_data;
 const void *best_players_places_data;
 const void *best_players_colours_data;
-const void *indexed_table_of_32_bit_values_009310_data;
-const void *rom_009334_data;
+const void *palette_request_handlers_data;
+const void *palette_request_second_halves_data;
 const void *palette_bank_counts_data;
 const void *palette_bank_addresses_data;
 const void *palette_banks_data;
 const void *palette_effect_banks_data;
-const void *indexed_table_of_32_bit_values_0099F0_data;
+const void *palette_effect_stops_data;
 const void *game_step_palettes_data;
 const void *game_step_palette_effects_data;
 const void *area_palette_effects_data;
-const void *indexed_table_of_32_bit_values_009C30_data;
+const void *palette_editor_states_data;
 const void *palette_editor_limits_data;
 const void *palette_editor_banks_data;
 const void *palette_editor_masks_data;
@@ -128,16 +124,16 @@ const void *palette_editor_number_places_data;
 const void *palette_editor_colour_places_data;
 const void *hex_digit_tiles_data;
 const void *area_palettes_data;
-const void *indexed_table_of_32_bit_values_00DF92_data;
-const void *indexed_table_of_32_bit_values_00E082_data;
-const void *indexed_table_of_32_bit_values_00E13C_data;
-const void *indexed_table_of_32_bit_values_00E1C0_data;
-const void *indexed_table_of_32_bit_values_00E2F0_data;
-const void *indexed_table_of_32_bit_values_00E3B0_data;
+const void *krang_appear_states_data;
+const void *krang_walk_states_data;
+const void *krang_melee_states_data;
+const void *krang_lasers_states_data;
+const void *krang_explode_states_data;
+const void *krang_escape_states_data;
 const void *krang_hover_heights_data;
 const void *krang_move_chances_data;
-const void *indexed_table_of_32_bit_values_00E546_data;
-const void *indexed_table_of_32_bit_values_00E582_data;
+const void *krang_attacks_in_front_data;
+const void *krang_attacks_close_by_data;
 const void *krang_move_times_data;
 const void *krang_laser_place_x_data;
 const void *krang_laser_place_height_data;
@@ -151,11 +147,11 @@ const void *rat_start_offsets_data;
 const void *rat_run_times_data;
 const void *pizza_stats_by_kind_data;
 const void *billboard_trigger_x_data;
-const void *indexed_table_of_32_bit_values_010616_data;
+const void *turret_wreck_states_data;
 const void *turret_waits_data;
 const void *nozzle_row_routines_data;
 const void *nozzle_rows_data;
-const void *indexed_table_of_32_bit_values_010B7E_data;
+const void *freeze_nozzle_spray_states_data;
 const void *turret_wreck_sounds_data;
 const void *turret_wreck_waits_data;
 const void *boss_explosion_x_data;
@@ -165,18 +161,18 @@ const void *stockman_explosion_x_data;
 const void *stockman_explosion_height_data;
 const void *sewer_launcher_drift_x_data;
 const void *sewer_launcher_drift_y_data;
-const void *indexed_table_of_32_bit_values_011562_data;
+const void *rock_soldier_site_enter_states_data;
 const void *rock_soldier_site_attack_reaches_data;
-const void *rom_011782_data;
-const void *indexed_table_of_32_bit_values_0119F2_data;
+const void *rock_soldier_site_states_data;
+const void *rock_soldier_defeated_states_data;
 const void *rock_soldier_crumble_times_data;
 const void *rock_soldier_site_moves_data;
 const void *rock_soldier_site_waits_data;
 const void *rock_soldier_site_move_times_data;
 const void *rubble_place_x_data;
 const void *rubble_place_y_data;
-const void *indexed_table_of_32_bit_values_0121AC_data;
-const void *rom_012360_data;
+const void *rock_soldier_technodrome_enter_states_data;
+const void *rock_soldier_technodrome_states_data;
 const void *rock_soldier_technodrome_moves_data;
 const void *rock_soldier_technodrome_move_times_data;
 const void *car_soldier_stop_y_data;
@@ -184,7 +180,7 @@ const void *helicopter_drift_y_data;
 const void *helicopter_shake_heights_data;
 const void *helicopter_bob_heights_data;
 const void *flying_drone_starts_data;
-const void *indexed_table_of_32_bit_values_0134CA_data;
+const void *flying_drone_enter_states_data;
 const void *flying_drone_shake_heights_data;
 const void *flying_drone_bob_heights_data;
 const void *flying_drone_aims_data;
@@ -196,9 +192,9 @@ const void *drone_shot_place_x_data;
 const void *drone_shot_place_height_data;
 const void *drone_shot_x_speeds_data;
 const void *drone_shot_y_speeds_data;
-const void *indexed_table_of_32_bit_values_013C46_data;
+const void *stockman_enter_states_data;
 const void *stockman_fly_moves_data;
-const void *indexed_table_of_32_bit_values_013F08_data;
+const void *stockman_defeated_states_data;
 const void *stockman_shake_heights_data;
 const void *stockman_height_steps_data;
 const void *stockman_bob_heights_data;
@@ -258,50 +254,50 @@ const void *box_opening_place_data;
 const void *unreached_box_opening_place_data;
 const void *profile_texts_data;
 const void *area_title_texts_data;
-const void *indexed_table_of_32_bit_values_019D54_data;
+const void *area_turtle_starts_data;
 const void *turtle_jump_in_x_data;
 const void *turtle_jump_in_y_data;
 const void *turtle_jump_in_speeds_data;
 const void *turtle_marker_animations_data;
-const void *indexed_table_of_32_bit_values_019F92_data;
-const void *indexed_table_of_32_bit_values_019FDE_data;
-const void *indexed_table_of_32_bit_values_01A14E_data;
+const void *area_entry_handlers_data;
+const void *fall_in_entry_states_data;
+const void *jump_in_entry_states_data;
 const void *turtle_jump_in_heights_data;
 const void *stage_scroll_locks_data;
-const void *indexed_table_of_32_bit_values_01A88C_data;
-const void *indexed_table_of_32_bit_values_01AC9A_data;
+const void *area_cleared_checks_data;
+const void *turtle_wall_checks_data;
 const void *turtle_walk_speeds_data;
-const void *indexed_table_of_32_bit_values_01B714_data;
-const void *indexed_table_of_32_bit_values_01BA88_data;
+const void *turtle_actions_data;
+const void *turtle_jump_states_data;
 const void *turtle_throw_moves_data;
 const void *turtle_throw_counters_data;
 const void *turtle_hit_animation_tables_data;
 const void *turtle_attack_firsts_data;
-const void *indexed_table_of_32_bit_values_01C272_data;
+const void *turtle_hit_handlers_data;
 const void *turtle_hit_speeds_data;
 const void *turtle_hit_waits_data;
-const void *indexed_table_of_32_bit_values_01C678_data;
+const void *turtle_knocked_down_states_data;
 const void *turtle_knocked_down_steps_data;
-const void *indexed_table_of_32_bit_values_01C7D0_data;
+const void *turtle_knocked_back_states_data;
 const void *turtle_knocked_back_steps_data;
-const void *indexed_table_of_32_bit_values_01C8F8_data;
+const void *turtle_knocked_flying_states_data;
 const void *turtle_knocked_flying_steps_data;
-const void *indexed_table_of_32_bit_values_01CAC2_data;
+const void *turtle_knocked_flying_from_behind_states_data;
 const void *turtle_knocked_flying_from_behind_steps_data;
-const void *indexed_table_of_32_bit_values_01CCAA_data;
-const void *indexed_table_of_32_bit_values_01CD44_data;
-const void *indexed_table_of_32_bit_values_01CDBC_data;
-const void *indexed_table_of_32_bit_values_01CE52_data;
-const void *indexed_table_of_32_bit_values_01CF4E_data;
-const void *indexed_table_of_32_bit_values_01D028_data;
-const void *indexed_table_of_32_bit_values_01D100_data;
+const void *turtle_frozen_states_data;
+const void *turtle_shocked_states_data;
+const void *turtle_fall_in_manhole_states_data;
+const void *turtle_held_states_data;
+const void *turtle_held_briefly_states_data;
+const void *turtle_held_knock_off_states_data;
+const void *turtle_held_throw_off_states_data;
 const void *turtle_struggle_bits_data;
 const void *turtle_hit_reactions_data;
 const void *turtle_attack_sounds_by_move_data;
 const void *turtle_hit_sounds_data;
 const void *turtle_attack_damages_data;
 const void *turtle_combos_data;
-const void *indexed_table_of_32_bit_values_01E2DA_data;
+const void *area_layer_starts_data;
 const void *area_layer_a_x_data;
 const void *area_layer_a_y_data;
 const void *area_layer_b_x_data;
@@ -312,47 +308,47 @@ const void *area_layer_b_maps_data;
 const void *area_layer_b_blocks_data;
 const void *area_layer_a_map_widths_data;
 const void *area_layer_b_map_widths_data;
-const void *indexed_table_of_32_bit_values_01ECEC_data;
+const void *area_layer_updates_data;
 const void *street_tv_pictures_data;
-const void *indexed_table_of_32_bit_values_01F43A_data;
-const void *indexed_table_of_32_bit_values_01F82C_data;
-const void *indexed_table_of_32_bit_values_01FC96_data;
+const void *technodrome_lift_steps_data;
+const void *highway_car_steps_data;
+const void *skateboard_road_steps_data;
 const void *fire_tiles_data;
 const void *fire_tiles_area_0_data;
 const void *area_scroll_segments_data;
 const void *turtle_animation_sets_data;
-const void *indexed_table_of_32_bit_values_02B2C6_data;
-const void *indexed_table_of_32_bit_values_02B62A_data;
-const void *indexed_table_of_32_bit_values_02B728_data;
-const void *indexed_table_of_32_bit_values_02BB16_data;
+const void *area_exit_starts_data;
+const void *area_exit_handlers_data;
+const void *exit_apartment_steps_data;
+const void *turtle_exit_street_steps_data;
 const void *exit_street_jump_animations_data;
-const void *indexed_table_of_32_bit_values_02BC98_data;
-const void *indexed_table_of_32_bit_values_02BD44_data;
-const void *indexed_table_of_32_bit_values_02BF10_data;
-const void *indexed_table_of_32_bit_values_02C04C_data;
+const void *exit_sewer_steps_data;
+const void *turtle_exit_sewer_steps_data;
+const void *exit_car_street_steps_data;
+const void *turtle_exit_car_street_steps_data;
 const void *car_street_exit_x_data;
 const void *car_street_exit_y_data;
 const void *van_start_x_shakes_data;
 const void *van_start_y_shakes_data;
-const void *indexed_table_of_32_bit_values_02C93A_data;
+const void *exit_skateboard_steps_data;
 const void *exit_places_x_data;
 const void *exit_places_y_data;
-const void *indexed_table_of_32_bit_values_02CE8E_data;
+const void *exit_building_site_steps_data;
 const void *building_site_exit_x_data;
 const void *building_site_exit_y_data;
 const void *building_site_exit_heights_data;
 const void *building_site_exit_drifts_data;
 const void *exit_building_site_rise_animations_data;
-const void *indexed_table_of_32_bit_values_02D616_data;
-const void *indexed_table_of_32_bit_values_02F654_data;
+const void *exit_final_steps_data;
+const void *area_scroll_holds_data;
 const void *enemy_limits_data;
-const void *indexed_table_of_32_bit_values_02F8C6_data;
+const void *opening_steps_data;
 const void *opening_turtle_y_speeds_data;
 const void *balloon_records_data;
-const void *indexed_table_of_32_bit_values_0303EE_data;
+const void *drill_arrival_steps_data;
 const void *shake_x_data;
 const void *shake_y_data;
-const void *indexed_table_of_32_bit_values_030996_data;
+const void *intro_steps_data;
 const void *intro_fire_frames_data;
 const void *attack_hit_jobs_data;
 const void *attack_check_objects_data;
@@ -413,7 +409,7 @@ const void *enemy_ways_in_data;
    their elements (the loader puts each element in the host's byte order) */
 const game_table game_tables[] =
 {
-	{ "indexed_table_of_32_bit_values_0013DE", 0x0013DEu, &indexed_table_of_32_bit_values_0013DE_data, 4 },
+	{ "job_handlers", 0x0013DEu, &job_handlers_data, 4 },
 	{ "lives_settings", 0x001426u, &lives_settings_data, 1 },
 	{ "coinage_coins", 0x001452u, &coinage_coins_data, 1 },
 	{ "coinage_credits", 0x001453u, &coinage_credits_data, 1 },
@@ -421,7 +417,7 @@ const game_table game_tables[] =
 	{ "coinage_2_credits", 0x001473u, &coinage_2_credits_data, 1 },
 	{ "boot_texts", 0x0015ACu, &boot_texts_data, 4 },
 	{ "text_colours", 0x001F1Au, &text_colours_data, 1 },
-	{ "indexed_table_of_32_bit_values_002678", 0x002678u, &indexed_table_of_32_bit_values_002678_data, 4 },
+	{ "player_message_handlers", 0x002678u, &player_message_handlers_data, 4 },
 	{ "text_layer_places", 0x0027A2u, &text_layer_places_data, 4 },
 	{ "big_font_place", 0x002802u, &big_font_place_data, 4 },
 	{ "big_font_tiles", 0x002806u, &big_font_tiles_data, 1 },
@@ -437,10 +433,10 @@ const game_table game_tables[] =
 	{ "stage_titles", 0x003402u, &stage_titles_data, 4 },
 	{ "positioned_texts", 0x0035ACu, &positioned_texts_data, 4 },
 	{ "tall_texts", 0x00375Cu, &tall_texts_data, 4 },
-	{ "indexed_table_of_32_bit_values_003E60", 0x003E60u, &indexed_table_of_32_bit_values_003E60_data, 4 },
-	{ "indexed_table_of_32_bit_values_003F8E", 0x003F8Eu, &indexed_table_of_32_bit_values_003F8E_data, 4 },
-	{ "indexed_table_of_32_bit_values_004100", 0x004100u, &indexed_table_of_32_bit_values_004100_data, 4 },
-	{ "indexed_table_of_32_bit_values_00413A", 0x00413Au, &indexed_table_of_32_bit_values_00413A_data, 4 },
+	{ "game_state_handlers", 0x003E60u, &game_state_handlers_data, 4 },
+	{ "startup_steps", 0x003F8Eu, &startup_steps_data, 4 },
+	{ "attract_steps", 0x004100u, &attract_steps_data, 4 },
+	{ "game_scene_handlers", 0x00413Au, &game_scene_handlers_data, 4 },
 	{ "demo_settings_table", 0x004E88u, &demo_settings_table_data, 1 },
 	{ "demo_input_streams", 0x004E94u, &demo_input_streams_data, 4 },
 	{ "color_test_places", 0x00584Cu, &color_test_places_data, 4 },
@@ -461,10 +457,6 @@ const game_table game_tables[] =
 	{ "area_music", 0x006B0Cu, &area_music_data, 1 },
 	{ "technodrome_explosion_sounds", 0x006DFCu, &technodrome_explosion_sounds_data, 1 },
 	{ "ending_palette_fades", 0x0071DCu, &ending_palette_fades_data, 6 },
-	{ "rom_0071EE", 0x0071EEu, &rom_0071EE_data, 2 },
-	{ "rom_0071F0", 0x0071F0u, &rom_0071F0_data, 4 },
-	{ "rom_0071F4", 0x0071F4u, &rom_0071F4_data, 2 },
-	{ "rom_0071F6", 0x0071F6u, &rom_0071F6_data, 4 },
 	{ "technodrome_explosion_x", 0x0072E2u, &technodrome_explosion_x_data, 2 },
 	{ "technodrome_explosion_y", 0x0072E4u, &technodrome_explosion_y_data, 2 },
 	{ "staff_roll_portrait_places", 0x00738Cu, &staff_roll_portrait_places_data, 2 },
@@ -483,17 +475,17 @@ const game_table game_tables[] =
 	{ "ranking_turtle_picture_sprites", 0x008C2Au, &ranking_turtle_picture_sprites_data, 1 },
 	{ "best_players_places", 0x00917Eu, &best_players_places_data, 4 },
 	{ "best_players_colours", 0x009186u, &best_players_colours_data, 1 },
-	{ "indexed_table_of_32_bit_values_009310", 0x009310u, &indexed_table_of_32_bit_values_009310_data, 4 },
-	{ "rom_009334", 0x009334u, &rom_009334_data, 4 },
+	{ "palette_request_handlers", 0x009310u, &palette_request_handlers_data, 4 },
+	{ "palette_request_second_halves", 0x009334u, &palette_request_second_halves_data, 4 },
 	{ "palette_bank_counts", 0x0095D2u, &palette_bank_counts_data, 1 },
 	{ "palette_bank_addresses", 0x0095D6u, &palette_bank_addresses_data, 4 },
 	{ "palette_banks", 0x00975Cu, &palette_banks_data, 4 },
 	{ "palette_effect_banks", 0x0098F2u, &palette_effect_banks_data, 4 },
-	{ "indexed_table_of_32_bit_values_0099F0", 0x0099F0u, &indexed_table_of_32_bit_values_0099F0_data, 4 },
+	{ "palette_effect_stops", 0x0099F0u, &palette_effect_stops_data, 4 },
 	{ "game_step_palettes", 0x009A7Cu, &game_step_palettes_data, 4 },
 	{ "game_step_palette_effects", 0x009AD2u, &game_step_palette_effects_data, 4 },
 	{ "area_palette_effects", 0x009B28u, &area_palette_effects_data, 4 },
-	{ "indexed_table_of_32_bit_values_009C30", 0x009C30u, &indexed_table_of_32_bit_values_009C30_data, 4 },
+	{ "palette_editor_states", 0x009C30u, &palette_editor_states_data, 4 },
 	{ "palette_editor_limits", 0x009D40u, &palette_editor_limits_data, 1 },
 	{ "palette_editor_banks", 0x009EFAu, &palette_editor_banks_data, 4 },
 	{ "palette_editor_masks", 0x009F0Au, &palette_editor_masks_data, 2 },
@@ -505,16 +497,16 @@ const game_table game_tables[] =
 	{ "palette_editor_colour_places", 0x009F2Eu, &palette_editor_colour_places_data, 4 },
 	{ "hex_digit_tiles", 0x009F46u, &hex_digit_tiles_data, 1 },
 	{ "area_palettes", 0x009F56u, &area_palettes_data, 4 },
-	{ "indexed_table_of_32_bit_values_00DF92", 0x00DF92u, &indexed_table_of_32_bit_values_00DF92_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E082", 0x00E082u, &indexed_table_of_32_bit_values_00E082_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E13C", 0x00E13Cu, &indexed_table_of_32_bit_values_00E13C_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E1C0", 0x00E1C0u, &indexed_table_of_32_bit_values_00E1C0_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E2F0", 0x00E2F0u, &indexed_table_of_32_bit_values_00E2F0_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E3B0", 0x00E3B0u, &indexed_table_of_32_bit_values_00E3B0_data, 4 },
+	{ "krang_appear_states", 0x00DF92u, &krang_appear_states_data, 4 },
+	{ "krang_walk_states", 0x00E082u, &krang_walk_states_data, 4 },
+	{ "krang_melee_states", 0x00E13Cu, &krang_melee_states_data, 4 },
+	{ "krang_lasers_states", 0x00E1C0u, &krang_lasers_states_data, 4 },
+	{ "krang_explode_states", 0x00E2F0u, &krang_explode_states_data, 4 },
+	{ "krang_escape_states", 0x00E3B0u, &krang_escape_states_data, 4 },
 	{ "krang_hover_heights", 0x00E48Au, &krang_hover_heights_data, 2 },
 	{ "krang_move_chances", 0x00E4FEu, &krang_move_chances_data, 1 },
-	{ "indexed_table_of_32_bit_values_00E546", 0x00E546u, &indexed_table_of_32_bit_values_00E546_data, 4 },
-	{ "indexed_table_of_32_bit_values_00E582", 0x00E582u, &indexed_table_of_32_bit_values_00E582_data, 4 },
+	{ "krang_attacks_in_front", 0x00E546u, &krang_attacks_in_front_data, 4 },
+	{ "krang_attacks_close_by", 0x00E582u, &krang_attacks_close_by_data, 4 },
 	{ "krang_move_times", 0x00E700u, &krang_move_times_data, 1 },
 	{ "krang_laser_place_x", 0x00EA9Eu, &krang_laser_place_x_data, 2 },
 	{ "krang_laser_place_height", 0x00EAA0u, &krang_laser_place_height_data, 2 },
@@ -528,11 +520,11 @@ const game_table game_tables[] =
 	{ "rat_run_times", 0x010012u, &rat_run_times_data, 1 },
 	{ "pizza_stats_by_kind", 0x010148u, &pizza_stats_by_kind_data, 4 },
 	{ "billboard_trigger_x", 0x010232u, &billboard_trigger_x_data, 2 },
-	{ "indexed_table_of_32_bit_values_010616", 0x010616u, &indexed_table_of_32_bit_values_010616_data, 4 },
+	{ "turret_wreck_states", 0x010616u, &turret_wreck_states_data, 4 },
 	{ "turret_waits", 0x0107AEu, &turret_waits_data, 1 },
 	{ "nozzle_row_routines", 0x010A0Eu, &nozzle_row_routines_data, 4 },
 	{ "nozzle_rows", 0x010AB2u, &nozzle_rows_data, 4 },
-	{ "indexed_table_of_32_bit_values_010B7E", 0x010B7Eu, &indexed_table_of_32_bit_values_010B7E_data, 4 },
+	{ "freeze_nozzle_spray_states", 0x010B7Eu, &freeze_nozzle_spray_states_data, 4 },
 	{ "turret_wreck_sounds", 0x010EAAu, &turret_wreck_sounds_data, 1 },
 	{ "turret_wreck_waits", 0x010EAEu, &turret_wreck_waits_data, 2 },
 	{ "boss_explosion_x", 0x010F1Cu, &boss_explosion_x_data, 2 },
@@ -542,18 +534,18 @@ const game_table game_tables[] =
 	{ "stockman_explosion_height", 0x010F64u, &stockman_explosion_height_data, 2 },
 	{ "sewer_launcher_drift_x", 0x0113BEu, &sewer_launcher_drift_x_data, 2 },
 	{ "sewer_launcher_drift_y", 0x0113C0u, &sewer_launcher_drift_y_data, 2 },
-	{ "indexed_table_of_32_bit_values_011562", 0x011562u, &indexed_table_of_32_bit_values_011562_data, 4 },
+	{ "rock_soldier_site_enter_states", 0x011562u, &rock_soldier_site_enter_states_data, 4 },
 	{ "rock_soldier_site_attack_reaches", 0x01175Au, &rock_soldier_site_attack_reaches_data, 1 },
-	{ "rom_011782", 0x011782u, &rom_011782_data, 4 },
-	{ "indexed_table_of_32_bit_values_0119F2", 0x0119F2u, &indexed_table_of_32_bit_values_0119F2_data, 4 },
+	{ "rock_soldier_site_states", 0x011782u, &rock_soldier_site_states_data, 4 },
+	{ "rock_soldier_defeated_states", 0x0119F2u, &rock_soldier_defeated_states_data, 4 },
 	{ "rock_soldier_crumble_times", 0x011AD2u, &rock_soldier_crumble_times_data, 1 },
 	{ "rock_soldier_site_moves", 0x011D1Au, &rock_soldier_site_moves_data, 1 },
 	{ "rock_soldier_site_waits", 0x011DEEu, &rock_soldier_site_waits_data, 1 },
 	{ "rock_soldier_site_move_times", 0x011DF2u, &rock_soldier_site_move_times_data, 1 },
 	{ "rubble_place_x", 0x012108u, &rubble_place_x_data, 1 },
 	{ "rubble_place_y", 0x012109u, &rubble_place_y_data, 1 },
-	{ "indexed_table_of_32_bit_values_0121AC", 0x0121ACu, &indexed_table_of_32_bit_values_0121AC_data, 4 },
-	{ "rom_012360", 0x012360u, &rom_012360_data, 4 },
+	{ "rock_soldier_technodrome_enter_states", 0x0121ACu, &rock_soldier_technodrome_enter_states_data, 4 },
+	{ "rock_soldier_technodrome_states", 0x012360u, &rock_soldier_technodrome_states_data, 4 },
 	{ "rock_soldier_technodrome_moves", 0x01255Eu, &rock_soldier_technodrome_moves_data, 1 },
 	{ "rock_soldier_technodrome_move_times", 0x012628u, &rock_soldier_technodrome_move_times_data, 1 },
 	{ "car_soldier_stop_y", 0x012CFEu, &car_soldier_stop_y_data, 2 },
@@ -561,7 +553,7 @@ const game_table game_tables[] =
 	{ "helicopter_shake_heights", 0x0130F4u, &helicopter_shake_heights_data, 2 },
 	{ "helicopter_bob_heights", 0x0130FCu, &helicopter_bob_heights_data, 2 },
 	{ "flying_drone_starts", 0x013486u, &flying_drone_starts_data, 1 },
-	{ "indexed_table_of_32_bit_values_0134CA", 0x0134CAu, &indexed_table_of_32_bit_values_0134CA_data, 4 },
+	{ "flying_drone_enter_states", 0x0134CAu, &flying_drone_enter_states_data, 4 },
 	{ "flying_drone_shake_heights", 0x0138ACu, &flying_drone_shake_heights_data, 2 },
 	{ "flying_drone_bob_heights", 0x0138B4u, &flying_drone_bob_heights_data, 2 },
 	{ "flying_drone_aims", 0x0139A2u, &flying_drone_aims_data, 1 },
@@ -573,9 +565,9 @@ const game_table game_tables[] =
 	{ "drone_shot_place_height", 0x013AE6u, &drone_shot_place_height_data, 2 },
 	{ "drone_shot_x_speeds", 0x013B72u, &drone_shot_x_speeds_data, 2 },
 	{ "drone_shot_y_speeds", 0x013B74u, &drone_shot_y_speeds_data, 2 },
-	{ "indexed_table_of_32_bit_values_013C46", 0x013C46u, &indexed_table_of_32_bit_values_013C46_data, 4 },
+	{ "stockman_enter_states", 0x013C46u, &stockman_enter_states_data, 4 },
 	{ "stockman_fly_moves", 0x013E30u, &stockman_fly_moves_data, 1 },
-	{ "indexed_table_of_32_bit_values_013F08", 0x013F08u, &indexed_table_of_32_bit_values_013F08_data, 4 },
+	{ "stockman_defeated_states", 0x013F08u, &stockman_defeated_states_data, 4 },
 	{ "stockman_shake_heights", 0x01416Eu, &stockman_shake_heights_data, 2 },
 	{ "stockman_height_steps", 0x014176u, &stockman_height_steps_data, 2 },
 	{ "stockman_bob_heights", 0x0141B4u, &stockman_bob_heights_data, 2 },
@@ -635,50 +627,50 @@ const game_table game_tables[] =
 	{ "unreached_box_opening_place", 0x018710u, &unreached_box_opening_place_data, 4 },
 	{ "profile_texts", 0x019272u, &profile_texts_data, 4 },
 	{ "area_title_texts", 0x019866u, &area_title_texts_data, 4 },
-	{ "indexed_table_of_32_bit_values_019D54", 0x019D54u, &indexed_table_of_32_bit_values_019D54_data, 4 },
+	{ "area_turtle_starts", 0x019D54u, &area_turtle_starts_data, 4 },
 	{ "turtle_jump_in_x", 0x019EB2u, &turtle_jump_in_x_data, 2 },
 	{ "turtle_jump_in_y", 0x019EB4u, &turtle_jump_in_y_data, 2 },
 	{ "turtle_jump_in_speeds", 0x019EB6u, &turtle_jump_in_speeds_data, 2 },
 	{ "turtle_marker_animations", 0x019F24u, &turtle_marker_animations_data, 4 },
-	{ "indexed_table_of_32_bit_values_019F92", 0x019F92u, &indexed_table_of_32_bit_values_019F92_data, 4 },
-	{ "indexed_table_of_32_bit_values_019FDE", 0x019FDEu, &indexed_table_of_32_bit_values_019FDE_data, 4 },
-	{ "indexed_table_of_32_bit_values_01A14E", 0x01A14Eu, &indexed_table_of_32_bit_values_01A14E_data, 4 },
+	{ "area_entry_handlers", 0x019F92u, &area_entry_handlers_data, 4 },
+	{ "fall_in_entry_states", 0x019FDEu, &fall_in_entry_states_data, 4 },
+	{ "jump_in_entry_states", 0x01A14Eu, &jump_in_entry_states_data, 4 },
 	{ "turtle_jump_in_heights", 0x01A2D2u, &turtle_jump_in_heights_data, 1 },
 	{ "stage_scroll_locks", 0x01A3C0u, &stage_scroll_locks_data, 1 },
-	{ "indexed_table_of_32_bit_values_01A88C", 0x01A88Cu, &indexed_table_of_32_bit_values_01A88C_data, 4 },
-	{ "indexed_table_of_32_bit_values_01AC9A", 0x01AC9Au, &indexed_table_of_32_bit_values_01AC9A_data, 4 },
+	{ "area_cleared_checks", 0x01A88Cu, &area_cleared_checks_data, 4 },
+	{ "turtle_wall_checks", 0x01AC9Au, &turtle_wall_checks_data, 4 },
 	{ "turtle_walk_speeds", 0x01B5B2u, &turtle_walk_speeds_data, 2 },
-	{ "indexed_table_of_32_bit_values_01B714", 0x01B714u, &indexed_table_of_32_bit_values_01B714_data, 4 },
-	{ "indexed_table_of_32_bit_values_01BA88", 0x01BA88u, &indexed_table_of_32_bit_values_01BA88_data, 4 },
+	{ "turtle_actions", 0x01B714u, &turtle_actions_data, 4 },
+	{ "turtle_jump_states", 0x01BA88u, &turtle_jump_states_data, 4 },
 	{ "turtle_throw_moves", 0x01C072u, &turtle_throw_moves_data, 2 },
 	{ "turtle_throw_counters", 0x01C074u, &turtle_throw_counters_data, 4 },
 	{ "turtle_hit_animation_tables", 0x01C08Au, &turtle_hit_animation_tables_data, 4 },
 	{ "turtle_attack_firsts", 0x01C20Eu, &turtle_attack_firsts_data, 1 },
-	{ "indexed_table_of_32_bit_values_01C272", 0x01C272u, &indexed_table_of_32_bit_values_01C272_data, 4 },
+	{ "turtle_hit_handlers", 0x01C272u, &turtle_hit_handlers_data, 4 },
 	{ "turtle_hit_speeds", 0x01C546u, &turtle_hit_speeds_data, 2 },
 	{ "turtle_hit_waits", 0x01C596u, &turtle_hit_waits_data, 2 },
-	{ "indexed_table_of_32_bit_values_01C678", 0x01C678u, &indexed_table_of_32_bit_values_01C678_data, 4 },
+	{ "turtle_knocked_down_states", 0x01C678u, &turtle_knocked_down_states_data, 4 },
 	{ "turtle_knocked_down_steps", 0x01C764u, &turtle_knocked_down_steps_data, 4 },
-	{ "indexed_table_of_32_bit_values_01C7D0", 0x01C7D0u, &indexed_table_of_32_bit_values_01C7D0_data, 4 },
+	{ "turtle_knocked_back_states", 0x01C7D0u, &turtle_knocked_back_states_data, 4 },
 	{ "turtle_knocked_back_steps", 0x01C8CAu, &turtle_knocked_back_steps_data, 4 },
-	{ "indexed_table_of_32_bit_values_01C8F8", 0x01C8F8u, &indexed_table_of_32_bit_values_01C8F8_data, 4 },
+	{ "turtle_knocked_flying_states", 0x01C8F8u, &turtle_knocked_flying_states_data, 4 },
 	{ "turtle_knocked_flying_steps", 0x01CA82u, &turtle_knocked_flying_steps_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CAC2", 0x01CAC2u, &indexed_table_of_32_bit_values_01CAC2_data, 4 },
+	{ "turtle_knocked_flying_from_behind_states", 0x01CAC2u, &turtle_knocked_flying_from_behind_states_data, 4 },
 	{ "turtle_knocked_flying_from_behind_steps", 0x01CC6Eu, &turtle_knocked_flying_from_behind_steps_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CCAA", 0x01CCAAu, &indexed_table_of_32_bit_values_01CCAA_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CD44", 0x01CD44u, &indexed_table_of_32_bit_values_01CD44_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CDBC", 0x01CDBCu, &indexed_table_of_32_bit_values_01CDBC_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CE52", 0x01CE52u, &indexed_table_of_32_bit_values_01CE52_data, 4 },
-	{ "indexed_table_of_32_bit_values_01CF4E", 0x01CF4Eu, &indexed_table_of_32_bit_values_01CF4E_data, 4 },
-	{ "indexed_table_of_32_bit_values_01D028", 0x01D028u, &indexed_table_of_32_bit_values_01D028_data, 4 },
-	{ "indexed_table_of_32_bit_values_01D100", 0x01D100u, &indexed_table_of_32_bit_values_01D100_data, 4 },
+	{ "turtle_frozen_states", 0x01CCAAu, &turtle_frozen_states_data, 4 },
+	{ "turtle_shocked_states", 0x01CD44u, &turtle_shocked_states_data, 4 },
+	{ "turtle_fall_in_manhole_states", 0x01CDBCu, &turtle_fall_in_manhole_states_data, 4 },
+	{ "turtle_held_states", 0x01CE52u, &turtle_held_states_data, 4 },
+	{ "turtle_held_briefly_states", 0x01CF4Eu, &turtle_held_briefly_states_data, 4 },
+	{ "turtle_held_knock_off_states", 0x01D028u, &turtle_held_knock_off_states_data, 4 },
+	{ "turtle_held_throw_off_states", 0x01D100u, &turtle_held_throw_off_states_data, 4 },
 	{ "turtle_struggle_bits", 0x01D200u, &turtle_struggle_bits_data, 1 },
 	{ "turtle_hit_reactions", 0x01D3FCu, &turtle_hit_reactions_data, 1 },
 	{ "turtle_attack_sounds_by_move", 0x01D526u, &turtle_attack_sounds_by_move_data, 1 },
 	{ "turtle_hit_sounds", 0x01D556u, &turtle_hit_sounds_data, 1 },
 	{ "turtle_attack_damages", 0x01D592u, &turtle_attack_damages_data, 2 },
 	{ "turtle_combos", 0x01D5F2u, &turtle_combos_data, 4 },
-	{ "indexed_table_of_32_bit_values_01E2DA", 0x01E2DAu, &indexed_table_of_32_bit_values_01E2DA_data, 4 },
+	{ "area_layer_starts", 0x01E2DAu, &area_layer_starts_data, 4 },
 	{ "area_layer_a_x", 0x01E5A0u, &area_layer_a_x_data, 4 },
 	{ "area_layer_a_y", 0x01E5A4u, &area_layer_a_y_data, 4 },
 	{ "area_layer_b_x", 0x01E5A8u, &area_layer_b_x_data, 4 },
@@ -689,47 +681,47 @@ const game_table game_tables[] =
 	{ "area_layer_b_blocks", 0x01E5BCu, &area_layer_b_blocks_data, 4 },
 	{ "area_layer_a_map_widths", 0x01E5C0u, &area_layer_a_map_widths_data, 2 },
 	{ "area_layer_b_map_widths", 0x01E5C2u, &area_layer_b_map_widths_data, 2 },
-	{ "indexed_table_of_32_bit_values_01ECEC", 0x01ECECu, &indexed_table_of_32_bit_values_01ECEC_data, 4 },
+	{ "area_layer_updates", 0x01ECECu, &area_layer_updates_data, 4 },
 	{ "street_tv_pictures", 0x01F158u, &street_tv_pictures_data, 4 },
-	{ "indexed_table_of_32_bit_values_01F43A", 0x01F43Au, &indexed_table_of_32_bit_values_01F43A_data, 4 },
-	{ "indexed_table_of_32_bit_values_01F82C", 0x01F82Cu, &indexed_table_of_32_bit_values_01F82C_data, 4 },
-	{ "indexed_table_of_32_bit_values_01FC96", 0x01FC96u, &indexed_table_of_32_bit_values_01FC96_data, 4 },
+	{ "technodrome_lift_steps", 0x01F43Au, &technodrome_lift_steps_data, 4 },
+	{ "highway_car_steps", 0x01F82Cu, &highway_car_steps_data, 4 },
+	{ "skateboard_road_steps", 0x01FC96u, &skateboard_road_steps_data, 4 },
 	{ "fire_tiles", 0x0200F2u, &fire_tiles_data, 4 },
 	{ "fire_tiles_area_0", 0x0203D2u, &fire_tiles_area_0_data, 4 },
 	{ "area_scroll_segments", 0x0205F2u, &area_scroll_segments_data, 4 },
 	{ "turtle_animation_sets", 0x0208C0u, &turtle_animation_sets_data, 4 },
-	{ "indexed_table_of_32_bit_values_02B2C6", 0x02B2C6u, &indexed_table_of_32_bit_values_02B2C6_data, 4 },
-	{ "indexed_table_of_32_bit_values_02B62A", 0x02B62Au, &indexed_table_of_32_bit_values_02B62A_data, 4 },
-	{ "indexed_table_of_32_bit_values_02B728", 0x02B728u, &indexed_table_of_32_bit_values_02B728_data, 4 },
-	{ "indexed_table_of_32_bit_values_02BB16", 0x02BB16u, &indexed_table_of_32_bit_values_02BB16_data, 4 },
+	{ "area_exit_starts", 0x02B2C6u, &area_exit_starts_data, 4 },
+	{ "area_exit_handlers", 0x02B62Au, &area_exit_handlers_data, 4 },
+	{ "exit_apartment_steps", 0x02B728u, &exit_apartment_steps_data, 4 },
+	{ "turtle_exit_street_steps", 0x02BB16u, &turtle_exit_street_steps_data, 4 },
 	{ "exit_street_jump_animations", 0x02BC56u, &exit_street_jump_animations_data, 4 },
-	{ "indexed_table_of_32_bit_values_02BC98", 0x02BC98u, &indexed_table_of_32_bit_values_02BC98_data, 4 },
-	{ "indexed_table_of_32_bit_values_02BD44", 0x02BD44u, &indexed_table_of_32_bit_values_02BD44_data, 4 },
-	{ "indexed_table_of_32_bit_values_02BF10", 0x02BF10u, &indexed_table_of_32_bit_values_02BF10_data, 4 },
-	{ "indexed_table_of_32_bit_values_02C04C", 0x02C04Cu, &indexed_table_of_32_bit_values_02C04C_data, 4 },
+	{ "exit_sewer_steps", 0x02BC98u, &exit_sewer_steps_data, 4 },
+	{ "turtle_exit_sewer_steps", 0x02BD44u, &turtle_exit_sewer_steps_data, 4 },
+	{ "exit_car_street_steps", 0x02BF10u, &exit_car_street_steps_data, 4 },
+	{ "turtle_exit_car_street_steps", 0x02C04Cu, &turtle_exit_car_street_steps_data, 4 },
 	{ "car_street_exit_x", 0x02C0F0u, &car_street_exit_x_data, 2 },
 	{ "car_street_exit_y", 0x02C0F2u, &car_street_exit_y_data, 2 },
 	{ "van_start_x_shakes", 0x02C3BAu, &van_start_x_shakes_data, 2 },
 	{ "van_start_y_shakes", 0x02C3BCu, &van_start_y_shakes_data, 2 },
-	{ "indexed_table_of_32_bit_values_02C93A", 0x02C93Au, &indexed_table_of_32_bit_values_02C93A_data, 4 },
+	{ "exit_skateboard_steps", 0x02C93Au, &exit_skateboard_steps_data, 4 },
 	{ "exit_places_x", 0x02CE62u, &exit_places_x_data, 2 },
 	{ "exit_places_y", 0x02CE64u, &exit_places_y_data, 2 },
-	{ "indexed_table_of_32_bit_values_02CE8E", 0x02CE8Eu, &indexed_table_of_32_bit_values_02CE8E_data, 4 },
+	{ "exit_building_site_steps", 0x02CE8Eu, &exit_building_site_steps_data, 4 },
 	{ "building_site_exit_x", 0x02D304u, &building_site_exit_x_data, 2 },
 	{ "building_site_exit_y", 0x02D306u, &building_site_exit_y_data, 2 },
 	{ "building_site_exit_heights", 0x02D308u, &building_site_exit_heights_data, 2 },
 	{ "building_site_exit_drifts", 0x02D30Au, &building_site_exit_drifts_data, 2 },
 	{ "exit_building_site_rise_animations", 0x02D4F4u, &exit_building_site_rise_animations_data, 4 },
-	{ "indexed_table_of_32_bit_values_02D616", 0x02D616u, &indexed_table_of_32_bit_values_02D616_data, 4 },
-	{ "indexed_table_of_32_bit_values_02F654", 0x02F654u, &indexed_table_of_32_bit_values_02F654_data, 4 },
+	{ "exit_final_steps", 0x02D616u, &exit_final_steps_data, 4 },
+	{ "area_scroll_holds", 0x02F654u, &area_scroll_holds_data, 4 },
 	{ "enemy_limits", 0x02F67Cu, &enemy_limits_data, 1 },
-	{ "indexed_table_of_32_bit_values_02F8C6", 0x02F8C6u, &indexed_table_of_32_bit_values_02F8C6_data, 4 },
+	{ "opening_steps", 0x02F8C6u, &opening_steps_data, 4 },
 	{ "opening_turtle_y_speeds", 0x02FBE0u, &opening_turtle_y_speeds_data, 2 },
 	{ "balloon_records", 0x030350u, &balloon_records_data, 1 },
-	{ "indexed_table_of_32_bit_values_0303EE", 0x0303EEu, &indexed_table_of_32_bit_values_0303EE_data, 4 },
+	{ "drill_arrival_steps", 0x0303EEu, &drill_arrival_steps_data, 4 },
 	{ "shake_x", 0x030652u, &shake_x_data, 1 },
 	{ "shake_y", 0x030653u, &shake_y_data, 1 },
-	{ "indexed_table_of_32_bit_values_030996", 0x030996u, &indexed_table_of_32_bit_values_030996_data, 4 },
+	{ "intro_steps", 0x030996u, &intro_steps_data, 4 },
 	{ "intro_fire_frames", 0x031152u, &intro_fire_frames_data, 4 },
 	{ "attack_hit_jobs", 0x0471F0u, &attack_hit_jobs_data, 1 },
 	{ "attack_check_objects", 0x0471F4u, &attack_check_objects_data, 4 },
@@ -787,4 +779,4 @@ const game_table game_tables[] =
 	{ "enemy_ways_in", 0x053ED6u, &enemy_ways_in_data, 4 },
 };
 
-const size_t game_table_count = 372;
+const size_t game_table_count = 368;

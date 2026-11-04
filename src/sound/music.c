@@ -3,7 +3,7 @@
  *    Description: the music: the random bytes, the tracks' tick, their commands and notes, the note hooks
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -87,7 +87,7 @@ uint32_t music_track_start(uint16_t channel)
 	song_entry += entry_offset;
 	AS8(CHANNEL(channel)->track) = z80_read8(song_entry);
 	AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(song_entry + 1u));
-	handler = 0x8CDu;
+	handler = music_track_first_tick_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -98,7 +98,7 @@ uint32_t music_track_first_tick(uint16_t channel)
 	uint16_t handler = 0;
 
 	z80_block(27);
-	handler = 0x8D6u;
+	handler = music_track_tick_ADDRESS;
 	set_channel_handler(handler, channel);
 	z80_block(10);
 	return read_track(channel);
@@ -203,7 +203,7 @@ uint32_t music_track_tick(uint16_t channel)
 		jump_target = CHANNEL(channel)->note_hook;
 		switch (jump_target)
 		{
-		case 0x0009F5u:
+		case note_hook_none_ADDRESS:
 			break;
 		default:
 			sound_invalid_jump(jump_target);
@@ -470,7 +470,7 @@ uint32_t read_track(uint16_t channel)
 			jump_target = TRACK_COMMAND_HANDLER(command_entry)[0];
 			switch (jump_target)
 			{
-			case 0x000D8Du:
+			case track_set_mode_ADDRESS:
 				z80_block(36);
 				CHANNEL(channel)->mode = z80_read8(place);
 				z80_block(6);
@@ -478,7 +478,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000D94u:
+			case track_set_tempo_ADDRESS:
 				z80_block(30);
 				tempo = z80_read8(place);
 				z80_block(6);
@@ -486,7 +486,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000D9Bu:
+			case track_set_instrument_ADDRESS:
 				z80_block(56);
 				instrument = z80_read8(place);
 				CHANNEL(channel)->instrument = instrument;
@@ -510,7 +510,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000DC0u:
+			case track_set_volume_ADDRESS:
 				z80_block(44);
 				value = z80_read8(place);
 				fm_extra = 0u;
@@ -527,7 +527,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000DD7u:
+			case track_set_gate_ADDRESS:
 				z80_block(36);
 				CHANNEL(channel)->gate = z80_read8(place);
 				z80_block(6);
@@ -535,9 +535,9 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000DDEu:
+			case track_held_note_ADDRESS:
 				break;
-			case 0x000E25u:
+			case track_set_detune_ADDRESS:
 				z80_block(36);
 				CHANNEL(channel)->detune = z80_read8(place);
 				z80_block(6);
@@ -545,7 +545,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E2Cu:
+			case track_set_portamento_ADDRESS:
 				z80_block(36);
 				CHANNEL(channel)->portamento = z80_read8(place);
 				z80_block(6);
@@ -553,7 +553,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E33u:
+			case track_set_music_transpose_ADDRESS:
 				z80_block(17);
 				value = read_transpose(place);
 				z80_block(23);
@@ -563,7 +563,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E59u:
+			case track_set_transpose_ADDRESS:
 				z80_block(17);
 				transpose = read_transpose(place);
 				z80_block(29);
@@ -573,7 +573,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E62u:
+			case track_set_music_volume_ADDRESS:
 				z80_block(17);
 				value = read_volume_offset(place);
 				z80_block(23);
@@ -583,7 +583,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E74u:
+			case track_set_volume_offset_ADDRESS:
 				z80_block(17);
 				volume_offset = read_volume_offset(place);
 				z80_block(29);
@@ -593,7 +593,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000E7Du:
+			case track_loop_transposed_ADDRESS:
 				z80_block(33);
 				transposed_loop_count = CHANNEL(channel)->transposed_loop_count;
 				CHANNEL(channel)->transposed_loop_count = transposed_loop_count - 1u;
@@ -636,7 +636,7 @@ uint32_t read_track(uint16_t channel)
 				AS8(CHANNEL(channel)->track) = z80_read8(place);
 				AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(place + 1u));
 				continue;
-			case 0x000EBDu:
+			case track_set_lfo_ADDRESS:
 				z80_block(35);
 				fm_write = 0x1800u | z80_read8(place);
 				carry = write_fm_register(fm_write);
@@ -656,7 +656,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000EDFu:
+			case track_set_lfo_ramp_ADDRESS:
 				z80_block(36);
 				CHANNEL(channel)->lfo_ramp = z80_read8(place);
 				z80_block(6);
@@ -664,19 +664,19 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000EE6u:
+			case track_nop_ADDRESS:
 				z80_block(10);
 				z80_block(6);
 				place++;
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000EE9u:
+			case track_jump_ADDRESS:
 				z80_block(68);
 				AS8(CHANNEL(channel)->track) = z80_read8(place);
 				AT8(CHANNEL(channel)->track, 1) = z80_read8((uint16_t)(place + 1u));
 				continue;
-			case 0x000EF5u:
+			case track_loop_exit_ADDRESS:
 				z80_block(33);
 				loop_exit_count = CHANNEL(channel)->loop_exit_count;
 				CHANNEL(channel)->loop_exit_count = loop_exit_count - 1u;
@@ -706,7 +706,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F0Fu:
+			case track_loop_start_ADDRESS:
 				z80_block(80);
 				CHANNEL(channel)->loop_count = z80_read8(place);
 				place++;
@@ -714,7 +714,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F1Du:
+			case track_loop_end_ADDRESS:
 				z80_block(33);
 				loop_count = CHANNEL(channel)->loop_count;
 				CHANNEL(channel)->loop_count = loop_count - 1u;
@@ -729,7 +729,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F2Cu:
+			case track_loop_2_start_ADDRESS:
 				z80_block(80);
 				CHANNEL(channel)->loop_2_count = z80_read8(place);
 				place++;
@@ -737,7 +737,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F3Au:
+			case track_loop_2_end_ADDRESS:
 				z80_block(33);
 				loop_2_count = CHANNEL(channel)->loop_2_count;
 				CHANNEL(channel)->loop_2_count = loop_2_count - 1u;
@@ -752,7 +752,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F49u:
+			case track_call_repeat_ADDRESS:
 				z80_block(49);
 				CHANNEL(channel)->repeat_count = z80_read8(place);
 				place++;
@@ -760,7 +760,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->repeat_return = place;
 				continue;
-			case 0x000F65u:
+			case track_return_repeat_ADDRESS:
 				z80_block(71);
 				repeat_count = CHANNEL(channel)->repeat_count;
 				CHANNEL(channel)->repeat_count = repeat_count - 1u;
@@ -776,31 +776,31 @@ uint32_t read_track(uint16_t channel)
 				AT8(CHANNEL(channel)->track, 1) = z80_read8(place);
 				AS8(CHANNEL(channel)->track) = z80_read8((uint16_t)(place - 1u));
 				continue;
-			case 0x000F7Eu:
+			case track_call_ADDRESS:
 				z80_block(17);
 				place = read_track_address(place, channel);
 				z80_block(48);
 				CHANNEL(channel)->call_return = place;
 				continue;
-			case 0x000F8Au:
+			case track_return_ADDRESS:
 				z80_block(48);
 				place = CHANNEL(channel)->call_return;
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000F93u:
+			case track_call_2_ADDRESS:
 				z80_block(17);
 				place = read_track_address(place, channel);
 				z80_block(48);
 				CHANNEL(channel)->call_2_return = place;
 				continue;
-			case 0x000F9Fu:
+			case track_return_2_ADDRESS:
 				z80_block(48);
 				place = CHANNEL(channel)->call_2_return;
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000FA8u:
+			case track_set_accelerando_ADDRESS:
 				z80_block(99);
 				value = z80_read8(place);
 				AS8(accelerando) = value;
@@ -811,7 +811,7 @@ uint32_t read_track(uint16_t channel)
 				z80_block(48);
 				CHANNEL(channel)->track = place;
 				continue;
-			case 0x000FC0u:
+			case track_end_ADDRESS:
 				z80_block(36);
 				chip_channel = CHANNEL(channel)->chip_channel;
 				zero = (uint8_t)(chip_channel - 8u) == 0u;

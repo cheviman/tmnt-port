@@ -3,7 +3,7 @@
  *    Description: the areas' exits: the turtles walk out, and the cutscenes between the areas (Shredder takes April, the villains' picture, the van, April's thanks, the van's crash, Splinter freed)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -27,7 +27,7 @@ void turtle_start_area_exit(void)
 		{
 			OBJECT(turtle)->flags |= 0x80u;
 			OBJECT(object)->flags = (uint8_t)cleared;
-			mem_write8(marker_time, (uint8_t)cleared);
+			MARKER_TIMER(marker_time)->frames = (uint8_t)cleared;
 			OBJECT(turtle)->turtle.invulnerable_time = (uint8_t)cleared;
 		}
 		turtle += 0x50u;
@@ -189,7 +189,7 @@ void turtle_exit_car_street_start(void)
 			OBJECT(turtle)->flags &= 0xBFu;
 			turtle_x = OBJECT(turtle)->x >> 8;
 			screen_x_high = turtle_x;
-			if (car_street_exit_x[OBJECT(turtle)->kind * 2u] < (uint16_t)((turtle_x & ~0xFF00u) | (screen_x_high & 0xFF00u)))
+			if (car_street_exit_x[OBJECT(turtle)->kind * 2u] < (uint16_t)turtle_x)
 				OBJECT(turtle)->flags |= 0x40u;
 			routine_state = 0x100u;
 			OBJECT(turtle)->turtle.exit_step = 0u;
@@ -238,10 +238,10 @@ void exit_skateboard_start(void)
 	uint32_t data = 0;
 
 	kind = 0x43Bu;
-	data = 0xC824u;
+	data = skateboard_exit_van_palette_ADDRESS;
 	post_palette_request(kind, data);
 	kind = 0x43Cu;
-	data = 0xC844u;
+	data = skateboard_exit_van_palette_2_ADDRESS;
 	post_palette_request(kind, data);
 	exit_skateboard_road_round();
 }
@@ -400,7 +400,7 @@ void turtle_exit_building(void)
 		{
 			screen_x = OBJECT(object)->screen_x;
 			screen_x_high = (screen_x_high & ~0xFFFFu) | screen_x;
-			if (((screen_x & ~0xFF00u) | (screen_x_high & 0xFF00u)) < 0x170u)
+			if (screen_x < 0x170u)
 			{
 				turtles_on_the_way--;
 				target_x = 0x170u;
@@ -639,7 +639,7 @@ void exit_apartment_shredder_escapes(void)
 	LAYER(LAYER_B)->y = 0x10000u;
 	LAYER(WORKING_LAYER)->y = 0x10000u;
 	clear_layers();
-	data = 0xA13Eu;
+	data = kidnap_picture_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 }
@@ -813,7 +813,7 @@ void turtle_exit_street_walk(uint32_t object)
 	turtles_on_the_way--;
 	screen_x = OBJECT(object)->screen_x;
 	screen_x_high = (screen_x_high & ~0xFFFFu) | screen_x;
-	if (((screen_x & ~0xFF00u) | (screen_x_high & 0xFF00u)) < 0x100u || OBJECT(object)->screen_y >= 0x60u)
+	if (screen_x < 0x100u || OBJECT(object)->screen_y >= 0x60u)
 	{
 		target_x = 0x13Cu;
 		target_y = 0x34u;
@@ -838,7 +838,7 @@ void turtle_exit_street_jump(uint32_t object)
 {
 	uint8_t speed = 0;
 	uint16_t target_x = 0, target_y = 0, x_from_spot = 0, y_from_spot = 0;
-	uint32_t animation = 0, d1 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, routine_state = 0;
+	uint32_t animation = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, routine_state = 0, spot_y = 0;
 	uint16_t height = 0, jump_speed = 0, screen_x = 0, screen_y = 0;
 
 	turtles_on_the_way--;
@@ -882,13 +882,13 @@ void turtle_exit_street_jump(uint32_t object)
 			}
 			OBJECT(object)->x = 0x13C00u;
 			OBJECT(object)->y = 0x3400u;
-			d1 = 0x34u;
+			spot_y = 0x34u;
 			OBJECT(object)->screen_x = 0x13Cu;
 			OBJECT(object)->screen_y = 0x34u;
 			animation = exit_street_jump_animations[OBJECT(object)->kind];
-			d1 = set_animation(d1, object, animation);
+			spot_y = set_animation(spot_y, object, animation);
 			OBJECT(object)->turtle.exit_step++;
-			screen_x_high = d1;
+			screen_x_high = spot_y;
 			return;
 		}
 	}
@@ -969,7 +969,7 @@ void turtle_exit_sewer(void)
 	clear_layers();
 	layer_priority = 0u;
 	io_write8(PRIORITY_0C0001, 0u);
-	data = 0xA16Eu;
+	data = villains_picture_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	next_area_step();
@@ -1034,12 +1034,12 @@ void exit_sewer_villains_picture(void)
 		return;
 	io_write8(TILES_106B00, 0x40u);
 	tile_banks_0_1 = 0x40u;
-	LAYER(WORKING_LAYER)->map = layers_0314C4_ADDRESS;
+	LAYER(WORKING_LAYER)->map = villains_picture_map_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = villains_picture_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->map_width = 0x20u;
 	tile_place = TILE_RAM + 0x4000u;
 	draw_whole_layer(tile_place);
-	LAYER(WORKING_LAYER)->map = layers_03163C_ADDRESS;
+	LAYER(WORKING_LAYER)->map = villains_picture_map_2_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = villains_picture_blocks_2_ADDRESS;
 	tile_place = TILE_RAM + 0x2000u;
 	draw_whole_layer(tile_place);
@@ -1084,7 +1084,7 @@ void exit_sewer_villains_taunt(uint32_t on_right)
 		OBJECT(OBJECT_ADDRESS(45))->height = 0u;
 		OBJECT(OBJECT_ADDRESS(45))->colour = 0xFFu;
 		OBJECT(OBJECT_ADDRESS(45))->animation_delay = 0u;
-		animation = animations_02E192_ADDRESS;
+		animation = exit_sewer_villains_taunt_animation_ADDRESS;
 		set_animation(0u, object, animation);
 		on_right &= ~0xFFu;
 		screen_x = 0x10u;
@@ -1210,21 +1210,20 @@ void turtle_exit_car_street(void)
 void turtle_exit_car_street_wait(uint32_t object)
 {
 	uint8_t speed = 0;
-	uint16_t d1 = 0, routine_state = 0, target_x = 0, target_y = 0, x_from_place = 0, y_from_place = 0;
+	uint16_t routine_state = 0, screen_x = 0, target_x = 0, target_y = 0, x_from_place = 0, y_from_place = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, kind_offset = 0;
-	uint16_t screen_y = 0, t1 = 0, screen_x = 0;
+	uint16_t screen_y = 0, screen_x_2 = 0;
 
 	turtles_on_the_way--;
-	d1 = car_street_exit_x[OBJECT(object)->kind * 2u];
-	screen_x_high = (screen_x_high & ~0xFFFFu) | d1;
+	screen_x = car_street_exit_x[OBJECT(object)->kind * 2u];
+	screen_x_high = (screen_x_high & ~0xFFFFu) | screen_x;
 	screen_y = OBJECT(object)->screen_y;
 	y_from_place = (uint16_t)(screen_y - 0x3Cu);
 	if (screen_y >= 0x3Cu && y_from_place < 8u)
 	{
-		t1 = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u);
-		screen_x = OBJECT(object)->screen_x;
-		x_from_place = (uint16_t)(screen_x - t1);
-		if (t1 <= screen_x && x_from_place < 8u)
+		screen_x_2 = OBJECT(object)->screen_x;
+		x_from_place = (uint16_t)(screen_x_2 - screen_x);
+		if (screen_x <= screen_x_2 && x_from_place < 8u)
 		{
 			OBJECT(object)->turtle.move_timer = 0x10u;
 			OBJECT(object)->flags &= 0xBFu;
@@ -1251,7 +1250,7 @@ void turtle_exit_car_street_board(uint32_t object)
 {
 	uint8_t sound = 0, speed = 0;
 	uint16_t routine_state = 0, screen_x = 0, screen_y = 0;
-	uint32_t r41 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, layer_y = 0, van = 0, van_x = 0, y_from_door = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, layer_y = 0, van = 0, van_x = 0, y_from_door = 0;
 	uint8_t move_timer = 0;
 	uint16_t screen_y_2 = 0, screen_x_2 = 0, x_speed = 0;
 
@@ -1281,9 +1280,9 @@ void turtle_exit_car_street_board(uint32_t object)
 		if (stage == 5u)
 		{
 			layer_y = LAYER(LAYER_B)->y >> 8;
-			r41 = layer_y;
+			screen_x_high = layer_y;
 			layer_y = layer_y & 0xFFu;
-			screen_x_high = (r41 & ~0xFFFFu) | layer_y;
+			screen_x_high = (screen_x_high & ~0xFFFFu) | layer_y;
 			distance_high_word = 0x40u;
 			screen_y = (uint16_t)(0x40u - layer_y + 0x4Du);
 		}
@@ -1465,7 +1464,7 @@ void exit_car_street_van_drives_off(void)
 	LAYER(LAYER_B)->x = 0u;
 	LAYER(WORKING_LAYER)->x = 0u;
 	clear_layers();
-	data = 0xA11Eu;
+	data = april_hug_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	next_area_step();
@@ -1476,11 +1475,11 @@ void exit_car_street_april_hug_start(void)
 {
 	uint8_t colour = 0, tile_attribute = 0;
 	uint32_t animation_entry = 0, animations = 0, best_colour = 0, ignored = 0, more_animations = 0, object = 0, object_2 = 0, other_colour = 0, player = 0, player_2 = 0, tile_place = 0, turtle_colour = 0;
-	uint8_t t1 = 0;
+	uint8_t colour_2 = 0;
 
 	if (palettes_busy != 0u)
 		return;
-	LAYER(WORKING_LAYER)->map = layers_046C52_ADDRESS;
+	LAYER(WORKING_LAYER)->map = april_hug_first_map_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = april_hug_first_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->map_width = 0x20u;
 	tile_place = TILE_RAM + 0x4000u;
@@ -1512,7 +1511,7 @@ void exit_car_street_april_hug_start(void)
 	do
 	{
 		if ((OBJECT(object)->flags & 1u) == 0u)
-			mem_write8(turtle_colour, 0xFFu);
+			HUG_COLOUR(turtle_colour)->colour = 0xFFu;
 		else
 			cutscene_counter++;
 		object += 0x50u;
@@ -1523,8 +1522,8 @@ void exit_car_street_april_hug_start(void)
 	object_2 = OBJECT_ADDRESS(1);
 	best_colour = hug_turtle_colours_ADDRESS;
 	other_colour = hug_turtle_colours_ADDRESS + 0x1u;
-	player = unk_060104_ADDRESS;
-	player_2 = unk_06010C_ADDRESS;
+	player = player_1_score_ADDRESS;
+	player_2 = player_2_score_ADDRESS;
 	do
 	{
 		if ((OBJECT(object)->flags & 1u) == 0u)
@@ -1543,8 +1542,8 @@ void exit_car_street_april_hug_start(void)
 		object_2 += 0x50u;
 		other_colour++;
 	} while (object_2 < OBJECT_ADDRESS(4));
-	colour = mem_read8(best_colour);
-	mem_write8(best_colour, 0xFFu);
+	colour = HUG_COLOUR(best_colour)->colour;
+	HUG_COLOUR(best_colour)->colour = 0xFFu;
 	animations = april_hug_animations_ADDRESS;
 	object = OBJECT_ADDRESS(12);
 	do
@@ -1577,12 +1576,12 @@ void exit_car_street_april_hug_start(void)
 		OBJECT(object)->animation_delay = 0u;
 		do
 		{
-			t1 = mem_read8(turtle_colour);
-			colour = t1;
+			colour_2 = HUG_COLOUR(turtle_colour)->colour;
+			colour = colour_2;
 			turtle_colour++;
-		} while ((int8_t)t1 < 0);
+		} while ((int8_t)colour_2 < 0);
 		OBJECT(object)->colour = colour;
-		mem_write8(turtle_colour - 1u, 0xFFu);
+		HUG_COLOUR(turtle_colour - 0x1u)->colour = 0xFFu;
 		animation_entry = ANIMATION_ENTRY(more_animations);
 		more_animations += 4u;
 		set_animation(ignored, object, animation_entry);
@@ -1695,11 +1694,12 @@ void exit_car_street_april_hug(void)
 }
 
 /* the object a step at a speed the way a direction points, and its screen place */
-void move_in_direction(uint8_t direction, uint8_t speed, uint32_t object)
+void move_in_direction(uint8_t direction, uint16_t speed, uint32_t object)
 {
-	uint32_t ignored = 0, x_speed = 0, y_speed = 0;
+	uint32_t x_speed = 0, y_speed = 0;
 
-	speeds_from_direction(direction, speed, &x_speed, &y_speed, &ignored);
+	speed = (uint16_t)((speed & ~0xFF00u) | (screen_x_high & 0xFF00u));
+	speeds_from_direction(direction, speed, &x_speed, &y_speed);
 	OBJECT(object)->x += (int16_t)x_speed;
 	OBJECT(object)->y += (int16_t)y_speed;
 	update_screen_place(object);
@@ -1769,9 +1769,9 @@ void turtle_exit_highway(void)
 void run_exit_skateboard(void)
 {
 	uint16_t step_offset = 0;
-	uint32_t a0 = 0;
+	uint32_t step_object = 0;
 
-	a0 = turtle_skateboard_shadow();
+	step_object = turtle_skateboard_shadow();
 	if (cutscene_step < 4u)
 	{
 		load_layer_b();
@@ -1784,19 +1784,19 @@ void run_exit_skateboard(void)
 	switch (step_offset)
 	{
 	case 0:
-		a0 = turtle_exit_skateboard_gather();
+		step_object = turtle_exit_skateboard_gather();
 		break;
 	case 4:
-		a0 = turtle_exit_skateboard_board();
+		step_object = turtle_exit_skateboard_board();
 		break;
 	case 8:
-		a0 = exit_skateboard_van_door();
+		step_object = exit_skateboard_van_door();
 		break;
 	case 12:
-		a0 = exit_skateboard_van_drives(step_offset, a0);
+		step_object = exit_skateboard_van_drives(step_offset, step_object);
 		break;
 	case 16:
-		a0 = exit_skateboard_crash_picture(a0);
+		step_object = exit_skateboard_crash_picture(step_object);
 		break;
 	case 20:
 		finish_area_exit();
@@ -1804,7 +1804,7 @@ void run_exit_skateboard(void)
 	}
 	if (cutscene_step < 4u)
 	{
-		auto_scroll(a0);
+		auto_scroll(step_object);
 		working_layer_tiles = TILE_RAM + 0x2000u;
 		draw_new_row_and_column();
 		OBJECT(OBJECT_ADDRESS(0))->contacts |= 0x80u;
@@ -1846,7 +1846,7 @@ uint32_t turtle_exit_skateboard_gather(void)
 	screen_x_high = 0u;
 	OBJECT(OBJECT_ADDRESS(40))->height = 0x50u;
 	OBJECT(OBJECT_ADDRESS(41))->height = 0x50u;
-	x = indexed_table_of_32_bit_values_005000_ADDRESS;
+	x = VAN_START_X;
 	OBJECT(OBJECT_ADDRESS(40))->x = x;
 	OBJECT(OBJECT_ADDRESS(41))->x = x;
 	OBJECT(OBJECT_ADDRESS(40))->y = 0xA000u;
@@ -2016,7 +2016,7 @@ uint32_t turtle_exit_skateboard_board(void)
 uint32_t exit_skateboard_van_door(void)
 {
 	uint8_t sound = 0;
-	uint32_t d1 = 0, object = 0, x = 0;
+	uint32_t object = 0, screen_x = 0, x = 0;
 
 	exit_skateboard_road_round();
 	object = OBJECT_ADDRESS(40);
@@ -2030,9 +2030,9 @@ uint32_t exit_skateboard_van_door(void)
 	}
 	OBJECT(object + 0x50u)->x += 0x300u;
 	x = OBJECT(object + 0x50u)->x;
-	d1 = x >> 8;
-	screen_x_high = d1;
-	OBJECT(object + 0x50u)->screen_x = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u);
+	screen_x = x >> 8;
+	screen_x_high = screen_x;
+	OBJECT(object + 0x50u)->screen_x = screen_x;
 	if (x < OBJECT(object)->x)
 		return object;
 	OBJECT(object + 0x50u)->x = OBJECT(object)->x;
@@ -2047,50 +2047,50 @@ uint32_t exit_skateboard_van_door(void)
 }
 
 /* the van speeds round the curve, "Hang on, guys", and the screen is cleared */
-uint32_t exit_skateboard_van_drives(uint32_t on_right, uint32_t a0)
+uint32_t exit_skateboard_van_drives(uint32_t on_right, uint32_t step_object)
 {
 	uint8_t sound = 0;
 	uint16_t kind = 0, line = 0, screen_x = 0, screen_y = 0;
-	uint32_t a0_2 = 0, data = 0, ignored = 0, ignored_3 = 0, ignored_4 = 0;
+	uint32_t cleared_end = 0, data = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	if (LAYER(WORKING_LAYER)->x < 0xA0000u)
 	{
 		if (balloons_said != 0u)
-			return a0;
+			return step_object;
 		on_right &= ~0xFFu;
 		screen_x = 0xC0u;
 		screen_y = 0x70u;
 		line = 0x3Cu;
-		show_balloon_beside(screen_x, screen_y, line, &on_right, &ignored, &ignored_3, &ignored_4);
-		draw_balloon_pointer(ignored_4);
-		return a0;
+		show_balloon_beside(screen_x, screen_y, line, &on_right, &ignored, &ignored_2, &ignored_3);
+		draw_balloon_pointer(ignored_3);
+		return step_object;
 	}
 	if (LAYER(WORKING_LAYER)->x < 0xA4000u)
-		return a0;
+		return step_object;
 	if (LAYER(WORKING_LAYER)->x < 0xA4600u)
 	{
 		sound = 0x3Cu;
 		queue_sound(sound);
-		return a0;
+		return step_object;
 	}
 	if (LAYER(WORKING_LAYER)->x < 0xA8000u)
-		return a0;
+		return step_object;
 	OBJECT(OBJECT_ADDRESS(40))->flags = 0u;
 	OBJECT(OBJECT_ADDRESS(41))->flags = 0u;
 	exit_cutscene = 0xFFu;
 	LAYER(WORKING_LAYER)->x = 0x800u;
 	LAYER(LAYER_A)->x = 0x800u;
 	LAYER(LAYER_B)->x = 0x800u;
-	a0_2 = clear_layers();
-	data = 0xA14Eu;
+	cleared_end = clear_layers();
+	data = skateboard_crash_picture_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	next_area_step();
-	return a0_2;
+	return cleared_end;
 }
 
 /* the picture of the van crashing through the road's wall, the turtles leaping out */
-uint32_t exit_skateboard_crash_picture(uint32_t a0)
+uint32_t exit_skateboard_crash_picture(uint32_t step_object)
 {
 	uint32_t carry = 0;
 	uint8_t columns_left = 0, rows_left = 0, sound = 0, tile_attribute = 0, tile_code = 0;
@@ -2098,7 +2098,7 @@ uint32_t exit_skateboard_crash_picture(uint32_t a0)
 	uint8_t t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
 	if (palettes_busy != 0u)
-		return a0;
+		return step_object;
 	tile_place = TILE_RAM + 0x4008u;
 	tile_attribute = 0x24u;
 	tile_code = 0u;
@@ -2241,7 +2241,7 @@ void turtle_exit_go_to_place(uint32_t object)
 	screen_x = (uint32_t)(int16_t)screen_x << 8;
 	screen_x_high = screen_x;
 	place_y = (uint32_t)(int16_t)place_y << 8;
-	OBJECT(object)->x = screen_x_high;
+	OBJECT(object)->x = screen_x;
 	OBJECT(object)->y = place_y;
 	OBJECT(object)->turtle.move_timer = 0x10u;
 	OBJECT(object)->flags &= 0xBFu;
@@ -2477,7 +2477,7 @@ void turtle_exit_building_site_jump(void)
 	LAYER(WORKING_LAYER)->x = 0u;
 	LAYER(LAYER_A)->x = 0u;
 	LAYER(LAYER_B)->x = 0u;
-	data = 0xA12Eu;
+	data = splinter_picture_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	next_area_step();
@@ -2494,7 +2494,7 @@ void exit_building_site_splinter_picture(void)
 		return;
 	io_write8(TILES_106B00, 0x70u);
 	tile_banks_0_1 = 0x70u;
-	LAYER(WORKING_LAYER)->map = layers_031280_ADDRESS;
+	LAYER(WORKING_LAYER)->map = splinter_picture_map_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = splinter_picture_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->map_width = 0x20u;
 	tile_place = TILE_RAM + 0x4000u;
@@ -2532,7 +2532,7 @@ void exit_building_site_splinter_picture(void)
 }
 
 /* Unused: four added to a counter one at a time */
-void unreached_02D1D6(uint32_t counter)
+void add_four_to_counter(uint32_t counter)
 {
 	mem_write16(counter, mem_read16(counter) + 1u);
 	mem_write16(counter, mem_read16(counter) + 1u);
@@ -2554,7 +2554,7 @@ void exit_building_site_splinter_thanks(void)
 	if (t1 == 1u)
 	{
 		clear_layers();
-		data = 0xA15Eu;
+		data = technodrome_drop_palettes_ADDRESS;
 		kind = 0x20Fu;
 		post_palette_request(kind, data);
 		next_area_step();
@@ -2626,7 +2626,7 @@ void turtle_exit_building_site_drop(void)
 void turtle_exit_building_site_land(void)
 {
 	uint16_t routine_state = 0;
-	uint32_t d1 = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, object = 0;
+	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, object = 0, screen_x = 0;
 	uint8_t t1 = 0;
 	uint16_t height = 0;
 
@@ -2654,9 +2654,9 @@ void turtle_exit_building_site_land(void)
 			{
 				turtles_on_the_way--;
 				OBJECT(object)->x += 0x300u;
-				d1 = OBJECT(object)->x >> 8;
-				screen_x_high = d1;
-				OBJECT(object)->screen_x = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u);
+				screen_x = OBJECT(object)->x >> 8;
+				screen_x_high = screen_x;
+				OBJECT(object)->screen_x = screen_x;
 				height = OBJECT(object)->height;
 				OBJECT(object)->height = height - 0x600u;
 				if (height < 0x600u)
@@ -2664,7 +2664,7 @@ void turtle_exit_building_site_land(void)
 					OBJECT(object)->height = 0u;
 					OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | 0x8u;
 					OBJECT(object)->state = 0u;
-					turtle_set_animation(d1, object);
+					turtle_set_animation(screen_x, object);
 				}
 			}
 		}
@@ -2889,7 +2889,7 @@ void turtle_exit_final_walk(void)
 			y_shake = (uint8_t)shake_y[shake_offset];
 			x_shake = (uint16_t)shake_x[shake_offset];
 			screen_x_high = (screen_x_high & ~0xFFFFu) | x_shake;
-			layer_b_scroll_x += (x_shake & ~0xFF00u) | (screen_x_high & 0xFF00u);
+			layer_b_scroll_x += x_shake;
 			layer_b_scroll_y = (layer_b_scroll_y & 0xFF00u) | ((uint8_t)layer_b_scroll_y + y_shake & 0xFFu);
 		}
 		if (cutscene_wait >= 0x70u)
@@ -2941,7 +2941,7 @@ void exit_final_shake(void)
 		y_shake = (uint8_t)shake_y[shake_offset];
 		x_shake = (uint16_t)shake_x[shake_offset];
 		screen_x_high = x_shake;
-		layer_b_scroll_x += (x_shake & ~0xFF00u) | (screen_x_high & 0xFF00u);
+		layer_b_scroll_x += x_shake;
 		layer_b_scroll_y = (layer_b_scroll_y & 0xFF00u) | ((uint8_t)layer_b_scroll_y + y_shake & 0xFFu);
 	}
 	t1 = cutscene_wait;
@@ -2961,7 +2961,7 @@ void draw_technodrome_screen(void)
 
 	io_write8(TILES_106B00, 0xC0u);
 	tile_banks_0_1 = 0xC0u;
-	LAYER(WORKING_LAYER)->map = layers_0458F8_ADDRESS;
+	LAYER(WORKING_LAYER)->map = technodrome_screen_map_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = technodrome_screen_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->x = 0x2000u;
 	LAYER(WORKING_LAYER)->y = 0x10000u;
@@ -2970,7 +2970,7 @@ void draw_technodrome_screen(void)
 	draw_whole_layer(tile_place);
 	io_write8(TILES_106E00, 0x2Cu);
 	tile_banks_2_3 = 0x2Cu;
-	LAYER(WORKING_LAYER)->map = technodrome_screen_map_ADDRESS;
+	LAYER(WORKING_LAYER)->map = technodrome_screen_map_2_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = technodrome_screen_blocks_2_ADDRESS;
 	LAYER(WORKING_LAYER)->x = 0x2000u;
 	LAYER(WORKING_LAYER)->y = 0x10000u;

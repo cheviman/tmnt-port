@@ -200,16 +200,32 @@ tools verify it, extract the assets and build your own executable.
       parameter named after one 639 → 350, faithful functions 67.9 % → 77.9 % (lines 98.2 %), results written back
       before an early return 66 → 3, partial writes that put a part of one value into another 185 → 83; still 17 of
       17 scenarios identical in state, picture and sound
-- [ ] What is left of the names and the structure: 478 parameters and locals still named after a register, 348 of
-      them the A5 the object loop hands from one object's handler to the next (some handlers take it as a player's
-      slot or a table of animations of their own, so it cannot be one global without losing those types), the rest
-      locals that hold several things in turn; 157 functions reach memory through an address they work out (the video
-      chips' memories, buffers, and 16 reads of the program's data through the bus in 9 functions: the elevators'
-      stops, the palette effects' lists, the window soldiers' records...), 57 put a part of one value into another,
-      and a few keep a control flag, a flag worked out as the CPU sets it or a switch on a code address. In the sound
-      program, the handlers it stores are written as numbers (the 68000's are named), a few numbers that happen to be
-      an address of its data come out with that name (pitches, lengths), and the 16-bit fields it writes a byte at a
-      time show their two bytes
+- [x] Nothing named after an address or a register, and 99 % of the C faithful (04-11-2026): what the object loop
+      hands each object's routine in A5 and A1 is kept as the game's state (`object_loop_leftover`,
+      `object_loop_slot`); the tables of states the objects run (`enemy_hop_states`), the switches' tables of handlers,
+      the routines nothing reaches (`say_speedy`, `word_to_decimal_digits`) and every piece of data the C named after
+      its address have names, and the switches on a handler name their cases after it (`case enemy_hop_crouch_ADDRESS:`).
+      The pointers the C reached memory through by address are typed: a players' record by the player's number
+      (`PLAYER(PLAYER_ADDRESS(0) + (int16_t)offset)->lives`), an array of the work RAM by a signed word, a place in the
+      tile RAM plus one, the enemies' reactions by the side they were hit on (`REACTION(reactions + side)`), the object
+      that hit a turtle (`OBJECT(hit_by)->hit_sound`), the fields an object's family keeps pointers in. A byte written
+      into a register whose other bytes are read afterwards is that variable changed in place, a statement of its own
+      (`move_offset = (move_offset & ~0xFFu) | moves[move_offset];`). The routines that clear or copy memory a long at
+      a time (the boot, its RAM tests, the turtles' objects, the layers' copies, the ranking's defaults) are memory
+      routines, each with its reason (`tools/game_profile.py`). In the sound program, the borrow of `sbc hl,de` is the
+      comparison it is (`offset + carry > 0xA00u`) and its handlers are named. In the whole C: functions with nothing
+      but the faithful leftovers 80.7 % → 99.3 % (lines 99.9 %), parameters and locals named after a register 478 → 0,
+      names made of an address 421 → 0, memory reached through an address the code works out 1,114 → 468 (the video
+      chips' memories, read by the bus as the board has them, and the memory routines), partial writes that put a part
+      of one value into another 83 → 3, flags worked out as the CPU sets them 8 → 0; still 17 of 17 scenarios identical
+      in state, picture and sound
+- [ ] What is left of the structure: 16 functions of 2,435, each for a reason: 8 keep a control flag their structure
+      needs, the enemies' retargeting reads a second slot that may be none through the bus (as the original, in 4), the
+      demo's input channels read past a player's record, the name entry adds one to an initial through an address the
+      instruction works out, Rocksteady's moves index a table with a word whose low byte comes from the data, and code
+      nothing runs (the palette editor keeps its stick at address 000006, in the program; a list of palette requests
+      whose place is not known; two routines with a stack frame the C has not; one that writes its results before
+      each of its two returns). In the sound program, the 16-bit fields it writes a byte at a time show their two bytes
 
 ## Getting started
 

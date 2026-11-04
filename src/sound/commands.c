@@ -3,7 +3,7 @@
  *    Description: the 68000's sound commands: the reset and its tests, the command's dispatch, the title music, the speech, the starts of the music and the effects, the fade, silence, the channels' stops
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -157,7 +157,7 @@ void sound_command(void)
 			return;
 		}
 		z80_block(41);
-		handler = 0x885u;
+		handler = music_track_start_ADDRESS;
 		record_size = 0x40u;
 		count = 9u;
 		channel = MUSIC_FM_1;
@@ -367,7 +367,7 @@ uint32_t speech_play(uint16_t channel)
 	attenuation = speech_music_attenuation[sound];
 	music_attenuation = attenuation;
 	music_attenuation_changed = attenuation;
-	handler = 0x1A4u;
+	handler = speech_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -690,83 +690,83 @@ void silence(void)
 void stop_fm_effect_channels(void)
 {
 	z80_block(68);
-	CHANNEL(FM_EFFECT_0)->handler = 0x5D0u;
-	CHANNEL(FM_EFFECT_6)->handler = 0x5D0u;
-	CHANNEL(FM_EFFECT_7)->handler = 0x5D0u;
+	CHANNEL(FM_EFFECT_0)->handler = stop_channel_ADDRESS;
+	CHANNEL(FM_EFFECT_6)->handler = stop_channel_ADDRESS;
+	CHANNEL(FM_EFFECT_7)->handler = stop_channel_ADDRESS;
 }
 
 /* Stops the music's FM channels 6 and 7 at their next pass. */
 void stop_music_fm_6_7(void)
 {
 	z80_block(52);
-	CHANNEL(MUSIC_FM_6)->handler = 0x5D0u;
-	CHANNEL(MUSIC_FM_7)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_6)->handler = stop_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_7)->handler = stop_channel_ADDRESS;
 }
 
 /* Stops the music's FM channels 1 to 5 at their next pass. */
 void stop_music_fm_1_5(void)
 {
 	z80_block(100);
-	CHANNEL(MUSIC_FM_1)->handler = 0x5D0u;
-	CHANNEL(MUSIC_FM_2)->handler = 0x5D0u;
-	CHANNEL(MUSIC_FM_3)->handler = 0x5D0u;
-	CHANNEL(MUSIC_FM_4)->handler = 0x5D0u;
-	CHANNEL(MUSIC_FM_5)->handler = 0x5D0u;
+	CHANNEL(MUSIC_FM_1)->handler = stop_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_2)->handler = stop_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_3)->handler = stop_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_4)->handler = stop_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_5)->handler = stop_channel_ADDRESS;
 }
 
 /* Frees the music's FM channels 6 and 7 at their next pass, without keying them off. */
 void free_music_fm_6_7(void)
 {
 	z80_block(52);
-	CHANNEL(MUSIC_FM_6)->handler = 0x5D6u;
-	CHANNEL(MUSIC_FM_7)->handler = 0x5D6u;
+	CHANNEL(MUSIC_FM_6)->handler = free_channel_ADDRESS;
+	CHANNEL(MUSIC_FM_7)->handler = free_channel_ADDRESS;
 }
 
 /* Stops the music's PCM channel A at its next pass. */
 void stop_music_pcm_a(void)
 {
 	z80_block(36);
-	CHANNEL(MUSIC_PCM_A)->handler = 0x5E8u;
+	CHANNEL(MUSIC_PCM_A)->handler = stop_pcm_channel_ADDRESS;
 }
 
 /* Frees the music's PCM channel A at its next pass, without stopping the sample. */
 void free_music_pcm_a(void)
 {
 	z80_block(36);
-	CHANNEL(MUSIC_PCM_A)->handler = 0x5D6u;
+	CHANNEL(MUSIC_PCM_A)->handler = free_channel_ADDRESS;
 }
 
 /* Stops the PCM effects' channel B at its next pass. */
 void stop_pcm_effect_b(void)
 {
 	z80_block(36);
-	CHANNEL(PCM_EFFECT_B)->handler = 0x5E8u;
+	CHANNEL(PCM_EFFECT_B)->handler = stop_pcm_channel_ADDRESS;
 }
 
 /* Frees the music's PCM channel B at its next pass, without stopping the sample. */
 void free_music_pcm_b(void)
 {
 	z80_block(36);
-	CHANNEL(MUSIC_PCM_B)->handler = 0x5D6u;
+	CHANNEL(MUSIC_PCM_B)->handler = free_channel_ADDRESS;
 }
 
 /* Stops the music's PCM channel B at its next pass. */
 void stop_music_pcm_b(void)
 {
 	z80_block(36);
-	CHANNEL(MUSIC_PCM_B)->handler = 0x5E8u;
+	CHANNEL(MUSIC_PCM_B)->handler = stop_pcm_channel_ADDRESS;
 }
 
 /* Stops the PCM effects' channel A at its next pass. */
 void stop_pcm_effect_a(void)
 {
 	z80_block(36);
-	CHANNEL(PCM_EFFECT_A)->handler = 0x5E8u;
+	CHANNEL(PCM_EFFECT_A)->handler = stop_pcm_channel_ADDRESS;
 }
 
 /* Frees the speech channel at its next pass. */
 void free_speech_channel(void)
 {
 	z80_block(36);
-	CHANNEL(SPEECH)->handler = 0x5D6u;
+	CHANNEL(SPEECH)->handler = free_channel_ADDRESS;
 }

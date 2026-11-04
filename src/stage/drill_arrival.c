@@ -3,7 +3,7 @@
  *    Description: the drill pod that comes down through the ceiling in areas 1 and 7 and lets out Rocksteady or the flying drones
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,28 +12,28 @@
 #include "game.h"
 
 /* the drill pod's arrival in areas 1 and 7, a step a frame */
-uint32_t run_drill_arrival(uint32_t a1)
+void run_drill_arrival(void)
 {
 	if (drill_arrival < 0)
-		return a1;
+		return;
 	switch (drill_arrival_step)
 	{
 	case 0:
 		drill_arrival_wait();
-		return a1;
+		return;
 	case 1:
 		drill_arrival_rumble();
-		return a1;
+		return;
 	case 2:
-		return drill_arrival_descend(a1);
+		drill_arrival_descend();
+		return;
 	case 3:
 		drill_arrival_open();
-		return a1;
+		return;
 	case 4:
 		drill_arrival_end();
-		return a1;
+		return;
 	}
-	unreachable();
 }
 
 /* at its place in the area the scroll stops and the rumbling starts */
@@ -126,7 +126,7 @@ void drill_arrival_rumble(void)
 	if (stage != 1u)
 		animation = drill_ceiling_animation_ADDRESS;
 	set_animation(pod_y, object, animation);
-	animation = animations_02D796_ADDRESS;
+	animation = drill_arrival_rumble_animation_ADDRESS;
 	object += 0x50u;
 	set_animation(pod_y, object, animation);
 	animation = drill_pod_animation_ADDRESS;
@@ -186,45 +186,45 @@ void shake_layers_and_objects(void)
 }
 
 /* the drill pod drills down through the ceiling into the room */
-uint32_t drill_arrival_descend(uint32_t object)
+void drill_arrival_descend(void)
 {
 	uint16_t screen_x = 0, screen_y = 0, screen_y_2 = 0;
-	uint32_t object_2 = 0;
+	uint32_t object = 0, object_2 = 0;
 
 	hurry_time = 0u;
 	shake_layers_and_objects();
-	object_2 = OBJECT_ADDRESS(45);
+	object = OBJECT_ADDRESS(45);
 	OBJECT(OBJECT_ADDRESS(46))->y += 0xC0u;
 	OBJECT(OBJECT_ADDRESS(46))->screen_y = OBJECT(OBJECT_ADDRESS(46))->y >> 8;
 	OBJECT(OBJECT_ADDRESS(45))->y += 0xC0u;
 	screen_y = (uint16_t)(OBJECT(OBJECT_ADDRESS(45))->y >> 8);
 	OBJECT(OBJECT_ADDRESS(45))->screen_y = screen_y;
-	if (stage == 7u && OBJECT(object_2)->screen_y >= 0x9Eu && balloons_said == 1u)
+	if (stage == 7u && OBJECT(object)->screen_y >= 0x9Eu && balloons_said == 1u)
 	{
-		object = OBJECT_ADDRESS(0);
+		object_2 = OBJECT_ADDRESS(0);
+		object_loop_slot = OBJECT_ADDRESS(0);
 		do
 		{
-			if ((OBJECT(object)->flags & 1u) != 0u)
+			if ((OBJECT(object_2)->flags & 1u) != 0u)
 			{
 				screen_y &= ~0xFFu;
-				screen_x = (uint16_t)(OBJECT(object)->screen_x - 0x40u);
-				screen_x_high = screen_x;
-				screen_y_2 = OBJECT(object)->screen_y;
-				say_overgrown_cork_screw(screen_y, (uint8_t)screen_x, screen_y_2);
+				screen_x = (uint16_t)(OBJECT(object_2)->screen_x - 0x40u);
+				screen_y_2 = OBJECT(object_2)->screen_y;
+				say_overgrown_cork_screw(screen_y, screen_x, screen_y_2);
 				break;
 			}
-			object += 0x50u;
-		} while (object < OBJECT_ADDRESS(4));
+			object_2 += 0x50u;
+			object_loop_slot = object_2;
+		} while (object_2 < OBJECT_ADDRESS(4));
 	}
 	screen_y = 0x124u;
 	if (stage != 1u)
 		screen_y = 0x144u;
-	if (OBJECT(object_2)->screen_y <= screen_y)
-		return object;
-	OBJECT(object_2)->frame_time = 0u;
+	if (OBJECT(object)->screen_y <= screen_y)
+		return;
+	OBJECT(object)->frame_time = 0u;
 	drill_arrival_time = 0x70u;
 	drill_arrival_step++;
-	return object;
 }
 
 /* the drill pod's door opens and Rocksteady or the flying drones come out */

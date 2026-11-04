@@ -3,7 +3,7 @@
  *    Description: the areas' scroll segments: the layers' limits and speeds
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -21,7 +21,8 @@ void start_scroll_segment(void)
 	uint8_t mode = 0;
 
 	stage_number = stage;
-	setting = SCROLL_SETTING_LIST(area_scroll_segments[(uint8_t)((uint32_t)stage_number << 2) / 4u] + (int16_t)scroll_segment);
+	stage_number = (uint8_t)((uint32_t)stage_number << 2);
+	setting = SCROLL_SETTING_LIST(area_scroll_segments[stage_number / 4u] + (int16_t)scroll_segment);
 	mode = SCROLL_SETTING(setting)->mode;
 	negative = mode >> 7;
 	scroll_mode = mode;

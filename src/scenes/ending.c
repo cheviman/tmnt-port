@@ -3,7 +3,7 @@
  *    Description: the ending after the last boss: the Technodrome explodes, the epilogue, the staff roll, GAME OVER
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -53,7 +53,7 @@ void ending_clear(void)
 	jobs_pending++;
 	job = 7u;
 	queue_job(job);
-	data = 0xA03Eu;
+	data = ending_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	clear_palette_effects();
@@ -368,7 +368,7 @@ void staff_roll_clear(void)
 	jobs_pending++;
 	job = 7u;
 	queue_job(job);
-	data = 0xA0DEu;
+	data = staff_roll_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	scene_subsubstep++;
@@ -420,7 +420,7 @@ void staff_roll_next_credit(void)
 			tile_place++;
 			text++;
 		} while (t1 != 0xFFFFu);
-		jobs = table_loaded_by_lea_007018_ADDRESS;
+		jobs = staff_roll_jobs_ADDRESS;
 		queue_jobs(jobs);
 		game_scene_timer = 0xB4u;
 		scene_subsubstep = 6u;
@@ -430,7 +430,8 @@ void staff_roll_next_credit(void)
 	}
 	tile_place = TILE_RAM + 0x324u;
 	credit_number = staff_roll_credit;
-	text = staff_roll_credits_ADDRESS + (uint16_t)(credit_number << 4);
+	credit_number = (uint16_t)(credit_number << 4);
+	text = staff_roll_credits_ADDRESS + credit_number;
 	count = 0xFu;
 	do
 	{
@@ -531,7 +532,7 @@ void ending_game_over_clear(void)
 	jobs_pending++;
 	job = 7u;
 	queue_job(job);
-	data = 0xA01Eu;
+	data = boot_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	clear_objects();
@@ -544,16 +545,16 @@ void ending_game_over_start(void)
 {
 	uint8_t sound = 0;
 	uint16_t text_number = 0;
-	uint32_t palette_effect_pointer = 0;
+	uint32_t effect_list = 0;
 
 	if (jobs_pending != 0u || palettes_busy != 0u)
 		return;
 	text_number = 1u;
 	print_colour_text(text_number);
-	palette_effect_pointer = 0xD2C4u;
-	start_palette_effects(palette_effect_pointer);
-	palette_effect_pointer = 0xD2E6u;
-	start_palette_effects(palette_effect_pointer);
+	effect_list = game_over_palette_effects_ADDRESS;
+	start_palette_effects(effect_list);
+	effect_list = game_over_palette_effects_2_ADDRESS;
+	start_palette_effects(effect_list);
 	game_scene_timer = 0xFAu;
 	scene_subsubstep++;
 	sound = 0x6Du;
@@ -860,7 +861,7 @@ void start_credit_name_erase(void)
 		typed_pass -= 0xAu;
 	} while (t1 != 0xFFFFu);
 	typed_passes_left = 8u;
-	TYPED_PASS(TYPED_PASS_ADDRESS(0))->text = 0x77D2u;
+	TYPED_PASS(TYPED_PASS_ADDRESS(0))->text = blank_credit_name_ADDRESS;
 }
 
 /* a pass of the credit's name set at its place, speed and text */
@@ -871,7 +872,8 @@ void set_credit_name_pass(uint32_t typed_pass)
 	TYPED_PASS(typed_pass)->place = TILE_RAM + 0x42Au;
 	TYPED_PASS(typed_pass)->delay = 4u;
 	credit_number = staff_roll_credit;
-	TYPED_PASS(typed_pass)->text = staff_roll_names_ADDRESS + (uint16_t)(credit_number << 4);
+	credit_number = (uint16_t)(credit_number << 4);
+	TYPED_PASS(typed_pass)->text = staff_roll_names_ADDRESS + credit_number;
 }
 
 /* the seven passes of the name typed on */

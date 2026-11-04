@@ -3,7 +3,7 @@
  *    Description: the commands to the sound board, queued and sent one a frame
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -27,7 +27,7 @@ void queue_sound_command(uint8_t command)
 	uint32_t queue_place = 0;
 
 	queue_place = sound_queue_write;
-	mem_write8(queue_place, command);
+	QUEUED_SOUND(queue_place)->command = command;
 	queue_place++;
 	if (queue_place > sound_queue_ADDRESS + 0x3Fu)
 		queue_place = sound_queue_ADDRESS;
@@ -46,18 +46,19 @@ void queue_sound_d0(uint8_t sound)
 /* the next sound command to the sound board */
 void send_sound_command(void)
 {
-	uint8_t command = 0;
+	uint8_t command = 0, control = 0;
 	uint32_t queue_place = 0;
 
 	queue_place = sound_queue_read;
 	if (queue_place == sound_queue_write)
 		return;
-	command = mem_read8(queue_place);
+	command = QUEUED_SOUND(queue_place)->command;
 	queue_place++;
 	if (queue_place > sound_queue_ADDRESS + 0x3Fu)
 		queue_place = sound_queue_ADDRESS;
 	sound_queue_read = queue_place;
 	io_write8(IO_0A0009, command);
-	fade_banks = board_control | 8u;
-	io_write8(IO_0A0001, fade_banks);
+	control = board_control | 8u;
+	fade_banks = control;
+	io_write8(IO_0A0001, control);
 }

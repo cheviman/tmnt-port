@@ -3,7 +3,7 @@
  *    Description: the chips' registers: the YM2151's writes and the frame's timer, its voices, keys, pitches and volumes; the K007232's start, pitch, volume and loop
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -12,14 +12,13 @@
 #include "sound.h"
 
 /* Writes a YM2151 register, a base plus an offset, with a value. */
-void write_fm_register_de(uint8_t value, uint16_t fm_register)
+void write_fm_register_de(uint16_t value, uint16_t fm_register)
 {
 	uint32_t carry = 0;
-	uint16_t fm_write = 0;
 
 	z80_block(22);
-	fm_write = (value & 0xFFu) | ((uint32_t)(uint8_t)((fm_register >> 8) + fm_register) << 8);
-	carry = write_fm_register(fm_write);
+	value = (value & 0xFFu) | ((uint32_t)(uint8_t)((fm_register >> 8) + fm_register) << 8);
+	carry = write_fm_register(value);
 }
 
 /* Writes the channel's own YM2151 register: the register given plus its chip channel. */
@@ -273,11 +272,10 @@ uint32_t fm_fast_release(uint16_t channel)
 uint32_t fm_fast_release_operator(uint16_t fm_register, uint16_t channel, uint8_t release)
 {
 	uint32_t carry = 0;
-	uint16_t fm_write = 0;
 
 	z80_block(21);
-	fm_write = (fm_register & ~0xFFu) | release | 0xFu;
-	write_fm_channel_register(channel, &fm_write, &carry);
+	fm_register = (fm_register & ~0xFFu) | release | 0xFu;
+	write_fm_channel_register(channel, &fm_register, &carry);
 	return carry;
 }
 
@@ -380,7 +378,7 @@ void set_fm_operator_level(uint16_t fm_register, uint16_t channel, uint8_t level
 	uint8_t carriers = (uint8_t)*p_carriers;
 	uint32_t carry = *p_carry;
 	uint8_t carrier_mask = 0;
-	uint16_t carrier_mask_left = 0, fm_write = 0;
+	uint16_t carrier_mask_left = 0;
 	uint8_t t1 = 0;
 
 	carrier_mask = (uint8_t)carriers;
@@ -399,9 +397,9 @@ void set_fm_operator_level(uint16_t fm_register, uint16_t channel, uint8_t level
 		}
 	}
 	z80_block(14);
-	fm_write = (fm_register & ~0xFFu) | level;
+	fm_register = (fm_register & ~0xFFu) | level;
 	carrier_mask_left = carrier_mask;
-	write_fm_channel_register(channel, &fm_write, &carry);
+	write_fm_channel_register(channel, &fm_register, &carry);
 	*p_carriers = (*p_carriers & 0xFF00u) | carrier_mask_left;
 	*p_carry = carry;
 }

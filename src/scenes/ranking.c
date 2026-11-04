@@ -3,7 +3,7 @@
  *    Description: the ranking after a game: the players' places, their columns, the name entry, and the ranking's defaults
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -84,7 +84,7 @@ void ranking_clear(void)
 	{
 		clear_objects();
 		clear_sprite_ram();
-		data = 0xA02Eu;
+		data = ranking_palettes_ADDRESS;
 		kind = 0x20Fu;
 		post_palette_request(kind, data);
 		clear_palette_effects();
@@ -198,7 +198,7 @@ void show_ranked_players(void)
 {
 	uint8_t score_players = 0;
 	uint16_t count = 0, player_number = 0;
-	uint32_t d6 = 0, picture_players = 0, places = 0;
+	uint32_t colour = 0, picture_players = 0, places = 0;
 	uint16_t t1 = 0;
 
 	count = 3u;
@@ -208,8 +208,8 @@ void show_ranked_players(void)
 	{
 		if (ranking_places((uint32_t)(int16_t)count) != 0u)
 		{
-			d6 = draw_ranking_frame(d6, count);
-			draw_ranking_label((uint8_t)d6, count);
+			colour = draw_ranking_frame(colour, count);
+			draw_ranking_label((uint8_t)colour, count);
 			score_players = (uint8_t)shl32(1u, (int)(count & 0x1Fu));
 			draw_scores(score_players);
 			count = (uint16_t)count;
@@ -231,7 +231,7 @@ void ranking_choose_entry(void)
 {
 	uint8_t entering = 0, sound = 0, unranked = 0;
 	uint16_t count = 0;
-	uint32_t d7 = 0, entered = 0, places = 0, players = 0;
+	uint32_t entered = 0, loop_end = 0, places = 0;
 	uint16_t t1 = 0, t2 = 0;
 
 	places = ranking_places_ADDRESS;
@@ -270,9 +270,9 @@ void ranking_choose_entry(void)
 			} while (t2 != 0xFFFFu);
 			players_entering_names = entering;
 			initials_buttons_held = 0u;
-			d7 = draw_ranking_background();
-			players = (d7 & ~0xFFu) | turtles_in_black;
-			draw_four_turtle_pictures(players);
+			loop_end = draw_ranking_background();
+			loop_end = (loop_end & ~0xFFu) | turtles_in_black;
+			draw_four_turtle_pictures(loop_end);
 			ranking_time = 0x5DCu;
 			scene_step += 2u;
 			return;
@@ -289,9 +289,9 @@ void ranking_choose_entry(void)
 	}
 	sound = 0x71u;
 	queue_sound(sound);
-	d7 = draw_ranking_background();
-	players = (d7 & ~0xFFu) | turtles_in_black;
-	draw_four_turtle_pictures(players);
+	loop_end = draw_ranking_background();
+	loop_end = (loop_end & ~0xFFu) | turtles_in_black;
+	draw_four_turtle_pictures(loop_end);
 	ranking_time = 0x1E0u;
 	scene_step++;
 }
@@ -550,7 +550,7 @@ void draw_initials(uint16_t count)
 	tile_place = TABLE32(ranking_initials_places, (uint32_t)(int16_t)((uint32_t)count << 2));
 	entered = initials_entered_ADDRESS;
 	initials = ranking_initials_ADDRESS;
-	initials_offset = mem_read8(ranking_places_ADDRESS + (int16_t)count);
+	initials_offset = ranking_places((uint32_t)(int16_t)count);
 	if (initials_offset == 0x10u)
 		initials_offset = 0xAu;
 	initials_offset = (uint16_t)((uint32_t)(uint8_t)(initials_offset - 1u) << 2);
@@ -584,28 +584,28 @@ void draw_initial(uint8_t attribute, uint16_t initial, uint32_t tile_place)
 }
 
 /* the frame of a player's column in his colour */
-uint32_t draw_ranking_frame(uint32_t d6, uint16_t count)
+uint32_t draw_ranking_frame(uint32_t colour, uint16_t count)
 {
 	uint16_t count_2 = 0, tile_offset = 0;
-	uint32_t player_number = 0, player_offset = 0, tile_place = 0, tiles = 0;
+	uint32_t tile_place = 0, tiles = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0;
 
-	player_offset = (d6 & ~0xFFFFu) | count;
-	player_offset = (player_offset & ~0xFFFFu) | (uint16_t)(player_offset << 2);
-	tile_place = TABLE32(ranking_frame_places, (uint32_t)(int16_t)player_offset);
-	player_number = (player_offset & ~0xFFFFu) | count;
-	player_number = ranking_frame_colour(player_number);
+	colour = LINKED(colour, count);
+	colour = LINKED(colour, (uint16_t)(colour << 2));
+	tile_place = TABLE32(ranking_frame_places, (uint32_t)(int16_t)colour);
+	colour = LINKED(colour, count);
+	colour = ranking_frame_colour(colour);
 	count_2 = 8u;
 	tile_offset = 0u;
 	tiles = ranking_frame_tiles_ADDRESS;
 	do
 	{
 		tile_offset += 0x80u;
-		mem_write8(tile_place + (int16_t)tile_offset, player_number);
-		mem_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles + 0x9u));
+		io_write8(tile_place + (int16_t)tile_offset, colour);
+		io_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles + 0x9u));
 		tile_offset -= 0x80u;
-		mem_write8(tile_place + (int16_t)tile_offset, player_number);
-		mem_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles));
+		io_write8(tile_place + (int16_t)tile_offset, colour);
+		io_write8(tile_place + 1u + (int16_t)tile_offset, PICTURE_TILE(tiles));
 		tile_offset = (uint16_t)((tile_offset & ~0xFFu) | (uint8_t)(tile_offset + 2u));
 		t1 = count_2 - 1u;
 		count_2 = t1;
@@ -615,9 +615,9 @@ uint32_t draw_ranking_frame(uint32_t d6, uint16_t count)
 	tile_place += 0x100u;
 	do
 	{
-		io_write8(tile_place, player_number);
+		io_write8(tile_place, colour);
 		io_write8(tile_place + 1u, 0x1Au);
-		io_write8(tile_place + 0x10u, player_number);
+		io_write8(tile_place + 0x10u, colour);
 		io_write8(tile_place + 0x11u, 0x1Du);
 		t2 = count_2 - 1u;
 		count_2 = t2;
@@ -628,14 +628,14 @@ uint32_t draw_ranking_frame(uint32_t d6, uint16_t count)
 	tiles = ranking_frame_tiles_2_ADDRESS;
 	do
 	{
-		io_write8(tile_place + tile_offset, player_number);
+		io_write8(tile_place + tile_offset, colour);
 		io_write8(tile_place + 1u + tile_offset, PICTURE_TILE(tiles));
 		tile_offset = (uint8_t)(tile_offset + 2u);
 		t3 = count_2 - 1u;
 		count_2 = t3;
 		tiles++;
 	} while (t3 != 0xFFFFu);
-	return player_number;
+	return colour;
 }
 
 /* a player's label at the top of his column */
@@ -656,7 +656,7 @@ void draw_ranking_label(uint8_t colour, uint16_t count)
 }
 
 /* a player's place, its digits and ending */
-void draw_ranking_place(uint16_t count, uint32_t a0)
+void draw_ranking_place(uint16_t count, uint32_t places)
 {
 	uint8_t place = 0;
 	uint16_t ending_offset = 0, tens_offset = 0, units_offset = 0;
@@ -678,7 +678,8 @@ void draw_ranking_place(uint16_t count, uint32_t a0)
 	io_write8(tile_place + 2u, 0u);
 	io_write8(tile_place + 3u, big_font_tiles_table[units_offset]);
 	io_write8(tile_place + 0x82u, 0u);
-	io_write8(tile_place + 0x83u, big_font_tiles_table[(uint8_t)(units_offset + 1u)]);
+	units_offset = (uint8_t)(units_offset + 1u);
+	io_write8(tile_place + 0x83u, big_font_tiles_table[units_offset]);
 	t1 = place & 0xF0u;
 	tens_offset = t1;
 	if (t1 != 0u)
@@ -687,18 +688,17 @@ void draw_ranking_place(uint16_t count, uint32_t a0)
 		io_write8(tile_place, 0u);
 		io_write8(tile_place + 1u, big_font_tiles_table[tens_offset]);
 		io_write8(tile_place + 0x80u, 0u);
-		io_write8(tile_place + 0x81u, big_font_tiles_table[(uint8_t)(tens_offset + 1u)]);
+		tens_offset = (uint8_t)(tens_offset + 1u);
+		io_write8(tile_place + 0x81u, big_font_tiles_table[tens_offset]);
 	}
 }
 
 /* the colour of a player's column */
 uint32_t ranking_frame_colour(uint32_t player_number)
 {
-	uint32_t colour = 0;
-
-	colour = (player_number & ~0xFFu) | TABLE8(text_colours, 0x1u + (uint32_t)(int16_t)player_number);
-	colour = colour | 1u;
-	return colour;
+	player_number = (player_number & ~0xFFu) | TABLE8(text_colours, 0x1u + (uint32_t)(int16_t)player_number);
+	player_number = player_number | 1u;
+	return player_number;
 }
 
 /* the ranking's default scores and initials, and the top score */

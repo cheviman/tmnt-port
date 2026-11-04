@@ -3,7 +3,7 @@
  *    Description: the story before area 0: the rooftop, "Fire!!", the climb, the burning roof
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -36,7 +36,7 @@ void start_intro(void)
 	LAYER(LAYER_B)->y = 0x10000u;
 	set_layers_scroll();
 	start_box_opening();
-	data = 0xA0EEu;
+	data = intro_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 }
@@ -368,7 +368,7 @@ void intro_rooftop(uint32_t height)
 			count = t3;
 			tile_place += 0x60u;
 		} while (t3 != 0xFFFFu);
-		data = 0xA0FEu;
+		data = intro_rooftop_palettes_ADDRESS;
 		kind = 0x20Fu;
 		post_palette_request(kind, data);
 		cutscene_step++;
@@ -488,7 +488,7 @@ void intro_climb(void)
 	LAYER(WORKING_LAYER)->x = 0u;
 	LAYER(LAYER_A)->x = 0u;
 	LAYER(LAYER_B)->x = 0u;
-	data = 0xA10Eu;
+	data = intro_climb_palettes_ADDRESS;
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
 	cutscene_step++;
@@ -497,23 +497,23 @@ void intro_climb(void)
 /* the burning roof with the four turtles dropping onto it */
 void intro_roof_start(void)
 {
-	uint16_t d5 = 0, routine_state = 0;
+	uint16_t routine_state = 0, screen_x = 0;
 	uint32_t drop_wait = 0, effect_lists = 0, ignored = 0, kind = 0, object = 0, tile_place = 0;
 
 	if (palettes_busy != 0u)
 		return;
 	io_write8(TILES_106B00, 0x30u);
 	tile_banks_0_1 = 0x30u;
-	LAYER(WORKING_LAYER)->map = layers_04618C_ADDRESS;
+	LAYER(WORKING_LAYER)->map = intro_roof_map_ADDRESS;
 	LAYER(WORKING_LAYER)->blocks = intro_roof_blocks_ADDRESS;
 	LAYER(WORKING_LAYER)->map_width = 0x20u;
 	tile_place = TILE_RAM + 0x4000u;
 	draw_whole_layer(tile_place);
-	effect_lists = 0x9C08u;
+	effect_lists = intro_roof_palette_effects_ADDRESS;
 	start_palette_effect_lists(effect_lists);
 	object = OBJECT_ADDRESS(44);
 	kind = 0u;
-	d5 = 0xB0u;
+	screen_x = 0xB0u;
 	distance_low_byte = 0xB0u;
 	drop_wait = 0x20u;
 	do
@@ -522,7 +522,7 @@ void intro_roof_start(void)
 		OBJECT(object)->contacts = 0u;
 		OBJECT(object)->kind = kind;
 		OBJECT(object)->height = 0xB000u;
-		OBJECT(object)->screen_x = (d5 & ~0xFFu) | (distance_low_byte & 0xFFu);
+		OBJECT(object)->screen_x = screen_x;
 		OBJECT(object)->screen_y = 0x50u;
 		OBJECT(object)->y_speed = (OBJECT(object)->y_speed & 0xFF00u) | (drop_wait & 0xFFu);
 		OBJECT(object)->shadow = common_shadow_ADDRESS;
@@ -531,8 +531,8 @@ void intro_roof_start(void)
 		routine_state = 0x203u;
 		turtle_set_state(routine_state, object, &ignored, &kind, &drop_wait);
 		kind = (uint8_t)(kind + 1u);
-		d5 = (uint16_t)(((d5 & ~0xFFu) | (distance_low_byte & 0xFFu)) - 0xCu);
-		distance_low_byte = d5;
+		screen_x = (uint16_t)(((screen_x & ~0xFFu) | (distance_low_byte & 0xFFu)) - 0xCu);
+		distance_low_byte = screen_x;
 		drop_wait = (uint8_t)(drop_wait + 0x10u);
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(48));
@@ -610,19 +610,19 @@ void intro_roof_land(void)
 }
 
 /* the fire and its smoke in the story's pictures, a new picture every eight frames */
-uint32_t intro_animate_fire(uint32_t d0)
+uint32_t intro_animate_fire(uint32_t kept_bits)
 {
 	uint8_t next_part_code = 0, picture_tile = 0, tile_code = 0;
-	uint16_t count_2 = 0, count_3 = 0, count_4 = 0, count_5 = 0;
-	uint32_t count = 0, fire_frame = 0, frame = 0, tile_attribute = 0, tile_place = 0;
+	uint16_t count = 0, count_2 = 0, count_3 = 0, count_4 = 0;
+	uint32_t fire_frame = 0, tile_attribute = 0, tile_place = 0;
 	uint8_t t1 = 0;
 	uint16_t t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0;
 
-	frame = (d0 & ~0xFFu) | (uint8_t)frame_count;
-	t1 = frame & 7u;
-	frame = (frame & ~0xFFu) | t1;
+	kept_bits = (kept_bits & ~0xFFu) | (uint8_t)frame_count;
+	t1 = kept_bits & 7u;
+	kept_bits = (kept_bits & ~0xFFu) | t1;
 	if (t1 != 0u)
-		return frame;
+		return kept_bits;
 	cutscene_counter += 4u;
 	if (cutscene_counter >= 0xCu)
 		cutscene_counter = 0u;
@@ -636,63 +636,63 @@ uint32_t intro_animate_fire(uint32_t d0)
 		tile_place = PICTURE_TILE_32(fire_frame);
 		fire_frame += 4u;
 		picture_tile = PICTURE_TILE(fire_frame);
-		count = 3u;
+		kept_bits = 3u;
 		fire_frame++;
 		do
 		{
-			count_2 = 3u;
+			count = 3u;
 			do
 			{
-				mem_write8(tile_place, picture_tile);
+				io_write8(tile_place, picture_tile);
 				tile_place++;
-				mem_write8(tile_place, PICTURE_TILE(fire_frame));
-				t2 = count_2 - 1u;
-				count_2 = t2;
+				io_write8(tile_place, PICTURE_TILE(fire_frame));
+				t2 = count - 1u;
+				count = t2;
 				tile_place++;
 				fire_frame++;
 			} while (t2 != 0xFFFFu);
-			t3 = count - 1u;
-			count = t3;
+			t3 = kept_bits - 1u;
+			kept_bits = t3;
 			tile_place += 0x78u;
 		} while (t3 != 0xFFFFu);
-		return count;
+		return kept_bits;
 	}
 	if (cutscene_counter == 0u)
 	{
 		tile_place = TILE_RAM + 0x4038u;
 		tile_attribute = 4u;
 		tile_code = 0x18u;
-		count_3 = 2u;
+		count_2 = 2u;
 		do
 		{
-			count_4 = 7u;
+			count_3 = 7u;
 			for (;;)
 			{
-				count_5 = 7u;
+				count_4 = 7u;
 				do
 				{
 					io_write8(tile_place, tile_attribute);
 					tile_place++;
 					io_write8(tile_place, tile_code);
 					tile_code++;
-					t4 = count_5 - 1u;
-					count_5 = t4;
+					t4 = count_4 - 1u;
+					count_4 = t4;
 					tile_place++;
 				} while (t4 != 0xFFFFu);
 				tile_code += 0x18u;
-				t5 = count_4 - 1u;
-				count_4 = t5;
+				t5 = count_3 - 1u;
+				count_3 = t5;
 				tile_place += 0x70u;
 				if (t5 != 0xFFFFu)
 					continue;
 				tile_attribute = (uint8_t)(tile_attribute + 1u);
-				if ((uint8_t)count_3 != 1u)
+				if ((uint8_t)count_2 != 1u)
 					break;
-				count_3 = (uint16_t)((count_3 & ~0xFFu) | (uint8_t)(count_3 - 1u));
-				count_4 = 3u;
+				count_2 = (uint16_t)((count_2 & ~0xFFu) | (uint8_t)(count_2 - 1u));
+				count_3 = 3u;
 			}
-			t6 = count_3 - 1u;
-			count_3 = t6;
+			t6 = count_2 - 1u;
+			count_2 = t6;
 		} while (t6 != 0xFFFFu);
 		return tile_attribute;
 	}
@@ -705,31 +705,31 @@ uint32_t intro_animate_fire(uint32_t d0)
 	}
 	tile_attribute = 0x1Au;
 	tile_place = TILE_RAM + 0x4038u;
-	count_3 = 1u;
-	count_4 = 0xFu;
+	count_2 = 1u;
+	count_3 = 0xFu;
 	for (;;)
 	{
-		count_5 = 7u;
+		count_4 = 7u;
 		do
 		{
 			io_write8(tile_place, tile_attribute);
 			tile_place++;
 			io_write8(tile_place, tile_code);
 			tile_code++;
-			t7 = count_5 - 1u;
-			count_5 = t7;
+			t7 = count_4 - 1u;
+			count_4 = t7;
 			tile_place++;
 		} while (t7 != 0xFFFFu);
-		t8 = count_4 - 1u;
-		count_4 = t8;
+		t8 = count_3 - 1u;
+		count_3 = t8;
 		tile_place += 0x70u;
 		if (t8 == 0xFFFFu)
 		{
-			count_4 = 3u;
+			count_3 = 3u;
 			tile_attribute = 0x1Bu;
 			tile_code = (uint8_t)next_part_code;
-			t9 = count_3 - 1u;
-			count_3 = t9;
+			t9 = count_2 - 1u;
+			count_2 = t9;
 			if (t9 != 0xFFFFu)
 				continue;
 			break;
@@ -758,9 +758,9 @@ uint32_t draw_tile_square_8x8(uint32_t square)
 		square++;
 		do
 		{
-			mem_write8(tile_place, picture_tile);
+			io_write8(tile_place, picture_tile);
 			tile_place++;
-			mem_write8(tile_place, tile_code);
+			io_write8(tile_place, tile_code);
 			tile_code++;
 			t1 = count_2 - 1u;
 			count_2 = t1;
@@ -794,9 +794,9 @@ uint32_t draw_tile_square_4x4(uint32_t square)
 		square++;
 		do
 		{
-			mem_write8(tile_place, picture_tile);
+			io_write8(tile_place, picture_tile);
 			tile_place++;
-			mem_write8(tile_place, tile_code);
+			io_write8(tile_place, tile_code);
 			tile_code++;
 			t1 = count_2 - 1u;
 			count_2 = t1;

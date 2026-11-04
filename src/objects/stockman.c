@@ -3,7 +3,7 @@
  *    Description: Baxter Stockman (area 3) and the Mousers he drops
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,23 +12,24 @@
 #include "game.h"
 
 /* Stockman comes in, by the state of his way in */
-uint32_t stockman_enter(uint16_t routine_offset, uint32_t object, uint32_t a5)
+void stockman_enter(uint16_t on_right, uint32_t object)
 {
 	offset_high_word = 0u;
 	switch (OBJECT(object)->state)
 	{
 	case 0:
 		stockman_start(object);
-		return a5;
+		return;
 	case 1:
-		return stockman_wait_for_last_enemy(object, a5);
+		stockman_wait_for_last_enemy(object);
+		return;
 	case 2:
 		stockman_wait(object);
-		return a5;
+		return;
 	case 3:
-		return stockman_fly_in(routine_offset, object, a5);
+		stockman_fly_in(on_right, object);
+		return;
 	}
-	unreachable();
 }
 
 /* Stockman waits in his flying machine */
@@ -54,7 +55,7 @@ void stockman_start(uint32_t object)
 }
 
 /* once he is the last enemy the music fades */
-uint32_t stockman_wait_for_last_enemy(uint32_t object, uint32_t a5)
+void stockman_wait_for_last_enemy(uint32_t object)
 {
 	uint8_t sound = 0;
 	uint16_t kind = 0;
@@ -65,13 +66,12 @@ uint32_t stockman_wait_for_last_enemy(uint32_t object, uint32_t a5)
 		sound = 0xFEu;
 		music = 0xFEu;
 		queue_sound(sound);
-		data = 0xC6C4u;
+		data = stockman_palette_ADDRESS;
 		kind = 0x43Cu;
-		a5 = post_palette_request(kind, data);
+		post_palette_request(kind, data);
 		OBJECT(object)->stockman.timer = 0x64u;
 		OBJECT(object)->state++;
 	}
-	return a5;
 }
 
 /* then the boss music, and he flies in */
@@ -102,15 +102,15 @@ void stockman_wait(uint32_t object)
 }
 
 /* he flies in, picks a turtle and says "Yippee-I-Ay!" */
-uint32_t stockman_fly_in(uint32_t routine_offset, uint32_t object, uint32_t a5)
+void stockman_fly_in(uint32_t on_right, uint32_t object)
 {
-	uint16_t on_right = 0, screen_x = 0, screen_y = 0;
-	uint32_t a5_2 = 0, picked = 0;
+	uint16_t screen_x = 0, screen_y = 0;
+	uint32_t picked = 0;
 
 	stockman_set_floor(object);
 	move_by_speeds(object);
 	if (OBJECT(object)->x >= 0x47000u)
-		return a5;
+		return;
 	OBJECT(object)->flags |= 2u;
 	OBJECT(object)->stockman.heading = 0x800u;
 	OBJECT(object)->stockman.turning = 1u;
@@ -118,22 +118,21 @@ uint32_t stockman_fly_in(uint32_t routine_offset, uint32_t object, uint32_t a5)
 	OBJECT(object)->stockman.bob = 0u;
 	OBJECT(object)->stockman.target = 0u;
 	OBJECT(object)->stockman.time_left = 0xE10u;
-	boss_pick_target(object, &routine_offset, &picked, &a5_2);
+	boss_pick_target(object, &on_right, &picked);
 	if ((uint8_t)picked == 0u)
 		OBJECT(object)->stockman.target = 0u;
 	stockman_random_drop_time(object);
-	on_right = (uint16_t)((routine_offset & ~0xFFu) | 0xFFu);
+	on_right = on_right | 0xFFu;
 	screen_x = OBJECT(object)->screen_x;
 	screen_y = (uint16_t)(OBJECT(object)->screen_y + 0x20u);
 	say_yippee_i_ay(on_right, screen_x, screen_y);
 	OBJECT(object)->height = 0x2C00u;
 	OBJECT(object)->routine++;
 	OBJECT(object)->state = 0u;
-	return a5_2;
 }
 
 /* he weaves at his turtle and now and then drops a Mouser; after a while he rises out of sight */
-uint32_t stockman_fly(uint32_t object, uint32_t a5)
+void stockman_fly(uint32_t object)
 {
 	uint32_t animation = 0, highest_player = 0, mouser = 0, objects_left = 0;
 	uint8_t timer = 0;
@@ -141,21 +140,21 @@ uint32_t stockman_fly(uint32_t object, uint32_t a5)
 	stockman_set_floor(object);
 	if (OBJECT(object)->stockman.time_left == 0u)
 	{
-		a5 = stockman_steer(object, a5);
+		stockman_steer(object);
 		OBJECT(object)->height_whole++;
 		if (OBJECT(object)->height_whole < 0xE0u)
-			return a5;
+			return;
 		enemies_on_screen--;
 		remove_object(object);
-		return a5;
+		return;
 	}
 	OBJECT(object)->stockman.time_left--;
 	stockman_bob(object);
-	a5 = stockman_steer(object, a5);
+	stockman_steer(object);
 	timer = OBJECT(object)->stockman.timer;
 	OBJECT(object)->stockman.timer = timer - 1u;
 	if (timer != 0u)
-		return a5;
+		return;
 	highest_player = highest_player_in_play();
 	if (enemies_on_screen <= stockman_fly_moves[highest_player])
 	{
@@ -164,25 +163,24 @@ uint32_t stockman_fly(uint32_t object, uint32_t a5)
 		find_free_object(&objects_left, &mouser);
 		if ((uint8_t)objects_left != 0u)
 		{
-			a5 = stockman_start_mouser(object, a5, mouser);
+			stockman_start_mouser(object, mouser);
 			animation = stockman_animations[1];
 			set_animation(0u, object, animation);
 			OBJECT(object)->routine++;
-			return a5;
+			return;
 		}
 	}
 	stockman_random_drop_time(object);
-	return a5;
 }
 
 /* his claws open as the Mouser drops */
-uint32_t stockman_drop_mouser(uint32_t object, uint32_t choices)
+void stockman_drop_mouser(uint32_t object)
 {
 	uint32_t animation = 0;
 
 	stockman_set_floor(object);
 	stockman_bob(object);
-	choices = stockman_steer(object, choices);
+	stockman_steer(object);
 	if (OBJECT(object)->frame_time == 0u)
 	{
 		OBJECT(object)->routine--;
@@ -191,7 +189,6 @@ uint32_t stockman_drop_mouser(uint32_t object, uint32_t choices)
 		stockman_random_drop_time(object);
 		OBJECT(object)->stockman.unused_cleared = 0u;
 	}
-	return choices;
 }
 
 /* Unused: nothing */
@@ -227,14 +224,14 @@ void stockman_struck(uint32_t object)
 }
 
 /* he gets over the hit */
-uint32_t stockman_recover(uint32_t object, uint32_t choices)
+void stockman_recover(uint32_t object)
 {
 	uint32_t animation = 0;
 	uint8_t timer = 0;
 
 	stockman_set_floor(object);
 	stockman_shake(object);
-	choices = stockman_steer(object, choices);
+	stockman_steer(object);
 	timer = OBJECT(object)->stockman.timer;
 	OBJECT(object)->stockman.timer = timer - 1u;
 	if (timer == 1u)
@@ -245,33 +242,32 @@ uint32_t stockman_recover(uint32_t object, uint32_t choices)
 		OBJECT(object)->routine = 1u;
 		OBJECT(object)->flags |= 2u;
 	}
-	return choices;
 }
 
 /* the defeated Stockman, by the state of his defeat */
-uint32_t stockman_defeated(uint32_t object, uint32_t a5)
+void stockman_defeated(uint32_t object)
 {
 	offset_high_word = 0u;
 	switch (OBJECT(object)->state)
 	{
 	case 0:
-		return stockman_defeated_explode(object, a5);
+		stockman_defeated_explode(object);
+		return;
 	case 1:
 		stockman_defeated_next_explosion(object);
-		return a5;
+		return;
 	case 2:
 		stockman_defeated_vanish(object);
-		return a5;
+		return;
 	}
-	unreachable();
 }
 
 /* an explosion on his machine */
-uint32_t stockman_defeated_explode(uint32_t object, uint32_t a5)
+void stockman_defeated_explode(uint32_t object)
 {
 	uint8_t sound = 0;
 	uint16_t explosion_offset = 0, height_offset = 0, sound_choice = 0, x_offset = 0;
-	uint32_t a5_2 = 0, explosion = 0, objects_left = 0;
+	uint32_t explosion = 0, objects_left = 0;
 
 	stockman_set_floor(object);
 	OBJECT(object)->stockman.timer = 0xCu;
@@ -282,18 +278,17 @@ uint32_t stockman_defeated_explode(uint32_t object, uint32_t a5)
 	if ((uint8_t)objects_left == 0u)
 	{
 		OBJECT(object)->state = 2u;
-		return a5;
+		return;
 	}
 	explosion_offset = (uint16_t)((uint32_t)OBJECT(object)->stockman.explosions << 2);
 	x_offset = (uint16_t)stockman_explosion_x[explosion_offset / 2u];
 	height_offset = (uint16_t)stockman_explosion_height[explosion_offset / 2u];
 	start_big_explosion(x_offset, height_offset, object, explosion);
-	a5_2 = explosion_sounds_ADDRESS;
 	offset_high_word = 0u;
 	sound_choice = OBJECT(object)->stockman.explosions;
 	sound = explosion_sounds[sound_choice & 1u];
+	object_loop_leftover = explosion_sounds_ADDRESS;
 	queue_sound(sound);
-	return a5_2;
 }
 
 /* the next explosion, until four; the boss is down */
@@ -326,11 +321,11 @@ void stockman_defeated_vanish(uint32_t object)
 /* the hit machine shakes at its height */
 void stockman_shake(uint32_t object)
 {
-	uint16_t d7 = 0, shake_offset = 0, step_offset = 0, y = 0;
+	uint16_t shake_height = 0, shake_offset = 0, step_offset = 0, y = 0;
 
 	offset_high_word = 0u;
 	shake_offset = (uint8_t)frame_count;
-	d7 = stockman_shake_heights[(shake_offset & 6u) / 2u];
+	shake_height = stockman_shake_heights[(shake_offset & 6u) / 2u];
 	step_offset = 0u;
 	y = (uint16_t)OBJECT(object)->y;
 	do
@@ -339,25 +334,25 @@ void stockman_shake(uint32_t object)
 			break;
 		step_offset += 2u;
 	} while ((uint8_t)step_offset < 0x1Eu);
-	OBJECT(object)->height = d7 + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
+	OBJECT(object)->height = shake_height + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
 	distance_low_byte = step_offset;
 }
 
 /* he weaves toward his turtle */
-uint32_t stockman_steer(uint32_t object, uint32_t choices)
+void stockman_steer(uint32_t object)
 {
 	uint32_t ignored = 0, picked = 0, target = 0, y_step = 0;
 
 	if ((frame_count & 0x3Fu) == 0u)
 	{
-		boss_pick_target(object, &ignored, &picked, &choices);
+		boss_pick_target(object, &ignored, &picked);
 		if ((uint8_t)picked == 0u)
 			OBJECT(object)->stockman.target = 0u;
 	}
 	target = OBJECT(object)->stockman.target;
 	if (target == 0u)
-		return choices;
-	if (OBJECT(object)->screen_x < mem_read16(target + 0xCu))
+		return;
+	if (OBJECT(object)->screen_x < OBJECT(target)->screen_x)
 	{
 		if (OBJECT(object)->stockman.turning != 0u)
 		{
@@ -389,12 +384,11 @@ uint32_t stockman_steer(uint32_t object, uint32_t choices)
 			OBJECT(object)->stockman.turning ^= 1u;
 	}
 	y_step = 0x100u;
-	if (mem_read16(target + 0xEu) <= OBJECT(object)->screen_y)
+	if (OBJECT(target)->screen_y <= OBJECT(object)->screen_y)
 		y_step = ~y_step;
 	OBJECT(object)->y += y_step;
 	stockman_move(object);
 	stockman_keep_in_area(object);
-	return choices;
 }
 
 /* he is kept within his part of the sewer */
@@ -419,10 +413,10 @@ void stockman_keep_in_area(uint32_t object)
 /* he bobs in the air at a height by how far back he is */
 void stockman_bob(uint32_t object)
 {
-	uint16_t d7 = 0, step_offset = 0, y = 0;
+	uint16_t bob_height = 0, step_offset = 0, y = 0;
 
 	offset_high_word = 0u;
-	d7 = stockman_bob_heights[(OBJECT(object)->stockman.bob & 0x3Eu) / 2u];
+	bob_height = stockman_bob_heights[(OBJECT(object)->stockman.bob & 0x3Eu) / 2u];
 	step_offset = 0u;
 	y = (uint16_t)OBJECT(object)->y;
 	do
@@ -431,7 +425,7 @@ void stockman_bob(uint32_t object)
 			break;
 		step_offset += 2u;
 	} while ((uint8_t)step_offset < 0x1Eu);
-	OBJECT(object)->height = d7 + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
+	OBJECT(object)->height = bob_height + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
 	OBJECT(object)->stockman.bob++;
 	OBJECT(object)->stockman.bob &= 0x3Fu;
 	distance_low_byte = step_offset;
@@ -503,12 +497,10 @@ uint32_t highest_player_in_play(void)
 }
 
 /* a Mouser drops from his claws, unless he is over the middle of the sewer */
-uint32_t stockman_start_mouser(uint32_t object, uint32_t a5, uint32_t object_2)
+void stockman_start_mouser(uint32_t object, uint32_t object_2)
 {
-	uint32_t shadow = 0;
-
 	if (OBJECT(object)->y >= 0x3800u && OBJECT(object)->y < 0x6800u)
-		return a5;
+		return;
 	OBJECT(object_2)->flags = 1u;
 	OBJECT(object_2)->contacts = 0u;
 	OBJECT(object_2)->kind = 0x5Eu;
@@ -516,7 +508,6 @@ uint32_t stockman_start_mouser(uint32_t object, uint32_t a5, uint32_t object_2)
 	OBJECT(object_2)->colour = 0xFFu;
 	OBJECT(object_2)->animation_delay = 0u;
 	OBJECT(object_2)->contacts |= 0x80u;
-	shadow = mouser_shadow_ADDRESS;
 	OBJECT(object_2)->shadow = mouser_shadow_ADDRESS;
 	place_at_object(object, object_2);
 	OBJECT(object_2)->y += 0x280u;
@@ -525,7 +516,7 @@ uint32_t stockman_start_mouser(uint32_t object, uint32_t a5, uint32_t object_2)
 	enemies_on_screen++;
 	OBJECT(object_2)->routine = 0u;
 	OBJECT(object_2)->state = 0u;
-	return shadow;
+	object_loop_leftover = mouser_shadow_ADDRESS;
 }
 
 /* a Mouser falls from Stockman's claws */

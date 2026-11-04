@@ -3,7 +3,7 @@
  *    Description: the sprite engine: the objects' animations, their sprites into the K051960, their boxes
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -102,10 +102,10 @@ uint32_t draw_sprites(uint32_t object)
 {
 	bool L_047164 = false;
 	uint8_t flip = 0, flips = 0, frame_time = 0, object_colour = 0, objects_left = 0;
-	uint16_t bottom = 0, count = 0, d1 = 0, shadow_y = 0;
+	uint16_t bottom = 0, count = 0, left = 0, shadow_y = 0, sprite_x = 0;
 	uint32_t draw_list_place = 0, frame = 0, next_object = 0, size = 0, sprite = 0, sprite_place = 0;
-	uint8_t t2 = 0, colour = 0, frame_time_2 = 0, time = 0, t5 = 0, t6 = 0;
-	uint16_t t1 = 0, t3 = 0, t4 = 0, draw_next = 0;
+	uint8_t t1 = 0, colour = 0, frame_time_2 = 0, time = 0, t4 = 0, t5 = 0;
+	uint16_t object_2 = 0, t2 = 0, t3 = 0, draw_next = 0;
 
 	draw_list_place = draw_list_ADDRESS + (int16_t)draw_first;
 	sprite_place = SPRITE_RAM;
@@ -113,12 +113,12 @@ uint32_t draw_sprites(uint32_t object)
 	objects_left = draw_count;
 	while (draw_list_place < 0x61580u)
 	{
-		t1 = mem_read16(draw_list_place);
-		next_object = (next_object & ~0xFFFFu) | t1;
+		object_2 = DRAW_ENTRY(draw_list_place)->object;
+		next_object = (next_object & ~0xFFFFu) | object_2;
 		draw_list_place += 2u;
-		if (t1 == 0u)
+		if (object_2 == 0u)
 			continue;
-		mem_write16(draw_list_place - 2u, 0u);
+		DRAW_ENTRY(draw_list_place - 0x2u)->object = 0u;
 		do
 		{
 			object = next_object;
@@ -128,26 +128,26 @@ uint32_t draw_sprites(uint32_t object)
 			do
 			{
 				size = sprite_sizes_ADDRESS + ((SPRITE(sprite)->size_code & 0xE0u) >> 2);
-				d1 = (uint16_t)SPRITE(sprite)->x;
-				t2 = (uint32_t)OBJECT(object)->flags << 1;
-				flip = t2;
-				if ((int8_t)t2 < 0)
-					d1 = (uint16_t)(0u - d1 - SPRITE_SIZE(size)->width);
-				d1 += OBJECT(object)->screen_x;
-				screen_x_high = d1;
-				if ((int16_t)((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)) < 0x1A0 && SPRITE_SIZE(size)->left < (int16_t)((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)))
+				left = (uint16_t)SPRITE(sprite)->x;
+				t1 = (uint32_t)OBJECT(object)->flags << 1;
+				flip = t1;
+				if ((int8_t)t1 < 0)
+					left = (uint16_t)(0u - left - SPRITE_SIZE(size)->width);
+				left += OBJECT(object)->screen_x;
+				screen_x_high = left;
+				if ((int16_t)left < 0x1A0 && SPRITE_SIZE(size)->left < (int16_t)left)
 				{
-					t3 = OBJECT(object)->height_whole + SPRITE(sprite)->y + OBJECT(object)->screen_y;
-					bottom = t3;
-					if ((int16_t)t3 >= 0 && (int16_t)bottom < SPRITE_SIZE(size)->bottom)
+					t2 = OBJECT(object)->height_whole + SPRITE(sprite)->y + OBJECT(object)->screen_y;
+					bottom = t2;
+					if ((int16_t)t2 >= 0 && (int16_t)bottom < SPRITE_SIZE(size)->bottom)
 					{
-						d1 = ((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u)) & 0x1FFu;
-						screen_x_high = d1;
+						left &= 0x1FFu;
+						screen_x_high = left;
 						flips = SPRITE(sprite)->flips;
 						if ((int8_t)(flip ^ flips) < 0)
 						{
-							d1 = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u) | 0x200u;
-							screen_x_high = d1;
+							left |= 0x200u;
+							screen_x_high = left;
 						}
 						bottom &= 0x1FFu;
 						if ((flips & 0x40u) != 0u)
@@ -161,27 +161,27 @@ uint32_t draw_sprites(uint32_t object)
 							io_write8(sprite_place + 3u, SPRITE(sprite)->colour);
 						else
 							io_write8(sprite_place + 3u, object_colour | (SPRITE(sprite)->colour & 0x90u));
-						io_write16(sprite_place + 6u, (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u));
-						io_write8(sprite_place + 7u, (uint8_t)d1);
+						io_write16(sprite_place + 6u, left);
+						io_write8(sprite_place + 7u, (uint8_t)left);
 						io_write16(sprite_place + 4u, bottom);
 						io_write8(sprite_place + 5u, (uint8_t)bottom);
 						sprite_place += 8u;
 					}
 				}
-				t4 = count - 1u;
-				count = t4;
+				t3 = count - 1u;
+				count = t3;
 				sprite += 8u;
-			} while (t4 != 0xFFFFu);
+			} while (t3 != 0xFFFFu);
 			if ((int8_t)OBJECT(object)->contacts < 0)
 			{
 				sprite = OBJECT(object)->shadow;
 				shadow_y = (uint16_t)(OBJECT(object)->floor_height + SPRITE(sprite)->y + OBJECT(object)->screen_y);
-				d1 = (SPRITE(sprite)->x + OBJECT(object)->screen_x) & 0x1FFu;
-				screen_x_high = d1;
+				sprite_x = (SPRITE(sprite)->x + OBJECT(object)->screen_x) & 0x1FFu;
+				screen_x_high = sprite_x;
 				if ((int8_t)SPRITE(sprite)->flips < 0)
 				{
-					d1 = (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u) | 0x200u;
-					screen_x_high = d1;
+					sprite_x |= 0x200u;
+					screen_x_high = sprite_x;
 				}
 				shadow_y &= 0x1FFu;
 				if ((SPRITE(sprite)->flips & 0x40u) != 0u)
@@ -190,8 +190,8 @@ uint32_t draw_sprites(uint32_t object)
 				io_write8(sprite_place + 1u, SPRITE(sprite)->size_code);
 				io_write8(sprite_place + 2u, SPRITE(sprite)->code);
 				io_write8(sprite_place + 3u, SPRITE(sprite)->colour);
-				io_write16(sprite_place + 6u, (d1 & ~0xFF00u) | (screen_x_high & 0xFF00u));
-				io_write8(sprite_place + 7u, (uint8_t)d1);
+				io_write16(sprite_place + 6u, sprite_x);
+				io_write8(sprite_place + 7u, (uint8_t)sprite_x);
 				io_write16(sprite_place + 4u, shadow_y);
 				io_write8(sprite_place + 5u, (uint8_t)shadow_y);
 				sprite_place += 8u;
@@ -222,9 +222,9 @@ uint32_t draw_sprites(uint32_t object)
 					OBJECT(object)->frame_time = frame_time;
 				}
 			}
-			t5 = objects_left;
-			objects_left = (uint8_t)(t5 - 1u);
-			L_047164 = t5 == 1u;
+			t4 = objects_left;
+			objects_left = (uint8_t)(t4 - 1u);
+			L_047164 = t4 == 1u;
 			if (L_047164)
 				break;
 			draw_next = OBJECT(object)->draw_next;
@@ -235,9 +235,9 @@ uint32_t draw_sprites(uint32_t object)
 	}
 	for (;;)
 	{
-		t6 = io_read8(sprite_place);
-		io_write8(sprite_place, t6 & 0x7Fu);
-		if ((t6 & 0x80u) == 0u)
+		t5 = io_read8(sprite_place);
+		io_write8(sprite_place, t5 & 0x7Fu);
+		if ((t5 & 0x80u) == 0u)
 			break;
 		sprite_place += 8u;
 	}
@@ -344,8 +344,9 @@ void check_attacks(void)
 										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t5 - t4));
 										if (t5 <= t4)
 										{
+											health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(turtle)->damage);
 											damage = OBJECT(turtle)->damage;
-											t6 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(turtle)->damage;
+											t6 = health_bars;
 											health_bars = (uint16_t)(t6 - damage);
 											if (t6 <= damage)
 											{
@@ -374,8 +375,9 @@ void check_attacks(void)
 									health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t5 - t4));
 									if (t5 <= t4)
 									{
+										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(turtle)->damage);
 										damage = OBJECT(turtle)->damage;
-										t6 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(turtle)->damage;
+										t6 = health_bars;
 										health_bars = (uint16_t)(t6 - damage);
 										if (t6 <= damage)
 										{
@@ -451,8 +453,9 @@ void check_attacks(void)
 										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t13 - t12));
 										if (t13 <= t12)
 										{
+											health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage);
 											damage_2 = OBJECT(object)->damage;
-											t14 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage;
+											t14 = health_bars;
 											health_bars = (uint16_t)(t14 - damage_2);
 											if (t14 < damage_2)
 												health_bars = 0u;
@@ -478,8 +481,9 @@ void check_attacks(void)
 									health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t13 - t12));
 									if (t13 <= t12)
 									{
+										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage);
 										damage_2 = OBJECT(object)->damage;
-										t14 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage;
+										t14 = health_bars;
 										health_bars = (uint16_t)(t14 - damage_2);
 										if (t14 < damage_2)
 											health_bars = 0u;
@@ -553,8 +557,9 @@ void check_attacks(void)
 										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t21 - t20));
 										if (t21 <= t20)
 										{
+											health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage);
 											damage_3 = OBJECT(object)->damage;
-											t22 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage;
+											t22 = health_bars;
 											health_bars = (uint16_t)(t22 - damage_3);
 											if (t22 < damage_3)
 												health_bars = 0u;
@@ -580,8 +585,9 @@ void check_attacks(void)
 									health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)(t21 - t20));
 									if (t21 <= t20)
 									{
+										health_bars = (uint16_t)((health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage);
 										damage_3 = OBJECT(object)->damage;
-										t22 = (health_bars & ~0xFFu) | (uint8_t)OBJECT(object)->damage;
+										t22 = health_bars;
 										health_bars = (uint16_t)(t22 - damage_3);
 										if (t22 < damage_3)
 											health_bars = 0u;
@@ -738,11 +744,11 @@ void turtle_collide_with_objects(uint32_t object)
 }
 
 /* the enemy against the solid objects: blocked or standing on one */
-uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
+void enemy_collide_with_objects(uint32_t object)
 {
 	uint8_t contact_bits = 0;
 	uint16_t count = 0, depth_overlap = 0, height_difference = 0, height_overlap = 0, other_height = 0, width_overlap = 0, x_distance = 0, y_distance = 0;
-	uint32_t box = 0, object_2 = 0;
+	uint32_t box = 0, object_2 = 0, other_box = 0;
 	uint8_t flags = 0;
 	uint16_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0;
 
@@ -786,6 +792,7 @@ uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
 			continue;
 		}
 		other_box = body_boxes_ADDRESS + (int16_t)ANIMATION_FRAME(OBJECT(object_2)->frame)->body_box;
+		object_loop_leftover = other_box;
 		t4 = OBJECT(object)->screen_x - OBJECT(object_2)->screen_x;
 		x_distance = t4;
 		if ((int16_t)t4 >= 0)
@@ -805,7 +812,7 @@ uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
 				break;
 			continue;
 		}
-		if (depth_overlap < ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)))
+		if (depth_overlap < width_overlap)
 			contact_bits &= 0xE7u;
 		else
 			contact_bits &= ~6u;
@@ -831,7 +838,7 @@ uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
 		height_overlap = t7;
 		if ((int16_t)t7 < 0)
 		{
-			if (depth_overlap >= 3u && ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 3u)
+			if (depth_overlap >= 3u && width_overlap >= 3u)
 			{
 				OBJECT(object)->floor_height = (uint8_t)other_height;
 				OBJECT(object)->flags |= 0x10u;
@@ -844,25 +851,24 @@ uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box)
 				break;
 			continue;
 		}
-		if (depth_overlap < 3u || ((width_overlap & ~0xFFu) | (distance_low_byte & 0xFFu)) < 3u)
+		if (depth_overlap < 3u || width_overlap < 3u)
 		{
 			OBJECT(object)->contacts |= contact_bits;
-			return other_box;
+			return;
 		}
 		OBJECT(object)->flags |= 0x10u;
 		if (height_overlap >= 5u)
 		{
 			OBJECT(object)->contacts |= contact_bits;
-			return other_box;
+			return;
 		}
 		OBJECT(object)->floor_height = (uint8_t)other_height;
 		OBJECT(object)->height_whole = (uint8_t)other_height;
 		OBJECT(object)->height &= 0xFF00u;
 		contact_bits = 1u;
 		OBJECT(object)->contacts |= contact_bits;
-		return other_box;
+		return;
 	}
-	return other_box;
 }
 
 /* the players' slots the enemies go after, set up for the area */
@@ -902,14 +908,14 @@ void start_player_slots(void)
 }
 
 /* the object loop: the enemies' spawns, the players' slots, and every object's routine and screen place */
-uint32_t run_objects(uint32_t a1)
+void run_objects(void)
 {
 	uint16_t routine_offset = 0;
-	uint32_t a5 = 0, object = 0, routine_entry = 0;
+	uint32_t object = 0, routine_entry = 0;
 
-	a1 = spawn_enemies(a1);
+	spawn_enemies();
 	load_layer_b();
-	a5 = update_player_slots();
+	update_player_slots();
 	object = OBJECT_ADDRESS(4);
 	do
 	{
@@ -919,1174 +925,1173 @@ uint32_t run_objects(uint32_t a1)
 			routine_entry = ROUTINE_ENTRY(object_routine_tables[OBJECT(object)->kind & 0x7Fu] + (routine_offset / 4u) * 0x4u);
 			switch (routine_entry)
 			{
-			case 0x00DF7Eu:
-				a5 = krang_appear(object, a5);
+			case krang_appear_ADDRESS:
+				krang_appear(object);
 				break;
-			case 0x00E03Cu:
-				a5 = krang_walk(object, a5);
+			case krang_walk_ADDRESS:
+				krang_walk(object);
 				break;
-			case 0x00E124u:
-				a5 = krang_melee(object, a5);
+			case krang_melee_ADDRESS:
+				krang_melee(object);
 				break;
-			case 0x00E1A8u:
-				a5 = krang_fire_lasers(object, a5);
+			case krang_fire_lasers_ADDRESS:
+				krang_fire_lasers(object);
 				break;
-			case 0x00E21Au:
+			case krang_struck_ADDRESS:
 				krang_struck(object);
 				break;
-			case 0x00E2A8u:
-				a5 = krang_recoil(object, a5);
+			case krang_recoil_ADDRESS:
+				krang_recoil(object);
 				break;
-			case 0x00E2DCu:
-				a5 = krang_explode(object, a5);
+			case krang_explode_ADDRESS:
+				krang_explode(object);
 				break;
-			case 0x00E39Cu:
+			case krang_escape_ADDRESS:
 				krang_escape(routine_offset, object);
 				break;
-			case 0x00E962u:
+			case krang_curtain_start_ADDRESS:
 				krang_curtain_start(object);
 				break;
-			case 0x00E992u:
+			case krang_curtain_open_ADDRESS:
 				krang_curtain_open(object);
 				break;
-			case 0x00E9B6u:
+			case krang_curtain_end_ADDRESS:
 				krang_curtain_end(object);
 				break;
-			case 0x00EAB6u:
+			case krang_laser_start_ADDRESS:
 				krang_laser_start(object);
 				break;
-			case 0x00EB2Au:
+			case krang_laser_wait_ADDRESS:
 				krang_laser_wait(object);
 				break;
-			case 0x00EB3Eu:
+			case krang_laser_fly_ADDRESS:
 				krang_laser_fly(object);
 				break;
-			case 0x00EB70u:
+			case krang_laser_spark_ADDRESS:
 				krang_laser_spark(object);
 				break;
-			case 0x00EBFEu:
+			case krang_fist_start_ADDRESS:
 				krang_fist_start(object);
 				break;
-			case 0x00EC4Cu:
+			case krang_fist_launch_ADDRESS:
 				krang_fist_launch(object);
 				break;
-			case 0x00EC76u:
+			case krang_fist_fly_ADDRESS:
 				krang_fist_fly(object);
 				break;
-			case 0x00F8DAu:
+			case ball_dropper_start_ADDRESS:
 				ball_dropper_start(object);
 				break;
-			case 0x00F8F2u:
+			case ball_dropper_wait_ADDRESS:
 				ball_dropper_wait(object);
 				break;
-			case 0x00F96Au:
+			case ball_start_ADDRESS:
 				ball_start(object);
 				break;
-			case 0x00F98Eu:
+			case ball_drop_ADDRESS:
 				ball_drop(object);
 				break;
-			case 0x00F9DCu:
+			case ball_bounce_ADDRESS:
 				ball_bounce(object);
 				break;
-			case 0x00FA1Cu:
+			case road_barrier_start_ADDRESS:
 				road_barrier_start(object);
 				break;
-			case 0x00FA5Au:
+			case road_barrier_stay_ADDRESS:
 				road_barrier_stay(object);
 				break;
-			case 0x00FA68u:
+			case tire_stack_start_ADDRESS:
 				tire_stack_start(object);
 				break;
-			case 0x00FA9Au:
+			case tire_stack_stay_ADDRESS:
 				tire_stack_stay(object);
 				break;
-			case 0x00FAACu:
+			case technodrome_ball_start_ADDRESS:
 				technodrome_ball_start(object);
 				break;
-			case 0x00FADCu:
+			case technodrome_ball_drop_ADDRESS:
 				technodrome_ball_drop(object);
 				break;
-			case 0x00FB34u:
+			case technodrome_ball_bounce_ADDRESS:
 				technodrome_ball_bounce(object);
 				break;
-			case 0x00FBB4u:
+			case hydrant_start_ADDRESS:
 				hydrant_start(object);
 				break;
-			case 0x00FBD8u:
+			case hydrant_stay_ADDRESS:
 				hydrant_stay(object);
 				break;
-			case 0x00FBDEu:
+			case hydrant_spray_ADDRESS:
 				hydrant_spray(object);
 				break;
-			case 0x00FC1Cu:
+			case hydrant_struck_ADDRESS:
 				hydrant_struck(object);
 				break;
-			case 0x00FCA6u:
+			case hydrant_recover_ADDRESS:
 				hydrant_recover(object);
 				break;
-			case 0x00FD3Au:
+			case hydrant_water_start_ADDRESS:
 				hydrant_water_start(object);
 				break;
-			case 0x00FDA4u:
+			case hydrant_water_fly_ADDRESS:
 				hydrant_water_fly(object);
 				break;
-			case 0x00FDF2u:
+			case roadside_cone_start_ADDRESS:
 				roadside_cone_start(object);
 				break;
-			case 0x00FDFCu:
+			case roadside_pole_start_ADDRESS:
 				roadside_pole_start(object);
 				break;
-			case 0x00FE44u:
+			case roadside_stay_ADDRESS:
 				roadside_stay(object);
 				break;
-			case 0x00FE4Cu:
+			case roadside_fly_ADDRESS:
 				roadside_fly(object);
 				break;
-			case 0x00FE5Eu:
+			case roadside_speed_sign_struck_ADDRESS:
 				roadside_speed_sign_struck(object);
 				break;
-			case 0x00FE6Eu:
+			case roadside_cone_struck_ADDRESS:
 				roadside_cone_struck(object);
 				break;
-			case 0x00FE7Eu:
+			case roadside_parking_meter_struck_ADDRESS:
 				roadside_parking_meter_struck(object);
 				break;
-			case 0x00FEE2u:
+			case rat_start_ADDRESS:
 				rat_start(object);
 				break;
-			case 0x00FF70u:
+			case rat_drop_ADDRESS:
 				rat_drop(object);
 				break;
-			case 0x00FFA0u:
+			case rat_sit_ADDRESS:
 				rat_sit(object);
 				break;
-			case 0x00FFBEu:
+			case rat_run_ADDRESS:
 				rat_run(object);
 				break;
-			case 0x010026u:
+			case alligator_start_ADDRESS:
 				alligator_start(object);
 				break;
-			case 0x010058u:
+			case alligator_swim_ADDRESS:
 				alligator_swim(object);
 				break;
-			case 0x010080u:
+			case alligator_snap_ADDRESS:
 				alligator_snap(object);
 				break;
-			case 0x0100ACu:
+			case skateboarder_start_ADDRESS:
 				skateboarder_start(object);
 				break;
-			case 0x0100D4u:
+			case skateboarder_idle_ADDRESS:
 				skateboarder_idle();
 				break;
-			case 0x0100D6u:
+			case skateboarder_glide_ADDRESS:
 				skateboarder_glide(object);
 				break;
-			case 0x0100DAu:
+			case skateboarder_struck_ADDRESS:
 				skateboarder_struck(object);
 				break;
-			case 0x010108u:
+			case pizza_start_ADDRESS:
 				pizza_start(object);
 				break;
-			case 0x010158u:
+			case pizza_wait_ADDRESS:
 				pizza_wait(routine_offset, object);
 				break;
-			case 0x0101DCu:
+			case pizza_vanish_ADDRESS:
 				pizza_vanish(object);
 				break;
-			case 0x0101F8u:
+			case billboard_start_ADDRESS:
 				billboard_start(object);
 				break;
-			case 0x01023Au:
+			case billboard_wait_ADDRESS:
 				billboard_wait(object);
 				break;
-			case 0x0102BCu:
+			case billboard_fall_ADDRESS:
 				billboard_fall(object);
 				break;
-			case 0x0102E0u:
+			case billboard_land_ADDRESS:
 				billboard_land(object);
 				break;
-			case 0x010354u:
+			case billboard_soldier_start_ADDRESS:
 				billboard_soldier_start(object);
 				break;
-			case 0x010398u:
+			case billboard_soldier_wait_ADDRESS:
 				billboard_soldier_wait(object);
 				break;
-			case 0x0103C0u:
+			case billboard_soldier_jump_down_ADDRESS:
 				billboard_soldier_jump_down(object);
 				break;
-			case 0x0103F2u:
+			case billboard_soldier_become_boomerang_soldier_ADDRESS:
 				billboard_soldier_become_boomerang_soldier(object);
 				break;
-			case 0x01042Cu:
+			case oil_drum_start_ADDRESS:
 				oil_drum_start(object);
 				break;
-			case 0x010450u:
+			case oil_drum_stay_ADDRESS:
 				oil_drum_stay(object);
 				break;
-			case 0x010458u:
+			case oil_drum_blow_up_ADDRESS:
 				oil_drum_blow_up(object);
 				break;
-			case 0x010490u:
+			case oil_drum_become_wreck_ADDRESS:
 				oil_drum_become_wreck(object);
 				break;
-			case 0x0104C2u:
+			case oil_drum_struck_ADDRESS:
 				oil_drum_struck(object);
 				break;
-			case 0x010520u:
+			case oil_drum_recover_ADDRESS:
 				oil_drum_recover(object);
 				break;
-			case 0x010554u:
+			case turret_start_ADDRESS:
 				turret_start(object);
 				break;
-			case 0x01059Eu:
+			case turret_move_ADDRESS:
 				turret_move(object);
 				break;
-			case 0x0105BCu:
+			case turret_fire_ADDRESS:
 				turret_fire(object);
 				break;
-			case 0x010602u:
-				a5 = turret_wreck(object, a5);
+			case turret_wreck_ADDRESS:
+				turret_wreck(object);
 				break;
-			case 0x010674u:
+			case turret_struck_ADDRESS:
 				turret_struck(object);
 				break;
-			case 0x0106D6u:
+			case turret_recover_ADDRESS:
 				turret_recover(object);
 				break;
-			case 0x01080Au:
+			case turret_shot_start_ADDRESS:
 				turret_shot_start(object);
 				break;
-			case 0x010880u:
+			case turret_shot_fly_ADDRESS:
 				turret_shot_fly(object);
 				break;
-			case 0x0108B6u:
+			case turret_shot_vanish_ADDRESS:
 				turret_shot_vanish(object);
 				break;
-			case 0x0108D4u:
+			case waiting_soldier_start_ADDRESS:
 				waiting_soldier_start(object);
 				break;
-			case 0x0108FCu:
+			case waiting_soldier_wait_ADDRESS:
 				waiting_soldier_wait(object);
 				break;
-			case 0x01090Cu:
+			case waiting_soldier_become_knife_soldier_ADDRESS:
 				waiting_soldier_become_knife_soldier(object);
 				break;
-			case 0x01092Eu:
+			case one_way_sign_start_ADDRESS:
 				one_way_sign_start(object);
 				break;
-			case 0x010952u:
+			case one_way_sign_stay_ADDRESS:
 				one_way_sign_stay(object);
 				break;
-			case 0x010958u:
+			case one_way_sign_spin_ADDRESS:
 				one_way_sign_spin(object);
 				break;
-			case 0x010970u:
+			case one_way_sign_idle_ADDRESS:
 				one_way_sign_idle();
 				break;
-			case 0x010972u:
+			case one_way_sign_struck_ADDRESS:
 				one_way_sign_struck(object);
 				break;
-			case 0x0109D2u:
+			case nozzle_row_start_ADDRESS:
 				nozzle_row_start(object);
 				break;
-			case 0x0109F8u:
-				a5 = nozzle_row_run(object, a5);
+			case nozzle_row_run_ADDRESS:
+				nozzle_row_run(object);
 				break;
-			case 0x010AD4u:
+			case nozzle_row_done_ADDRESS:
 				nozzle_row_done(object);
 				break;
-			case 0x010B22u:
+			case freeze_nozzle_start_ADDRESS:
 				freeze_nozzle_start(object);
 				break;
-			case 0x010B4Au:
+			case freeze_nozzle_rise_ADDRESS:
 				freeze_nozzle_rise(object);
 				break;
-			case 0x010B6Au:
+			case freeze_nozzle_spray_ADDRESS:
 				freeze_nozzle_spray(object);
 				break;
-			case 0x010BE0u:
+			case freeze_nozzle_sink_ADDRESS:
 				freeze_nozzle_sink(object);
 				break;
-			case 0x010BF8u:
+			case freeze_nozzle_struck_ADDRESS:
 				freeze_nozzle_struck(object);
 				break;
-			case 0x010C46u:
+			case freeze_nozzle_broken_ADDRESS:
 				freeze_nozzle_broken(object);
 				break;
-			case 0x010C56u:
-				a5 = electric_beam_start(object);
+			case electric_beam_start_ADDRESS:
+				electric_beam_start(object);
 				break;
-			case 0x010C76u:
+			case electric_beam_wait_ADDRESS:
 				electric_beam_wait(object);
 				break;
-			case 0x010CB2u:
-				a5 = electric_beam_shine(object, a5);
+			case electric_beam_shine_ADDRESS:
+				electric_beam_shine(object);
 				break;
-			case 0x010CDAu:
-				a5 = electric_vent_start(object);
+			case electric_vent_start_ADDRESS:
+				electric_vent_start(object);
 				break;
-			case 0x010CFAu:
-				a5 = electric_vent_wait(object, a5);
+			case electric_vent_wait_ADDRESS:
+				electric_vent_wait(object);
 				break;
-			case 0x010D36u:
+			case electric_vent_wait_column_ADDRESS:
 				electric_vent_wait_column(object);
 				break;
-			case 0x010DA8u:
+			case electric_column_start_ADDRESS:
 				electric_column_start(object);
 				break;
-			case 0x010DD4u:
+			case electric_column_rise_ADDRESS:
 				electric_column_rise(object);
 				break;
-			case 0x010DE8u:
+			case electric_column_flicker_ADDRESS:
 				electric_column_flicker(object);
 				break;
-			case 0x010E0Cu:
+			case electric_column_leave_ADDRESS:
 				electric_column_leave(object);
 				break;
-			case 0x010E50u:
+			case grille_start_ADDRESS:
 				grille_start(object);
 				break;
-			case 0x010E76u:
+			case grille_idle_ADDRESS:
 				grille_idle();
 				break;
-			case 0x0110A8u:
+			case explosion_small_start_ADDRESS:
 				explosion_small_start(object);
 				break;
-			case 0x0110B2u:
+			case explosion_big_start_ADDRESS:
 				explosion_big_start(object);
 				break;
-			case 0x0110BCu:
+			case explosion_drum_start_ADDRESS:
 				explosion_drum_start(object);
 				break;
-			case 0x0110C6u:
+			case explosion_rocket_start_ADDRESS:
 				explosion_rocket_start(object);
 				break;
-			case 0x0110D0u:
+			case explosion_medium_start_ADDRESS:
 				explosion_medium_start(object);
 				break;
-			case 0x0110F4u:
+			case explosion_end_ADDRESS:
 				explosion_end(object);
 				break;
-			case 0x011116u:
+			case spiked_pole_start_ADDRESS:
 				spiked_pole_start(object);
 				break;
-			case 0x01115Au:
+			case spiked_pole_wait_ADDRESS:
 				spiked_pole_wait(object);
 				break;
-			case 0x011190u:
+			case spiked_pole_hold_up_ADDRESS:
 				spiked_pole_hold_up(object);
 				break;
-			case 0x0111C6u:
+			case spiked_pole_drop_ADDRESS:
 				spiked_pole_drop(object);
 				break;
-			case 0x011208u:
+			case spiked_pole_hold_down_ADDRESS:
 				spiked_pole_hold_down(object);
 				break;
-			case 0x01123Eu:
+			case spiked_pole_rise_ADDRESS:
 				spiked_pole_rise(object);
 				break;
-			case 0x01129Cu:
+			case sewer_launcher_start_ADDRESS:
 				sewer_launcher_start(object);
 				break;
-			case 0x0112DAu:
+			case sewer_launcher_wait_ADDRESS:
 				sewer_launcher_wait(object);
 				break;
-			case 0x01133Au:
+			case sewer_launcher_fired_ADDRESS:
 				sewer_launcher_fired(object);
 				break;
-			case 0x011374u:
+			case sewer_launcher_remove_ADDRESS:
 				sewer_launcher_remove(object);
 				break;
-			case 0x01147Eu:
+			case sewer_missile_start_ADDRESS:
 				sewer_missile_start(object);
 				break;
-			case 0x0114C6u:
+			case sewer_missile_rise_ADDRESS:
 				sewer_missile_rise(object);
 				break;
-			case 0x0114F6u:
+			case sewer_missile_fly_ADDRESS:
 				sewer_missile_fly(object);
 				break;
-			case 0x0114FEu:
+			case sewer_missile_remove_ADDRESS:
 				sewer_missile_remove(object);
 				break;
-			case 0x011502u:
+			case sewer_missile_struck_ADDRESS:
 				sewer_missile_struck(object);
 				break;
-			case 0x011528u:
+			case sewer_missile_vanish_ADDRESS:
 				sewer_missile_vanish(object);
 				break;
-			case 0x01154Eu:
-				a5 = rock_soldier_site_enter(routine_offset, object, a5);
+			case rock_soldier_site_enter_ADDRESS:
+				rock_soldier_site_enter(routine_offset, object);
 				break;
-			case 0x0116CCu:
-				a5 = rock_soldier_site_think(object, a5);
+			case rock_soldier_site_think_ADDRESS:
+				rock_soldier_site_think(object);
 				break;
-			case 0x01186Cu:
+			case rock_soldier_site_fire_ADDRESS:
 				rock_soldier_site_fire(object);
 				break;
-			case 0x0118CAu:
-				a5 = rock_soldier_site_finish_attack(object, a5);
+			case rock_soldier_site_finish_attack_ADDRESS:
+				rock_soldier_site_finish_attack(object);
 				break;
-			case 0x0118ECu:
-				a1 = rock_soldier_struck(object);
+			case rock_soldier_struck_ADDRESS:
+				rock_soldier_struck(object);
 				break;
-			case 0x0119A0u:
-				a5 = rock_soldier_recover(object, a5);
+			case rock_soldier_recover_ADDRESS:
+				rock_soldier_recover(object);
 				break;
-			case 0x0119DEu:
-				a5 = rock_soldier_defeated(object, a5);
+			case rock_soldier_defeated_ADDRESS:
+				rock_soldier_defeated(object);
 				break;
-			case 0x012024u:
+			case gun_blast_start_ADDRESS:
 				gun_blast_start(object);
 				break;
-			case 0x012076u:
+			case gun_blast_fly_ADDRESS:
 				gun_blast_fly(object);
 				break;
-			case 0x012110u:
+			case rubble_start_ADDRESS:
 				rubble_start(object);
 				break;
-			case 0x01214Eu:
+			case rubble_fall_ADDRESS:
 				rubble_fall(object);
 				break;
-			case 0x01217Au:
+			case rubble_stay_ADDRESS:
 				rubble_stay();
 				break;
-			case 0x012198u:
-				a5 = rock_soldier_technodrome_enter(object, a5);
+			case rock_soldier_technodrome_enter_ADDRESS:
+				rock_soldier_technodrome_enter(object);
 				break;
-			case 0x0122C8u:
-				a5 = rock_soldier_technodrome_think(object, a5);
+			case rock_soldier_technodrome_think_ADDRESS:
+				rock_soldier_technodrome_think(object);
 				break;
-			case 0x012422u:
-				a5 = rock_soldier_technodrome_fire(object, a5);
+			case rock_soldier_technodrome_fire_ADDRESS:
+				rock_soldier_technodrome_fire(object);
 				break;
-			case 0x012430u:
-				a5 = rock_soldier_technodrome_finish_blow(object, a5);
+			case rock_soldier_technodrome_finish_blow_ADDRESS:
+				rock_soldier_technodrome_finish_blow(object);
 				break;
-			case 0x0126A0u:
+			case wall_slab_start_ADDRESS:
 				wall_slab_start(object);
 				break;
-			case 0x0126F0u:
+			case wall_slab_fly_ADDRESS:
 				wall_slab_fly(object);
 				break;
-			case 0x01277Eu:
+			case missile_start_ADDRESS:
 				missile_start(object);
 				break;
-			case 0x0127D6u:
-				a5 = missile_fly(object, a5);
+			case missile_fly_ADDRESS:
+				missile_fly(object);
 				break;
-			case 0x012830u:
+			case missile_explode_ADDRESS:
 				missile_explode(object);
 				break;
-			case 0x012862u:
+			case missile_idle_ADDRESS:
 				missile_idle();
 				break;
-			case 0x012864u:
+			case missile_struck_ADDRESS:
 				missile_struck(object);
 				break;
-			case 0x01287Au:
+			case missile_vanish_ADDRESS:
 				missile_vanish(object);
 				break;
-			case 0x0128D8u:
+			case shock_bars_start_ADDRESS:
 				shock_bars_start(object);
 				break;
-			case 0x0128FEu:
+			case shock_bars_blink_in_ADDRESS:
 				shock_bars_blink_in(object);
 				break;
-			case 0x012924u:
+			case shock_bars_on_ADDRESS:
 				shock_bars_on(object);
 				break;
-			case 0x01293Cu:
+			case shock_bars_blink_out_ADDRESS:
 				shock_bars_blink_out(object);
 				break;
-			case 0x0129A6u:
+			case shock_bars_hit_box_start_ADDRESS:
 				shock_bars_hit_box_start(object);
 				break;
-			case 0x0129E2u:
+			case shock_bars_hit_box_zap_ADDRESS:
 				shock_bars_hit_box_zap(object);
 				break;
-			case 0x012A2Eu:
+			case parked_car_start_ADDRESS:
 				parked_car_start(object);
 				break;
-			case 0x012A68u:
+			case parked_car_draw_ADDRESS:
 				parked_car_draw(object);
 				break;
-			case 0x012A88u:
+			case parked_car_wait_ADDRESS:
 				parked_car_wait(object);
 				break;
-			case 0x012AA6u:
-				a5 = parked_car_start_drive(object, a5);
+			case parked_car_start_drive_ADDRESS:
+				parked_car_start_drive(object);
 				break;
-			case 0x012AE2u:
+			case parked_car_drive_off_ADDRESS:
 				parked_car_drive_off(object);
 				break;
-			case 0x012B3Cu:
+			case parked_car_release_soldiers_ADDRESS:
 				parked_car_release_soldiers(object);
 				break;
-			case 0x012C1Cu:
+			case car_hit_box_start_ADDRESS:
 				car_hit_box_start(object);
 				break;
-			case 0x012C58u:
+			case car_hit_box_move_ADDRESS:
 				car_hit_box_move(object);
 				break;
-			case 0x012CB2u:
+			case car_soldier_start_ADDRESS:
 				car_soldier_start(object);
 				break;
-			case 0x012D06u:
+			case car_soldier_leap_ADDRESS:
 				car_soldier_leap(object);
 				break;
-			case 0x012D4Eu:
+			case helicopter_start_ADDRESS:
 				helicopter_start(object);
 				break;
-			case 0x012DCEu:
+			case helicopter_hover_ADDRESS:
 				helicopter_hover(object);
 				break;
-			case 0x012E06u:
+			case helicopter_fire_bullets_ADDRESS:
 				helicopter_fire_bullets(object);
 				break;
-			case 0x012E50u:
+			case helicopter_drop_missiles_ADDRESS:
 				helicopter_drop_missiles(object);
 				break;
-			case 0x012E9Au:
+			case helicopter_struck_ADDRESS:
 				helicopter_struck(object);
 				break;
-			case 0x012F10u:
+			case helicopter_recover_ADDRESS:
 				helicopter_recover(object);
 				break;
-			case 0x012F40u:
+			case helicopter_destroyed_ADDRESS:
 				helicopter_destroyed(object);
 				break;
-			case 0x0131B8u:
+			case copter_bullet_start_ADDRESS:
 				copter_bullet_start(object);
 				break;
-			case 0x01320Cu:
+			case copter_bullet_fly_ADDRESS:
 				copter_bullet_fly(object);
 				break;
-			case 0x013260u:
+			case copter_bullet_burst_ADDRESS:
 				copter_bullet_burst(object);
 				break;
-			case 0x013264u:
+			case copter_bullet_vanish_ADDRESS:
 				copter_bullet_vanish(object);
 				break;
-			case 0x0132A2u:
+			case falling_missile_start_ADDRESS:
 				falling_missile_start(object);
 				break;
-			case 0x013310u:
+			case falling_missile_fall_ADDRESS:
 				falling_missile_fall(object);
 				break;
-			case 0x013340u:
+			case falling_missile_explode_ADDRESS:
 				falling_missile_explode(object);
 				break;
-			case 0x0134B6u:
-				a5 = flying_drone_enter(object, a5);
+			case flying_drone_enter_ADDRESS:
+				flying_drone_enter(object);
 				break;
-			case 0x0135B4u:
-				a5 = flying_drone_fly(object, a5);
+			case flying_drone_fly_ADDRESS:
+				flying_drone_fly(object);
 				break;
-			case 0x01360Cu:
-				a5 = flying_drone_fire(object, a5);
+			case flying_drone_fire_ADDRESS:
+				flying_drone_fire(object);
 				break;
-			case 0x013656u:
+			case flying_drone_struck_ADDRESS:
 				flying_drone_struck(object);
 				break;
-			case 0x0136BAu:
+			case flying_drone_recover_ADDRESS:
 				flying_drone_recover(object);
 				break;
-			case 0x0136EAu:
+			case flying_drone_destroyed_ADDRESS:
 				flying_drone_destroyed(object);
 				break;
-			case 0x013AFCu:
+			case drone_shot_start_ADDRESS:
 				drone_shot_start(object);
 				break;
-			case 0x013B8Au:
+			case drone_shot_flash_ADDRESS:
 				drone_shot_flash(object);
 				break;
-			case 0x013BB6u:
+			case drone_shot_fly_ADDRESS:
 				drone_shot_fly(object);
 				break;
-			case 0x013C0Cu:
+			case drone_shot_vanish_ADDRESS:
 				drone_shot_vanish(object);
 				break;
-			case 0x013C32u:
-				a5 = stockman_enter(routine_offset, object, a5);
+			case stockman_enter_ADDRESS:
+				stockman_enter(routine_offset, object);
 				break;
-			case 0x013DA8u:
-				a5 = stockman_fly(object, a5);
+			case stockman_fly_ADDRESS:
+				stockman_fly(object);
 				break;
-			case 0x013E36u:
-				a5 = stockman_drop_mouser(object, a5);
+			case stockman_drop_mouser_ADDRESS:
+				stockman_drop_mouser(object);
 				break;
-			case 0x013E64u:
+			case stockman_idle_ADDRESS:
 				stockman_idle();
 				break;
-			case 0x013E66u:
+			case stockman_struck_ADDRESS:
 				stockman_struck(object);
 				break;
-			case 0x013EC0u:
-				a5 = stockman_recover(object, a5);
+			case stockman_recover_ADDRESS:
+				stockman_recover(object);
 				break;
-			case 0x013EF4u:
-				a5 = stockman_defeated(object, a5);
+			case stockman_defeated_ADDRESS:
+				stockman_defeated(object);
 				break;
-			case 0x014336u:
+			case falling_mouser_start_ADDRESS:
 				falling_mouser_start(object);
 				break;
-			case 0x014366u:
+			case falling_mouser_fall_ADDRESS:
 				falling_mouser_fall(object);
 				break;
-			case 0x0143BAu:
+			case falling_mouser_idle_ADDRESS:
 				falling_mouser_idle();
 				break;
-			case 0x0143BCu:
+			case falling_mouser_struck_ADDRESS:
 				falling_mouser_struck(object);
 				break;
-			case 0x01832Au:
+			case remove_object_ADDRESS:
 				remove_object(object);
 				break;
-			case 0x0489E2u:
-				a5 = enemy_foot_soldier_start(object, a5, routine_entry);
+			case enemy_foot_soldier_start_ADDRESS:
+				enemy_foot_soldier_start(object, routine_entry);
 				break;
-			case 0x048A60u:
-				enemy_enter(object, &a1, &a5);
+			case enemy_enter_ADDRESS:
+				enemy_enter(object);
 				break;
-			case 0x048A94u:
-				enemy_think(object, routine_entry, &a1, &a5);
+			case enemy_think_ADDRESS:
+				enemy_think(object, routine_entry);
 				break;
-			case 0x048D8Au:
-				enemy_attack(object, &a1, &a5);
+			case enemy_attack_ADDRESS:
+				enemy_attack(object);
 				break;
-			case 0x048DBAu:
-				enemy_hit(object, &a1, &a5);
+			case enemy_hit_ADDRESS:
+				enemy_hit(object);
 				break;
-			case 0x048EDAu:
-				enemy_react(object, &a1, &a5);
+			case enemy_react_ADDRESS:
+				enemy_react(object);
 				break;
-			case 0x048F02u:
-				enemy_step_over_edge(object, &a1, &a5);
+			case enemy_step_over_edge_ADDRESS:
+				enemy_step_over_edge(object);
 				break;
-			case 0x04A744u:
-				a5 = boss_shutter_start(object);
+			case boss_shutter_start_ADDRESS:
+				boss_shutter_start(object);
 				break;
-			case 0x04A76Au:
+			case boss_shutter_wait_ADDRESS:
 				boss_shutter_wait(object);
 				break;
-			case 0x04A7AAu:
+			case boss_shutter_open_ADDRESS:
 				boss_shutter_open(object);
 				break;
-			case 0x04A7F8u:
+			case scenery_lamp_start_ADDRESS:
 				scenery_lamp_start(object);
 				break;
-			case 0x04A814u:
+			case scenery_stay_ADDRESS:
 				scenery_stay();
 				break;
-			case 0x04A830u:
+			case scenery_open_manhole_start_ADDRESS:
 				scenery_open_manhole_start(object);
 				break;
-			case 0x04A856u:
+			case scenery_gone_off_screen_ADDRESS:
 				scenery_gone_off_screen(object);
 				break;
-			case 0x04A880u:
+			case scenery_chair_start_ADDRESS:
 				scenery_chair_start(object);
 				break;
-			case 0x04A8E6u:
+			case scenery_fire_start_ADDRESS:
 				scenery_fire_start(object);
 				break;
-			case 0x04A97Eu:
+			case foot_car_start_ADDRESS:
 				foot_car_start(object);
 				break;
-			case 0x04A9B6u:
+			case foot_car_drive_ADDRESS:
 				foot_car_drive(object);
 				break;
-			case 0x04AA82u:
+			case falling_debris_start_ADDRESS:
 				falling_debris_start(object);
 				break;
-			case 0x04AAAAu:
-				a5 = falling_debris_wait(object, a5, routine_entry);
+			case falling_debris_wait_ADDRESS:
+				falling_debris_wait(object, routine_entry);
 				break;
-			case 0x04AAE4u:
+			case falling_debris_fall_ADDRESS:
 				falling_debris_fall(object);
 				break;
-			case 0x04AB2Au:
+			case falling_debris_burn_ADDRESS:
 				falling_debris_burn(object);
 				break;
-			case 0x04AB5Eu:
+			case motorbike_start_ADDRESS:
 				motorbike_start(object);
 				break;
-			case 0x04ABCAu:
-				a5 = motorbike_ride(object, a5, routine_entry);
+			case motorbike_ride_ADDRESS:
+				motorbike_ride(object, routine_entry);
 				break;
-			case 0x04AC0Eu:
+			case motorbike_ride_off_ADDRESS:
 				motorbike_ride_off(object);
 				break;
-			case 0x04AC22u:
-				a5 = motorbike_struck(object);
+			case motorbike_struck_ADDRESS:
+				motorbike_struck(object);
 				break;
-			case 0x04ACB0u:
-				a5 = enemy_sword_soldier_start(object, a5, routine_entry);
+			case enemy_sword_soldier_start_ADDRESS:
+				enemy_sword_soldier_start(object, routine_entry);
 				break;
-			case 0x04AD3Cu:
-				a5 = enemy_hammer_soldier_start(object, a5, routine_entry);
+			case enemy_hammer_soldier_start_ADDRESS:
+				enemy_hammer_soldier_start(object, routine_entry);
 				break;
-			case 0x04B7F8u:
-				a1 = whip_arm_start(routine_offset, object);
+			case whip_arm_start_ADDRESS:
+				whip_arm_start(routine_offset, object);
 				break;
-			case 0x04B828u:
-				a1 = whip_arm_follow(routine_offset, object);
+			case whip_arm_follow_ADDRESS:
+				whip_arm_follow(routine_offset, object);
 				break;
-			case 0x04B88Eu:
-				a1 = whip_arm_let_go(object);
+			case whip_arm_let_go_ADDRESS:
+				whip_arm_let_go(object);
 				break;
-			case 0x04B89Eu:
-				a1 = whip_arm_drag(object);
+			case whip_arm_drag_ADDRESS:
+				whip_arm_drag(object);
 				break;
-			case 0x04B900u:
-				a1 = whip_arm_struck(routine_offset, object);
+			case whip_arm_struck_ADDRESS:
+				whip_arm_struck(routine_offset, object);
 				break;
-			case 0x04B9C2u:
+			case laser_bolt_start_ADDRESS:
 				laser_bolt_start(object);
 				break;
-			case 0x04BA04u:
+			case laser_bolt_fly_ADDRESS:
 				laser_bolt_fly(object);
 				break;
-			case 0x04BA34u:
+			case laser_bolt_vanish_ADDRESS:
 				laser_bolt_vanish(object);
 				break;
-			case 0x04BA56u:
+			case rolling_manhole_cover_start_ADDRESS:
 				rolling_manhole_cover_start(object);
 				break;
-			case 0x04BAB2u:
+			case rolling_wait_hittable_ADDRESS:
 				rolling_wait_hittable(object);
 				break;
-			case 0x04BAC4u:
+			case rolling_roll_ADDRESS:
 				rolling_roll(object);
 				break;
-			case 0x04BAE8u:
+			case rolling_struck_ADDRESS:
 				rolling_struck(object);
 				break;
-			case 0x04BB32u:
+			case knife_start_ADDRESS:
 				knife_start(object);
 				break;
-			case 0x04BB88u:
+			case knife_fly_ADDRESS:
 				knife_fly(object);
 				break;
-			case 0x04BBB6u:
+			case knife_vanish_ADDRESS:
 				knife_vanish(object);
 				break;
-			case 0x04BBD8u:
+			case knife_struck_ADDRESS:
 				knife_struck(object);
 				break;
-			case 0x04BC0Eu:
+			case spear_start_ADDRESS:
 				spear_start(object);
 				break;
-			case 0x04BC50u:
+			case spear_fly_ADDRESS:
 				spear_fly(object);
 				break;
-			case 0x04BC60u:
+			case spear_vanish_ADDRESS:
 				spear_vanish(object);
 				break;
-			case 0x04BC6Eu:
+			case spear_struck_ADDRESS:
 				spear_struck(object);
 				break;
-			case 0x04BC98u:
+			case axe_start_ADDRESS:
 				axe_start(object);
 				break;
-			case 0x04BCEEu:
+			case axe_fly_ADDRESS:
 				axe_fly(object);
 				break;
-			case 0x04BD2Cu:
+			case gun_shot_start_ADDRESS:
 				gun_shot_start(object);
 				break;
-			case 0x04BD78u:
+			case gun_shot_fly_ADDRESS:
 				gun_shot_fly(object);
 				break;
-			case 0x04BD9Eu:
+			case gun_shot_vanish_ADDRESS:
 				gun_shot_vanish(object);
 				break;
-			case 0x04BDC0u:
+			case gun_shot_struck_ADDRESS:
 				gun_shot_struck(object);
 				break;
-			case 0x04BE12u:
+			case boomerang_start_ADDRESS:
 				boomerang_start(object);
 				break;
-			case 0x04BE5Au:
+			case boomerang_fly_out_ADDRESS:
 				boomerang_fly_out(object);
 				break;
-			case 0x04BE92u:
+			case boomerang_fly_back_ADDRESS:
 				boomerang_fly_back(object);
 				break;
-			case 0x04BEBAu:
+			case boomerang_fly_on_ADDRESS:
 				boomerang_fly_on(object);
 				break;
-			case 0x04BECEu:
+			case boomerang_struck_ADDRESS:
 				boomerang_struck(object);
 				break;
-			case 0x04BEE8u:
+			case boomerang_vanish_ADDRESS:
 				boomerang_vanish(object);
 				break;
-			case 0x04BF0Au:
+			case shuriken_start_ADDRESS:
 				shuriken_start(object);
 				break;
-			case 0x04BF4Cu:
+			case shuriken_fly_ADDRESS:
 				shuriken_fly(object);
 				break;
-			case 0x04BF96u:
+			case shuriken_vanish_ADDRESS:
 				shuriken_vanish(object);
 				break;
-			case 0x04BFA4u:
+			case shuriken_struck_ADDRESS:
 				shuriken_struck(object);
 				break;
-			case 0x04BFE6u:
-				a5 = rocksteady_bullet_start(object);
+			case rocksteady_bullet_start_ADDRESS:
+				rocksteady_bullet_start(object);
 				break;
-			case 0x04C054u:
+			case rocksteady_bullet_fly_ADDRESS:
 				rocksteady_bullet_fly(object);
 				break;
-			case 0x04C078u:
+			case rocksteady_bullet_vanish_ADDRESS:
 				rocksteady_bullet_vanish(object);
 				break;
-			case 0x04C0AEu:
+			case bebop_shot_start_ADDRESS:
 				bebop_shot_start(object);
 				break;
-			case 0x04C0F0u:
+			case bebop_shot_fly_ADDRESS:
 				bebop_shot_fly(object);
 				break;
-			case 0x04C11Au:
+			case rolling_tire_start_ADDRESS:
 				rolling_tire_start(object);
 				break;
-			case 0x04C17Cu:
+			case shredder_piece_start_ADDRESS:
 				shredder_piece_start(object);
 				break;
-			case 0x04C1B6u:
+			case shredder_piece_bounce_ADDRESS:
 				shredder_piece_bounce(object);
 				break;
-			case 0x04C204u:
+			case shredder_ray_start_ADDRESS:
 				shredder_ray_start(object);
 				break;
-			case 0x04C23Cu:
+			case shredder_ray_shine_ADDRESS:
 				shredder_ray_shine(object);
 				break;
-			case 0x04C264u:
+			case rocket_start_ADDRESS:
 				rocket_start(object);
 				break;
-			case 0x04C2CEu:
+			case rocket_fly_ADDRESS:
 				rocket_fly(object);
 				break;
-			case 0x04C30Cu:
+			case rocket_explode_ADDRESS:
 				rocket_explode(object);
 				break;
-			case 0x04C32Au:
+			case dynamite_start_ADDRESS:
 				dynamite_start(object);
 				break;
-			case 0x04C35Eu:
-				a5 = dynamite_throw(object, a5, routine_entry);
+			case dynamite_throw_ADDRESS:
+				dynamite_throw(object, routine_entry);
 				break;
-			case 0x04C386u:
+			case dynamite_bounce_ADDRESS:
 				dynamite_bounce(object);
 				break;
-			case 0x04C3F2u:
+			case dynamite_explode_ADDRESS:
 				dynamite_explode(object);
 				break;
-			case 0x04C4E6u:
+			case kicked_door_start_ADDRESS:
 				kicked_door_start(object);
 				break;
-			case 0x04C4FCu:
+			case kicked_door_wait_ADDRESS:
 				kicked_door_wait(object);
 				break;
-			case 0x04C522u:
-				a5 = kicked_door_break(object, a5);
+			case kicked_door_break_ADDRESS:
+				kicked_door_break(object);
 				break;
-			case 0x04C552u:
+			case kicked_door_become_foot_soldier_ADDRESS:
 				kicked_door_become_foot_soldier(object);
 				break;
-			case 0x04C5F4u:
-				a5 = door_piece_start(object);
+			case door_piece_start_ADDRESS:
+				door_piece_start(object);
 				break;
-			case 0x04C63Au:
+			case door_piece_fly_ADDRESS:
 				door_piece_fly(object);
 				break;
-			case 0x04C6E8u:
+			case elevator_start_ADDRESS:
 				elevator_start(object);
 				break;
-			case 0x04C716u:
-				a1 = elevator_wait_on_screen(object);
+			case elevator_wait_on_screen_ADDRESS:
+				elevator_wait_on_screen(object);
 				break;
-			case 0x04C730u:
-				a5 = elevator_open(object, a5);
+			case elevator_open_ADDRESS:
+				elevator_open(object);
 				break;
-			case 0x04C784u:
+			case elevator_scroll_off_ADDRESS:
 				elevator_scroll_off(object);
 				break;
-			case 0x04C89Cu:
+			case tire_soldier_start_ADDRESS:
 				tire_soldier_start(object);
 				break;
-			case 0x04C8E0u:
+			case tire_soldier_wait_ADDRESS:
 				tire_soldier_wait(object);
 				break;
-			case 0x04C906u:
+			case tire_soldier_jump_ADDRESS:
 				tire_soldier_jump(object);
 				break;
-			case 0x04C936u:
+			case tire_soldier_fly_ADDRESS:
 				tire_soldier_fly(object);
 				break;
-			case 0x04C964u:
-				a5 = tire_soldier_throw(object, a5);
+			case tire_soldier_throw_ADDRESS:
+				tire_soldier_throw(object);
 				break;
-			case 0x04C9C6u:
+			case manhole_soldier_start_ADDRESS:
 				manhole_soldier_start(object);
 				break;
-			case 0x04CA06u:
+			case manhole_soldier_wait_ADDRESS:
 				manhole_soldier_wait(object);
 				break;
-			case 0x04CA2Cu:
-				a5 = manhole_soldier_jump_out(object, a5);
+			case manhole_soldier_jump_out_ADDRESS:
+				manhole_soldier_jump_out(object);
 				break;
-			case 0x04CA68u:
+			case manhole_soldier_fly_ADDRESS:
 				manhole_soldier_fly(object);
 				break;
-			case 0x04CA98u:
-				a5 = manhole_soldier_throw(object, a5);
+			case manhole_soldier_throw_ADDRESS:
+				manhole_soldier_throw(object);
 				break;
-			case 0x04CAD2u:
+			case thrower_become_foot_soldier_ADDRESS:
 				thrower_become_foot_soldier(object);
 				break;
-			case 0x04CBFCu:
-				a5 = window_soldier_drop_start(object);
+			case window_soldier_drop_start_ADDRESS:
+				window_soldier_drop_start(object);
 				break;
-			case 0x04CC2Eu:
-				a5 = window_soldier_drop_jump_out(object, a5);
+			case window_soldier_drop_jump_out_ADDRESS:
+				window_soldier_drop_jump_out(object);
 				break;
-			case 0x04CC76u:
-				a5 = window_soldier_drop_break_window(object, a5);
+			case window_soldier_drop_break_window_ADDRESS:
+				window_soldier_drop_break_window(object);
 				break;
-			case 0x04CCA0u:
+			case window_soldier_drop_fall_ADDRESS:
 				window_soldier_drop_fall(object);
 				break;
-			case 0x04CCECu:
+			case window_soldier_become_foot_soldier_ADDRESS:
 				window_soldier_become_foot_soldier(object);
 				break;
-			case 0x04CD80u:
+			case window_soldier_dive_start_ADDRESS:
 				window_soldier_dive_start(object);
 				break;
-			case 0x04CDAAu:
-				a5 = window_soldier_dive_wait(object, a5);
+			case window_soldier_dive_wait_ADDRESS:
+				window_soldier_dive_wait(object);
 				break;
-			case 0x04CE06u:
+			case window_soldier_dive_fall_ADDRESS:
 				window_soldier_dive_fall(object);
 				break;
-			case 0x04CECAu:
+			case glass_shards_start_ADDRESS:
 				glass_shards_start(object);
 				break;
-			case 0x04CF10u:
+			case glass_shards_fall_ADDRESS:
 				glass_shards_fall(object);
 				break;
-			case 0x04D1AEu:
+			case sewer_ripple_start_ADDRESS:
 				sewer_ripple_start(object);
 				break;
-			case 0x04D1DEu:
+			case sewer_ripple_swim_ADDRESS:
 				sewer_ripple_swim(object);
 				break;
-			case 0x04D24Cu:
-				a5 = sewer_ripple_leap_out(object, a5);
+			case sewer_ripple_leap_out_ADDRESS:
+				sewer_ripple_leap_out(object);
 				break;
-			case 0x04D288u:
+			case sewer_ripple_vanish_ADDRESS:
 				sewer_ripple_vanish(object);
 				break;
-			case 0x04D2A6u:
+			case sewer_ripple_swim_again_ADDRESS:
 				sewer_ripple_swim_again(object);
 				break;
-			case 0x04D46Cu:
-				a5 = bomber_start(object);
+			case bomber_start_ADDRESS:
+				bomber_start(object);
 				break;
-			case 0x04D488u:
+			case bomber_wait_ADDRESS:
 				bomber_wait(object);
 				break;
-			case 0x04D4B0u:
+			case bomber_lean_out_ADDRESS:
 				bomber_lean_out(object);
 				break;
-			case 0x04D4D0u:
-				a5 = bomber_throw(object, a5);
+			case bomber_throw_ADDRESS:
+				bomber_throw(object);
 				break;
-			case 0x04D4FEu:
+			case bomber_step_out_ADDRESS:
 				bomber_step_out(object);
 				break;
-			case 0x04D52Cu:
+			case bomber_walk_in_ADDRESS:
 				bomber_walk_in(object);
 				break;
-			case 0x04D564u:
+			case enemy_rocket_soldier_start_ADDRESS:
 				enemy_rocket_soldier_start(object);
 				break;
-			case 0x04D58Eu:
-				a5 = enemy_rocket_soldier_line_up(object, a5);
+			case enemy_rocket_soldier_line_up_ADDRESS:
+				enemy_rocket_soldier_line_up(object);
 				break;
-			case 0x04D5EEu:
-				a5 = enemy_rocket_soldier_fire(object, a5);
+			case enemy_rocket_soldier_fire_ADDRESS:
+				enemy_rocket_soldier_fire(object);
 				break;
-			case 0x04D624u:
+			case enemy_rocket_soldier_unarmed_ADDRESS:
 				enemy_rocket_soldier_unarmed(object);
 				break;
-			case 0x04D64Cu:
-				enemy_rocket_soldier_struck(object, &a1, &a5);
+			case enemy_rocket_soldier_struck_ADDRESS:
+				enemy_rocket_soldier_struck(object);
 				break;
-			case 0x04D6C8u:
+			case double_door_start_ADDRESS:
 				double_door_start(object);
 				break;
-			case 0x04D6CEu:
-				a5 = double_door_wait(object, a5);
+			case double_door_wait_ADDRESS:
+				double_door_wait(object);
 				break;
-			case 0x04D722u:
+			case double_door_open_ADDRESS:
 				double_door_open(object);
 				break;
-			case 0x04D76Cu:
+			case technodrome_door_start_ADDRESS:
 				technodrome_door_start(object);
 				break;
-			case 0x04D782u:
-				a5 = technodrome_door_wait(object, a5);
+			case technodrome_door_wait_ADDRESS:
+				technodrome_door_wait(object);
 				break;
-			case 0x04D7D0u:
+			case technodrome_door_open_ADDRESS:
 				technodrome_door_open(object);
 				break;
-			case 0x04D7E8u:
-				a5 = technodrome_door_let_out(object, a5);
+			case technodrome_door_let_out_ADDRESS:
+				technodrome_door_let_out(object);
 				break;
-			case 0x04DC04u:
-				a5 = enemy_knife_soldier_start(object, a5, routine_entry);
+			case enemy_knife_soldier_start_ADDRESS:
+				enemy_knife_soldier_start(object, routine_entry);
 				break;
-			case 0x04DC9Eu:
-				a5 = enemy_spear_soldier_start(object, a5, routine_entry);
+			case enemy_spear_soldier_start_ADDRESS:
+				enemy_spear_soldier_start(object, routine_entry);
 				break;
-			case 0x04E6A2u:
-				a5 = enemy_axe_soldier_start(object, a5, routine_entry);
+			case enemy_axe_soldier_start_ADDRESS:
+				enemy_axe_soldier_start(object, routine_entry);
 				break;
-			case 0x04E736u:
-				a5 = enemy_gun_soldier_start(object, a5, routine_entry);
+			case enemy_gun_soldier_start_ADDRESS:
+				enemy_gun_soldier_start(object, routine_entry);
 				break;
-			case 0x04EE2Eu:
-				a5 = enemy_boomerang_soldier_start(object, a5, routine_entry);
+			case enemy_boomerang_soldier_start_ADDRESS:
+				enemy_boomerang_soldier_start(object, routine_entry);
 				break;
-			case 0x04EEC8u:
-				a5 = enemy_shuriken_soldier_start(object, a5, routine_entry);
+			case enemy_shuriken_soldier_start_ADDRESS:
+				enemy_shuriken_soldier_start(object, routine_entry);
 				break;
-			case 0x04EF58u:
-				a5 = enemy_skateboard_soldier_start(object, a5, routine_entry);
+			case enemy_skateboard_soldier_start_ADDRESS:
+				enemy_skateboard_soldier_start(object, routine_entry);
 				break;
-			case 0x04EFECu:
-				enemy_skateboard_think(object, routine_entry, &a1, &a5);
+			case enemy_skateboard_think_ADDRESS:
+				enemy_skateboard_think(object, routine_entry);
 				break;
-			case 0x04F002u:
-				enemy_skateboard_attack(object, &a1, &a5);
+			case enemy_skateboard_attack_ADDRESS:
+				enemy_skateboard_attack(object);
 				break;
-			case 0x04F014u:
-				enemy_skateboard_hit(object, &a1, &a5);
+			case enemy_skateboard_hit_ADDRESS:
+				enemy_skateboard_hit(object);
 				break;
-			case 0x04F026u:
-				enemy_skateboard_react(object, &a1, &a5);
+			case enemy_skateboard_react_ADDRESS:
+				enemy_skateboard_react(object);
 				break;
-			case 0x04F1D2u:
-				a5 = enemy_rocksteady_start(object, a5, routine_entry);
+			case enemy_rocksteady_start_ADDRESS:
+				enemy_rocksteady_start(object, routine_entry);
 				break;
-			case 0x04F28Au:
-				a5 = enemy_rocksteady_enter(object, a1, a5);
+			case enemy_rocksteady_enter_ADDRESS:
+				enemy_rocksteady_enter(object);
 				break;
-			case 0x04F3BAu:
-				enemy_rocksteady_think(object, routine_entry, &a1, &a5);
+			case enemy_rocksteady_think_ADDRESS:
+				enemy_rocksteady_think(object, routine_entry);
 				break;
-			case 0x04F5E4u:
-				enemy_rocksteady_attack(object, &a1, &a5);
+			case enemy_rocksteady_attack_ADDRESS:
+				enemy_rocksteady_attack(object);
 				break;
-			case 0x04F622u:
-				enemy_rocksteady_hit(object, &a1, &a5);
+			case enemy_rocksteady_hit_ADDRESS:
+				enemy_rocksteady_hit(object);
 				break;
-			case 0x04F680u:
-				enemy_rocksteady_react(object, &a1, &a5);
+			case enemy_rocksteady_react_ADDRESS:
+				enemy_rocksteady_react(object);
 				break;
-			case 0x0501C6u:
-				a5 = enemy_bebop_start(object, a5, routine_entry);
+			case enemy_bebop_start_ADDRESS:
+				enemy_bebop_start(object, routine_entry);
 				break;
-			case 0x05027Au:
-				a5 = enemy_bebop_enter(object, a1, a5);
+			case enemy_bebop_enter_ADDRESS:
+				enemy_bebop_enter(object);
 				break;
-			case 0x0503ECu:
-				enemy_bebop_think(routine_offset, object, routine_entry, &a1, &a5);
+			case enemy_bebop_think_ADDRESS:
+				enemy_bebop_think(routine_offset, object, routine_entry);
 				break;
-			case 0x050612u:
-				enemy_bebop_attack(object, &a1, &a5);
+			case enemy_bebop_attack_ADDRESS:
+				enemy_bebop_attack(object);
 				break;
-			case 0x050622u:
-				enemy_bebop_hit(object, &a1, &a5);
+			case enemy_bebop_hit_ADDRESS:
+				enemy_bebop_hit(object);
 				break;
-			case 0x05066Eu:
-				enemy_bebop_react(object, &a1, &a5);
+			case enemy_bebop_react_ADDRESS:
+				enemy_bebop_react(object);
 				break;
-			case 0x050F98u:
-				a5 = enemy_mouser_start(object, a5, routine_entry);
+			case enemy_mouser_start_ADDRESS:
+				enemy_mouser_start(object, routine_entry);
 				break;
-			case 0x051002u:
-				a5 = enemy_mouser_enter(object, a1, a5);
+			case enemy_mouser_enter_ADDRESS:
+				enemy_mouser_enter(object);
 				break;
-			case 0x0510F4u:
-				enemy_mouser_think(object, routine_entry, &a1, &a5);
+			case enemy_mouser_think_ADDRESS:
+				enemy_mouser_think(object, routine_entry);
 				break;
-			case 0x051314u:
-				enemy_mouser_bite(object, &a1, &a5);
+			case enemy_mouser_bite_ADDRESS:
+				enemy_mouser_bite(object);
 				break;
-			case 0x05144Eu:
-				enemy_mouser_hit(object, &a1, &a5);
+			case enemy_mouser_hit_ADDRESS:
+				enemy_mouser_hit(object);
 				break;
-			case 0x051492u:
-				enemy_mouser_step_over_edge(object, &a1, &a5);
+			case enemy_mouser_step_over_edge_ADDRESS:
+				enemy_mouser_step_over_edge(object);
 				break;
-			case 0x051B56u:
+			case mouser_hole_start_ADDRESS:
 				mouser_hole_start(object);
 				break;
-			case 0x051BA2u:
+			case mouser_hole_wait_ADDRESS:
 				mouser_hole_wait(object);
 				break;
-			case 0x051BDAu:
+			case mouser_hole_open_ADDRESS:
 				mouser_hole_open(object);
 				break;
-			case 0x051BF4u:
-				a5 = mouser_hole_let_out(object, a5);
+			case mouser_hole_let_out_ADDRESS:
+				mouser_hole_let_out(object);
 				break;
-			case 0x051C44u:
-				a5 = enemy_rodney_start(object, a5, routine_entry);
+			case enemy_rodney_start_ADDRESS:
+				enemy_rodney_start(object, routine_entry);
 				break;
-			case 0x051CACu:
-				a5 = enemy_rodney_enter(object, a1, a5);
+			case enemy_rodney_enter_ADDRESS:
+				enemy_rodney_enter(object);
 				break;
-			case 0x051D80u:
-				enemy_rodney_think(object, routine_entry, &a1, &a5);
+			case enemy_rodney_think_ADDRESS:
+				enemy_rodney_think(object, routine_entry);
 				break;
-			case 0x051FA0u:
-				enemy_rodney_hit(object, &a1, &a5);
+			case enemy_rodney_hit_ADDRESS:
+				enemy_rodney_hit(object);
 				break;
-			case 0x052790u:
-				a5 = enemy_shredder_start(object, a1, a5, routine_entry);
+			case enemy_shredder_start_ADDRESS:
+				enemy_shredder_start(object, routine_entry);
 				break;
-			case 0x052830u:
-				a5 = enemy_shredder_enter(object, a1, a5);
+			case enemy_shredder_enter_ADDRESS:
+				enemy_shredder_enter(object);
 				break;
-			case 0x052840u:
-				enemy_shredder_think(object, routine_entry, &a1, &a5);
+			case enemy_shredder_think_ADDRESS:
+				enemy_shredder_think(object, routine_entry);
 				break;
-			case 0x052B84u:
-				enemy_shredder_attack(object, &a1, &a5);
+			case enemy_shredder_attack_ADDRESS:
+				enemy_shredder_attack(object);
 				break;
-			case 0x052BC8u:
-				enemy_shredder_hit(object, &a1, &a5);
+			case enemy_shredder_hit_ADDRESS:
+				enemy_shredder_hit(object);
 				break;
-			case 0x052C68u:
-				enemy_shredder_react(object, &a1, &a5);
+			case enemy_shredder_react_ADDRESS:
+				enemy_shredder_react(object);
 				break;
 			}
 			update_object_screen_place(object);
 		}
 		object += 0x50u;
 	} while (object < OBJECT_ADDRESS(40));
-	return a1;
 }
 
 /* every frame: the players' slots counted and the least crowded one found */
-uint32_t update_player_slots(void)
+void update_player_slots(void)
 {
 	uint32_t zero = 0;
 	uint8_t enemies = 0;
@@ -2122,7 +2127,8 @@ uint32_t update_player_slots(void)
 	if ((uint8_t)turtle_count == 0u)
 	{
 		enemies_per_turtle = per_turtle;
-		return turtle;
+		object_loop_leftover = turtle;
+		return;
 	}
 	per_turtle = enemies_on_screen;
 	zero = m68k_divu_z(per_turtle, turtle_count);
@@ -2132,7 +2138,7 @@ uint32_t update_player_slots(void)
 	if (zero)
 		per_turtle = (uint16_t)(per_turtle + 1u);
 	enemies_per_turtle = per_turtle;
-	return turtle;
+	object_loop_leftover = turtle;
 }
 
 /* the object's place on the screen from its place in the area, and whether it is off the screen */
@@ -2160,15 +2166,13 @@ void update_object_screen_place(uint32_t object)
 
 /* starts an animation on the object: its first frame, timed by the frame's count plus the object's
    animation delay */
-uint32_t set_animation(uint32_t d1, uint32_t object, uint32_t animation)
+uint32_t set_animation(uint32_t kept_bits, uint32_t object, uint32_t animation)
 {
-	uint32_t frame_time = 0;
-
-	frame_time = (d1 & ~0xFFu) | ANIMATION_FRAME(animation)->time;
-	frame_time = (frame_time & ~0xFFu) | (uint8_t)(frame_time + OBJECT(object)->animation_delay);
-	OBJECT(object)->frame_time = frame_time;
+	kept_bits = (kept_bits & ~0xFFu) | ANIMATION_FRAME(animation)->time;
+	kept_bits = (kept_bits & ~0xFFu) | (uint8_t)(kept_bits + OBJECT(object)->animation_delay);
+	OBJECT(object)->frame_time = kept_bits;
 	OBJECT(object)->frame = animation;
-	return frame_time;
+	return kept_bits;
 }
 
 /* the first free object of a group */
@@ -2245,7 +2249,7 @@ void start_shot(uint32_t object, uint32_t record, uint32_t *p_shot, uint32_t *p_
 		OBJECT(shot)->colour = 0xFFu;
 		OBJECT(shot)->animation_delay = 0u;
 		OBJECT(shot)->throw = 0u;
-		OBJECT(shot)->start_shot.hit_sound = OBJECT(object)->start_shot.hit_sound;
+		OBJECT(shot)->hit_sound = OBJECT(object)->hit_sound;
 		zero = place_from_record(object, record, shot);
 	}
 	*p_shot = shot;
@@ -2273,36 +2277,37 @@ uint32_t place_from_record(uint32_t object, uint32_t placement, uint32_t object_
 }
 
 /* the speeds across and up or down of a speed in a direction */
-void speeds_from_direction(uint8_t direction, uint8_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed, uint32_t *p_sines)
+void speeds_from_direction(uint8_t direction, uint16_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed)
 {
 	uint16_t angle = 0;
-	uint32_t cosines = 0;
+	uint32_t cosines = 0, sines = 0, x_speed = 0, y_speed = 0;
 	uint32_t t1 = 0;
 
-	*p_sines = quarter_sine_ADDRESS;
+	sines = quarter_sine_ADDRESS;
 	cosines = quarter_sine_last_ADDRESS;
 	angle = (uint8_t)direction & 0x3Fu;
 	if ((direction & 0x40u) == 0u)
 	{
-		t1 = *p_sines;
-		*p_sines = cosines;
+		t1 = sines;
+		sines = cosines;
 		cosines = t1;
 		angle = (uint16_t)(0u - angle);
 	}
-	*p_x_speed = (SINE(*p_sines + (int16_t)angle) * ((speed & ~0xFF00u) | (screen_x_high & 0xFF00u))) >> 8;
+	x_speed = ((uint32_t)SINE(sines + (int16_t)angle) * speed) >> 8;
 	if ((int8_t)(direction + 0x40u) < 0)
-		*p_x_speed = (uint16_t)(0u - *p_x_speed);
-	*p_y_speed = (SINE(cosines + ((int16_t)(0u - angle))) * ((speed & ~0xFF00u) | (screen_x_high & 0xFF00u))) >> 8;
-	offset_high_word = *p_y_speed;
-	if ((int8_t)direction < 0)
-	{
-		return;
-	}
-	*p_y_speed = (uint16_t)(0u - *p_y_speed);
+		x_speed = (uint16_t)(0u - x_speed);
+	y_speed = ((uint32_t)SINE(cosines + ((int16_t)(0u - angle))) * speed) >> 8;
+	offset_high_word = y_speed;
+	if ((int8_t)direction >= 0)
+		y_speed = (uint16_t)(0u - y_speed);
+	object_loop_leftover = sines;
+	*p_x_speed = x_speed;
+	*p_y_speed = y_speed;
 }
 
-/* Unused: an empty routine that returns at once */
-void unreached_047D0E(uint8_t direction)
+/* Unused: speeds_from_direction's work without its last shift: the speeds across and up or down of a
+   byte's speed in a direction, 256 times larger */
+void speeds_from_direction_unscaled(uint8_t direction)
 {
 }
 

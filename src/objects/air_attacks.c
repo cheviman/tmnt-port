@@ -3,7 +3,7 @@
  *    Description: the helicopters of the skateboard ride, the missiles that fall on idle turtles, the flying drones
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -68,7 +68,7 @@ void helicopter_hover(uint32_t object)
 /* the helicopter fires a burst of bullets */
 void helicopter_fire_bullets(uint32_t object)
 {
-	uint32_t bullet = 0, d7 = 0;
+	uint32_t bullet = 0, objects_left = 0;
 	uint8_t timer = 0, shots_left = 0;
 
 	helicopter_bob(object);
@@ -82,9 +82,9 @@ void helicopter_fire_bullets(uint32_t object)
 	if (shots_left != 0u)
 	{
 		bullet = OBJECT_ADDRESS(32);
-		d7 = 8u;
-		find_free_object(&d7, &bullet);
-		if ((uint8_t)d7 != 0u)
+		objects_left = 8u;
+		find_free_object(&objects_left, &bullet);
+		if ((uint8_t)objects_left != 0u)
 		{
 			helicopter_start_bullet(object, bullet);
 			OBJECT(object)->helicopter.timer = 5u;
@@ -99,7 +99,7 @@ void helicopter_fire_bullets(uint32_t object)
 /* the helicopter drops its missiles */
 void helicopter_drop_missiles(uint32_t object)
 {
-	uint32_t d7 = 0, missile = 0;
+	uint32_t missile = 0, objects_left = 0;
 	uint8_t timer = 0, shots_left = 0;
 
 	helicopter_bob(object);
@@ -113,9 +113,9 @@ void helicopter_drop_missiles(uint32_t object)
 	if (shots_left != 0u)
 	{
 		missile = OBJECT_ADDRESS(24);
-		d7 = 8u;
-		find_free_object(&d7, &missile);
-		if ((uint8_t)d7 != 0u)
+		objects_left = 8u;
+		find_free_object(&objects_left, &missile);
+		if ((uint8_t)objects_left != 0u)
 		{
 			helicopter_start_missile(object, missile);
 			OBJECT(object)->helicopter.timer = 7u;
@@ -608,23 +608,23 @@ void release_flying_drones(void)
 }
 
 /* the drone comes in, by the state of its way in */
-uint32_t flying_drone_enter(uint32_t object, uint32_t a5)
+void flying_drone_enter(uint32_t object)
 {
 	switch (OBJECT(object)->state)
 	{
 	case 0:
 		flying_drone_start(object);
-		return a5;
+		return;
 	case 1:
 		flying_drone_wait(object);
-		return a5;
+		return;
 	case 2:
 		flying_drone_take_off(object);
-		return a5;
+		return;
 	case 3:
-		return flying_drone_ready(object);
+		flying_drone_ready(object);
+		return;
 	}
-	unreachable();
 }
 
 /* the drone rests */
@@ -683,23 +683,22 @@ void flying_drone_take_off(uint32_t object)
 }
 
 /* the drone picks a turtle and can be hit */
-uint32_t flying_drone_ready(uint32_t object)
+void flying_drone_ready(uint32_t object)
 {
-	uint32_t a5 = 0, ignored = 0, picked = 0;
+	uint32_t ignored = 0, picked = 0;
 
 	OBJECT(object)->flags |= 2u;
-	boss_pick_target(object, &ignored, &picked, &a5);
+	boss_pick_target(object, &ignored, &picked);
 	if ((uint8_t)picked == 0u)
 		OBJECT(object)->flying_drone.target = 0u;
 	flying_drone_random_wait(object);
 	OBJECT(object)->flying_drone.time_left = 0x708u;
 	OBJECT(object)->routine++;
 	OBJECT(object)->state = 0u;
-	return a5;
 }
 
 /* the drone weaves at its turtle until it fires; after a while it rises out of sight */
-uint32_t flying_drone_fly(uint32_t object, uint32_t a5)
+void flying_drone_fly(uint32_t object)
 {
 	uint8_t timer = 0;
 
@@ -707,7 +706,7 @@ uint32_t flying_drone_fly(uint32_t object, uint32_t a5)
 	{
 		OBJECT(object)->flying_drone.time_left--;
 		flying_drone_bob(object);
-		a5 = flying_drone_steer(object, a5);
+		flying_drone_steer(object);
 		flying_drone_animate(object);
 		timer = OBJECT(object)->flying_drone.timer;
 		OBJECT(object)->flying_drone.timer = timer - 1u;
@@ -716,51 +715,49 @@ uint32_t flying_drone_fly(uint32_t object, uint32_t a5)
 			OBJECT(object)->flying_drone.timer = 0u;
 			OBJECT(object)->flying_drone.shots_left = 4u;
 			OBJECT(object)->routine++;
-			return a5;
+			return;
 		}
-		return a5;
+		return;
 	}
-	a5 = flying_drone_steer(object, a5);
+	flying_drone_steer(object);
 	flying_drone_animate(object);
 	OBJECT(object)->height_whole++;
 	if (OBJECT(object)->height_whole < 0xE0u)
-		return a5;
+		return;
 	enemies_on_screen--;
 	flying_drone_count--;
 	remove_object(object);
-	return a5;
 }
 
 /* the drone fires a burst of shots */
-uint32_t flying_drone_fire(uint32_t object, uint32_t a5)
+void flying_drone_fire(uint32_t object)
 {
-	uint32_t d7 = 0, shot = 0;
+	uint32_t objects_left = 0, shot = 0;
 	uint8_t timer = 0, shots_left = 0;
 
 	flying_drone_bob(object);
-	a5 = flying_drone_steer(object, a5);
+	flying_drone_steer(object);
 	timer = OBJECT(object)->flying_drone.timer;
 	OBJECT(object)->flying_drone.timer = timer - 1u;
 	if (timer != 0u)
-		return a5;
+		return;
 	shots_left = OBJECT(object)->flying_drone.shots_left;
 	OBJECT(object)->flying_drone.shots_left = shots_left - 1u;
 	if (shots_left != 0u)
 	{
 		shot = OBJECT_ADDRESS(32);
-		d7 = 8u;
-		find_free_object(&d7, &shot);
-		if ((uint8_t)d7 != 0u)
+		objects_left = 8u;
+		find_free_object(&objects_left, &shot);
+		if ((uint8_t)objects_left != 0u)
 		{
-			a5 = flying_drone_start_shot(object, shot);
+			flying_drone_start_shot(object, shot);
 			OBJECT(object)->flying_drone.timer = 7u;
-			return a5;
+			return;
 		}
 	}
 	OBJECT(object)->routine--;
 	flying_drone_random_wait(object);
 	OBJECT(object)->flying_drone.shots_left = 0u;
-	return a5;
 }
 
 /* a hit makes the drone shake, or the last one wrecks it in an explosion */
@@ -844,20 +841,20 @@ void flying_drone_shake(uint32_t object)
 }
 
 /* the drone weaves toward its turtle */
-uint32_t flying_drone_steer(uint32_t object, uint32_t choices)
+void flying_drone_steer(uint32_t object)
 {
 	uint32_t ignored = 0, picked = 0, target = 0, y_step = 0;
 
 	if ((frame_count & 0x7Fu) == 0u)
 	{
-		boss_pick_target(object, &ignored, &picked, &choices);
+		boss_pick_target(object, &ignored, &picked);
 		if ((uint8_t)picked == 0u)
 			OBJECT(object)->flying_drone.target = 0u;
 	}
 	target = OBJECT(object)->flying_drone.target;
 	if (target == 0u)
-		return choices;
-	if (OBJECT(object)->screen_x < mem_read16(target + 0xCu))
+		return;
+	if (OBJECT(object)->screen_x < OBJECT(target)->screen_x)
 	{
 		if (OBJECT(object)->flying_drone.turning != 0u)
 		{
@@ -889,12 +886,11 @@ uint32_t flying_drone_steer(uint32_t object, uint32_t choices)
 			OBJECT(object)->flying_drone.turning ^= 1u;
 	}
 	y_step = 0x100u;
-	if (mem_read16(target + 0xEu) <= OBJECT(object)->screen_y)
+	if (OBJECT(target)->screen_y <= OBJECT(object)->screen_y)
 		y_step = ~y_step;
 	OBJECT(object)->y += y_step;
 	flying_drone_move(object);
 	flying_drone_keep_in_area(object);
-	return choices;
 }
 
 /* the drone or its shot is kept on the screen and within the area's depth */
@@ -947,7 +943,7 @@ void flying_drone_move(uint32_t object)
 void flying_drone_animate(uint32_t object)
 {
 	uint16_t aim = 0, direction = 0;
-	uint32_t animation = 0;
+	uint32_t animation = 0, target = 0;
 
 	if (OBJECT(object)->flying_drone.target == 0u)
 	{
@@ -964,7 +960,8 @@ void flying_drone_animate(uint32_t object)
 	else
 	{
 		OBJECT(object)->flags &= 0xBFu;
-		if (OBJECT(object)->screen_x < mem_read16(OBJECT(object)->flying_drone.target + 0xCu))
+		target = OBJECT(object)->flying_drone.target;
+		if (OBJECT(object)->screen_x < OBJECT(target)->screen_x)
 			OBJECT(object)->flags |= 0x40u;
 		offset_high_word = 0u;
 		direction = OBJECT(object)->flying_drone.direction;
@@ -973,7 +970,8 @@ void flying_drone_animate(uint32_t object)
 	}
 	OBJECT(object)->flying_drone.aim = (uint8_t)aim;
 	aim = (uint16_t)((uint32_t)aim << 4);
-	animation = TABLE32(flying_drone_animations, (aim & ~0xFFu) | (uint8_t)(aim + (((uint8_t)frame_count & 3u) << 2)));
+	aim = (uint16_t)((aim & ~0xFFu) | (uint8_t)(aim + (((uint8_t)frame_count & 3u) << 2)));
+	animation = flying_drone_animations[aim / 4u];
 	set_animation(0u, object, animation);
 }
 
@@ -1015,7 +1013,7 @@ void sound_flying_drones(uint32_t object)
 }
 
 /* a shot from the drone's gun */
-uint32_t flying_drone_start_shot(uint32_t object, uint32_t shot)
+void flying_drone_start_shot(uint32_t object, uint32_t shot)
 {
 	uint16_t aim_side = 0;
 	uint32_t shot_places = 0;
@@ -1041,7 +1039,7 @@ uint32_t flying_drone_start_shot(uint32_t object, uint32_t shot)
 	OBJECT(shot)->drone_shot.aim = OBJECT(object)->flying_drone.aim;
 	OBJECT(shot)->routine = 0u;
 	OBJECT(shot)->state = 0u;
-	return shot_places;
+	object_loop_leftover = shot_places;
 }
 
 /* the shot flashes at the gun */

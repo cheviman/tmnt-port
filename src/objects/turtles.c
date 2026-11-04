@@ -3,7 +3,7 @@
  *    Description: the turtles: joining the game, the area's start and entry, and every turtle's frame: the controls, the moves and the scroll they push, the jumps, the attacks, the hits and the floor map's walls
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* a player who has just put a coin in comes into the game with full health, blinking, with its marker */
-uint32_t turtle_join(uint8_t players)
+void turtle_join(uint8_t players)
 {
 	uint32_t carry = 0;
 	uint8_t by_entry = 0;
@@ -20,7 +20,7 @@ uint32_t turtle_join(uint8_t players)
 	uint32_t marker = 0, turtle = 0;
 
 	turtle = OBJECT_ADDRESS(0);
-	marker = OBJECT_ADDRESS(40);
+	object_loop_slot = OBJECT_ADDRESS(40);
 	player = 0u;
 	do
 	{
@@ -33,19 +33,20 @@ uint32_t turtle_join(uint8_t players)
 			OBJECT(turtle)->health_bars = 0xAu;
 			OBJECT(turtle)->health = 3u;
 			marker_times(player) = 0x80u;
+			marker = object_loop_slot;
 			turtle_start_marker(player, &turtle, &marker);
+			object_loop_slot = marker;
 			if (entry_without_blink == 0u)
 				OBJECT(turtle)->turtle.invulnerable_time |= 0x80u;
 		}
 		player = (uint8_t)(player + 1u);
-		marker += 0x50u;
+		object_loop_slot += 0x50u;
 		turtle += 0x50u;
 	} while (turtle < OBJECT_ADDRESS(4));
-	return marker;
 }
 
 /* a player whose turtle was knocked out comes back at the start point with full health */
-uint32_t turtle_respawn(uint8_t players)
+void turtle_respawn(uint8_t players)
 {
 	uint32_t carry = 0;
 	uint8_t by_entry = 0;
@@ -53,7 +54,7 @@ uint32_t turtle_respawn(uint8_t players)
 	uint32_t marker = 0, turtle = 0;
 
 	turtle = OBJECT_ADDRESS(0);
-	marker = OBJECT_ADDRESS(40);
+	object_loop_slot = OBJECT_ADDRESS(40);
 	player = 0u;
 	do
 	{
@@ -66,19 +67,20 @@ uint32_t turtle_respawn(uint8_t players)
 			OBJECT(turtle)->health_bars = 0xAu;
 			OBJECT(turtle)->health = 3u;
 			marker_times(player) = 0x80u;
+			marker = object_loop_slot;
 			turtle_start_marker(player, &turtle, &marker);
+			object_loop_slot = marker;
 			if (entry_without_blink == 0u)
 				OBJECT(turtle)->turtle.invulnerable_time |= 0x80u;
 		}
 		player = (uint8_t)(player + 1u);
-		marker += 0x50u;
+		object_loop_slot += 0x50u;
 		turtle += 0x50u;
 	} while (turtle < OBJECT_ADDRESS(4));
-	return marker;
 }
 
 /* every player's turtle starts the area with the health bars it had */
-uint32_t turtle_start_area(uint8_t starting_players)
+void turtle_start_area(uint8_t starting_players)
 {
 	uint32_t carry = 0;
 	uint8_t by_entry = 0;
@@ -86,8 +88,8 @@ uint32_t turtle_start_area(uint8_t starting_players)
 	uint32_t marker = 0, player_health = 0, turtle = 0;
 
 	turtle = OBJECT_ADDRESS(0);
-	marker = OBJECT_ADDRESS(40);
-	player_health = unk_060106_ADDRESS;
+	object_loop_slot = OBJECT_ADDRESS(40);
+	player_health = player_1_health_bars_ADDRESS;
 	player = 0u;
 	do
 	{
@@ -103,23 +105,25 @@ uint32_t turtle_start_area(uint8_t starting_players)
 			{
 				OBJECT(turtle)->health_bars = 0xAu;
 				OBJECT(turtle)->health = 3u;
-				mem_write16(player_health, 0xA03u);
+				PLAYER(player_health - 0x6u)->health_bars = 0xAu;
+				PLAYER(player_health - 0x6u)->message = 3u;
 			}
 			marker_times(player) = 0x80u;
+			marker = object_loop_slot;
 			turtle_start_marker(player, &turtle, &marker);
+			object_loop_slot = marker;
 			if (entry_without_blink == 0u)
 				OBJECT(turtle)->turtle.invulnerable_time |= 0x80u;
 		}
 		player = (uint8_t)(player + 1u);
 		turtle += 0x50u;
 		player_health = scratch + 8u;
-		marker += 0x50u;
+		object_loop_slot += 0x50u;
 	} while (turtle < OBJECT_ADDRESS(4));
 	OBJECT(OBJECT_ADDRESS(0))->health_bars = PLAYER(PLAYER_ADDRESS(0))->health_bars;
 	OBJECT(OBJECT_ADDRESS(1))->health_bars = PLAYER(PLAYER_ADDRESS(1))->health_bars;
 	OBJECT(OBJECT_ADDRESS(2))->health_bars = PLAYER(PLAYER_ADDRESS(2))->health_bars;
 	OBJECT(OBJECT_ADDRESS(3))->health_bars = PLAYER(PLAYER_ADDRESS(3))->health_bars;
-	return marker;
 }
 
 /* a turtle's object set up for its player, invulnerable for a while, and placed by the area's entry */
@@ -618,10 +622,10 @@ uint32_t turtle_skateboard_shadow(void)
 
 /* every frame of play: the markers kept on their turtles while they last, the bars kept, every turtle
    run */
-uint32_t update_players(void)
+void update_players(void)
 {
-	uint32_t a1 = 0, marker_time = 0, object = 0, object_2 = 0;
-	uint8_t t1 = 0;
+	uint32_t marker_time = 0, object = 0, object_2 = 0;
+	uint8_t frames = 0;
 	uint32_t height_long = 0;
 
 	object = OBJECT_ADDRESS(0);
@@ -629,16 +633,16 @@ uint32_t update_players(void)
 	marker_time = marker_times_ADDRESS;
 	do
 	{
-		if (mem_read8(marker_time) != 0u)
+		if (MARKER_TIMER(marker_time)->frames != 0u)
 		{
 			OBJECT(object_2)->screen_x = OBJECT(object)->screen_x;
 			OBJECT(object_2)->screen_y = OBJECT(object)->screen_y;
 			height_long = (((uint32_t)OBJECT(object)->height << 16u) | (OBJECT(object)->x >> 16u));
 			OBJECT(object_2)->height = (uint16_t)(height_long >> 16u);
 			OBJECT(object_2)->x = (OBJECT(object_2)->x & 0xFFFFu) | ((height_long & 0xFFFFu) << 16u);
-			t1 = mem_read8(marker_time);
-			mem_write8(marker_time, t1 - 1u);
-			if (t1 == 1u)
+			frames = MARKER_TIMER(marker_time)->frames;
+			MARKER_TIMER(marker_time)->frames = frames - 1u;
+			if (frames == 1u)
 				OBJECT(object_2)->flags = 0u;
 		}
 		marker_time++;
@@ -652,18 +656,17 @@ uint32_t update_players(void)
 	if (stage_scroll_locks[stage] != 0u)
 	{
 		load_layer_b();
-		a1 = turtle_run_all();
+		turtle_run_all();
 		save_layer_b();
-		return a1;
+		return;
 	}
 	load_layer_a();
-	a1 = turtle_run_all();
+	turtle_run_all();
 	save_layer_a();
-	return a1;
 }
 
 /* every turtle in play a frame: controls, move, the screen's limits, the scroll, floor and walls */
-uint32_t turtle_run_all(void)
+void turtle_run_all(void)
 {
 	uint8_t routine_past_walk = 0, segment_end_axis = 0;
 	uint16_t scroll_stage = 0;
@@ -808,12 +811,17 @@ uint32_t turtle_run_all(void)
 		check_area_cleared();
 		if (area_beaten != 0u && turtles_busy == 0u)
 			area_cleared--;
-		return inputs;
+		object_loop_slot = inputs;
+		return;
 	}
 	scroll_stage = stage;
-	scroll_setting = SCROLL_SETTING_LIST(area_scroll_segments[(uint8_t)((uint32_t)scroll_stage << 2) / 4u] + (int16_t)scroll_segment);
+	scroll_stage = (uint8_t)((uint32_t)scroll_stage << 2);
+	scroll_setting = SCROLL_SETTING_LIST(area_scroll_segments[scroll_stage / 4u] + (int16_t)scroll_segment);
 	if (SCROLL_SETTING(scroll_setting)->mode == 0u)
-		return inputs;
+	{
+		object_loop_slot = inputs;
+		return;
+	}
 	end = LAYER(WORKING_LAYER)->x;
 	end_axis = SCROLL_SETTING(scroll_setting)->end_axis;
 	segment_end_axis = end_axis;
@@ -822,18 +830,23 @@ uint32_t turtle_run_all(void)
 	if ((segment_end_axis & 0x7Fu) != 0u)
 	{
 		if (SCROLL_SETTING(scroll_setting)->end <= end)
-			return inputs;
+		{
+			object_loop_slot = inputs;
+			return;
+		}
 		scroll_segment += 4u;
+		object_loop_slot = inputs;
 		start_scroll_segment();
-		return inputs;
+		return;
 	}
 	if (SCROLL_SETTING(scroll_setting)->end <= end)
 	{
 		scroll_segment += 4u;
+		object_loop_slot = inputs;
 		start_scroll_segment();
-		return inputs;
+		return;
 	}
-	return inputs;
+	object_loop_slot = inputs;
 }
 
 /* the turtle against solid objects, the floor map and its walls, and falling when nothing holds it */
@@ -851,17 +864,17 @@ void turtle_collide(uint32_t object, uint32_t inputs)
 		forced_input = 2u;
 		if ((OBJECT(object)->turtle.knockback_flags & 1u) != 0u)
 			forced_input = 1u;
-		mem_write8(inputs, forced_input);
+		PLAYER_INPUT(inputs)->bits = forced_input;
 	}
 	else if (OBJECT(object)->routine == 3u && (OBJECT(object)->state >= 9u || (OBJECT(object)->kind == 3u && OBJECT(object)->state == 7u)))
 	{
 		forced_input = 2u;
 		if ((OBJECT(object)->flags & 0x40u) == 0u)
-			mem_write8(inputs, forced_input);
+			PLAYER_INPUT(inputs)->bits = forced_input;
 		else
 		{
 			forced_input = 1u;
-			mem_write8(inputs, forced_input);
+			PLAYER_INPUT(inputs)->bits = forced_input;
 		}
 	}
 	turtle_collide_with_objects(object);
@@ -923,7 +936,7 @@ void turtle_collide(uint32_t object, uint32_t inputs)
 }
 
 /* Unused: the floor map's cells around the object */
-void unreached_01AC7E(uint32_t object)
+void jump_to_read_floor_cells(uint32_t object)
 {
 	read_floor_cells(object);
 }
@@ -931,7 +944,7 @@ void unreached_01AC7E(uint32_t object)
 /* the walls around the turtle checked by the way its stick pushes */
 void turtle_check_walls(uint32_t object, uint32_t inputs, uint32_t floor_cell_place)
 {
-	switch ((uint16_t)((mem_read8(inputs) & 0xFu) << 2))
+	switch ((uint16_t)((PLAYER_INPUT(inputs)->bits & 0xFu) << 2))
 	{
 	case 0:
 		turtle_walls_still(object, floor_cell_place);
@@ -982,7 +995,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 	uint16_t column_phase = 0, x_speed_2 = 0, column_phase_2 = 0, column_phase_3 = 0, x_speed_3 = 0, column_phase_4 = 0, row_phase = 0, y_speed_2 = 0, row_phase_2 = 0, row_phase_3 = 0, row_phase_4 = 0, y_speed_3 = 0;
 
 	OBJECT(object)->turtle.scroll_push = 0u;
-	t1 = mem_read8(inputs) & 3u;
+	t1 = PLAYER_INPUT(inputs)->bits & 3u;
 	direction_inputs = t1;
 	if (t1 != 0u)
 	{
@@ -995,7 +1008,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 				{
 					turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 					x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-					if ((mem_read8(inputs) & 0xFu) != 0xAu)
+					if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 					{
 						if ((OBJECT(object)->contacts & 8u) == 0u)
 							OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1013,7 +1026,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 							{
 								turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 								x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-								if ((mem_read8(inputs) & 0xFu) != 0xAu)
+								if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 								{
 									if ((OBJECT(object)->contacts & 8u) == 0u)
 										OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1028,7 +1041,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 								{
 									do
 									{
-										if (L_01B086 || (mem_read8(inputs) & 0xFu) != 0xAu)
+										if (L_01B086 || (PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 										{
 											if (L_01B086 || (OBJECT(object)->contacts & 8u) == 0u)
 											{
@@ -1070,7 +1083,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 								{
 									turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 									x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-									if ((mem_read8(inputs) & 0xFu) != 0xAu)
+									if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 									{
 										if ((OBJECT(object)->contacts & 8u) == 0u)
 											OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1082,7 +1095,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 								{
 									do
 									{
-										if (L_01B012 || (mem_read8(inputs) & 0xFu) != 0xAu)
+										if (L_01B012 || (PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 										{
 											if (L_01B012 || (OBJECT(object)->contacts & 8u) == 0u)
 											{
@@ -1093,7 +1106,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 												{
 													turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 													x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-													if ((mem_read8(inputs) & 0xFu) != 0xAu)
+													if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 													{
 														if ((OBJECT(object)->contacts & 8u) == 0u)
 															OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1115,7 +1128,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 															LAYER(WORKING_LAYER)->x_direction = scroll_x_moved;
 														LAYER(WORKING_LAYER)->x = x_max;
 														LAYER(WORKING_LAYER)->column_phase = scroll_x_moved;
-														if ((mem_read8(inputs) & 0xFu) != 0xAu)
+														if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 														{
 															if ((OBJECT(object)->contacts & 8u) == 0u)
 																OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1150,7 +1163,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 							{
 								turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 								x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-								if ((mem_read8(inputs) & 0xFu) != 0xAu)
+								if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 								{
 									if ((OBJECT(object)->contacts & 8u) == 0u)
 										OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1166,7 +1179,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 			{
 				turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 				x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-				if ((mem_read8(inputs) & 0xFu) != 0xAu)
+				if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 0xAu)
 				{
 					if ((OBJECT(object)->contacts & 8u) == 0u)
 						OBJECT(object)->x += x_speed & 0xFFFFu;
@@ -1184,7 +1197,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 				{
 					turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 					x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-					if ((mem_read8(inputs) & 0xFu) != 9u)
+					if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 					{
 						if ((OBJECT(object)->contacts & 0x10u) == 0u)
 							OBJECT(object)->x -= x_speed;
@@ -1196,7 +1209,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 				{
 					do
 					{
-						if (L_01AEA8 || (mem_read8(inputs) & 0xFu) != 9u)
+						if (L_01AEA8 || (PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 						{
 							if (L_01AEA8 || (OBJECT(object)->contacts & 0x10u) == 0u)
 							{
@@ -1237,7 +1250,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 				{
 					turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 					x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-					if ((mem_read8(inputs) & 0xFu) != 9u)
+					if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 					{
 						if ((OBJECT(object)->contacts & 0x10u) == 0u)
 							OBJECT(object)->x -= x_speed;
@@ -1249,7 +1262,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 				{
 					do
 					{
-						if (L_01AE2C || (mem_read8(inputs) & 0xFu) != 9u)
+						if (L_01AE2C || (PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 						{
 							if (L_01AE2C || (OBJECT(object)->contacts & 0x10u) == 0u)
 							{
@@ -1260,7 +1273,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 								{
 									turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 									x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-									if ((mem_read8(inputs) & 0xFu) != 9u)
+									if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 									{
 										if ((OBJECT(object)->contacts & 0x10u) == 0u)
 											OBJECT(object)->x -= x_speed;
@@ -1280,7 +1293,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 											LAYER(WORKING_LAYER)->x_direction = 0;
 										LAYER(WORKING_LAYER)->x = LAYER(WORKING_LAYER)->x_min;
 										LAYER(WORKING_LAYER)->column_phase = 0u;
-										if ((mem_read8(inputs) & 0xFu) != 9u)
+										if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 										{
 											if ((OBJECT(object)->contacts & 0x10u) == 0u)
 												OBJECT(object)->x -= x_speed;
@@ -1310,7 +1323,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 			{
 				turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 				x_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset);
-				if ((mem_read8(inputs) & 0xFu) != 9u)
+				if ((PLAYER_INPUT(inputs)->bits & 0xFu) != 9u)
 				{
 					if ((OBJECT(object)->contacts & 0x10u) == 0u)
 						OBJECT(object)->x -= x_speed;
@@ -1320,7 +1333,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 			}
 		}
 	}
-	t2 = mem_read8(inputs) & 0xCu;
+	t2 = PLAYER_INPUT(inputs)->bits & 0xCu;
 	direction_inputs = t2;
 	if (t2 == 0u)
 		return;
@@ -1467,7 +1480,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 		{
 			turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 			y_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset + 0x4u);
-			direction_inputs = mem_read8(inputs) & 0xFu;
+			direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 			if (direction_inputs == 5u)
 			{
 				if ((OBJECT(object)->contacts & 0x52u) != 0u)
@@ -1495,7 +1508,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 		}
 		if (OBJECT(object)->y >= 0xA000u)
 		{
-			direction_inputs = mem_read8(inputs) & 0xFu;
+			direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 			if (direction_inputs == 5u)
 			{
 				if ((OBJECT(object)->contacts & 0x50u) != 0u)
@@ -1585,7 +1598,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 		{
 			turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 			y_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset + 0x4u);
-			direction_inputs = mem_read8(inputs) & 0xFu;
+			direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 			if (direction_inputs == 5u)
 			{
 				if ((OBJECT(object)->contacts & 0x52u) != 0u)
@@ -1611,7 +1624,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 			OBJECT(object)->y += y_speed;
 			return;
 		}
-		direction_inputs = mem_read8(inputs) & 0xFu;
+		direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 		if (direction_inputs == 5u)
 		{
 			if ((OBJECT(object)->contacts & 0x50u) != 0u)
@@ -1630,7 +1643,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 		{
 			turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 			y_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset + 0x4u);
-			direction_inputs = mem_read8(inputs) & 0xFu;
+			direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 			if (direction_inputs == 5u)
 			{
 				if ((OBJECT(object)->contacts & 0x52u) != 0u)
@@ -1678,7 +1691,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 			LAYER(WORKING_LAYER)->y_direction = scroll_x_moved;
 		LAYER(WORKING_LAYER)->y = y_max;
 		LAYER(WORKING_LAYER)->row_phase = scroll_x_moved;
-		direction_inputs = mem_read8(inputs) & 0xFu;
+		direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 		if (direction_inputs == 5u)
 		{
 			if ((OBJECT(object)->contacts & 0x52u) != 0u)
@@ -1708,7 +1721,7 @@ void turtle_move(uint32_t object, uint32_t inputs)
 		return;
 	turtle_walk_speed(object, inputs, &speed_offset, &walk_speeds);
 	y_speed = WALK_SPEED(walk_speeds + (uint16_t)speed_offset + 0x4u);
-	direction_inputs = mem_read8(inputs) & 0xFu;
+	direction_inputs = PLAYER_INPUT(inputs)->bits & 0xFu;
 	if (direction_inputs == 5u)
 	{
 		if ((OBJECT(object)->contacts & 0x52u) != 0u)
@@ -1808,7 +1821,7 @@ void push_scroll_diagonally(uint32_t turtle)
 	uint32_t carry = 0;
 	uint8_t edge = 0;
 	uint32_t new_column_x = 0;
-	uint16_t t1 = 0, column_phase = 0;
+	uint16_t column_phase = 0;
 
 	edge = 0x7Fu;
 	carry = turtle_other_at_edge(edge, turtle);
@@ -1819,10 +1832,9 @@ void push_scroll_diagonally(uint32_t turtle)
 		screen_x_high = (screen_x_high & ~0xFFFFu) | 0x2400u;
 		LAYER(WORKING_LAYER)->x += 0x120u;
 		new_column_x = LAYER(WORKING_LAYER)->x;
-		t1 = screen_x_high & 0xFF00u;
 		column_phase = LAYER(WORKING_LAYER)->column_phase;
-		carry = (uint16_t)(column_phase + t1) < column_phase;
-		LAYER(WORKING_LAYER)->column_phase = column_phase + t1;
+		carry = (uint16_t)(column_phase + 0x2400u) < column_phase;
+		LAYER(WORKING_LAYER)->column_phase = column_phase + 0x2400u;
 		new_column_x += 0x15800u;
 		if (carry)
 		{
@@ -1876,7 +1888,7 @@ void turtle_walk_speed(uint32_t object, uint32_t inputs, uint32_t *p_speed_offse
 	uint16_t diagonal_offset = 0, speed_offset = 0;
 
 	diagonal_offset = 0u;
-	direction_inputs = mem_read8(inputs);
+	direction_inputs = PLAYER_INPUT(inputs)->bits;
 	direction_copy = (uint8_t)direction_inputs;
 	if ((direction_inputs & 3u) != 0u && (direction_copy & 0xCu) != 0u)
 		diagonal_offset = 2u;
@@ -1977,8 +1989,8 @@ void turtle_control(uint32_t object, uint32_t inputs, uint32_t presses)
 		if ((int8_t)t1 >= 0)
 		{
 			OBJECT(object)->flags |= 0x80u;
-			held = mem_read8(inputs);
-			pressed = mem_read8(presses);
+			held = PLAYER_INPUT(inputs)->bits;
+			pressed = PLAYER_INPUT(presses)->bits;
 			if ((pressed & 0x20u) != 0u)
 				OBJECT(object)->turtle.attack_press_time = 0u;
 			attack_press_time = OBJECT(object)->turtle.attack_press_time;
@@ -2020,8 +2032,8 @@ void turtle_control(uint32_t object, uint32_t inputs, uint32_t presses)
 			OBJECT(object)->flags |= 0x80u;
 		}
 	}
-	held = mem_read8(inputs);
-	pressed = mem_read8(presses);
+	held = PLAYER_INPUT(inputs)->bits;
+	pressed = PLAYER_INPUT(presses)->bits;
 	if ((pressed & 0x20u) != 0u)
 		OBJECT(object)->turtle.attack_press_time = 0u;
 	attack_press_time = OBJECT(object)->turtle.attack_press_time;
@@ -2089,9 +2101,9 @@ void turtle_start_jump(uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t move = 0;
 	uint16_t routine_state = 0;
-	uint32_t d1 = 0, ignored = 0, ignored_2 = 0;
+	uint32_t held = 0, ignored = 0, ignored_2 = 0;
 
-	if ((mem_read8(presses) & 0x20u) != 0u)
+	if ((PLAYER_INPUT(presses)->bits & 0x20u) != 0u)
 	{
 		OBJECT(object)->flags &= ~8u;
 		OBJECT(object)->flags |= 4u;
@@ -2119,8 +2131,8 @@ void turtle_start_jump(uint32_t object, uint32_t inputs, uint32_t presses)
 	OBJECT(object)->turtle.jump_flip = 0u;
 	OBJECT(object)->height += 0x500u;
 	routine_state = 0x201u;
-	turtle_set_state(routine_state, object, &d1, &ignored, &ignored_2);
-	turtle_jump((uint8_t)d1, object, inputs, presses);
+	turtle_set_state(routine_state, object, &held, &ignored, &ignored_2);
+	turtle_jump((uint8_t)held, object, inputs, presses);
 }
 
 /* the attack button starts a combo at random, or the attack behind when an enemy is there */
@@ -2131,16 +2143,16 @@ void turtle_start_combo(uint32_t object, uint32_t inputs)
 	uint32_t combo_table = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, range = 0;
 	uint8_t t1 = 0;
 
-	t1 = mem_read8(inputs) & 3u;
-	mem_write8(inputs, t1);
+	t1 = PLAYER_INPUT(inputs)->bits & 3u;
+	PLAYER_INPUT(inputs)->bits = t1;
 	if (t1 != 0u)
 	{
-		if ((mem_read8(inputs) & 1u) != 0u)
+		if ((PLAYER_INPUT(inputs)->bits & 1u) != 0u)
 			OBJECT(object)->flags |= 0x40u;
 		else
 			OBJECT(object)->flags &= 0xBFu;
 	}
-	mem_write8(inputs, 0u);
+	PLAYER_INPUT(inputs)->bits = 0u;
 	if (OBJECT(object)->turtle.has_gun != 0u)
 	{
 		OBJECT(object)->flags &= ~8u;
@@ -2202,10 +2214,10 @@ void turtle_set_attack(uint16_t move, uint16_t attack, uint32_t object)
 }
 
 /* a new routine and state for the turtle with its animation */
-void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_d1, uint32_t *p_d4, uint32_t *p_d6)
+void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_player_offset, uint32_t *p_bank, uint32_t *p_fourth_row_tile)
 {
-	uint32_t d1 = *p_d1;
-	uint32_t d6 = *p_d6;
+	uint32_t player_offset = *p_player_offset;
+	uint32_t fourth_row_tile = *p_fourth_row_tile;
 	uint8_t sound = 0;
 	uint16_t player = 0, screen_y = 0;
 
@@ -2213,32 +2225,32 @@ void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_d1, u
 	{
 		sound = 0x26u;
 		queue_sound(sound);
-		d1 = (d1 & ~0xFFFFu) | OBJECT(object)->kind;
-		player = (uint16_t)d1;
-		d1 = (d1 & ~0xFFFFu) | (uint16_t)(d1 << 3);
-		screen_x_high = (screen_x_high & ~0xFFFFu) | (d1 & 0xFFFFu);
-		if (RAM16(unk_060100_ADDRESS + (uint16_t)((d1 & ~0xFF00u) | (screen_x_high & 0xFF00u))) == 0u)
+		player_offset = (player_offset & ~0xFFFFu) | OBJECT(object)->kind;
+		player = (uint16_t)player_offset;
+		player_offset = (player_offset & ~0xFFFFu) | (uint16_t)(player_offset << 3);
+		screen_x_high = (screen_x_high & ~0xFFFFu) | (player_offset & 0xFFFFu);
+		if (RAM16(player_1_lives_ADDRESS + (uint16_t)player_offset) == 0u)
 		{
 			routine_state &= ~0xFFu;
 			prompt_shown(player) = (uint8_t)routine_state;
 			if ((OBJECT(object)->flags & 0x40u) != 0u)
 				routine_state |= (uint8_t)(routine_state - 1u);
-			d1 = (d1 & ~0xFFFFu) | OBJECT(object)->screen_x;
+			player_offset = (player_offset & ~0xFFFFu) | OBJECT(object)->screen_x;
 			screen_y = (uint16_t)(OBJECT(object)->screen_y - 0x10u);
-			say_shell_shock(routine_state, (uint16_t)d1, screen_y, object, p_d4, &d6);
+			say_shell_shock(routine_state, (uint16_t)player_offset, screen_y, object, p_bank, &fourth_row_tile);
 			routine_state = 0x411u;
 		}
 	}
 	OBJECT(object)->turtle.idle_time = 0u;
 	OBJECT(object)->routine = (uint8_t)(routine_state >> 8u);
 	OBJECT(object)->state = (uint8_t)routine_state;
-	d1 = turtle_set_animation(d1, object);
-	*p_d1 = d1;
-	*p_d6 = (*p_d6 & 0xFFFF0000u) | (d6 & 0xFFFFu);
+	player_offset = turtle_set_animation(player_offset, object);
+	*p_player_offset = player_offset;
+	*p_fourth_row_tile = (*p_fourth_row_tile & 0xFFFF0000u) | (fourth_row_tile & 0xFFFFu);
 }
 
 /* the turtle's animation for its routine and state */
-uint32_t turtle_set_animation(uint32_t d1, uint32_t object)
+uint32_t turtle_set_animation(uint32_t held, uint32_t object)
 {
 	uint16_t table_offset = 0;
 	uint32_t animation_entry = 0, animation_set = 0;
@@ -2247,7 +2259,7 @@ uint32_t turtle_set_animation(uint32_t d1, uint32_t object)
 	animation_set = turtle_animation_sets[table_offset / 4u];
 	table_offset = (uint16_t)(IN_PAGE(table_offset, OBJECT(object)->routine) << 2);
 	animation_entry = ANIMATION_ENTRY(ANIMATION_TABLE_ENTRY(animation_set + (table_offset / 4u) * 0x4u) + (IN_PAGE(table_offset, OBJECT(object)->state) & 0x3FFFu) * 0x4u);
-	return set_animation(d1, object, animation_entry);
+	return set_animation(held, object, animation_entry);
 }
 
 /* standing: jump, attack, walk, or the idle animation */
@@ -2356,13 +2368,13 @@ void turtle_walk(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs
 }
 
 /* in the air: a jump attack by its height, or the jump's state */
-void turtle_jump(uint8_t d1, uint32_t object, uint32_t inputs, uint32_t presses)
+void turtle_jump(uint8_t held, uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t attack_height = 0, height_above_floor = 0, move = 0;
 
 	turtles_busy--;
 	OBJECT(object)->flags &= ~0xCu;
-	if ((mem_read8(presses) & 0x20u) != 0u)
+	if ((PLAYER_INPUT(presses)->bits & 0x20u) != 0u)
 	{
 		attack_height = 0x38u;
 		if (OBJECT(object)->kind == 3u)
@@ -2394,7 +2406,7 @@ void turtle_jump(uint8_t d1, uint32_t object, uint32_t inputs, uint32_t presses)
 		turtle_jump_rise(object, inputs);
 		return;
 	case 2:
-		turtle_jump_top(d1, object, inputs);
+		turtle_jump_top(held, object, inputs);
 		return;
 	case 3:
 		turtle_jump_fall(object);
@@ -2428,7 +2440,7 @@ void turtle_jump_rise(uint32_t object, uint32_t inputs)
 			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 			return;
 		}
-		if ((mem_read8(inputs) & 0x10u) == 0u)
+		if ((PLAYER_INPUT(inputs)->bits & 0x10u) == 0u)
 			OBJECT(object)->turtle.move_timer = 0u;
 	}
 	OBJECT(object)->height += OBJECT(object)->turtle.jump_speed;
@@ -2439,7 +2451,7 @@ void turtle_jump_rise(uint32_t object, uint32_t inputs)
 }
 
 /* the top of the jump: the somersault, or kicking off a wall it is pushed against */
-void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
+void turtle_jump_top(uint32_t held, uint32_t object, uint32_t inputs)
 {
 	uint16_t jump_speed = 0, routine_state = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
@@ -2449,18 +2461,18 @@ void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
 	if (OBJECT(object)->turtle.jump_flip != 0u && OBJECT(object)->frame_time == 0u)
 	{
 		routine_state = 0x203u;
-		turtle_set_state(routine_state, object, &d1, &ignored, &ignored_2);
+		turtle_set_state(routine_state, object, &held, &ignored, &ignored_2);
 	}
 	if (OBJECT(object)->turtle.falling != 0u)
 	{
 		if (OBJECT(object)->height + OBJECT(object)->y < 0xF400u && (uint8_t)(OBJECT(object)->height_whole - OBJECT(object)->floor_height) >= 0x40u)
 		{
-			if ((mem_read8(inputs) & 1u) != 0u)
+			if ((PLAYER_INPUT(inputs)->bits & 1u) != 0u)
 			{
 				if ((OBJECT(object)->contacts & 0x10u) != 0u)
 				{
 					OBJECT(object)->turtle.jump_flip = 0u;
-					mem_write8(inputs, 0u);
+					PLAYER_INPUT(inputs)->bits = 0u;
 					OBJECT(object)->turtle.jump_speed = 0u;
 					routine_state = 0x205u;
 					turtle_set_state(routine_state, object, &ignored_3, &ignored, &ignored_2);
@@ -2469,10 +2481,10 @@ void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
 					return;
 				}
 			}
-			else if ((mem_read8(inputs) & 2u) != 0u && (OBJECT(object)->contacts & 8u) != 0u)
+			else if ((PLAYER_INPUT(inputs)->bits & 2u) != 0u && (OBJECT(object)->contacts & 8u) != 0u)
 			{
 				OBJECT(object)->turtle.jump_flip = 0xFFu;
-				mem_write8(inputs, 0u);
+				PLAYER_INPUT(inputs)->bits = 0u;
 				OBJECT(object)->turtle.jump_speed = 0u;
 				routine_state = 0x205u;
 				turtle_set_state(routine_state, object, &ignored_3, &ignored, &ignored_2);
@@ -2503,12 +2515,12 @@ void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
 	}
 	if (OBJECT(object)->height + OBJECT(object)->y < 0xF400u && (uint8_t)(OBJECT(object)->height_whole - OBJECT(object)->floor_height) >= 0x40u)
 	{
-		if ((mem_read8(inputs) & 1u) != 0u)
+		if ((PLAYER_INPUT(inputs)->bits & 1u) != 0u)
 		{
 			if ((OBJECT(object)->contacts & 0x10u) != 0u)
 			{
 				OBJECT(object)->turtle.jump_flip = 0u;
-				mem_write8(inputs, 0u);
+				PLAYER_INPUT(inputs)->bits = 0u;
 				OBJECT(object)->turtle.jump_speed = 0u;
 				routine_state = 0x205u;
 				turtle_set_state(routine_state, object, &ignored_3, &ignored, &ignored_2);
@@ -2517,10 +2529,10 @@ void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
 				return;
 			}
 		}
-		else if ((mem_read8(inputs) & 2u) != 0u && (OBJECT(object)->contacts & 8u) != 0u)
+		else if ((PLAYER_INPUT(inputs)->bits & 2u) != 0u && (OBJECT(object)->contacts & 8u) != 0u)
 		{
 			OBJECT(object)->turtle.jump_flip = 0xFFu;
-			mem_write8(inputs, 0u);
+			PLAYER_INPUT(inputs)->bits = 0u;
 			OBJECT(object)->turtle.jump_speed = 0u;
 			routine_state = 0x205u;
 			turtle_set_state(routine_state, object, &ignored_3, &ignored, &ignored_2);
@@ -2569,7 +2581,7 @@ void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs)
 		OBJECT(object)->turtle.falling = ~OBJECT(object)->turtle.falling;
 		return;
 	}
-	if ((d1 & 0x10u) != 0u)
+	if ((held & 0x10u) != 0u)
 	{
 		OBJECT(object)->height += OBJECT(object)->turtle.jump_speed;
 		if (OBJECT(object)->turtle.jump_speed >= 0x380u || OBJECT(object)->turtle.jump_flip != 0u)
@@ -2645,7 +2657,7 @@ void turtle_wall_jump(uint32_t object, uint32_t inputs)
 	uint16_t jump_speed = 0;
 	uint16_t height = 0;
 
-	mem_write8(inputs, 0u);
+	PLAYER_INPUT(inputs)->bits = 0u;
 	if (OBJECT(object)->turtle.move_timer != 0u)
 	{
 		OBJECT(object)->turtle.move_timer--;
@@ -2688,7 +2700,7 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 	turtles_busy--;
 	if (OBJECT(object)->state >= 8u)
 	{
-		mem_write8(inputs, mem_read8(inputs) & 0x10u);
+		PLAYER_INPUT(inputs)->bits &= 0x10u;
 		x_step = 0x400u;
 		if (OBJECT(object)->state != 9u)
 		{
@@ -2758,8 +2770,8 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 			OBJECT(object)->turtle.falling = ~OBJECT(object)->turtle.falling;
 			return;
 		}
-		t1 = mem_read8(inputs) & 0x10u;
-		mem_write8(inputs, t1);
+		t1 = PLAYER_INPUT(inputs)->bits & 0x10u;
+		PLAYER_INPUT(inputs)->bits = t1;
 		if (t1 != 0u)
 		{
 			OBJECT(object)->height += OBJECT(object)->turtle.jump_speed;
@@ -2776,7 +2788,7 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 	}
 	if (OBJECT(object)->state == 3u)
 	{
-		mem_write8(inputs, mem_read8(inputs) & 0xCu);
+		PLAYER_INPUT(inputs)->bits &= 0xCu;
 		return;
 	}
 	if (OBJECT(object)->kind != 3u || OBJECT(object)->state != 7u)
@@ -2790,12 +2802,12 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 			input_bit = 0u;
 			side_wall_bit++;
 		}
-		if ((OBJECT(object)->contacts & shl32(1u, (int)(side_wall_bit))) == 0u && (mem_read8(inputs) & shl32(1u, (int)(input_bit))) != 0u)
+		if ((OBJECT(object)->contacts & shl32(1u, (int)(side_wall_bit))) == 0u && (PLAYER_INPUT(inputs)->bits & shl32(1u, (int)(input_bit))) != 0u)
 			OBJECT(object)->x += x_step;
-		mem_write8(inputs, mem_read8(inputs) & 0xCu);
+		PLAYER_INPUT(inputs)->bits &= 0xCu;
 		return;
 	}
-	mem_write8(inputs, 0u);
+	PLAYER_INPUT(inputs)->bits = 0u;
 	x_step = 0x300u;
 	wall_bit = 3u;
 	if ((OBJECT(object)->flags & 0x40u) != 0u)
@@ -2806,15 +2818,15 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 	if ((OBJECT(object)->contacts & shl32(1u, (int)(wall_bit))) != 0u)
 		return;
 	OBJECT(object)->x += x_step;
-	mem_write8(inputs, mem_read8(inputs) & 0xCu);
+	PLAYER_INPUT(inputs)->bits &= 0xCu;
 }
 
 /* the attack ended: the combo's next attack, the throw, or back to standing */
 void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t facing = 0, sound = 0, stick = 0;
-	uint16_t attack_2 = 0, d7 = 0, kind_offset = 0, move = 0, routine_state = 0, throw_move = 0;
-	uint32_t animation_entry = 0, attack = 0, combo_table = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, target = 0, throw_counter = 0;
+	uint16_t attack_2 = 0, job = 0, kind_offset = 0, move = 0, routine_state = 0, throw_move = 0;
+	uint32_t animation_entry = 0, attack = 0, combo_table = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, target = 0, throw_counter = 0, thrown_enemy = 0;
 	uint8_t t1 = 0, t2 = 0, t3 = 0;
 
 	OBJECT(object)->contacts &= 0x7Fu;
@@ -2834,19 +2846,19 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 	if (OBJECT(object)->state == 5u)
 	{
 		OBJECT(object)->flags |= 8u;
-		d7 = 0x401u;
+		job = 0x401u;
 		if (OBJECT(object)->kind != 0u)
 		{
-			d7 = 0x408u;
+			job = 0x408u;
 			if (OBJECT(object)->kind != 3u)
 			{
 				OBJECT(object)->flags ^= 0x40u;
-				d7 = 0x402u;
+				job = 0x402u;
 				if ((OBJECT(object)->kind & 1u) == 0u)
-					d7 += 2u;
+					job += 2u;
 			}
 		}
-		queue_job(d7);
+		queue_job(job);
 	}
 	if (OBJECT(object)->turtle.attack_press_time < 0xDu)
 	{
@@ -2908,8 +2920,8 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 			if (OBJECT(object)->turtle.enemy_behind != 0u)
 			{
 				OBJECT(object)->turtle.combo += 0xCu;
-				mem_write8(inputs, 0u);
-				move = COMBO_STEP(combo_table + ((int32_t)((int16_t)OBJECT(object)->turtle.combo + 1u)));
+				PLAYER_INPUT(inputs)->bits = 0u;
+				move = COMBO_STEP(combo_table + ((int16_t)OBJECT(object)->turtle.combo + 1u));
 				attack_2 = (uint8_t)(move + turtle_attack_firsts[OBJECT(object)->kind & 3u]);
 				if ((OBJECT(object)->flags & 0x40u) != 0u)
 					attack_2 = attack_2 | 0x80u;
@@ -2931,11 +2943,11 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 				kind_offset += (uint32_t)kind_offset << 1;
 				throw_move = turtle_throw_moves[kind_offset / 2u];
 				throw_counter = TABLE32(turtle_throw_counters, kind_offset);
-				if (mem_read16(throw_counter) >= 0x100u)
+				if (THROW_TIMER(throw_counter)->frames >= 0x100u)
 				{
-					mem_write16(throw_counter, 0u);
+					THROW_TIMER(throw_counter)->frames = 0u;
 					OBJECT(object)->turtle.idle_time = 0u;
-					mem_write8(inputs, 0u);
+					PLAYER_INPUT(inputs)->bits = 0u;
 					OBJECT(target)->routine = 5u;
 					OBJECT(target)->state = 0u;
 					OBJECT(target)->enemy.move = throw_move;
@@ -2957,17 +2969,18 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 					sound = turtle_attack_sounds_by_move[attack];
 					queue_sound(sound);
 					OBJECT(object)->damage = turtle_attack_damages[attack & 0x7FFFu];
-					animation_entry = ANIMATION_ENTRY(turtle_hit_animation_tables[OBJECT(object)->kind] + ((int32_t)(mem_read8(OBJECT(object)->turtle.hit_target + 0x4Bu) & 7u - 4u)) * 0x4u);
+					thrown_enemy = OBJECT(object)->turtle.hit_target;
+					animation_entry = ANIMATION_ENTRY(turtle_hit_animation_tables[OBJECT(object)->kind] + ((int32_t)(OBJECT(thrown_enemy)->throw & 7u - 4u)) * 0x4u);
 					set_animation(attack, object, animation_entry);
 					return;
 				}
 			}
-			t2 = mem_read8(inputs) & 3u;
-			mem_write8(inputs, t2);
+			t2 = PLAYER_INPUT(inputs)->bits & 3u;
+			PLAYER_INPUT(inputs)->bits = t2;
 			if (t2 == 0u)
 			{
-				mem_write8(inputs, 0u);
-				move = COMBO_STEP(combo_table + ((int32_t)((int16_t)OBJECT(object)->turtle.combo + 1u)));
+				PLAYER_INPUT(inputs)->bits = 0u;
+				move = COMBO_STEP(combo_table + ((int16_t)OBJECT(object)->turtle.combo + 1u));
 				attack_2 = (uint8_t)(move + turtle_attack_firsts[OBJECT(object)->kind & 3u]);
 				if ((OBJECT(object)->flags & 0x40u) != 0u)
 					attack_2 = attack_2 | 0x80u;
@@ -2982,11 +2995,11 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 				turtle_set_state(move, object, &ignored, &ignored_2, &ignored_3);
 				return;
 			}
-			if ((mem_read8(inputs) & 1u) != 0u)
+			if ((PLAYER_INPUT(inputs)->bits & 1u) != 0u)
 			{
 				OBJECT(object)->flags |= 0x40u;
-				mem_write8(inputs, 0u);
-				move = COMBO_STEP(combo_table + ((int32_t)((int16_t)OBJECT(object)->turtle.combo + 1u)));
+				PLAYER_INPUT(inputs)->bits = 0u;
+				move = COMBO_STEP(combo_table + ((int16_t)OBJECT(object)->turtle.combo + 1u));
 				attack_2 = (uint8_t)(move + turtle_attack_firsts[OBJECT(object)->kind & 3u]);
 				if ((OBJECT(object)->flags & 0x40u) != 0u)
 					attack_2 = attack_2 | 0x80u;
@@ -3002,8 +3015,8 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 				return;
 			}
 			OBJECT(object)->flags &= 0xBFu;
-			mem_write8(inputs, 0u);
-			move = COMBO_STEP(combo_table + ((int32_t)((int16_t)OBJECT(object)->turtle.combo + 1u)));
+			PLAYER_INPUT(inputs)->bits = 0u;
+			move = COMBO_STEP(combo_table + ((int16_t)OBJECT(object)->turtle.combo + 1u));
 			attack_2 = (uint8_t)(move + turtle_attack_firsts[OBJECT(object)->kind & 3u]);
 			if ((OBJECT(object)->flags & 0x40u) != 0u)
 				attack_2 = attack_2 | 0x80u;
@@ -3025,19 +3038,19 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 		}
 		if (OBJECT(object)->state != 5u)
 		{
-			t3 = mem_read8(inputs) & 3u;
-			mem_write8(inputs, t3);
+			t3 = PLAYER_INPUT(inputs)->bits & 3u;
+			PLAYER_INPUT(inputs)->bits = t3;
 			if (t3 != 0u)
 			{
-				if ((mem_read8(inputs) & 1u) != 0u)
+				if ((PLAYER_INPUT(inputs)->bits & 1u) != 0u)
 					OBJECT(object)->flags |= 0x40u;
 				else
 					OBJECT(object)->flags &= 0xBFu;
 			}
 		}
-		mem_write8(inputs, 0u);
+		PLAYER_INPUT(inputs)->bits = 0u;
 		OBJECT(object)->turtle.combo_step++;
-		move = COMBO_STEP(turtle_combos[OBJECT(object)->kind & 3u] + ((int32_t)((int16_t)OBJECT(object)->turtle.combo + 2u)));
+		move = COMBO_STEP(turtle_combos[OBJECT(object)->kind & 3u] + ((int16_t)OBJECT(object)->turtle.combo + 2u));
 		attack_2 = (uint8_t)(move + turtle_attack_firsts[OBJECT(object)->kind & 3u]);
 		if ((OBJECT(object)->flags & 0x40u) != 0u)
 			attack_2 = attack_2 | 0x80u;
@@ -3084,18 +3097,18 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 /* hit: the reaction by the attack that hit it, and out of play when its bars run out */
 void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 {
-	uint8_t d7 = 0, sound = 0;
-	uint16_t d7_2 = 0, floor_height = 0, hit_reaction = 0, knockback_flags = 0, reaction_offset = 0, reaction_variant = 0, routine_state = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, target = 0, x = 0;
+	uint16_t floor_height = 0, hit_reaction = 0, knockback_flags = 0, reaction_offset = 0, reaction_variant = 0, routine_state = 0;
+	uint32_t hit_by = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, target = 0, x = 0, x_2 = 0;
 	uint8_t health_bars = 0;
 
-	mem_write8(inputs, 0u);
+	PLAYER_INPUT(inputs)->bits = 0u;
 	OBJECT(object)->flags &= ~0xEu;
 	if (OBJECT(object)->state == 0u)
 	{
-		d7 = turtle_hit_sounds[mem_read16(OBJECT(object)->turtle.hit_by + 0x28u) >> 2];
-		if (d7 != 0xFFu)
-			queue_sound(d7);
+		hit_by = OBJECT(object)->turtle.hit_by;
+		x = turtle_hit_sounds[OBJECT(hit_by)->hit_sound >> 2];
+		if (x != 0xFFu)
+			queue_sound((uint8_t)x);
 		OBJECT(object)->turtle.falling = 0u;
 		OBJECT(object)->turtle.hit_reaction = 0u;
 		OBJECT(object)->turtle.reaction_step = 0u;
@@ -3125,8 +3138,9 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 					OBJECT(object)->turtle.escape_presses = 4u;
 				OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 				routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-				turtle_save_health(object);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+				x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+				turtle_save_health(x, object);
 				return;
 			}
 		}
@@ -3152,21 +3166,23 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 			{
 				if (OBJECT(object)->health_bars == 0u)
 				{
-					sound = 0x26u;
-					queue_sound(sound);
+					x = 0x26u;
+					queue_sound((uint8_t)x);
 					if ((int8_t)OBJECT(object)->turtle.knockback_flags >= 0 || hit_reaction >= 9u)
 					{
 						OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 						routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-						turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-						turtle_save_health(object);
+						turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+						x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+						turtle_save_health(x, object);
 						return;
 					}
 					hit_reaction = 6u;
 					OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 					routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-					turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-					turtle_save_health(object);
+					turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+					x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+					turtle_save_health(x, object);
 					return;
 				}
 				hit_reaction = 4u;
@@ -3188,8 +3204,9 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 				{
 					OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 					routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-					turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-					turtle_save_health(object);
+					turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+					x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+					turtle_save_health(x, object);
 					return;
 				}
 				if (hit_reaction < 4u)
@@ -3225,16 +3242,18 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 					hit_reaction = 6u;
 				OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 				routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-				turtle_save_health(object);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+				x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+				turtle_save_health(x, object);
 				return;
 			}
 			if (hit_reaction >= 9u)
 			{
 				OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 				routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-				turtle_save_health(object);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+				x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+				turtle_save_health(x, object);
 				return;
 			}
 			if (hit_reaction < 4u)
@@ -3250,8 +3269,8 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 		reaction_variant = (uint8_t)frame_count;
 		reaction_variant = reaction_variant & 1u;
 		OBJECT(object)->turtle.reaction_variant = (uint8_t)reaction_variant;
-		x = HIT_NEAR_LEFT_EDGE_X;
-		d7_2 = 0x2000u;
+		x_2 = HIT_NEAR_LEFT_EDGE_X;
+		x = HIT_NEAR_RIGHT_EDGE_X;
 		offset_high_word = HIT_NEAR_RIGHT_EDGE_X;
 		if (hit_reaction != 4u)
 		{
@@ -3259,17 +3278,18 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 			{
 				OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 				routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-				turtle_save_health(object);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+				x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+				turtle_save_health(x, object);
 				return;
 			}
+			x_2 = 0x10000u;
 			x = 0x10000u;
-			d7_2 = 0u;
 			offset_high_word = 0x10000u;
 		}
 		if ((OBJECT(object)->turtle.knockback_flags & 1u) != 0u)
 		{
-			if (OBJECT(object)->x <= ((d7_2 & 0xFFFFu) | (offset_high_word & ~0xFFFFu)))
+			if (OBJECT(object)->x <= x)
 			{
 				reaction_variant = 0u;
 				if (OBJECT(object)->health_bars < 5u)
@@ -3277,18 +3297,20 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 				OBJECT(object)->turtle.reaction_variant = (uint8_t)reaction_variant;
 				OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 				routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-				turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-				turtle_save_health(object);
+				turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+				x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+				turtle_save_health(x, object);
 				return;
 			}
 			OBJECT(object)->turtle.reaction_variant += 2u;
 			OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 			routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-			turtle_save_health(object);
+			turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+			x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+			turtle_save_health(x, object);
 			return;
 		}
-		if (x < OBJECT(object)->x)
+		if (x_2 < OBJECT(object)->x)
 		{
 			reaction_variant = 0u;
 			if (OBJECT(object)->health_bars < 5u)
@@ -3296,15 +3318,17 @@ void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
 			OBJECT(object)->turtle.reaction_variant = (uint8_t)reaction_variant;
 			OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 			routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-			turtle_save_health(object);
+			turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+			x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+			turtle_save_health(x, object);
 			return;
 		}
 		OBJECT(object)->turtle.reaction_variant += 2u;
 		OBJECT(object)->turtle.hit_reaction = (uint8_t)hit_reaction;
 		routine_state = (uint16_t)(turtle_hit_reactions[hit_reaction] + 0x400u);
-		turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
-		turtle_save_health(object);
+		turtle_set_state(routine_state, object, &ignored, &ignored_2, &x_2);
+		x = (x & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+		turtle_save_health(x, object);
 		return;
 	}
 	switch (OBJECT(object)->turtle.hit_reaction)
@@ -3393,10 +3417,13 @@ void turtle_hit_wait(uint32_t object)
 /* the turtle's health full again */
 void turtle_refill_health(uint32_t object)
 {
+	uint32_t job = 0;
+
 	OBJECT(object)->turtle.reaction_step = 0xFFu;
 	OBJECT(object)->health_bars = 0xAu;
 	OBJECT(object)->health = 3u;
-	turtle_save_health(object);
+	job = offset_high_word & ~0xFFFFu;
+	turtle_save_health(job, object);
 }
 
 /* Shredder's ray turns the turtle into an ordinary turtle; with no lives left it walks off the screen */
@@ -3536,7 +3563,7 @@ void turtle_knocked_down_lie(uint32_t object)
 /* the knock down's next step by its kind, or the end of the steps */
 void turtle_knocked_down_next(uint32_t object)
 {
-	uint16_t knock_offset = 0, reaction_step = 0;
+	uint16_t knock_offset = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, knock_steps = 0;
 	uint8_t knock_step = 0;
 
@@ -3545,14 +3572,14 @@ void turtle_knocked_down_next(uint32_t object)
 	knock_steps = turtle_knocked_down_steps[knock_offset / 4u];
 	knock_offset = (uint16_t)IN_PAGE(knock_offset, OBJECT(object)->turtle.reaction_step);
 	knock_step = KNOCK_STEP(knock_steps + knock_offset);
-	reaction_step = (uint16_t)IN_PAGE(knock_offset, knock_step);
+	knock_offset = (uint16_t)IN_PAGE(knock_offset, knock_step);
 	if ((int8_t)knock_step < 0)
 	{
-		OBJECT(object)->turtle.reaction_step = (uint8_t)reaction_step;
+		OBJECT(object)->turtle.reaction_step = (uint8_t)knock_offset;
 		return;
 	}
-	reaction_step += 0x400u;
-	turtle_set_state(reaction_step, object, &ignored, &ignored_2, &ignored_3);
+	knock_offset += 0x400u;
+	turtle_set_state(knock_offset, object, &ignored, &ignored_2, &ignored_3);
 }
 
 /* the turtle comes down to its floor */
@@ -3666,7 +3693,7 @@ void turtle_knocked_back_lie(uint32_t object)
 /* the knock back's next step by its kind; at the end the light knocks push it back a little */
 void turtle_knocked_back_next(uint32_t object)
 {
-	uint16_t knock_offset = 0, reaction_step = 0;
+	uint16_t knock_offset = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, knock_steps = 0, x_step = 0;
 	uint8_t knock_step = 0;
 
@@ -3675,14 +3702,14 @@ void turtle_knocked_back_next(uint32_t object)
 	knock_steps = turtle_knocked_back_steps[knock_offset / 4u];
 	knock_offset = (uint16_t)IN_PAGE(knock_offset, OBJECT(object)->turtle.reaction_step);
 	knock_step = KNOCK_STEP(knock_steps + knock_offset);
-	reaction_step = (uint16_t)IN_PAGE(knock_offset, knock_step);
+	knock_offset = (uint16_t)IN_PAGE(knock_offset, knock_step);
 	if ((int8_t)knock_step >= 0)
 	{
-		reaction_step += 0x400u;
-		turtle_set_state(reaction_step, object, &ignored, &ignored_2, &ignored_3);
+		knock_offset += 0x400u;
+		turtle_set_state(knock_offset, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	OBJECT(object)->turtle.reaction_step = (uint8_t)reaction_step;
+	OBJECT(object)->turtle.reaction_step = (uint8_t)knock_offset;
 	if (OBJECT(object)->turtle.reaction_variant >= 2u)
 		return;
 	x_step = reset_ADDRESS;
@@ -3849,7 +3876,7 @@ void turtle_knocked_flying_wait(uint32_t object)
 /* the knock flying's next step by its kind, or the end of the steps */
 void turtle_knocked_flying_next(uint32_t object)
 {
-	uint16_t knock_offset = 0, reaction_step = 0;
+	uint16_t knock_offset = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, knock_steps = 0;
 	uint8_t knock_step = 0;
 
@@ -3858,14 +3885,14 @@ void turtle_knocked_flying_next(uint32_t object)
 	knock_steps = turtle_knocked_flying_steps[knock_offset / 4u];
 	knock_offset = (uint16_t)IN_PAGE(knock_offset, OBJECT(object)->turtle.reaction_step);
 	knock_step = KNOCK_STEP(knock_steps + knock_offset);
-	reaction_step = (uint16_t)IN_PAGE(knock_offset, knock_step);
+	knock_offset = (uint16_t)IN_PAGE(knock_offset, knock_step);
 	if ((int8_t)knock_step < 0)
 	{
-		OBJECT(object)->turtle.reaction_step = (uint8_t)reaction_step;
+		OBJECT(object)->turtle.reaction_step = (uint8_t)knock_offset;
 		return;
 	}
-	reaction_step += 0x400u;
-	turtle_set_state(reaction_step, object, &ignored, &ignored_2, &ignored_3);
+	knock_offset += 0x400u;
+	turtle_set_state(knock_offset, object, &ignored, &ignored_2, &ignored_3);
 }
 
 /* knocked flying from behind: flies, slides, lies, gets up */
@@ -4024,7 +4051,7 @@ void turtle_knocked_flying_from_behind_wait(uint32_t object)
 /* the knock's next step, or its end */
 void turtle_knocked_flying_from_behind_next(uint32_t object)
 {
-	uint16_t knock_offset = 0, reaction_step = 0;
+	uint16_t knock_offset = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, knock_steps = 0, x_step = 0;
 	uint8_t knock_step = 0;
 
@@ -4033,14 +4060,14 @@ void turtle_knocked_flying_from_behind_next(uint32_t object)
 	knock_steps = turtle_knocked_flying_from_behind_steps[knock_offset / 4u];
 	knock_offset = (uint16_t)IN_PAGE(knock_offset, OBJECT(object)->turtle.reaction_step);
 	knock_step = KNOCK_STEP(knock_steps + knock_offset);
-	reaction_step = (uint16_t)IN_PAGE(knock_offset, knock_step);
+	knock_offset = (uint16_t)IN_PAGE(knock_offset, knock_step);
 	if ((int8_t)knock_step >= 0)
 	{
-		reaction_step += 0x400u;
-		turtle_set_state(reaction_step, object, &ignored, &ignored_2, &ignored_3);
+		knock_offset += 0x400u;
+		turtle_set_state(knock_offset, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	OBJECT(object)->turtle.reaction_step = (uint8_t)reaction_step;
+	OBJECT(object)->turtle.reaction_step = (uint8_t)knock_offset;
 	if (OBJECT(object)->turtle.reaction_variant == 1u || OBJECT(object)->turtle.reaction_variant == 4u)
 		return;
 	x_step = reset_ADDRESS;
@@ -4226,18 +4253,19 @@ void turtle_fall_in_manhole(uint32_t object)
 /* the turtle loses a bar and drops into the hole */
 void turtle_fall_in_manhole_start(uint32_t object)
 {
-	uint32_t hit_by = 0, y = 0;
+	uint32_t job = 0, manhole = 0, y = 0;
 
 	if (OBJECT(object)->health_bars != 1u)
 	{
 		OBJECT(object)->health_bars--;
-		turtle_save_health(object);
+		job = offset_high_word & ~0xFFFFu;
+		turtle_save_health(job, object);
 	}
 	OBJECT(object)->turtle.reaction_step++;
 	OBJECT(object)->flags &= 0xBFu;
-	hit_by = OBJECT(object)->turtle.hit_by;
-	y = (uint32_t)mem_read16(hit_by + 0xEu) << 8;
-	OBJECT(object)->x = (uint32_t)mem_read16(hit_by + 0xCu) << 8;
+	manhole = OBJECT(object)->turtle.hit_by;
+	y = (uint32_t)OBJECT(manhole)->screen_y << 8;
+	OBJECT(object)->x = (uint32_t)OBJECT(manhole)->screen_x << 8;
 	OBJECT(object)->y = y;
 	OBJECT(object)->turtle.move_timer = 0x1Au;
 }
@@ -4268,13 +4296,13 @@ void turtle_fall_in_manhole_climb_out(uint32_t on_right, uint32_t object)
 	if (bebop_exchange_lines != 0u && (bebop_exchange_lines < 3u || bebop_exchange_lines != 3u || time_since_balloon < 0x80u))
 		return;
 	screen_x -= 0x30u;
-	screen_x_high = screen_x;
 	t1 = screen_y;
 	screen_y = (uint16_t)(t1 - 0x38u);
 	if (t1 < 0x38u)
 		screen_y = 0u;
 	line = 0x64u;
 	bank = 0x20u;
+	screen_x_high = screen_x & 0xFF00u;
 	show_balloon(screen_x, screen_y, line, &on_right, &bank, &ignored, &ignored_2);
 	draw_wide_balloon_pointer(ignored_2);
 }
@@ -4298,7 +4326,7 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 {
 	uint8_t move = 0;
 	uint16_t prompt_y = 0, routine_state = 0, screen_x = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t holder = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, job = 0;
 
 	screen_x = OBJECT(object)->screen_x;
 	prompt_y = (uint16_t)(OBJECT(object)->screen_y + OBJECT(object)->height_whole);
@@ -4311,7 +4339,8 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 			return;
 		}
 		turtle_erase_prompt(object);
-		mem_write8(OBJECT(object)->turtle.hit_by + 5u, 3u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->state = 3u;
 		OBJECT(object)->health = 3u;
 		OBJECT(object)->flags &= ~2u;
 		OBJECT(object)->turtle.escape_presses = 0u;
@@ -4336,7 +4365,8 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 	if ((frame_count & 0x7Fu) == 0u)
 	{
 		OBJECT(object)->health_bars--;
-		turtle_save_health(object);
+		job = offset_high_word & ~0xFFFFu;
+		turtle_save_health(job, object);
 		if (OBJECT(object)->health_bars == 0u)
 		{
 			turtle_held_dies(object);
@@ -4344,7 +4374,7 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 		}
 	}
 	OBJECT(object)->flags |= 2u;
-	if (mem_read8(presses) == 0u)
+	if (PLAYER_INPUT(presses)->bits == 0u)
 		return;
 	OBJECT(object)->turtle.escape_presses++;
 	if (OBJECT(object)->turtle.escape_presses < 8u)
@@ -4355,7 +4385,8 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 		return;
 	}
 	turtle_erase_prompt(object);
-	mem_write8(OBJECT(object)->turtle.hit_by + 5u, 3u);
+	holder = OBJECT(object)->turtle.hit_by;
+	OBJECT(holder)->state = 3u;
 	OBJECT(object)->health = 3u;
 	OBJECT(object)->flags &= ~2u;
 	OBJECT(object)->turtle.escape_presses = 0u;
@@ -4368,12 +4399,12 @@ void turtle_held_struggle(uint32_t object, uint32_t presses)
 void turtle_held_dies(uint32_t object)
 {
 	uint16_t routine_state = 0;
-	uint32_t hit_by = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t holder = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	turtle_erase_prompt(object);
-	hit_by = OBJECT(object)->turtle.hit_by;
-	if (mem_read8(hit_by + 4u) != 4u)
-		mem_write8(hit_by + 5u, 3u);
+	holder = OBJECT(object)->turtle.hit_by;
+	if (OBJECT(holder)->routine != 4u)
+		OBJECT(holder)->state = 3u;
 	OBJECT(object)->turtle.reaction_step++;
 	OBJECT(object)->turtle.wait_timer = 0x60u;
 	routine_state = 0x411u;
@@ -4400,7 +4431,7 @@ void turtle_held_briefly_struggle(uint32_t object, uint32_t presses)
 {
 	uint8_t move = 0;
 	uint16_t prompt_y = 0, routine_state = 0, screen_x = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t holder = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	screen_x = OBJECT(object)->screen_x;
 	prompt_y = (uint16_t)(OBJECT(object)->screen_y + OBJECT(object)->height_whole);
@@ -4413,7 +4444,8 @@ void turtle_held_briefly_struggle(uint32_t object, uint32_t presses)
 			return;
 		}
 		turtle_erase_prompt(object);
-		mem_write8(OBJECT(object)->turtle.hit_by + 5u, 3u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->state = 3u;
 		OBJECT(object)->turtle.escape_presses = 0u;
 		OBJECT(object)->health = 3u;
 		OBJECT(object)->flags &= ~2u;
@@ -4440,7 +4472,7 @@ void turtle_held_briefly_struggle(uint32_t object, uint32_t presses)
 			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 			return;
 		}
-		if (mem_read8(presses) == 0u)
+		if (PLAYER_INPUT(presses)->bits == 0u)
 			return;
 		OBJECT(object)->turtle.escape_presses++;
 		if (OBJECT(object)->turtle.escape_presses < 6u)
@@ -4451,7 +4483,8 @@ void turtle_held_briefly_struggle(uint32_t object, uint32_t presses)
 			return;
 		}
 		turtle_erase_prompt(object);
-		mem_write8(OBJECT(object)->turtle.hit_by + 5u, 3u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->state = 3u;
 		OBJECT(object)->turtle.escape_presses = 0u;
 		OBJECT(object)->health = 3u;
 		OBJECT(object)->flags &= ~2u;
@@ -4492,7 +4525,7 @@ void turtle_held_knock_off(uint32_t object, uint32_t presses)
 void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 {
 	uint16_t prompt_y = 0, routine_state = 0, screen_x = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint32_t holder = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, job = 0;
 
 	screen_x = OBJECT(object)->screen_x;
 	prompt_y = (uint16_t)(OBJECT(object)->screen_y + OBJECT(object)->height_whole);
@@ -4501,14 +4534,16 @@ void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 	{
 		if (OBJECT(object)->health_bars != 0u)
 		{
-			mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+			holder = OBJECT(object)->turtle.hit_by;
+			OBJECT(holder)->routine = 2u;
 			turtle_erase_prompt(object);
 			routine_state = 0u;
 			OBJECT(object)->turtle.escape_presses = 0u;
 			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 			return;
 		}
-		mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->routine = 2u;
 		turtle_erase_prompt(object);
 		OBJECT(object)->turtle.reaction_step++;
 		OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4528,7 +4563,8 @@ void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 	}
 	if (OBJECT(object)->health_bars == 0u)
 	{
-		mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->routine = 2u;
 		turtle_erase_prompt(object);
 		OBJECT(object)->turtle.reaction_step++;
 		OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4538,21 +4574,23 @@ void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 	}
 	if ((frame_count & 0x3Fu) != 0u)
 	{
-		if (mem_read8(presses) == 0u)
+		if (PLAYER_INPUT(presses)->bits == 0u)
 			return;
 		OBJECT(object)->turtle.escape_presses++;
 		if (OBJECT(object)->turtle.escape_presses < 8u)
 			return;
 		if (OBJECT(object)->health_bars != 0u)
 		{
-			mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+			holder = OBJECT(object)->turtle.hit_by;
+			OBJECT(holder)->routine = 2u;
 			turtle_erase_prompt(object);
 			routine_state = 0u;
 			OBJECT(object)->turtle.escape_presses = 0u;
 			turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 			return;
 		}
-		mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->routine = 2u;
 		turtle_erase_prompt(object);
 		OBJECT(object)->turtle.reaction_step++;
 		OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4561,10 +4599,12 @@ void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 		return;
 	}
 	OBJECT(object)->health_bars--;
-	turtle_save_health(object);
+	job = offset_high_word & ~0xFFFFu;
+	turtle_save_health(job, object);
 	if (OBJECT(object)->health_bars == 0u)
 	{
-		mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->routine = 2u;
 		turtle_erase_prompt(object);
 		OBJECT(object)->turtle.reaction_step++;
 		OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4572,21 +4612,23 @@ void turtle_held_knock_off_struggle(uint32_t object, uint32_t presses)
 		turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	if (mem_read8(presses) == 0u)
+	if (PLAYER_INPUT(presses)->bits == 0u)
 		return;
 	OBJECT(object)->turtle.escape_presses++;
 	if (OBJECT(object)->turtle.escape_presses < 8u)
 		return;
 	if (OBJECT(object)->health_bars != 0u)
 	{
-		mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+		holder = OBJECT(object)->turtle.hit_by;
+		OBJECT(holder)->routine = 2u;
 		turtle_erase_prompt(object);
 		routine_state = 0u;
 		OBJECT(object)->turtle.escape_presses = 0u;
 		turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	mem_write8(OBJECT(object)->turtle.hit_by + 4u, 2u);
+	holder = OBJECT(object)->turtle.hit_by;
+	OBJECT(holder)->routine = 2u;
 	turtle_erase_prompt(object);
 	OBJECT(object)->turtle.reaction_step++;
 	OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4613,8 +4655,8 @@ void turtle_held_throw_off(uint32_t object, uint32_t presses)
 void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 {
 	uint8_t facing = 0;
-	uint16_t job = 0, kind = 0, prompt_y = 0, routine_state = 0, screen_x = 0;
-	uint32_t hit_by = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0;
+	uint16_t job_2 = 0, kind = 0, prompt_y = 0, routine_state = 0, screen_x = 0;
+	uint32_t holder = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, job = 0;
 	uint8_t wait_timer = 0;
 
 	screen_x = OBJECT(object)->screen_x;
@@ -4627,12 +4669,13 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 		if (OBJECT(object)->health_bars == 0u)
 		{
 			turtle_erase_prompt(object);
-			hit_by = OBJECT(object)->turtle.hit_by;
-			mem_write8(hit_by, mem_read8(hit_by) | 2u);
-			mem_write16(hit_by + 4u, 0x200u);
-			mem_write8(hit_by + 0x10u, mem_read8(hit_by + 0x32u));
-			mem_write8(hit_by + 0x22u, 0u);
-			mem_write8(hit_by, mem_read8(hit_by) | 0x80u);
+			holder = OBJECT(object)->turtle.hit_by;
+			OBJECT(holder)->flags |= 2u;
+			OBJECT(holder)->routine = 2u;
+			OBJECT(holder)->state = 0u;
+			OBJECT(holder)->height_whole = OBJECT(holder)->floor_height;
+			OBJECT(holder)->enemy.move_time = 0u;
+			OBJECT(holder)->flags |= 0x80u;
 			OBJECT(object)->turtle.escape_presses = 0u;
 			OBJECT(object)->turtle.reaction_step++;
 			OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4643,16 +4686,18 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 		if ((frame_count & 0x3Fu) == 0u)
 		{
 			OBJECT(object)->health_bars--;
-			turtle_save_health(object);
+			job = offset_high_word & ~0xFFFFu;
+			turtle_save_health(job, object);
 			if (OBJECT(object)->health_bars == 0u)
 			{
 				turtle_erase_prompt(object);
-				hit_by = OBJECT(object)->turtle.hit_by;
-				mem_write8(hit_by, mem_read8(hit_by) | 2u);
-				mem_write16(hit_by + 4u, 0x200u);
-				mem_write8(hit_by + 0x10u, mem_read8(hit_by + 0x32u));
-				mem_write8(hit_by + 0x22u, 0u);
-				mem_write8(hit_by, mem_read8(hit_by) | 0x80u);
+				holder = OBJECT(object)->turtle.hit_by;
+				OBJECT(holder)->flags |= 2u;
+				OBJECT(holder)->routine = 2u;
+				OBJECT(holder)->state = 0u;
+				OBJECT(holder)->height_whole = OBJECT(holder)->floor_height;
+				OBJECT(holder)->enemy.move_time = 0u;
+				OBJECT(holder)->flags |= 0x80u;
 				OBJECT(object)->turtle.escape_presses = 0u;
 				OBJECT(object)->turtle.reaction_step++;
 				OBJECT(object)->turtle.wait_timer = 0x60u;
@@ -4661,7 +4706,7 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 				return;
 			}
 		}
-		if (mem_read8(presses) == 0u)
+		if (PLAYER_INPUT(presses)->bits == 0u)
 		{
 			wait_timer = OBJECT(object)->turtle.wait_timer;
 			OBJECT(object)->turtle.wait_timer = wait_timer - 1u;
@@ -4684,8 +4729,8 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 	}
 	turtle_erase_prompt(object);
 	kind = OBJECT(object)->kind;
-	job = (uint16_t)(turtle_struggle_bits[kind] + 0x400u);
-	queue_job(job);
+	job_2 = (uint16_t)(turtle_struggle_bits[kind] + 0x400u);
+	queue_job(job_2);
 	if (OBJECT(object)->health_bars == 0u)
 	{
 		OBJECT(object)->turtle.escape_presses = 0u;
@@ -4695,21 +4740,22 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses)
 		turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	hit_by = OBJECT(object)->turtle.hit_by;
-	if (mem_read8(hit_by + 4u) == 5u)
+	holder = OBJECT(object)->turtle.hit_by;
+	if (OBJECT(holder)->routine == 5u)
 	{
 		routine_state = 0u;
 		OBJECT(object)->turtle.escape_presses = 0u;
 		turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
 		return;
 	}
-	mem_write16(hit_by + 4u, 0x500u);
-	mem_write8(hit_by + 0x22u, 0u);
-	mem_write16(hit_by + 0x28u, 0x94u);
+	OBJECT(holder)->routine = 5u;
+	OBJECT(holder)->state = 0u;
+	OBJECT(holder)->enemy.move_time = 0u;
+	OBJECT(holder)->enemy.move = 0x94u;
 	facing = 0u;
 	if ((int8_t)OBJECT(object)->turtle.knockback_flags >= 0)
 		facing = 0x80u;
-	mem_write8(hit_by + 0x30u, facing);
+	OBJECT(holder)->enemy.facing = facing;
 	routine_state = 0u;
 	OBJECT(object)->turtle.escape_presses = 0u;
 	turtle_set_state(routine_state, object, &ignored, &ignored_2, &ignored_3);
@@ -4771,10 +4817,10 @@ void turtle_show_prompt(uint32_t prompt_place, uint16_t prompt_y, uint32_t objec
 		count_2 = 9u;
 		do
 		{
-			mem_write8(tile_place, PROMPT_BYTE(tiles));
+			io_write8(tile_place, PROMPT_BYTE(tiles));
 			tiles++;
 			tile_place++;
-			mem_write8(tile_place, PROMPT_BYTE(tiles));
+			io_write8(tile_place, PROMPT_BYTE(tiles));
 			t1 = count_2 - 1u;
 			count_2 = t1;
 			tiles++;
@@ -4806,9 +4852,9 @@ void turtle_erase_prompt(uint32_t object)
 		count_2 = 9u;
 		do
 		{
-			mem_write8(tile_place, blank_attribute);
+			io_write8(tile_place, blank_attribute);
 			tile_place++;
-			mem_write8(tile_place, space_tile);
+			io_write8(tile_place, space_tile);
 			t1 = count_2 - 1u;
 			count_2 = t1;
 			tile_place++;
@@ -4821,12 +4867,10 @@ void turtle_erase_prompt(uint32_t object)
 }
 
 /* the turtle's health bars kept for its player and shown again */
-void turtle_save_health(uint32_t object)
+void turtle_save_health(uint32_t job, uint32_t object)
 {
-	uint32_t job = 0;
-
 	PLAYER(PLAYER_ADDRESS(0) + (OBJECT(object)->kind) * 0x8u)->health_bars = OBJECT(object)->health_bars;
-	job = 0xB20u | (offset_high_word & ~0xFFFFu) | shl32(1u, (int)(OBJECT(object)->kind & 0x1Fu));
+	job = (job & ~0xFFFFu) | 0xB20u | shl32(1u, (int)(OBJECT(object)->kind & 0x1Fu));
 	offset_high_word = job;
 	queue_job((uint16_t)job);
 }
@@ -4906,7 +4950,7 @@ void turtle_fire_gun(uint8_t held, uint8_t pressed, uint32_t object, uint32_t in
 		turtle_attack_over(held, pressed, object, inputs, presses);
 		return;
 	}
-	mem_write8(inputs, mem_read8(inputs) & 0xCu);
+	PLAYER_INPUT(inputs)->bits &= 0xCu;
 }
 
 /* on another object: whether the turtle stands on it or is in the air */
@@ -5052,7 +5096,7 @@ void turtle_raise_floor(uint8_t new_contacts, uint32_t object, uint32_t floor_ce
 			OBJECT(object)->contacts |= reset_contacts;
 			return;
 		}
-	} while ((int8_t)mem_read8(floor_cell_place) < 0);
+	} while ((int8_t)FLOOR_MAP_CELL(floor_cell_place)->cell < 0);
 	OBJECT(object)->y = (OBJECT(object)->y & 0xFFFFFF00u) | 0xFFu;
 	new_contacts |= 0x82u;
 	if (OBJECT(object)->floor_height <= OBJECT(object)->height_whole)
@@ -5126,7 +5170,7 @@ void turtle_lower_floor(uint8_t new_contacts, uint32_t object, uint32_t floor_ce
 		rows++;
 		if (max_rows <= rows)
 			break;
-		if ((int8_t)mem_read8(floor_cell_place) >= 0)
+		if ((int8_t)FLOOR_MAP_CELL(floor_cell_place)->cell >= 0)
 		{
 			OBJECT(object)->y &= 0xFFFFFF00u;
 			new_contacts |= 0x82u;

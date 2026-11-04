@@ -3,7 +3,7 @@
  *    Description: the areas' scenery and traps: balls, hydrants, signs, rats, oil drums, turrets, nozzles, electric beams, spiked poles, the parked car
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -25,16 +25,16 @@ void ball_dropper_start(uint32_t object)
 /* a ball drops each time the screen reaches the next place; the dropper is gone after the last */
 void ball_dropper_wait(uint32_t object)
 {
-	uint32_t ball = 0, d7 = 0;
+	uint32_t ball = 0, objects_left = 0;
 	uint8_t t1 = 0;
 
 	offset_high_word = 0u;
 	if (OBJECT(object)->screen_x <= ball_drop_waits[OBJECT(object)->ball_dropper.balls_left])
 	{
 		ball = OBJECT_ADDRESS(4);
-		d7 = 8u;
-		find_free_object(&d7, &ball);
-		if ((uint8_t)d7 != 0u)
+		objects_left = 8u;
+		find_free_object(&objects_left, &ball);
+		if ((uint8_t)objects_left != 0u)
 		{
 			ball_dropper_drop_ball(object, ball);
 			t1 = OBJECT(object)->ball_dropper.balls_left - 1u;
@@ -739,10 +739,10 @@ void pizza_start(uint32_t object)
 }
 
 /* as the pizza comes on the screen it is announced; a turtle that takes it gets its health back */
-void pizza_wait(uint16_t routine_offset, uint32_t object)
+void pizza_wait(uint16_t on_right, uint32_t object)
 {
 	uint8_t sound = 0;
-	uint16_t on_right = 0, screen_y = 0;
+	uint16_t screen_y = 0;
 	uint32_t animation = 0, screen_x = 0;
 
 	if (OBJECT(object)->screen_x >= 0x170u || OBJECT(object)->pizza.announced != 0u)
@@ -763,7 +763,7 @@ void pizza_wait(uint16_t routine_offset, uint32_t object)
 	OBJECT(object)->pizza.announced = 1u;
 	sound = 0xB7u;
 	queue_sound(sound);
-	on_right = (uint16_t)((routine_offset & ~0xFFu) | 0xFFu);
+	on_right = (uint16_t)(on_right | 0xFFu);
 	screen_x = (uint16_t)(OBJECT(object)->screen_x - 0xCu);
 	screen_y = (uint16_t)(OBJECT(object)->screen_y - 0x20u);
 	if (screen_y >= 0x300u)
@@ -808,22 +808,22 @@ void billboard_start(uint32_t object)
 void billboard_wait(uint32_t object)
 {
 	uint8_t soldier_number = 0;
-	uint32_t animation = 0, d7 = 0, soldier = 0, stats = 0;
+	uint32_t animation = 0, objects_left = 0, soldier = 0, stats = 0;
 
 	if (OBJECT(object)->billboard.trigger_x < OBJECT(object)->screen_x)
 		return;
 	soldier_number = 0u;
 	soldier = OBJECT_ADDRESS(12);
-	d7 = 0xCu;
-	find_free_object(&d7, &soldier);
-	if ((uint8_t)d7 != 0u)
+	objects_left = 0xCu;
+	find_free_object(&objects_left, &soldier);
+	if ((uint8_t)objects_left != 0u)
 	{
 		billboard_start_soldier(soldier_number, object, soldier);
 		soldier_number = 1u;
 		soldier = OBJECT_ADDRESS(12);
-		d7 = 0xCu;
-		find_free_object(&d7, &soldier);
-		if ((uint8_t)d7 != 0u)
+		objects_left = 0xCu;
+		find_free_object(&objects_left, &soldier);
+		if ((uint8_t)objects_left != 0u)
 			billboard_start_soldier(soldier_number, object, soldier);
 	}
 	OBJECT(object)->flags |= 4u;
@@ -871,7 +871,7 @@ void billboard_land(uint32_t object)
 /* a Foot soldier on the billboard, counted as an enemy */
 void billboard_start_soldier(uint8_t soldier_number, uint32_t object, uint32_t soldier)
 {
-	uint32_t d7 = 0;
+	uint32_t x_offset = 0;
 
 	OBJECT(soldier)->flags = 1u;
 	OBJECT(soldier)->contacts = 0u;
@@ -880,13 +880,13 @@ void billboard_start_soldier(uint8_t soldier_number, uint32_t object, uint32_t s
 	OBJECT(soldier)->colour = 6u;
 	OBJECT(soldier)->animation_delay = 0u;
 	place_at_object(object, soldier);
-	d7 = 0x2000u;
+	x_offset = 0x2000u;
 	if (soldier_number != 0u)
 	{
-		d7 = (int16_t)~d7;
-		offset_high_word = d7;
+		x_offset = (int16_t)~x_offset;
+		offset_high_word = x_offset;
 	}
-	OBJECT(soldier)->x += (d7 & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
+	OBJECT(soldier)->x += (x_offset & 0xFFFFu) | (offset_high_word & ~0xFFFFu);
 	OBJECT(soldier)->y += 0x100u;
 	OBJECT(soldier)->billboard_soldier.flipped = 0u;
 	if (soldier_number != 0u)
@@ -937,12 +937,12 @@ void billboard_soldier_wait(uint32_t object)
 /* the soldier comes down to the ground and lands */
 void billboard_soldier_jump_down(uint32_t object)
 {
-	uint32_t animation = 0, height = 0, y_speed = 0;
+	uint32_t animation = 0, height = 0;
 	uint16_t height_2 = 0;
 
-	y_speed = OBJECT(object)->y_speed;
-	OBJECT(object)->y -= y_speed;
-	height = (y_speed & ~0xFFFFu) | (uint16_t)OBJECT(object)->height_speed;
+	height = OBJECT(object)->y_speed;
+	OBJECT(object)->y -= height;
+	height = (height & ~0xFFFFu) | (uint16_t)OBJECT(object)->height_speed;
 	height_2 = OBJECT(object)->height;
 	OBJECT(object)->height = height_2 - height;
 	if (height_2 < (uint16_t)height)
@@ -1163,29 +1163,29 @@ void turret_fire(uint32_t object)
 }
 
 /* the destroyed turret's explosions */
-uint32_t turret_wreck(uint32_t object, uint32_t a5)
+void turret_wreck(uint32_t object)
 {
 	offset_high_word = 0u;
 	switch (OBJECT(object)->state)
 	{
 	case 0:
-		return turret_wreck_explode(object, a5);
+		turret_wreck_explode(object);
+		return;
 	case 1:
 		turret_wreck_next(object);
-		return a5;
+		return;
 	case 2:
 		turret_wreck_stay(object);
-		return a5;
+		return;
 	}
-	unreachable();
 }
 
 /* an explosion on the destroyed turret's column */
-uint32_t turret_wreck_explode(uint32_t object, uint32_t a5)
+void turret_wreck_explode(uint32_t object)
 {
 	uint8_t sound = 0;
 	uint16_t height_offset = 0, sound_choice = 0, x_offset = 0;
-	uint32_t a5_2 = 0, explosion = 0, objects_left = 0;
+	uint32_t explosion = 0, objects_left = 0;
 
 	OBJECT(object)->turret.timer = 4u;
 	OBJECT(object)->state++;
@@ -1195,17 +1195,16 @@ uint32_t turret_wreck_explode(uint32_t object, uint32_t a5)
 	if ((uint8_t)objects_left == 0u)
 	{
 		OBJECT(object)->state = 2u;
-		return a5;
+		return;
 	}
 	x_offset = 0u;
-	a5_2 = turret_wreck_waits_ADDRESS;
 	height_offset = turret_wreck_waits[OBJECT(object)->turret.phase];
 	start_small_explosion(x_offset, height_offset, object, explosion);
 	offset_high_word = 0u;
 	sound_choice = OBJECT(object)->turret.phase;
 	sound = turret_wreck_sounds[sound_choice & 3u];
+	object_loop_leftover = turret_wreck_waits_ADDRESS;
 	queue_sound(sound);
-	return a5_2;
 }
 
 /* the next explosion, higher up, until seven */
@@ -1282,7 +1281,8 @@ void turret_slide(uint32_t object)
 
 	remove_if_off_screen(object);
 	slide_kind = OBJECT(object)->parameter & 3u;
-	slide = turret_slides_ADDRESS + (uint16_t)(slide_kind << 3);
+	slide_kind = (uint16_t)(slide_kind << 3);
+	slide = turret_slides_ADDRESS + slide_kind;
 	phase_offset = OBJECT(object)->turret.phase;
 	phase_offset = (uint16_t)((phase_offset & 1u) << 2);
 	x = OFFSET_PAIR(slide + (phase_offset / 4u) * 0x4u)->x;
@@ -1517,28 +1517,28 @@ void nozzle_row_start(uint32_t object)
 }
 
 /* the row watches for turtles, waits for its nozzle, or is done */
-uint32_t nozzle_row_run(uint32_t object, uint32_t a5)
+void nozzle_row_run(uint32_t object)
 {
 	offset_high_word = 0u;
 	switch (OBJECT(object)->nozzle_row.nozzle_status)
 	{
 	case 0:
-		return nozzle_row_watch(object);
+		nozzle_row_watch(object);
+		return;
 	case 1:
 		nozzle_row_wait(object);
-		return a5;
+		return;
 	case 2:
 		nozzle_row_done(object);
-		return a5;
+		return;
 	}
-	unreachable();
 }
 
 /* a turtle near one of the row's places makes a nozzle come up there */
-uint32_t nozzle_row_watch(uint32_t object)
+void nozzle_row_watch(uint32_t object)
 {
 	uint16_t count = 0, count_2 = 0, x_distance = 0, y_distance = 0;
-	uint32_t d7 = 0, nozzle = 0, nozzle_place = 0, object_2 = 0, row = 0;
+	uint32_t nozzle = 0, nozzle_place = 0, object_2 = 0, objects_left = 0, row = 0;
 	uint16_t screen_x = 0, screen_x_2 = 0, screen_y = 0, t1 = 0, t2 = 0, t3 = 0;
 
 	remove_if_off_screen(object);
@@ -1551,6 +1551,7 @@ uint32_t nozzle_row_watch(uint32_t object)
 		nozzle_place = NOZZLE_PLACE(row);
 		count_2 = 3u;
 		object_2 = OBJECT_ADDRESS(3);
+		object_loop_leftover = OBJECT_ADDRESS(3);
 		row++;
 		do
 		{
@@ -1560,7 +1561,7 @@ uint32_t nozzle_row_watch(uint32_t object)
 				screen_x_2 = OBJECT(object)->screen_x;
 				x_distance = (uint16_t)(screen_x_2 - screen_x);
 				distance_low_byte = x_distance;
-				if (screen_x <= screen_x_2 && ((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 0x40u)
+				if (screen_x <= screen_x_2 && x_distance < 0x40u)
 				{
 					screen_y = OBJECT(object_2)->screen_y;
 					t1 = OBJECT(object)->screen_y - nozzle_place;
@@ -1568,33 +1569,33 @@ uint32_t nozzle_row_watch(uint32_t object)
 					distance_low_byte = y_distance;
 					if (t1 < screen_y)
 					{
-						y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+						y_distance = (uint16_t)~y_distance;
 						distance_low_byte = y_distance;
 					}
-					if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 8u)
+					if (y_distance < 8u)
 					{
 						nozzle = OBJECT_ADDRESS(4);
-						d7 = 8u;
-						find_free_object(&d7, &nozzle);
-						if ((uint8_t)d7 != 0u)
+						objects_left = 8u;
+						find_free_object(&objects_left, &nozzle);
+						if ((uint8_t)objects_left != 0u)
 						{
-							object_2 = nozzle_row_start_nozzle(nozzle_place, object, nozzle);
+							nozzle_row_start_nozzle(nozzle_place, object, nozzle);
 							OBJECT(object)->nozzle_row.nozzle_status = 1u;
 						}
-						return object_2;
+						return;
 					}
 				}
 			}
+			object_2 -= 0x50u;
+			object_loop_leftover = object_2;
 			t2 = count_2 - 1u;
 			count_2 = t2;
-			object_2 -= 0x50u;
 		} while (t2 != 0xFFFFu);
 		t3 = count - 1u;
 		count = t3;
 		if (t3 == 0xFFFFu)
-			return object_2;
+			return;
 	}
-	unreachable();
 }
 
 /* a nozzle is up */
@@ -1610,7 +1611,7 @@ void nozzle_row_done(uint32_t object)
 }
 
 /* a nozzle at one of the row's places */
-uint32_t nozzle_row_start_nozzle(uint32_t nozzle_place, uint32_t object, uint32_t nozzle)
+void nozzle_row_start_nozzle(uint32_t nozzle_place, uint32_t object, uint32_t nozzle)
 {
 	uint32_t row_status = 0;
 
@@ -1621,13 +1622,14 @@ uint32_t nozzle_row_start_nozzle(uint32_t nozzle_place, uint32_t object, uint32_
 	OBJECT(nozzle)->colour = 0xFFu;
 	OBJECT(nozzle)->animation_delay = 0u;
 	place_at_object(object, nozzle);
-	OBJECT(nozzle)->y -= (uint16_t)(nozzle_place << 8);
+	nozzle_place = (uint16_t)(nozzle_place << 8);
+	OBJECT(nozzle)->y -= nozzle_place;
 	row_status = object + 0x2Fu;
 	OBJECT(nozzle)->freeze_nozzle.row_status = row_status;
 	OBJECT(nozzle)->count = 0u;
 	OBJECT(nozzle)->routine = 0u;
 	OBJECT(nozzle)->state = 0u;
-	return row_status;
+	object_loop_leftover = row_status;
 }
 
 /* a nozzle comes up out of the floor */
@@ -1717,6 +1719,7 @@ void freeze_nozzle_spray_stop(uint32_t object)
 /* the nozzle is gone and its row watches again */
 void freeze_nozzle_sink(uint32_t object)
 {
+	uint32_t row_status = 0;
 	uint8_t timer = 0;
 
 	timer = OBJECT(object)->freeze_nozzle.timer;
@@ -1724,7 +1727,8 @@ void freeze_nozzle_sink(uint32_t object)
 	if (timer == 1u)
 	{
 		remove_object(object);
-		mem_write8(OBJECT(object)->freeze_nozzle.row_status, 0u);
+		row_status = OBJECT(object)->freeze_nozzle.row_status;
+		OBJECT(row_status - 0x2Fu)->nozzle_row.nozzle_status = 0u;
 		return;
 	}
 }
@@ -1734,13 +1738,14 @@ void freeze_nozzle_struck(uint32_t object)
 {
 	uint8_t sound = 0, struck_sound = 0;
 	uint16_t height_offset = 0, x_offset = 0;
-	uint32_t animation = 0, explosion = 0, objects_left = 0;
+	uint32_t animation = 0, explosion = 0, objects_left = 0, row_status = 0;
 
 	OBJECT(object)->health = 1u;
 	OBJECT(object)->routine++;
 	OBJECT(object)->flags &= ~6u;
 	OBJECT(object)->freeze_nozzle.timer = 0u;
-	mem_write8(OBJECT(object)->freeze_nozzle.row_status, 2u);
+	row_status = OBJECT(object)->freeze_nozzle.row_status;
+	OBJECT(row_status - 0x2Fu)->nozzle_row.nozzle_status = 2u;
 	struck_sound = 5u;
 	queue_sound(struck_sound);
 	animation = freeze_nozzle_animations[4];
@@ -1766,17 +1771,17 @@ void freeze_nozzle_broken(uint32_t object)
 }
 
 /* an electric beam, off for a while */
-uint32_t electric_beam_start(uint32_t object)
+void electric_beam_start(uint32_t object)
 {
 	uint32_t stats = 0, waits = 0;
 
 	OBJECT(object)->flags = 1u;
 	stats = electric_beam_stats_ADDRESS;
 	set_object_stats(object, stats);
-	waits = indexed_table_of_8_bit_values_010D5A_ADDRESS;
+	object_loop_leftover = electric_beam_waits_ADDRESS;
+	waits = electric_beam_waits_ADDRESS;
 	electric_random_wait(object, waits);
 	OBJECT(object)->routine++;
-	return waits;
 }
 
 /* the beam comes on and electrocutes turtles */
@@ -1803,7 +1808,7 @@ void electric_beam_wait(uint32_t object)
 }
 
 /* the beam stays on a second, then goes off again */
-uint32_t electric_beam_shine(uint32_t object, uint32_t a5)
+void electric_beam_shine(uint32_t object)
 {
 	uint8_t timer = 0;
 
@@ -1815,30 +1820,30 @@ uint32_t electric_beam_shine(uint32_t object, uint32_t a5)
 		if (timer == 0u)
 		{
 			OBJECT(object)->routine = 0u;
-			return electric_beam_start(object);
+			electric_beam_start(object);
+			return;
 		}
 	}
-	return a5;
 }
 
 /* a spot in the floor that shoots electric columns */
-uint32_t electric_vent_start(uint32_t object)
+void electric_vent_start(uint32_t object)
 {
 	uint32_t stats = 0, waits = 0;
 
 	OBJECT(object)->flags = 1u;
 	stats = inert_stats_ADDRESS;
 	set_object_stats(object, stats);
+	object_loop_leftover = electric_waits_ADDRESS;
 	waits = electric_waits_ADDRESS;
 	electric_random_wait(object, waits);
 	OBJECT(object)->routine++;
-	return waits;
 }
 
 /* now and then the vent shoots an electric column */
-uint32_t electric_vent_wait(uint32_t object, uint32_t a5)
+void electric_vent_wait(uint32_t object)
 {
-	uint32_t column = 0, objects_left = 0;
+	uint32_t column = 0, objects_left = 0, waits = 0;
 	uint8_t timer = 0;
 
 	remove_if_off_screen(object);
@@ -1846,8 +1851,9 @@ uint32_t electric_vent_wait(uint32_t object, uint32_t a5)
 	OBJECT(object)->electric.timer = timer - 1u;
 	if (timer == 0u)
 	{
-		a5 = electric_waits_ADDRESS;
-		electric_random_wait(object, a5);
+		object_loop_leftover = electric_waits_ADDRESS;
+		waits = electric_waits_ADDRESS;
+		electric_random_wait(object, waits);
 		column = OBJECT_ADDRESS(32);
 		objects_left = 8u;
 		find_free_object(&objects_left, &column);
@@ -1858,7 +1864,6 @@ uint32_t electric_vent_wait(uint32_t object, uint32_t a5)
 			OBJECT(object)->electric.column_done = 0u;
 		}
 	}
-	return a5;
 }
 
 /* the vent waits for its column to be gone */
@@ -2231,10 +2236,10 @@ uint32_t sewer_launcher_find_turtle(uint32_t object)
 			distance_low_byte = y_distance;
 			if ((int16_t)t1 < 0)
 			{
-				y_distance = (uint16_t)~((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+				y_distance = (uint16_t)~y_distance;
 				distance_low_byte = y_distance;
 			}
-			if (((y_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) < 4u)
+			if (y_distance < 4u)
 			{
 				turtle_in_line = 0u;
 				t2 = OBJECT(object_2)->screen_x - OBJECT(object)->screen_x;
@@ -2242,11 +2247,11 @@ uint32_t sewer_launcher_find_turtle(uint32_t object)
 				distance_low_byte = x_distance;
 				if ((int16_t)t2 < 0)
 				{
-					x_distance = (uint16_t)~((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu));
+					x_distance = (uint16_t)~x_distance;
 					distance_low_byte = x_distance;
 					turtle_in_line = 0x80u;
 				}
-				if (((x_distance & ~0xFFu) | (distance_low_byte & 0xFFu)) >= 0x30u)
+				if (x_distance >= 0x30u)
 					break;
 			}
 		}
@@ -2404,7 +2409,7 @@ void parked_car_wait(uint32_t object)
 }
 
 /* after a moment the car's three unseen hit boxes start */
-uint32_t parked_car_start_drive(uint32_t object, uint32_t a5)
+void parked_car_start_drive(uint32_t object)
 {
 	uint16_t count = 0;
 	uint32_t hit_box = 0, objects_left = 0;
@@ -2415,7 +2420,7 @@ uint32_t parked_car_start_drive(uint32_t object, uint32_t a5)
 	counter = OBJECT(object)->parked_car.counter;
 	OBJECT(object)->parked_car.counter = counter - 1u;
 	if (counter != 1u)
-		return a5;
+		return;
 	count = 2u;
 	do
 	{
@@ -2424,14 +2429,13 @@ uint32_t parked_car_start_drive(uint32_t object, uint32_t a5)
 		find_free_object(&objects_left, &hit_box);
 		if ((uint8_t)objects_left == 0u)
 			break;
-		a5 = parked_car_start_hit_box(count, object, hit_box);
+		parked_car_start_hit_box(count, object, hit_box);
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
 	OBJECT(object)->parked_car.counter = 0u;
 	OBJECT(object)->routine++;
 	OBJECT(object)->state = 0u;
-	return a5;
 }
 
 /* the car drives off to the front right, its picture blanked row by row as it goes */
@@ -2514,8 +2518,8 @@ void parked_car_blank_row(uint32_t object)
 	tile_offset = 0u;
 	do
 	{
-		mem_write8(blank_row + (int16_t)tile_offset, 0u);
-		mem_write8(blank_row + 1u + (int16_t)tile_offset, 0x10u);
+		io_write8(blank_row + (int16_t)tile_offset, 0u);
+		io_write8(blank_row + 1u + (int16_t)tile_offset, 0x10u);
 		tile_offset += 2u;
 		t1 = count - 1u;
 		count = t1;
@@ -2524,7 +2528,7 @@ void parked_car_blank_row(uint32_t object)
 }
 
 /* an unseen hit box along the car's body */
-uint32_t parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t object_2)
+void parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t object_2)
 {
 	uint32_t box_number = 0, place = 0, y = 0;
 
@@ -2536,7 +2540,8 @@ uint32_t parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t obje
 	OBJECT(object_2)->animation_delay = 0u;
 	place_at_object(object, object_2);
 	box_number = count;
-	place = car_hit_box_places_ADDRESS + (uint16_t)(box_number << 2);
+	box_number = (uint16_t)(box_number << 2);
+	place = car_hit_box_places_ADDRESS + box_number;
 	OBJECT(object_2)->x += OFFSET_PAIR(place)->x;
 	y = OFFSET_PAIR(place)->y;
 	OBJECT(object_2)->y += y;
@@ -2544,7 +2549,7 @@ uint32_t parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t obje
 	OBJECT(object_2)->routine = 0u;
 	OBJECT(object_2)->state = 0u;
 	offset_high_word = y;
-	return place;
+	object_loop_leftover = place;
 }
 
 /* an unseen box that knocks flying the turtles in the car's way */

@@ -3,7 +3,7 @@
  *    Description: the game's scenes: a new game, the players' turtles, an area's set-up, its story and title screens, the play, the area's exit
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -299,8 +299,8 @@ void area_title_reset(void)
 /* the area's SCENE text started and the boxes drawn, in a game and for the areas that have one */
 void area_title_start_text(void)
 {
-	uint16_t box_flags = 0, job = 0;
-	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0, text = 0;
+	uint16_t job = 0;
+	uint32_t box_flags = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, ignored_4 = 0, text = 0;
 
 	scene_substep++;
 	job = 0x200u;
@@ -312,10 +312,11 @@ void area_title_start_text(void)
 		return;
 	}
 	text = area_title_texts[stage];
-	start_typed_text_at_once(text);
+	ignored = start_typed_text_at_once(text);
 	game_scene_timer = 0xB4u;
 	box_flags = 0xB7Fu;
-	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
+	offset_high_word = box_flags;
+	draw_player_boxes((uint16_t)box_flags, &ignored_2, &ignored_3, &ignored_4);
 }
 
 /* the text typed and the health bars filled until the time runs out or a button */
@@ -330,7 +331,7 @@ void area_title_wait(void)
 	offset_high_word = 0u;
 	box_flags = (uint16_t)(players_in_play + 0xB20u);
 	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
-	update_players_in_game(0u);
+	update_players_in_game();
 	type_next_character();
 	t1 = game_scene_timer;
 	game_scene_timer = t1 - 1u;
@@ -486,11 +487,10 @@ void play_entry_show_game_over(void)
 }
 
 /* the turtles, the spawns, the players' slots and the music started for the area */
-void play_entry_start(uint16_t substep_offset)
+void play_entry_start(uint16_t count)
 {
 	uint8_t score_players = 0, starting_players = 0;
-	uint16_t count = 0;
-	uint32_t a1 = 0, player = 0;
+	uint32_t player = 0;
 	uint16_t t1 = 0;
 
 	if (jobs_pending != 0u)
@@ -498,7 +498,7 @@ void play_entry_start(uint16_t substep_offset)
 	if (game_on == 0u)
 	{
 		player = PLAYER_ADDRESS(3);
-		count = (uint16_t)((substep_offset & ~0xFFu) | 3u);
+		count = (uint16_t)((count & ~0xFFu) | 3u);
 		do
 		{
 			if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u)
@@ -516,16 +516,16 @@ void play_entry_start(uint16_t substep_offset)
 	area_entry_done = 0u;
 	offset_high_word = 0u;
 	starting_players = players_in_play & ~players_joining;
-	a1 = turtle_start_area(starting_players);
-	a1 = update_players_in_game(a1);
+	turtle_start_area(starting_players);
+	update_players_in_game();
 	entry_without_blink = 0u;
 	score_players = 0xFu;
 	draw_scores(score_players);
 	start_area_spawns();
 	start_player_slots();
 	hide_all_sprites();
-	a1 = run_objects(a1);
-	run_objects(a1);
+	run_objects();
+	run_objects();
 	music = 0u;
 	start_area_music();
 	scene_substep++;
@@ -538,7 +538,7 @@ void play_entry_run(void)
 	uint16_t job = 0;
 	uint32_t ignored = 0;
 
-	update_players_in_game(0u);
+	update_players_in_game();
 	do_nothing();
 	if (area_entry_done == 0u)
 	{
@@ -573,7 +573,7 @@ void play_frame(void)
 {
 	uint8_t frame = 0, frame_phase = 0;
 	uint16_t text_number = 0;
-	uint32_t a1 = 0, object = 0;
+	uint32_t object = 0;
 
 	if (game_on == 0u)
 	{
@@ -587,13 +587,13 @@ void play_frame(void)
 			print_colour_text(text_number);
 		}
 	}
-	update_players_in_game(0u);
+	update_players_in_game();
 	do_nothing();
 	update_difficulty();
 	update_time_without_knockout();
-	a1 = update_players();
-	a1 = update_area_layers(a1);
-	run_objects(a1);
+	update_players();
+	update_area_layers();
+	run_objects();
 	check_attacks();
 	object = build_draw_list();
 	object = draw_sprites(object);
@@ -707,7 +707,7 @@ void scene_area_exit(void)
 	do_nothing();
 	if (exit_cutscene != 0u)
 		return;
-	update_players_in_game(0u);
+	update_players_in_game();
 }
 
 /* the turtles start walking out of the cleared area */

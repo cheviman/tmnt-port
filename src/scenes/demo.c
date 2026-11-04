@@ -3,7 +3,7 @@
  *    Description: the players' inputs, the demos' recorded ones, and the demo game
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -53,16 +53,16 @@ void update_game_inputs(void)
 				mem_write32(record_place, record + 1u);
 				switch (join_routine)
 				{
-				case 0x0048B2u:
+				case demo_join_player_1_ADDRESS:
 					channels = demo_join_player_1(channels);
 					break;
-				case 0x0048E6u:
+				case demo_join_player_2_ADDRESS:
 					channels = demo_join_player_2(channels);
 					break;
-				case 0x00491Au:
+				case demo_join_player_3_ADDRESS:
 					channels = demo_join_player_3(channels);
 					break;
-				case 0x00494Eu:
+				case demo_join_player_4_ADDRESS:
 					channels = demo_join_player_4(channels);
 					break;
 				}

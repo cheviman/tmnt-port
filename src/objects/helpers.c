@@ -3,7 +3,7 @@
  *    Description: small routines the objects of these files share: their stats, moves, free objects, the bosses' targets
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,14 +12,15 @@
 #include "game.h"
 
 /* picks one of the turtles in play at random as the boss's target and aims at it; none, none picked */
-void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_picked, uint32_t *p_choices)
+void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_picked)
 {
 	uint16_t count = 0;
-	uint32_t choice_count = 0, object_2 = 0;
+	uint32_t choice_count = 0, choices = 0, object_2 = 0;
 	uint16_t t1 = 0;
 
 	object_2 = OBJECT_ADDRESS(3);
-	*p_choices = boss_target_choices_ADDRESS;
+	choices = boss_target_choices_ADDRESS;
+	object_loop_leftover = boss_target_choices_ADDRESS;
 	boss_target_choices(0) = 0u;
 	boss_target_choices(1) = 0u;
 	boss_target_choices(2) = 0u;
@@ -42,7 +43,7 @@ void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p
 		choice_count = random_below((uint16_t)choice_count, object);
 		choice_count = ((choice_count & ~0xFFu) | boss_target_choices(choice_count)) * 0x50u;
 		OBJECT(object)->boss.target = OBJECT_ADDRESS(0) + choice_count;
-		boss_aim_at_target(object, p_direction_offset, &choice_count, p_choices);
+		boss_aim_at_target(object, p_direction_offset, &choice_count);
 		choice_count = IN_PAGE(choice_count, 1u);
 	}
 	offset_high_word = choice_count;
@@ -50,12 +51,12 @@ void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p
 }
 
 /* sets the boss's speeds toward its target and turns it that way */
-void boss_aim_at_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_y_speed, uint32_t *p_target)
+void boss_aim_at_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_y_speed)
 {
 	uint16_t y = 0;
 	uint32_t direction = 0, speeds = 0;
 
-	boss_direction_to_target(object, &direction, p_target);
+	direction = boss_direction_to_target(object);
 	speeds = rock_soldier_site_speeds_ADDRESS;
 	if (OBJECT(object)->kind != 0x1Eu)
 		speeds = boss_speeds_ADDRESS;
@@ -80,18 +81,18 @@ void set_object_stats(uint32_t object, uint32_t stats)
 	OBJECT(object)->health = OBJECT_STATS(stats)->health;
 	OBJECT(object)->damage = OBJECT_STATS(stats)->damage;
 	OBJECT(object)->depth = OBJECT_STATS(stats)->depth;
-	OBJECT(object)->set_object_stats.hit_sound = OBJECT_STATS(stats)->hit_sound;
+	OBJECT(object)->hit_sound = OBJECT_STATS(stats)->hit_sound;
 }
 
 /* moves the object by its speeds across, up or down the screen, and in height */
 void move_by_speeds(uint32_t object)
 {
-	uint32_t height_speed = 0, y_speed = 0;
+	uint32_t height_speed = 0;
 
 	OBJECT(object)->x += OBJECT(object)->x_speed;
-	y_speed = OBJECT(object)->y_speed;
-	OBJECT(object)->y += y_speed;
-	height_speed = (y_speed & ~0xFFFFu) | (uint16_t)OBJECT(object)->height_speed;
+	height_speed = OBJECT(object)->y_speed;
+	OBJECT(object)->y += height_speed;
+	height_speed = (height_speed & ~0xFFFFu) | (uint16_t)OBJECT(object)->height_speed;
 	OBJECT(object)->height += height_speed;
 	offset_high_word = height_speed;
 }
@@ -135,7 +136,7 @@ void remove_object(uint32_t object)
 }
 
 /* the direction, one of sixteen, from the boss to its target */
-void boss_direction_to_target(uint32_t object, uint32_t *p_direction, uint32_t *p_target)
+uint32_t boss_direction_to_target(uint32_t object)
 {
 	uint32_t overflow = 0;
 	uint16_t quadrant = 0, slope_offset = 0, y_distance = 0;
@@ -144,7 +145,7 @@ void boss_direction_to_target(uint32_t object, uint32_t *p_direction, uint32_t *
 
 	target = OBJECT(object)->boss.target;
 	quadrant = 0u;
-	t1 = mem_read16(target + 0xCu) - OBJECT(object)->screen_x;
+	t1 = OBJECT(target)->screen_x - OBJECT(object)->screen_x;
 	x_distance = t1;
 	if ((int16_t)t1 < 0)
 	{
@@ -152,7 +153,7 @@ void boss_direction_to_target(uint32_t object, uint32_t *p_direction, uint32_t *
 		x_distance = (uint16_t)~x_distance;
 		x_distance = (x_distance & ~0xFFu) | (uint8_t)(x_distance + 1u);
 	}
-	t2 = mem_read16(target + 0xEu) - OBJECT(object)->screen_y;
+	t2 = OBJECT(target)->screen_y - OBJECT(object)->screen_y;
 	y_distance = t2;
 	if ((int16_t)t2 < 0)
 	{
@@ -161,28 +162,36 @@ void boss_direction_to_target(uint32_t object, uint32_t *p_direction, uint32_t *
 		y_distance = (uint16_t)((y_distance & ~0xFFu) | (uint8_t)(y_distance + 1u));
 	}
 	if (x_distance == 0u)
-		direction = boss_axis_directions[quadrant];
-	else if (y_distance == 0u)
-		direction = boss_axis_directions[3 + quadrant];
-	else
 	{
-		slope_offset = 0u;
-		x_distance = x_distance * 0x3E8u;
-		overflow = m68k_divu_ov(x_distance, y_distance);
-		x_distance = y_distance == 0u ? x_distance : m68k_divu(x_distance, y_distance);
-		if (y_distance == 0u)
-			exception_hang();
-		if (overflow == 0u)
-		{
-			while ((uint16_t)x_distance < TABLE16(boss_axis_directions, 0x6u + (uint32_t)(int16_t)slope_offset))
-			{
-				slope_offset += 2u;
-			}
-		}
-		direction = boss_slope_directions[quadrant * 5u + (slope_offset >> 1)];
+		direction = boss_axis_directions[quadrant];
+		object_loop_leftover = target;
+		return direction;
 	}
-	*p_direction = direction;
-	*p_target = target;
+	if (y_distance == 0u)
+	{
+		direction = boss_axis_directions[3 + quadrant];
+		object_loop_leftover = target;
+		return direction;
+	}
+	slope_offset = 0u;
+	x_distance = x_distance * 0x3E8u;
+	overflow = m68k_divu_ov(x_distance, y_distance);
+	x_distance = y_distance == 0u ? x_distance : m68k_divu(x_distance, y_distance);
+	if (y_distance == 0u)
+		exception_hang();
+	if (overflow)
+	{
+		direction = boss_slope_directions[quadrant * 5u + (slope_offset >> 1)];
+		object_loop_leftover = target;
+		return direction;
+	}
+	while ((uint16_t)x_distance < TABLE16(boss_axis_directions, 0x6u + (uint32_t)(int16_t)slope_offset))
+	{
+		slope_offset += 2u;
+	}
+	direction = boss_slope_directions[quadrant * 5u + (slope_offset >> 1)];
+	object_loop_leftover = target;
+	return direction;
 }
 
 /* puts the other object where this one is */

@@ -3,7 +3,7 @@
  *    Description: the enemies' spawn lists, by the scroll
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -21,8 +21,8 @@ void start_area_spawns(void)
 	spawn_next = TABLE32(area_spawn_lists, (uint32_t)(int16_t)area_offset);
 	area_offset = (uint16_t)((uint32_t)area_offset << 1);
 	speeds = TABLE32(area_spawn_scrolls, (uint32_t)(int16_t)area_offset);
-	mem_write16(speeds + 2u, 0u);
-	mem_write16(speeds, 0u);
+	LAYER(speeds - 0xCu)->x_speed = 0u;
+	LAYER(speeds - 0xCu)->y_speed = 0u;
 	spawn_speeds = speeds;
 	spawn_directions = TABLE32(area_spawn_scrolls, 0x4u + (uint32_t)(int16_t)area_offset);
 	spawn_x = TABLE32(area_spawn_starts, (uint32_t)(int16_t)area_offset);
@@ -31,11 +31,11 @@ void start_area_spawns(void)
 
 /* every frame: the spawn scroll moved on and, when it reaches the next record, its enemy put into a free
    object */
-uint32_t spawn_enemies(uint32_t offset)
+void spawn_enemies(void)
 {
 	uint32_t zero = 0, carry = 0;
 	uint16_t x_step = 0, y_step = 0;
-	uint32_t directions = 0, enemy_x = 0, object = 0, spawn_record = 0, speeds = 0;
+	uint32_t directions = 0, enemy_x = 0, object = 0, offset = 0, spawn_record = 0, speeds = 0;
 	uint32_t kind_halfword = 0, kind_halfword_2 = 0;
 
 	speeds = spawn_speeds;
@@ -50,20 +50,21 @@ uint32_t spawn_enemies(uint32_t offset)
 	spawn_y += (int16_t)y_step;
 	spawn_record = spawn_next;
 	if (SPAWN_RECORD(spawn_record)->x == 0xFFFFu || (int16_t)(spawn_x >> 8) < (int16_t)SPAWN_RECORD(spawn_record)->x)
-		return offset;
+		return;
 	if (area == 6u)
 	{
 		carry = hold_scroll_for_enemies();
 		if (carry)
 		{
 			spawn_next = spawn_record + 8u;
-			return offset;
+			return;
 		}
 		if (difficulty < (SPAWN_RECORD(spawn_record)->flags & 0xFu))
 			spawn_next = spawn_record + 8u;
 		else
 		{
 			offset = spawn_offset(spawn_record);
+			object_loop_slot = offset;
 			take_free_object(spawn_record, &object, &zero);
 			if (zero)
 			{
@@ -84,23 +85,24 @@ uint32_t spawn_enemies(uint32_t offset)
 				if ((SPAWN_RECORD(spawn_record)->flags & 0x40u) != 0u)
 				{
 					enemy_x = (uint16_t)(enemy_x - 0x140u);
-					enemy_x = (uint16_t)(enemy_x - SCREEN_MARGIN(offset)->x);
+					enemy_x = (uint16_t)(enemy_x - SCREEN_MARGIN(object_loop_slot)->x);
 				}
 				else
-					enemy_x = (uint16_t)(enemy_x + SCREEN_MARGIN(offset)->x);
+					enemy_x = (uint16_t)(enemy_x + SCREEN_MARGIN(object_loop_slot)->x);
 				OBJECT(object)->x = enemy_x << 8;
 				OBJECT(object)->y = (uint32_t)SPAWN_RECORD(spawn_record)->y << 8;
 				spawn_next = spawn_record + 8u;
-				return offset;
+				return;
 			}
 		}
-		return offset;
+		return;
 	}
 	if (difficulty < (SPAWN_RECORD(spawn_record)->flags & 0xFu))
 		spawn_next = spawn_record + 8u;
 	else
 	{
 		offset = spawn_offset(spawn_record);
+		object_loop_slot = offset;
 		take_free_object(spawn_record, &object, &zero);
 		if (zero)
 		{
@@ -121,21 +123,20 @@ uint32_t spawn_enemies(uint32_t offset)
 			if ((SPAWN_RECORD(spawn_record)->flags & 0x40u) != 0u)
 			{
 				enemy_x = (uint16_t)(enemy_x - 0x140u);
-				enemy_x = (uint16_t)(enemy_x - SCREEN_MARGIN(offset)->x);
+				enemy_x = (uint16_t)(enemy_x - SCREEN_MARGIN(object_loop_slot)->x);
 			}
 			else
-				enemy_x = (uint16_t)(enemy_x + SCREEN_MARGIN(offset)->x);
+				enemy_x = (uint16_t)(enemy_x + SCREEN_MARGIN(object_loop_slot)->x);
 			OBJECT(object)->x = enemy_x << 8;
 			OBJECT(object)->y = (uint32_t)SPAWN_RECORD(spawn_record)->y << 8;
 			spawn_next = spawn_record + 8u;
-			return offset;
+			return;
 		}
 	}
-	return offset;
 }
 
 /* Unused: the next record's enemy put into a free object when the spawn scroll comes level with its y */
-void unreached_047B1C(uint32_t spawn)
+void spawn_enemy_level_with_scroll(uint32_t spawn)
 {
 	uint32_t zero = 0;
 	uint16_t scroll_y = 0;

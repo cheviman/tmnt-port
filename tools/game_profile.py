@@ -90,11 +90,28 @@ MEMORY_ROUTINES = {
                       "there: its callers hand it the work RAM's stretches and the sprite RAM (004612 \"lea $140800.l, A0\")",
     "clear_objects": "zeroes the 50 objects with movem, 32 bytes at a time down from their end (004604 \"lea $62fa0.l, A0\", 00460A \"move.w #$7c, D0\")",
     # (five ways into one unreached tail, 004666: a place, a count, then three movem a block of 96 bytes, 00466A-004672)
-    "unreached_004620": "unreached: zeroes 4 blocks of 96 bytes below 062000 (004620), whatever is there",
-    "unreached_00462E": "unreached: zeroes 12 blocks of 96 bytes below 0623C0 (00462E), whatever is there",
-    "unreached_00463C": "unreached: zeroes 8 blocks of 96 bytes below 062780 (00463C), whatever is there",
-    "unreached_00464A": "unreached: zeroes 8 blocks of 96 bytes below 062140 (00464A), whatever is there",
-    "unreached_004658": "unreached: zeroes 8 blocks of 96 bytes below 062A00 (004658), whatever is there",
+    "zero_ram_below_object_0": "unreached: zeroes 4 blocks of 96 bytes below 062000 (004620), whatever is there",
+    "zero_ram_below_object_12": "unreached: zeroes 12 blocks of 96 bytes below 0623C0 (00462E), whatever is there",
+    "zero_ram_below_object_24": "unreached: zeroes 8 blocks of 96 bytes below 062780 (00463C), whatever is there",
+    "zero_ram_below_object_4": "unreached: zeroes 8 blocks of 96 bytes below 062140 (00464A), whatever is there",
+    "zero_ram_below_object_32": "unreached: zeroes 8 blocks of 96 bytes below 062A00 (004658), whatever is there",
+    # the boot's: it clears the work RAM 32 bytes at a time down from its end (0011B2 "lea $64000.l, A0", 0011BE "movem.l
+    # D1-D6/A1-A2, -(A0)") and sums the program chips into the work RAM before anything has its place there (00151E
+    # "lea $60018.l, A2"); the RAM tests write and read the RAM by its address; the original of the program chips' sums
+    # (runtime/replaced.txt) reads the program by its address
+    "reset": "clears the work RAM with movem down from 064000 and keeps the program chips' sums at 060018, whatever is there",
+    "test_ram": "the boot's RAM test: patterns written and read back at each address of the RAM it is handed",
+    "test_palette_ram": "the boot's palette RAM test: patterns written and read back at each address of the palette RAM",
+    "BOARD_ORIGINAL": "the sum of each program chip's bytes, read by their address (the board puts its own in its place)",
+    # a whole object or layer cleared or copied a long at a time: a pointer moving through it is no field
+    "turtle_init": "clears the turtle's object a long at a time, 20 longs (019C98 \"moveq #$13, D2\", 019C9A \"move.l D1, (A0)+\")",
+    "turtle_start_marker": "clears the marker's object a long at a time, 21 longs (019ECE \"moveq #$14, D2\", 019ED0 \"move.l D1, (A1)\")",
+    "load_layer_a": "copies layer A's copy over the working layer, 16 longs (01E71E \"moveq #$10, D0\", 01E720 \"move.l (A3)+, (A4)+\")",
+    "load_layer_b": "copies layer B's copy over the working layer, 16 longs, as load_layer_a",
+    "save_layer_a": "copies the working layer over layer A's copy, 16 longs, as load_layer_a",
+    "save_layer_b": "copies the working layer over layer B's copy, 16 longs, as load_layer_a",
+    "reset_ranking": "copies the ranking's defaults over its scores and initials, one run of longs over the two arrays "
+                     "(0082D2 \"move.l (A5)+, (A6)+\", 0082DE \"move.l (A5)+, (A6)+\")",
 }
 # a constant stored into a field symbols.txt types as a number (an object's or a layer's x and y: positions, 1/256
 # of a pixel a unit), or compared with what one holds, is a number, not the address of what the program has there
@@ -141,6 +158,10 @@ NARROW_OUTPUTS = True
 # those parts of the registers are global variables, named by symbols.txt's register lines; what a function works out
 # and uses itself, or hands a routine it calls, stays a local or a parameter (core/decompiler/carried.py)
 CARRIED_REGISTERS = True
+# a value a function reads for itself where it starts, or works out itself and hands back, stays its parameter or result
+# even where it goes on to what a register carries: the value crosses by a copy (the object loop's A5 goes through the
+# enemies' routines, which take their own slot or animations in it; core/decompiler/carried.py)
+CARRIED_CUTS = True
 # a function that hands back a value and ends in a switch on a state, each case of which returns (or in the ifs around
 # such switches), says that its end is never reached (unreachable(), game/support.h): the compiler took it for a way out
 # with no value (C4715)
@@ -148,7 +169,35 @@ UNREACHABLE_ENDS = True
 # a web symbols.txt names twice (two "local" lines whose definitions the data flow joins) takes the name of the one first
 # in the program, whatever order the web's definitions were joined in (core/decompiler/variables.py)
 CHOSEN_IN_ORDER = True
-NOISE_REGISTERS = r"[da][0-7]"                 # the 68000's: what tools/noise_report.py counts as named after a register
+# a switch on the handler a table of the program's data holds (the data decides which routine runs) names each case
+# after the function it runs, case enemy_hop_crouch_ADDRESS (core/decompiler/emit.py)
+NAMED_CODE_CASES = True
+# a part of a value set to all ones with the rest kept ("st D0" on the routine's offset) reads x | 0xFF
+# (core/decompiler/cprint.py)
+MASK_FILLS = True
+# a place in a memory of the board, or a record, plus a sign-extended word ("move.b D4, (A4,D6.w)" into the tile RAM)
+# keeps its type: the word is a few bytes either way (core/decompiler/pointers.py)
+SIGNED_OFFSETS = True
+# a byte or word written into a register whose other parts are read afterwards ("move.b #3, D0" before a dbra over
+# the word) is the same variable as the register's value before: the write changes a part of it in place
+# (core/decompiler/variables.py)
+JOIN_KEPT_PARTS = True
+# the object a function of a family runs on (A0) is the family's in the pointer analysis too: what is read through
+# its pointer fields has their type (the enemy's definition, the turtle's hit_by), as the C prints them
+# (core/m68000/emit.py)
+OWN_OBJECT_POINTERS = True
+# a number below 0x10000 an instruction names as a data address (lea $e790.l, move.l #$a13e) is that address: named by
+# the data around it, or counted among the addresses written as numbers (core/m68000/decompile.py)
+ADDRESS_REFERENCES = True
+# the sound program's handlers, which it stores in its channels' records and switches on, by name (NAME_ADDRESS)
+SOUND_CODE_VALUES = True
+# the noise meter (core/noise_report.py): a switch on code counts by its cases written as addresses, whatever its
+# variable is called; names the tools made of an address are a kind of their own
+CODE_SWITCH_CASES = True
+ADDRESS_NAMES = True
+# the 68000's: what tools/noise_report.py counts as named after a register (d0-d7, a0-a6, and a virtual register's
+# number, r41, the globals of what the registers carry)
+NOISE_REGISTERS = r"(?:[da][0-7]|r\d+)"
 NOTES = {
     "variables": ["/* the game's variables in work RAM (060000-063FFF) */"],
     "scoped": ["/* work RAM as one family of functions uses it */"],
@@ -219,3 +268,9 @@ SOUND_NAMES_PAST_STORES = True
 # an access through HL set to a variable's address on every way to it ("ld hl,$83DF; dec (hl)", then "ld a,(hl)" past
 # the jump) reads that variable, as the C names it: HL is no longer set for it (decompiler/expressions.py)
 SOUND_CONSTANT_ADDRESSES = True
+# the borrow of "sbc hl,de" (the pitch less a random step, the borrow of the step before in) is a comparison,
+# pitch < step + borrow, not the CPU's flag worked out (decompiler/expressions.py)
+SOUND_CARRY_COMPARISONS = True
+# a byte written into a pair whose other byte is read afterwards ("ld e,a" with D the register's number, then the
+# write of DE to the chip) is the pair changed in part (decompiler/variables.py)
+SOUND_JOIN_KEPT_PARTS = True

@@ -3,7 +3,7 @@
  *    Description: the attract mode's steps: the title, the coin's screen, the opening's steps, a character's profile, BEST 10 PLAYERS, its end
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -187,12 +187,12 @@ void start_title_logo(void)
 		}
 		animation_entry = ANIMATION_ENTRY(animations + (animation_number & 0x3FFFu) * 0x4u);
 		set_animation(ignored, object, animation_entry);
-		piece_places = indexed_table_of_16_bit_values_004B58_ADDRESS;
+		piece_places = title_logo_places_ADDRESS;
 		if ((version & 2u) != 0u)
-			piece_places = 0x4B64u;
+			piece_places = hero_title_logo_places_ADDRESS;
 		piece_offset = (uint16_t)((uint32_t)count << 2);
-		OBJECT(object)->screen_x = mem_read16(piece_places + (int16_t)piece_offset);
-		OBJECT(object)->screen_y = mem_read16(piece_places + 2u + (int16_t)piece_offset);
+		OBJECT(object)->screen_x = LOGO_PLACE(piece_places + (int16_t)piece_offset);
+		OBJECT(object)->screen_y = LOGO_PLACE(piece_places + (int16_t)piece_offset + 0x2u);
 		t1 = count - 1u;
 		count = t1;
 		object += 0x50u;
@@ -286,9 +286,9 @@ void title_turtles_slide_in(void)
 	OBJECT(object)->screen_x = 0x100u;
 	attract_timer = 0xF0u;
 	scene_step++;
-	jobs = table_loaded_by_lea_004C76_ADDRESS;
+	jobs = ninja_title_jobs_ADDRESS;
 	if ((version & 1u) != 0u)
-		jobs = 0x4C7Cu;
+		jobs = hero_title_jobs_ADDRESS;
 	queue_jobs(jobs);
 }
 
@@ -462,7 +462,8 @@ void profile_start_picture(void)
 		animation = profile_animations[profile_character];
 		set_animation(0u, picture, animation);
 		profile_number = profile_character;
-		motion = profile_motions_ADDRESS + (uint16_t)(profile_number << 4);
+		profile_number = (uint16_t)(profile_number << 4);
+		motion = profile_motions_ADDRESS + profile_number;
 		OBJECT(OBJECT_ADDRESS(12))->screen_x = PROFILE_MOTION(motion)->x;
 		motion += 2u;
 		OBJECT(OBJECT_ADDRESS(12))->screen_y = PROFILE_MOTION(motion - 0x2u)->y;
@@ -606,7 +607,7 @@ void attract_end_restart(void)
 }
 
 /* Unused: eight sprites copied into the sprite chip, and layer B scrolled and filled */
-void unreached_005266(void)
+void copy_sprites_and_fill_layer_b(void)
 {
 	uint8_t tile_number = 0;
 	uint16_t colour_number = 0, count = 0;
@@ -728,7 +729,8 @@ void coin_screen_check_credits(void)
 	reset_layers_scroll();
 	any_lives = PLAYER(PLAYER_ADDRESS(0))->lives | PLAYER(PLAYER_ADDRESS(1))->lives | PLAYER(PLAYER_ADDRESS(2))->lives | PLAYER(PLAYER_ADDRESS(3))->lives;
 	any_lives = (uint16_t)(any_lives | free_play);
-	if ((any_lives | extra_credits) == 0u)
+	any_lives = (uint16_t)(any_lives | extra_credits);
+	if (any_lives == 0u)
 	{
 		game_step++;
 		scene = 0u;
@@ -794,7 +796,7 @@ void coin_screen_draw(void)
 	uint32_t jobs = 0, player = 0, players = 0;
 	uint16_t t1 = 0;
 
-	jobs = table_loaded_by_lea_008ABE_ADDRESS;
+	jobs = coin_screen_jobs_ADDRESS;
 	queue_jobs(jobs);
 	players = 0u;
 	count = 3u;
@@ -892,8 +894,8 @@ void draw_turtle_pictures(uint16_t count, uint32_t players)
 			count_2 = 3u;
 			do
 			{
-				mem_write8(sprite_place + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + (int16_t)count_2));
-				mem_write8(sprite_place + 8u + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int32_t)((int16_t)count_2 + 8u))));
+				io_write8(sprite_place + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + (int16_t)count_2));
+				io_write8(sprite_place + 8u + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int16_t)count_2 + 8u)));
 				t1 = count_2 - 1u;
 				count_2 = t1;
 			} while (t1 != 0xFFFFu);
@@ -905,8 +907,8 @@ void draw_turtle_pictures(uint16_t count, uint32_t players)
 			count_2 = 3u;
 			do
 			{
-				mem_write8(sprite_place + 4u + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int32_t)((int16_t)count_2 + 4u))));
-				mem_write8(sprite_place + 0xCu + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int32_t)((int16_t)count_2 + 0xCu))));
+				io_write8(sprite_place + 4u + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int16_t)count_2 + 4u)));
+				io_write8(sprite_place + 0xCu + (int16_t)count_2, PICTURE_SPRITE_BYTE(sprites + ((int16_t)count_2 + 0xCu)));
 				t2 = count_2 - 1u;
 				count_2 = t2;
 			} while (t2 != 0xFFFFu);
@@ -1133,11 +1135,11 @@ void best_players_palettes(void)
 void best_players_draw(void)
 {
 	uint16_t count = 0, kind = 0;
-	uint32_t d7 = 0, data = 0, players = 0;
+	uint32_t data = 0, loop_end = 0;
 
 	if (jobs_pending == 0u && palettes_busy == 0u)
 	{
-		data = palettes_008F58_ADDRESS;
+		data = best_players_palette_ADDRESS;
 		kind = 0x500u;
 		post_palette_request(kind, data);
 		tile_banks_0_1 = 0u;
@@ -1146,14 +1148,14 @@ void best_players_draw(void)
 		io_write8(TILES_106E00, 0u);
 		layer_b_scroll_x = 0x60u;
 		layer_b_scroll_y = 0u;
-		d7 = draw_ranking_background();
+		loop_end = draw_ranking_background();
 		count = 4u;
-		players = (d7 & ~0xFFu) | 0x8Fu;
+		loop_end = (loop_end & ~0xFFu) | 0x8Fu;
 		player_turtles(0) = 0u;
 		player_turtles(1) = 1u;
 		player_turtles(2) = 2u;
 		player_turtles(3) = 3u;
-		draw_turtle_pictures(count, players);
+		draw_turtle_pictures(count, loop_end);
 		draw_best_players();
 		scene++;
 		scene_step = 0u;
@@ -1235,7 +1237,7 @@ void draw_best_players(void)
 {
 	uint32_t jobs = 0;
 
-	jobs = 0x9190u;
+	jobs = best_players_jobs_ADDRESS;
 	queue_jobs(jobs);
 	draw_best_players_initials();
 	draw_best_players_scores();
@@ -1261,12 +1263,12 @@ void draw_best_players_initials(void)
 		io_write8(tile_place + 0x80u, colour);
 		io_write8(tile_place + 0x84u, colour);
 		io_write8(tile_place + 0x88u, colour);
-		character = mem_read8(initials);
+		character = RANKING_NAME(initials)->first;
 		draw_best_players_character(character, font_tiles, tile_place);
-		character = mem_read8(initials + 1u);
+		character = RANKING_NAME(initials)->second;
 		tile_place += 4u;
 		draw_best_players_character(character, font_tiles, tile_place);
-		character = mem_read8(initials + 2u);
+		character = RANKING_NAME(initials)->third;
 		tile_place += 4u;
 		draw_best_players_character(character, font_tiles, tile_place);
 		place = (uint8_t)(place + 1u);
@@ -1279,8 +1281,8 @@ void draw_best_players_initials(void)
 void draw_best_players_character(uint16_t character, uint32_t font_tiles, uint32_t tile_place)
 {
 	character = (uint16_t)((uint32_t)(uint8_t)(character - 0x30u) << 1);
-	io_write8(tile_place + 1u, mem_read8(font_tiles + character));
-	io_write8(tile_place + 0x81u, mem_read8(font_tiles + 1u + character));
+	io_write8(tile_place + 1u, FONT_TILE(font_tiles + character));
+	io_write8(tile_place + 0x81u, FONT_TILE(font_tiles + ((int32_t)(character + 1u))));
 }
 
 /* the ten scores with PTS */
@@ -1296,32 +1298,32 @@ void draw_best_players_scores(void)
 	{
 		tile_place = best_players_places[1] + place * 0x100u;
 		score_place = tile_place;
-		score_digits = mem_read16(score);
+		score_digits = RANKING_SCORE(score)->score;
 		while (score_digits != 0u)
 		{
 			colour = best_players_colours[place];
-			mem_write8(tile_place, colour);
-			mem_write8(tile_place + 0x80u, colour);
+			io_write8(tile_place, colour);
+			io_write8(tile_place + 0x80u, colour);
 			digit_offset = (uint8_t)score_digits;
 			digit_offset = (uint16_t)((digit_offset & 0xFu) << 1);
-			mem_write8(tile_place + 1u, big_font_tiles_table[digit_offset]);
-			mem_write8(tile_place + 0x81u, big_font_tiles_table[1 + digit_offset]);
+			io_write8(tile_place + 1u, big_font_tiles_table[digit_offset]);
+			io_write8(tile_place + 0x81u, big_font_tiles_table[1 + digit_offset]);
 			score_digits = score_digits >> 4;
 			tile_place -= 4u;
 		}
 		colour = best_players_colours[place];
-		mem_write8(score_place + 4u, colour);
-		mem_write8(score_place + 6u, colour);
-		mem_write8(score_place + 8u, colour);
-		mem_write8(score_place + 0x84u, colour);
-		mem_write8(score_place + 0x86u, colour);
-		mem_write8(score_place + 0x88u, colour);
-		mem_write8(score_place + 5u, big_font_tiles_table[64]);
-		mem_write8(score_place + 0x85u, big_font_tiles_table[65]);
-		mem_write8(score_place + 7u, big_font_tiles_table[72]);
-		mem_write8(score_place + 0x87u, big_font_tiles_table[73]);
-		mem_write8(score_place + 9u, big_font_tiles_table[70]);
-		mem_write8(score_place + 0x89u, big_font_tiles_table[71]);
+		io_write8(score_place + 4u, colour);
+		io_write8(score_place + 6u, colour);
+		io_write8(score_place + 8u, colour);
+		io_write8(score_place + 0x84u, colour);
+		io_write8(score_place + 0x86u, colour);
+		io_write8(score_place + 0x88u, colour);
+		io_write8(score_place + 5u, big_font_tiles_table[64]);
+		io_write8(score_place + 0x85u, big_font_tiles_table[65]);
+		io_write8(score_place + 7u, big_font_tiles_table[72]);
+		io_write8(score_place + 0x87u, big_font_tiles_table[73]);
+		io_write8(score_place + 9u, big_font_tiles_table[70]);
+		io_write8(score_place + 0x89u, big_font_tiles_table[71]);
 		place = (uint8_t)(place + 1u);
 		score += 2u;
 	} while (place < 0xAu);

@@ -3,7 +3,7 @@
  *    Description: blocks of tiles drawn into the layers, and texts typed a character at a time
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,17 +12,20 @@
 #include "game.h"
 
 /* a text to type, its first character at once */
-void start_typed_text_at_once(uint32_t text)
+uint32_t start_typed_text_at_once(uint32_t text)
 {
-	start_typed_text(text);
+	uint32_t colour_number = 0;
+
+	start_typed_text(&colour_number, &text);
 	typed_text_wait = 0u;
+	return colour_number;
 }
 
 /* the typed text's next character, a new line, or its end */
 void type_next_character(void)
 {
 	uint8_t text = 0;
-	uint32_t text_record = 0, tile_place = 0;
+	uint32_t ignored = 0, text_record = 0, tile_place = 0;
 	uint8_t t1 = 0;
 
 	if (typed_text == 0u)
@@ -47,7 +50,7 @@ void type_next_character(void)
 	}
 	if (text == 0x2Fu)
 	{
-		text_record = start_typed_text(text_record);
+		start_typed_text(&ignored, &text_record);
 		text = TEXT(text_record);
 		tile_place = typed_text_place;
 		text_record++;
@@ -61,14 +64,14 @@ void type_next_character(void)
 }
 
 /* a text typed a character at a time: its place, the frames between characters and its colour */
-uint32_t start_typed_text(uint32_t text)
+void start_typed_text(uint32_t *p_colour_number, uint32_t *p_text)
 {
-	uint16_t colour_number = 0;
+	uint32_t text = *p_text;
+	uint32_t colour_number = 0;
 
 	typed_text_place = TEXT_32(text);
 	text += 4u;
 	typed_text_delay = TEXT(text);
-	offset_high_word = 0u;
 	text++;
 	colour_number = TEXT(text);
 	typed_text = text + 1u;
@@ -80,7 +83,8 @@ uint32_t start_typed_text(uint32_t text)
 	}
 	typed_text_colour = text_colours[colour_number];
 	text = typed_text;
-	return text;
+	*p_colour_number = colour_number;
+	*p_text = text;
 }
 
 /* a block of tiles into the tile RAM at the place picked, wrapping round the layer */
@@ -106,9 +110,9 @@ void draw_tile_block(uint16_t place, uint32_t block)
 		column = (uint16_t)column_offset;
 		do
 		{
-			mem_write8(tile_row + (int16_t)column, TILE_BLOCK_BYTE(block));
+			io_write8(tile_row + (int16_t)column, TILE_BLOCK_BYTE(block));
 			block++;
-			mem_write8(tile_row + 1u + (int16_t)column, TILE_BLOCK_BYTE(block));
+			io_write8(tile_row + 1u + (int16_t)column, TILE_BLOCK_BYTE(block));
 			column = (column + 2u) & 0x7Fu;
 			t1 = count_2 - 1u;
 			count_2 = t1;
@@ -121,7 +125,7 @@ void draw_tile_block(uint16_t place, uint32_t block)
 }
 
 /* Unused: the spawn scroll's place shown on the screen in hex digits */
-void unreached_01845E(void)
+void show_spawn_scroll_place(void)
 {
 	uint16_t count = 0;
 	uint32_t number = 0, tile_place = 0;
@@ -307,8 +311,8 @@ void grow_tile_box(void)
 	}
 }
 
-/* Unused: a box's opening set up: 16 frames, its size, its tile and its place */
-void unreached_0186E2(void)
+/* Unused: a box set up the size of the screen: 16 frames, its size, its tile and its place */
+void start_wide_box_opening(void)
 {
 	box_frames_left = 0x10u;
 	box_width = 0x1Fu;

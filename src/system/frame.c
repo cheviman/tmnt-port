@@ -3,7 +3,7 @@
  *    Description: the VBLANK interrupt: the inputs, the frame's work, the game's states and the job queue
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -179,7 +179,7 @@ void count_coin(uint32_t coin_slot)
 uint32_t add_credit_lives(void)
 {
 	uint32_t carry = 0, extend = 0;
-	uint8_t slot = 0;
+	uint8_t credit_lives = 0, slot = 0;
 	uint16_t count = 0, count_2 = 0, lives = 0, players = 0;
 	uint32_t coin_slot = 0, player = 0, player_2 = 0, player_number = 0;
 	uint16_t credits = 0, t1 = 0, t2 = 0, t3 = 0;
@@ -198,11 +198,12 @@ uint32_t add_credit_lives(void)
 			count_2 = (uint16_t)((count_2 & ~0xFFu) | (uint8_t)(count_2 - 1u));
 			do
 			{
-				distance_low_byte = lives_per_credit;
+				credit_lives = lives_per_credit;
+				distance_low_byte = credit_lives;
 				lives = PLAYER(player_2)->lives;
 				extend = 0u;
-				carry = m68k_abcd_cy((uint8_t)lives, distance_low_byte, extend);
-				lives = (uint16_t)((lives & ~0xFFu) | m68k_abcd((uint8_t)lives, distance_low_byte, extend));
+				carry = m68k_abcd_cy((uint8_t)lives, credit_lives, extend);
+				lives = (uint16_t)((lives & ~0xFFu) | m68k_abcd((uint8_t)lives, credit_lives, extend));
 				if (carry)
 				{
 					lives += 0x100u;
@@ -242,7 +243,7 @@ uint32_t add_credit_lives(void)
 }
 
 /* Unused: a column of 28 tiles set to the one given */
-void unreached_003DAA(uint8_t tile_code)
+void fill_tile_column(uint8_t tile_code)
 {
 	uint16_t count = 0;
 	uint32_t tile_place = 0;
@@ -263,7 +264,7 @@ void unreached_003DAA(uint8_t tile_code)
 /* the frame's interrupt: the inputs, the coins, the sound, the palettes and the game state's frame */
 void vblank_interrupt(void)
 {
-	uint32_t d7 = 0;
+	uint32_t bank_bits = 0;
 
 	board_control &= 0xDFu;
 	io_write8(IO_0A0001, board_control);
@@ -273,13 +274,13 @@ void vblank_interrupt(void)
 	frame_count++;
 	sound_stopped_by_coin = 0u;
 	send_sound_command();
-	d7 = read_inputs(0u);
+	bank_bits = read_inputs(0u);
 	if (game_state != 3u)
 	{
 		update_coins();
-		d7 = add_credit_lives();
+		bank_bits = add_credit_lives();
 	}
-	run_palette_requests((uint16_t)d7);
+	run_palette_requests((uint16_t)bank_bits);
 	step_palette_effects();
 	switch (game_state)
 	{
@@ -301,10 +302,9 @@ void vblank_interrupt(void)
 }
 
 /* the coins and the four players' inputs read, and the layers' scroll written */
-uint32_t read_inputs(uint32_t d7)
+uint32_t read_inputs(uint32_t kept_bits)
 {
 	uint8_t inputs = 0;
-	uint32_t scroll_x = 0;
 
 	player_inputs_3_frames_ago = player_inputs_2_frames_ago;
 	player_inputs_2_frames_ago = (((uint32_t)player_inputs_last_frame(0) << 24u) | ((uint32_t)player_inputs_last_frame(1) << 16u) | ((uint32_t)player_inputs_last_frame(2) << 8u) | player_inputs_last_frame(3));
@@ -329,18 +329,18 @@ uint32_t read_inputs(uint32_t d7)
 	player_inputs(3) = inputs;
 	player_presses(3) = inputs & ~player_inputs_last_frame(3);
 	io_write8(TILES_106018, (uint8_t)layer_a_scroll_y);
-	scroll_x = (d7 & ~0xFFFFu) | layer_a_scroll_x;
-	scroll_x = (scroll_x & ~0xFFFFu) | (uint16_t)(scroll_x - 0x60u);
-	io_write8(TILES_106400, scroll_x);
-	scroll_x = (scroll_x & ~0xFFFFu) | ((uint16_t)scroll_x >> 8);
-	io_write8(TILES_106402, scroll_x);
+	kept_bits = (kept_bits & ~0xFFFFu) | layer_a_scroll_x;
+	kept_bits = (kept_bits & ~0xFFFFu) | (uint16_t)(kept_bits - 0x60u);
+	io_write8(TILES_106400, kept_bits);
+	kept_bits = (kept_bits & ~0xFFFFu) | ((uint16_t)kept_bits >> 8);
+	io_write8(TILES_106402, kept_bits);
 	io_write8(TILES_106019, (uint8_t)layer_b_scroll_y);
-	scroll_x = (scroll_x & ~0xFFFFu) | layer_b_scroll_x;
-	scroll_x = (scroll_x & ~0xFFFFu) | (uint16_t)(scroll_x - 0x60u);
-	io_write8(TILES_106401, scroll_x);
-	scroll_x = (scroll_x & ~0xFFFFu) | ((uint16_t)scroll_x >> 8);
-	io_write8(TILES_106403, scroll_x);
-	return scroll_x;
+	kept_bits = (kept_bits & ~0xFFFFu) | layer_b_scroll_x;
+	kept_bits = (kept_bits & ~0xFFFFu) | (uint16_t)(kept_bits - 0x60u);
+	io_write8(TILES_106401, kept_bits);
+	kept_bits = (kept_bits & ~0xFFFFu) | ((uint16_t)kept_bits >> 8);
+	io_write8(TILES_106403, kept_bits);
+	return kept_bits;
 }
 
 /* the steps after the reset */
@@ -383,7 +383,7 @@ void startup_begin(void)
 	job = 1u;
 	queue_job(job);
 	kind = 0x20Fu;
-	data = 0xA05Eu;
+	data = startup_palettes_ADDRESS;
 	post_palette_request(kind, data);
 }
 
@@ -412,8 +412,9 @@ void startup_end(void)
 	}
 }
 
-/* Unused: the screen's flip set */
-void unreached_004068(void)
+/* Unused: bytes no code reads (02 00 01 0F 01 07 01 0A FF FF) that decode as three instructions running
+   on into set_screen_flip */
+void run_on_into_set_screen_flip(void)
 {
 	set_screen_flip();
 }
@@ -561,7 +562,7 @@ void queue_job(uint16_t job)
 	uint32_t queue_place = 0;
 
 	queue_place = job_queue_write;
-	mem_write16(queue_place, job);
+	QUEUED_JOB(queue_place)->job = job;
 	queue_place += 2u;
 	if (queue_place > job_queue_ADDRESS + 0x7Fu)
 		queue_place = job_queue_ADDRESS;
@@ -780,13 +781,12 @@ void reset_score(uint32_t player)
 }
 
 /* the players who join or come back, their boxes and messages */
-uint32_t update_players_in_game(uint32_t marker)
+void update_players_in_game(void)
 {
-	marker = join_players(marker);
+	join_players();
 	redraw_new_lives();
-	marker = respawn_players(marker);
+	respawn_players();
 	update_player_messages();
-	return marker;
 }
 
 /* the boxes whose lives a coin changed */
@@ -802,16 +802,16 @@ void redraw_new_lives(void)
 }
 
 /* the players who join: their turtles in, a life each */
-uint32_t join_players(uint32_t marker)
+void join_players(void)
 {
 	uint8_t players = 0;
 	uint16_t box_flags = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	if (players_joining == 0u)
-		return marker;
+		return;
 	players = players_joining;
-	marker = turtle_join(players);
+	turtle_join(players);
 	if ((players_joining & 1u) != 0u)
 		use_life_player_1();
 	if ((players_joining & 2u) != 0u)
@@ -824,18 +824,17 @@ uint32_t join_players(uint32_t marker)
 	box_flags = (uint16_t)(box_flags | 0x30u);
 	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 	players_joining = 0u;
-	return marker;
 }
 
 /* the players whose turtle was knocked out: a life each, the turtle back */
-uint32_t respawn_players(uint32_t marker)
+void respawn_players(void)
 {
 	uint8_t players = 0;
 	uint16_t box_flags = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
 
 	if (players_knocked_out == 0u)
-		return marker;
+		return;
 	if ((players_knocked_out & 1u) != 0u)
 		use_life_player_1();
 	if ((players_knocked_out & 2u) != 0u)
@@ -845,38 +844,47 @@ uint32_t respawn_players(uint32_t marker)
 	if ((players_knocked_out & 8u) != 0u)
 		use_life_player_4();
 	players = players_in_play & players_knocked_out;
-	marker = turtle_respawn(players);
+	turtle_respawn(players);
 	box_flags = (uint16_t)(0xB00u | players_knocked_out);
 	box_flags = (uint16_t)(box_flags | 0x30u);
 	draw_player_boxes(box_flags, &ignored, &ignored_2, &ignored_3);
 	players_knocked_out = 0u;
-	return marker;
 }
 
 /* the messages under the four boxes */
 void update_player_messages(void)
 {
 	uint16_t count = 0;
+	uint32_t player_bits = 0;
 	uint16_t t1 = 0;
 
 	count = 3u;
 	do
 	{
-		update_player_message((uint8_t)count);
+		player_bits = screen_x_high & ~0xFFu;
+		update_player_message((uint8_t)count, player_bits);
 		t1 = count - 1u;
 		count = t1;
 	} while (t1 != 0xFFFFu);
 }
 
 /* the message under a player's box by how he stands */
-void update_player_message(uint8_t count)
+void update_player_message(uint8_t count, uint32_t player_bits)
 {
 	uint8_t player_message = 0;
 	uint32_t ignored = 0, ignored_2 = 0;
 
-	if (((players_with_lives | players_joining | players_in_play | players_knocked_out | (screen_x_high & ~0xFFu)) & shl32(1u, (int)(count & 0x1Fu))) != 0u)
+	player_bits |= players_with_lives;
+	player_bits = player_bits | players_joining;
+	player_bits = player_bits | players_in_play;
+	player_bits = player_bits | players_knocked_out;
+	if ((player_bits & shl32(1u, (int)(count & 0x1Fu))) != 0u)
 	{
-		if (((players_joining | players_in_play | players_knocked_out | players_out_of_lives | (screen_x_high & ~0xFFu)) & shl32(1u, (int)(count & 0x1Fu))) != 0u || (players_with_lives & shl32(1u, (int)(count & 7u))) == 0u)
+		player_bits = (player_bits & ~0xFFu) | players_joining;
+		player_bits = player_bits | players_in_play;
+		player_bits = player_bits | players_knocked_out;
+		player_bits = player_bits | players_out_of_lives;
+		if ((player_bits & shl32(1u, (int)(count & 0x1Fu))) != 0u || (players_with_lives & shl32(1u, (int)(count & 7u))) == 0u)
 		{
 			offset_high_word = 0u;
 			player_message = 0xCu;
@@ -902,7 +910,7 @@ void update_player_message(uint8_t count)
 }
 
 /* Unused: queues the drawing of the players' boxes the bits given pick */
-void unreached_0044EE(uint16_t box_flags)
+void queue_player_boxes(uint16_t box_flags)
 {
 	box_flags |= 0xB30u;
 	queue_job(box_flags);
@@ -1149,7 +1157,7 @@ void clear_area_variables(void)
 }
 
 /* Unused: the four players cleared and two stretches of work RAM zeroed */
-void unreached_00456A(void)
+void clear_players_and_ram(void)
 {
 	uint16_t count = 0;
 	uint32_t ram_end = 0;
@@ -1325,15 +1333,14 @@ void clear_sprite_ram(void)
 }
 
 /* Unused: the 384 bytes of work RAM below the first object zeroed */
-void unreached_004620(uint16_t d0)
+void zero_ram_below_object_0(uint16_t kept_bits)
 {
-	uint16_t count = 0;
 	uint32_t fill = 0, fill_2 = 0, fill_3 = 0, fill_4 = 0, fill_5 = 0, fill_6 = 0, fill_7 = 0, fill_8 = 0, ram_end = 0;
 	uint16_t t25 = 0;
 	uint32_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0, t21 = 0, t22 = 0, t23 = 0, t24 = 0;
 
 	ram_end = OBJECT_ADDRESS(0);
-	count = (uint16_t)((d0 & ~0xFFu) | 3u);
+	kept_bits = (uint16_t)((kept_bits & ~0xFFu) | 3u);
 	zero_fill_registers(&fill, &fill_2, &fill_3, &fill_4, &fill_5, &fill_6, &fill_7, &fill_8);
 	do
 	{
@@ -1410,21 +1417,20 @@ void unreached_004620(uint16_t d0)
 		mem_write16(t24 + 2u, fill);
 		mem_write16(t24, fill >> 16);
 		ram_end = t24;
-		t25 = count - 1u;
-		count = t25;
+		t25 = kept_bits - 1u;
+		kept_bits = t25;
 	} while (t25 != 0xFFFFu);
 }
 
 /* Unused: the 1152 bytes of work RAM below object 12 zeroed */
-void unreached_00462E(uint16_t d0)
+void zero_ram_below_object_12(uint16_t kept_bits)
 {
-	uint16_t count = 0;
 	uint32_t fill = 0, fill_2 = 0, fill_3 = 0, fill_4 = 0, fill_5 = 0, fill_6 = 0, fill_7 = 0, fill_8 = 0, ram_end = 0;
 	uint16_t t25 = 0;
 	uint32_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0, t21 = 0, t22 = 0, t23 = 0, t24 = 0;
 
 	ram_end = OBJECT_ADDRESS(12);
-	count = (uint16_t)((d0 & ~0xFFu) | 0xBu);
+	kept_bits = (uint16_t)((kept_bits & ~0xFFu) | 0xBu);
 	zero_fill_registers(&fill, &fill_2, &fill_3, &fill_4, &fill_5, &fill_6, &fill_7, &fill_8);
 	do
 	{
@@ -1501,21 +1507,20 @@ void unreached_00462E(uint16_t d0)
 		mem_write16(t24 + 2u, fill);
 		mem_write16(t24, fill >> 16);
 		ram_end = t24;
-		t25 = count - 1u;
-		count = t25;
+		t25 = kept_bits - 1u;
+		kept_bits = t25;
 	} while (t25 != 0xFFFFu);
 }
 
 /* Unused: the 768 bytes of work RAM below object 24 zeroed */
-void unreached_00463C(uint16_t d0)
+void zero_ram_below_object_24(uint16_t kept_bits)
 {
-	uint16_t count = 0;
 	uint32_t fill = 0, fill_2 = 0, fill_3 = 0, fill_4 = 0, fill_5 = 0, fill_6 = 0, fill_7 = 0, fill_8 = 0, ram_end = 0;
 	uint16_t t25 = 0;
 	uint32_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0, t21 = 0, t22 = 0, t23 = 0, t24 = 0;
 
 	ram_end = OBJECT_ADDRESS(24);
-	count = (uint16_t)((d0 & ~0xFFu) | 7u);
+	kept_bits = (uint16_t)((kept_bits & ~0xFFu) | 7u);
 	zero_fill_registers(&fill, &fill_2, &fill_3, &fill_4, &fill_5, &fill_6, &fill_7, &fill_8);
 	do
 	{
@@ -1592,21 +1597,20 @@ void unreached_00463C(uint16_t d0)
 		mem_write16(t24 + 2u, fill);
 		mem_write16(t24, fill >> 16);
 		ram_end = t24;
-		t25 = count - 1u;
-		count = t25;
+		t25 = kept_bits - 1u;
+		kept_bits = t25;
 	} while (t25 != 0xFFFFu);
 }
 
 /* Unused: the 768 bytes of work RAM below object 4 zeroed, the turtles' objects among them */
-void unreached_00464A(uint16_t d0)
+void zero_ram_below_object_4(uint16_t kept_bits)
 {
-	uint16_t count = 0;
 	uint32_t fill = 0, fill_2 = 0, fill_3 = 0, fill_4 = 0, fill_5 = 0, fill_6 = 0, fill_7 = 0, fill_8 = 0, ram_end = 0;
 	uint16_t t25 = 0;
 	uint32_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0, t21 = 0, t22 = 0, t23 = 0, t24 = 0;
 
 	ram_end = OBJECT_ADDRESS(4);
-	count = (uint16_t)((d0 & ~0xFFu) | 7u);
+	kept_bits = (uint16_t)((kept_bits & ~0xFFu) | 7u);
 	zero_fill_registers(&fill, &fill_2, &fill_3, &fill_4, &fill_5, &fill_6, &fill_7, &fill_8);
 	do
 	{
@@ -1683,21 +1687,20 @@ void unreached_00464A(uint16_t d0)
 		mem_write16(t24 + 2u, fill);
 		mem_write16(t24, fill >> 16);
 		ram_end = t24;
-		t25 = count - 1u;
-		count = t25;
+		t25 = kept_bits - 1u;
+		kept_bits = t25;
 	} while (t25 != 0xFFFFu);
 }
 
 /* Unused: the 768 bytes of work RAM below object 32 zeroed */
-void unreached_004658(uint16_t d0)
+void zero_ram_below_object_32(uint16_t kept_bits)
 {
-	uint16_t count = 0;
 	uint32_t fill = 0, fill_2 = 0, fill_3 = 0, fill_4 = 0, fill_5 = 0, fill_6 = 0, fill_7 = 0, fill_8 = 0, ram_end = 0;
 	uint16_t t25 = 0;
 	uint32_t t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0, t7 = 0, t8 = 0, t9 = 0, t10 = 0, t11 = 0, t12 = 0, t13 = 0, t14 = 0, t15 = 0, t16 = 0, t17 = 0, t18 = 0, t19 = 0, t20 = 0, t21 = 0, t22 = 0, t23 = 0, t24 = 0;
 
 	ram_end = OBJECT_ADDRESS(32);
-	count = (uint16_t)((d0 & ~0xFFu) | 7u);
+	kept_bits = (uint16_t)((kept_bits & ~0xFFu) | 7u);
 	zero_fill_registers(&fill, &fill_2, &fill_3, &fill_4, &fill_5, &fill_6, &fill_7, &fill_8);
 	do
 	{
@@ -1774,7 +1777,7 @@ void unreached_004658(uint16_t d0)
 		mem_write16(t24 + 2u, fill);
 		mem_write16(t24, fill >> 16);
 		ram_end = t24;
-		t25 = count - 1u;
-		count = t25;
+		t25 = kept_bits - 1u;
+		kept_bits = t25;
 	} while (t25 != 0xFFFFu);
 }

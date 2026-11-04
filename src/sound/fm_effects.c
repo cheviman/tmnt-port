@@ -3,7 +3,7 @@
  *    Description: the FM effects (commands 01-41)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -42,7 +42,7 @@ uint32_t fm_effect_01_note(uint16_t channel, uint8_t attenuation)
 	carry = fm_key_on(channel);
 	z80_block(40);
 	fm_effect_01_timer = 0x34u;
-	handler = 0x1662u;
+	handler = fm_effect_01_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -120,7 +120,7 @@ uint32_t fm_effect_02_round(uint16_t channel, uint8_t steps)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x16CFu;
+	handler = fm_effect_02_slide_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -160,7 +160,7 @@ uint32_t fm_effect_02_slide(uint16_t channel)
 		attenuation = 0x31u;
 		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		handler = 0x1727u;
+		handler = fm_effect_02_pause_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -233,7 +233,7 @@ uint32_t fm_effect_03(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x177Du;
+	handler = fm_effect_03_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -268,7 +268,7 @@ uint32_t fm_effect_03_fall(uint16_t channel)
 	CHANNEL(channel)->fm_effect.attenuation = 0xBu;
 	carry = set_fm_volume(channel, attenuation);
 	z80_block(20);
-	handler = 0x17ADu;
+	handler = fm_effect_03_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -361,7 +361,7 @@ uint32_t fm_effect_wobble_note(uint16_t channel, uint8_t attenuation)
 	carry = fm_key_on(channel);
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0x20u;
-	handler = 0x183Fu;
+	handler = fm_effect_wobble_down_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -385,7 +385,7 @@ uint32_t fm_effect_wobble_down(uint16_t channel)
 		z80_block(17);
 		carry = set_fm_volume_from_record(channel);
 		z80_block(20);
-		handler = 0x1868u;
+		handler = fm_effect_wobble_hold_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -433,7 +433,7 @@ void fm_effect_37(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 8u;
-	handler = 0x1881u;
+	handler = fm_effect_37_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -475,7 +475,7 @@ uint32_t fm_effect_06(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x18A9u;
+	handler = fm_effect_06_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -510,7 +510,7 @@ uint32_t fm_effect_06_fall(uint16_t channel)
 	CHANNEL(channel)->fm_effect.attenuation = 5u;
 	carry = set_fm_volume(channel, attenuation);
 	z80_block(20);
-	handler = 0x18D9u;
+	handler = fm_effect_06_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -587,7 +587,7 @@ uint32_t fm_effect_07_note(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1962u;
+	handler = fm_effect_07_step_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -686,7 +686,7 @@ uint32_t fm_effect_08_note(uint16_t channel, uint8_t length)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x19F9u;
+	handler = fm_effect_08_rise_and_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -803,7 +803,7 @@ uint32_t fm_effect_0a_note(uint16_t channel, uint8_t attenuation)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1A98u;
+	handler = fm_effect_0a_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -875,7 +875,7 @@ uint32_t fm_effect_33_drone(uint16_t channel, uint8_t attenuation)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1B1Bu;
+	handler = fm_effect_33_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -932,7 +932,7 @@ uint32_t fm_effect_0b(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1B79u;
+	handler = fm_effect_0b_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -977,7 +977,7 @@ uint32_t fm_effect_0b_slide_start(uint16_t channel, uint8_t attenuation)
 	carry = set_fm_volume(channel, attenuation);
 	z80_block(40);
 	fm_effect_0b_slide_timer = 0x60u;
-	handler = 0x1B9Cu;
+	handler = fm_effect_0b_slide_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1091,7 +1091,7 @@ uint32_t fm_effect_zigzag_steps_key_on(uint16_t channel, uint8_t attenuation)
 	carry = fm_key_on(channel);
 	z80_block(58);
 	CHANNEL(channel)->fm_effect_zigzag_steps.timer = CHANNEL(channel)->fm_effect_zigzag_steps.period;
-	handler = 0x1C40u;
+	handler = fm_effect_zigzag_steps_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1183,7 +1183,7 @@ uint32_t fm_effect_0d(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1CCEu;
+	handler = fm_effect_0d_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1229,7 +1229,7 @@ uint32_t fm_effect_0d_trill_round(uint16_t channel, uint8_t attenuation)
 	AT8(CHANNEL(channel)->fm_effect.base_pitch, 1) = 8u;
 	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
-	handler = 0x1D0Au;
+	handler = fm_effect_0d_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1268,7 +1268,7 @@ uint32_t fm_effect_0d_trill(uint16_t channel)
 		attenuation = 0x31u;
 		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		handler = 0x1D4Fu;
+		handler = fm_effect_0d_pause_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -1324,7 +1324,7 @@ uint32_t fm_effect_0e(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1D96u;
+	handler = fm_effect_0e_zigzag_down_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1390,7 +1390,7 @@ uint32_t fm_effect_0e_zigzag_up_start(uint16_t channel, uint8_t attenuation)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1DE4u;
+	handler = fm_effect_0e_zigzag_up_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1456,7 +1456,7 @@ uint32_t fm_effect_0f(uint16_t channel)
 	voice = 0x1E1Au;
 	carry = fm_effect_drop_start(voice, channel);
 	z80_block(20);
-	handler = 0x1E4Cu;
+	handler = fm_effect_0f_drop_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1553,7 +1553,7 @@ uint32_t fm_effect_burst(uint16_t channel, uint8_t attenuation)
 	z80_block(68);
 	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
-	handler = 0x1EB5u;
+	handler = fm_effect_burst_step_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1583,7 +1583,7 @@ uint32_t fm_effect_burst_step(uint16_t channel)
 		fm_effect_quieter_pool_offset(channel, &offset, &carry);
 		z80_block(83);
 		t1 = 0xA00u - offset - carry;
-		carry = z80_carry_sub16(0xA00u, offset, carry);
+		carry = offset + carry > 0xA00u;
 		base_pitch = t1;
 		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 		pitch = 0x600u;
@@ -1632,7 +1632,7 @@ uint32_t fm_effect_10(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x1F37u;
+	handler = fm_effect_10_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1659,7 +1659,7 @@ uint32_t fm_effect_10_fall(uint16_t channel)
 	if (CHANNEL(PCM_EFFECT_B)->sound < 0x12u)
 	{
 		z80_block(66);
-		CHANNEL(PCM_EFFECT_B)->handler = 0x1183u;
+		CHANNEL(PCM_EFFECT_B)->handler = pcm_effect_84_ADDRESS;
 		CHANNEL(PCM_EFFECT_B)->sound = 4u;
 		CHANNEL(PCM_EFFECT_B)->priority = 0x11u;
 	}
@@ -1675,7 +1675,7 @@ uint32_t fm_effect_10_fall(uint16_t channel)
 	z80_block(68);
 	AS8(CHANNEL(channel)->fm_effect_10.pitch) = 0u;
 	AT8(CHANNEL(channel)->fm_effect_10.pitch, 1) = 0xAu;
-	handler = 0x1F7Fu;
+	handler = fm_effect_10_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1746,7 +1746,7 @@ uint32_t fm_effect_drop_and_pcm_start(uint16_t voice, uint16_t channel)
 	z80_block(17);
 	carry = fm_effect_drop_start(voice, channel);
 	z80_block(20);
-	handler = 0x1FE4u;
+	handler = fm_effect_drop_and_pcm_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1821,7 +1821,7 @@ uint32_t fm_effect_14(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2069u;
+	handler = fm_effect_14_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1875,7 +1875,7 @@ uint32_t fm_effect_15(uint16_t channel)
 	uint16_t saved_channel = 0;
 
 	z80_block(105);
-	CHANNEL(FM_EFFECT_7)->handler = 0x212Cu;
+	CHANNEL(FM_EFFECT_7)->handler = fm_effect_15_echo_ADDRESS;
 	CHANNEL(FM_EFFECT_7)->sound = 0x15u;
 	CHANNEL(FM_EFFECT_7)->priority = 0x13u;
 	saved_channel = channel;
@@ -1920,7 +1920,7 @@ uint32_t fm_effect_15_note(uint16_t channel, uint8_t length)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x20F5u;
+	handler = fm_effect_15_sink_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -1973,7 +1973,7 @@ void fm_effect_15_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->fm_effect_15.timer = 0x10u;
-	handler = 0x2136u;
+	handler = fm_effect_15_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -2000,7 +2000,7 @@ uint32_t fm_effect_15_echo_wait(uint16_t channel, uint32_t carry)
 uint32_t fm_effect_16(uint16_t channel)
 {
 	z80_block(66);
-	CHANNEL(FM_EFFECT_6)->handler = 0x21C6u;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_16_echo_ADDRESS;
 	CHANNEL(FM_EFFECT_6)->sound = 0x16u;
 	CHANNEL(FM_EFFECT_6)->priority = 0x12u;
 	return fm_effect_16_rise(channel);
@@ -2037,7 +2037,7 @@ uint32_t fm_effect_long_rise_start(uint16_t length, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2197u;
+	handler = fm_effect_long_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2092,7 +2092,7 @@ uint32_t fm_effect_16_echo(uint16_t channel)
 	carry = fm_fast_release(channel);
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0x50u;
-	handler = 0x21D6u;
+	handler = fm_effect_16_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2166,7 +2166,7 @@ uint32_t fm_effect_17_key_on(uint16_t channel, uint8_t attenuation)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2226u;
+	handler = fm_effect_17_zigzag_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2295,7 +2295,7 @@ uint32_t fm_effect_ladder_step(uint16_t pitch, uint16_t channel)
 	carry = fm_key_on(channel);
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0xAu;
-	handler = 0x2306u;
+	handler = fm_effect_ladder_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2364,8 +2364,8 @@ uint32_t fm_effect_1a(uint16_t channel)
 	uint16_t handler = 0, ignored16 = 0, pitch = 0, voice = 0;
 
 	z80_block(152);
-	CHANNEL(FM_EFFECT_7)->handler = 0x244Fu;
-	CHANNEL(FM_EFFECT_6)->handler = 0x2012u;
+	CHANNEL(FM_EFFECT_7)->handler = fm_effect_1a_second_start_ADDRESS;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_13_ADDRESS;
 	CHANNEL(FM_EFFECT_7)->sound = 0x1Au;
 	CHANNEL(FM_EFFECT_6)->sound = 0x13u;
 	CHANNEL(FM_EFFECT_7)->priority = 0x30u;
@@ -2386,7 +2386,7 @@ uint32_t fm_effect_1a(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2393u;
+	handler = fm_effect_1a_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2430,7 +2430,7 @@ uint32_t fm_effect_1a_burst(uint16_t channel, uint8_t attenuation)
 	z80_block(68);
 	AS8(CHANNEL(channel)->fm_effect.pitch) = 0x80u;
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
-	handler = 0x23CAu;
+	handler = fm_effect_1a_burst_step_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2460,7 +2460,7 @@ uint32_t fm_effect_1a_burst_step(uint16_t channel)
 		fm_effect_quieter_pool_offset(channel, &offset, &carry);
 		z80_block(83);
 		t1 = 0xA80u - offset - carry;
-		carry = z80_carry_sub16(0xA80u, offset, carry);
+		carry = offset + carry > 0xA80u;
 		base_pitch = t1;
 		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 		pitch = 0x680u;
@@ -2599,7 +2599,7 @@ uint32_t fm_effect_1a_second_note(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x247Au;
+	handler = fm_effect_1a_second_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2648,7 +2648,7 @@ uint32_t fm_effect_1a_second_burst(uint16_t channel, uint8_t attenuation)
 	z80_block(68);
 	AS8(CHANNEL(channel)->fm_effect.pitch) = 0u;
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xBu;
-	handler = 0x24B7u;
+	handler = fm_effect_1a_second_burst_step_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2678,7 +2678,7 @@ uint32_t fm_effect_1a_second_burst_step(uint16_t channel)
 		fm_effect_quieter_pool_offset(channel, &offset, &carry);
 		z80_block(83);
 		t1 = 0xB00u - offset - carry;
-		carry = z80_carry_sub16(0xB00u, offset, carry);
+		carry = offset + carry > 0xB00u;
 		base_pitch = t1;
 		CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 		pitch = 0x700u;
@@ -2726,7 +2726,7 @@ uint32_t fm_effect_1b(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2531u;
+	handler = fm_effect_1b_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2749,7 +2749,7 @@ uint32_t fm_effect_1b_rise(uint16_t channel)
 		attenuation = 0x2Du;
 		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		handler = 0x2556u;
+		handler = fm_effect_1b_hold_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -2800,7 +2800,7 @@ uint32_t fm_effect_1c(uint16_t channel)
 	uint8_t attenuation = 0;
 
 	z80_block(73);
-	CHANNEL(FM_EFFECT_6)->handler = 0x25FEu;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_1c_echo_ADDRESS;
 	CHANNEL(FM_EFFECT_6)->sound = 0x1Cu;
 	CHANNEL(FM_EFFECT_6)->priority = 0x14u;
 	attenuation = 5u;
@@ -2842,7 +2842,7 @@ uint32_t fm_effect_pulse(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x25B8u;
+	handler = fm_effect_pulses_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -2906,7 +2906,7 @@ void fm_effect_1c_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0x16u;
-	handler = 0x2608u;
+	handler = fm_effect_1c_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -2936,7 +2936,7 @@ uint32_t fm_effect_1d(uint16_t channel)
 	uint16_t pitch = 0;
 
 	z80_block(88);
-	CHANNEL(FM_EFFECT_7)->handler = 0x26ACu;
+	CHANNEL(FM_EFFECT_7)->handler = fm_effect_1d_echo_ADDRESS;
 	CHANNEL(FM_EFFECT_7)->sound = 0x1Du;
 	CHANNEL(FM_EFFECT_7)->priority = 0x1Du;
 	CHANNEL(channel)->fm_effect.attenuation = 0u;
@@ -2983,7 +2983,7 @@ uint32_t fm_effect_arpeggio_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x267Au;
+	handler = fm_effect_arpeggio_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3010,7 +3010,7 @@ uint32_t fm_effect_arpeggio(uint16_t channel, uint32_t carry)
 	{
 		z80_block(39);
 		CHANNEL(channel)->fm_effect.timer = 0xC0u;
-		handler = 0x26A5u;
+		handler = fm_effect_arpeggio_ring_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -3048,7 +3048,7 @@ void fm_effect_1d_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 8u;
-	handler = 0x26B6u;
+	handler = fm_effect_1d_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -3084,7 +3084,7 @@ uint32_t fm_effect_1e(uint16_t channel)
 	carry = fm_fast_release(channel);
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0x30u;
-	handler = 0x26D4u;
+	handler = fm_effect_1e_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3128,7 +3128,7 @@ uint32_t fm_effect_1f(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2713u;
+	handler = fm_effect_1f_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3174,7 +3174,7 @@ uint32_t fm_effect_1f_strike(uint16_t channel, uint8_t attenuation)
 	fm_effect_1f_timer = 0x20u;
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x274Du;
+	handler = fm_effect_1f_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3243,7 +3243,7 @@ uint32_t fm_effect_21(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x27A7u;
+	handler = fm_effect_21_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3278,7 +3278,7 @@ uint32_t fm_effect_21_rise(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x27DDu;
+	handler = fm_effect_21_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3321,13 +3321,13 @@ uint32_t fm_effect_22(uint16_t channel)
 	uint16_t saved_channel = 0;
 
 	z80_block(228);
-	CHANNEL(MUSIC_FM_1)->handler = 0x2875u;
-	CHANNEL(MUSIC_FM_2)->handler = 0x2870u;
-	CHANNEL(MUSIC_FM_3)->handler = 0x286Bu;
-	CHANNEL(MUSIC_FM_4)->handler = 0x2866u;
-	CHANNEL(MUSIC_FM_5)->handler = 0x2861u;
-	CHANNEL(FM_EFFECT_6)->handler = 0x285Cu;
-	CHANNEL(FM_EFFECT_7)->handler = 0x2857u;
+	CHANNEL(MUSIC_FM_1)->handler = fm_effect_22_on_channel_1_ADDRESS;
+	CHANNEL(MUSIC_FM_2)->handler = fm_effect_22_on_channel_2_ADDRESS;
+	CHANNEL(MUSIC_FM_3)->handler = fm_effect_22_on_channel_3_ADDRESS;
+	CHANNEL(MUSIC_FM_4)->handler = fm_effect_22_on_channel_4_ADDRESS;
+	CHANNEL(MUSIC_FM_5)->handler = fm_effect_22_on_channel_5_ADDRESS;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_22_on_channel_6_ADDRESS;
+	CHANNEL(FM_EFFECT_7)->handler = fm_effect_22_on_channel_7_ADDRESS;
 	saved_channel = channel;
 	count = 7u;
 	channel = MUSIC_FM_1;
@@ -3444,7 +3444,7 @@ uint32_t fm_effect_22_delay(uint16_t channel, uint8_t waits)
 	carry = (uint8_t)(waits + count) < waits;
 	CHANNEL(channel)->fm_effect.attenuation = waits + count;
 	CHANNEL(channel)->fm_effect.timer = 0x50u;
-	handler = 0x288Eu;
+	handler = fm_effect_22_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3499,7 +3499,7 @@ uint32_t fm_effect_23(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x28E1u;
+	handler = fm_effect_23_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3573,7 +3573,7 @@ uint32_t fm_effect_24(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2958u;
+	handler = fm_effect_24_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3624,7 +3624,7 @@ uint32_t fm_effect_24_burst(uint16_t channel, uint8_t attenuation)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2998u;
+	handler = fm_effect_24_burst_step_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3668,7 +3668,7 @@ uint32_t fm_effect_24_burst_step(uint16_t channel)
 	fm_effect_quieter_pool_offset(channel, &offset, &carry);
 	z80_block(98);
 	t1 = 0xA00u - offset - carry;
-	carry = z80_carry_sub16(0xA00u, offset, carry);
+	carry = offset + carry > 0xA00u;
 	pitch = t1;
 	CHANNEL(channel)->fm_effect.pitch = pitch;
 	pitch = 0x600u - offset - carry;
@@ -3697,7 +3697,7 @@ uint32_t fm_effect_25(uint16_t channel)
 	carry = fm_key_on(channel);
 	z80_block(40);
 	fm_effect_25_timer = 8u;
-	handler = 0x2A0Du;
+	handler = fm_effect_25_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3725,7 +3725,7 @@ uint32_t fm_effect_25_fall(uint16_t channel, uint32_t carry)
 	fm_effect_25_pitch = 0xF40u;
 	set_fm_pitch(pitch, channel, &ignored16, &carry);
 	z80_block(20);
-	handler = 0x2A33u;
+	handler = fm_effect_25_bend_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3821,7 +3821,7 @@ uint32_t fm_effect_26_note(uint16_t pitch, uint16_t channel)
 	carry = fm_key_on(channel);
 	z80_block(40);
 	fm_effect_26_timer = 0x1Cu;
-	handler = 0x2AABu;
+	handler = fm_effect_26_play_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -3921,7 +3921,7 @@ uint32_t fm_effect_27_note(uint16_t channel, uint8_t length)
 	CHANNEL(channel)->fm_effect.timer = length;
 	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	handler = 0x2B52u;
+	handler = fm_effect_27_swell_and_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4108,7 +4108,7 @@ uint32_t fm_effect_28_step(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2C09u;
+	handler = fm_effect_28_jitter_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4176,7 +4176,7 @@ uint32_t fm_effect_29(uint16_t channel)
 	pitch = pcm_drums_ADDRESS - 0x2u;
 	carry = fm_effect_29_strike(pitch, channel);
 	z80_block(20);
-	handler = 0x2C60u;
+	handler = fm_effect_29_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4205,7 +4205,7 @@ uint32_t fm_effect_29_fall(uint16_t channel)
 	pitch = 0x910u;
 	carry = fm_effect_29_strike(pitch, channel);
 	z80_block(20);
-	handler = 0x2C8Du;
+	handler = fm_effect_29_tick_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4228,7 +4228,7 @@ uint32_t fm_effect_29_tick(uint16_t channel)
 		attenuation = 0u;
 		carry = set_fm_volume(channel, attenuation);
 		z80_block(20);
-		handler = 0x2CBAu;
+		handler = fm_effect_29_drop_ADDRESS;
 		set_channel_handler(handler, channel);
 		return carry;
 	}
@@ -4326,7 +4326,7 @@ uint32_t fm_effect_2a_note(uint16_t channel, uint8_t length)
 	z80_block(17);
 	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	handler = 0x2D1Du;
+	handler = fm_effect_2a_swell_and_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4358,7 +4358,7 @@ uint32_t fm_effect_2a_swell_and_warble(uint16_t channel)
 	attenuation = 0x34u;
 	carry = set_fm_volume(channel, attenuation);
 	z80_block(20);
-	handler = 0x2D40u;
+	handler = fm_effect_2a_rest_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4407,7 +4407,7 @@ uint32_t fm_effect_2b(uint16_t channel)
 	voice = 0x2D64u;
 	carry = fm_effect_drop_start(voice, channel);
 	z80_block(20);
-	handler = 0x2D9Du;
+	handler = fm_effect_2b_drop_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4470,7 +4470,7 @@ uint32_t fm_effect_dive_start(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2DF6u;
+	handler = fm_effect_dive_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4528,7 +4528,7 @@ uint32_t fm_effect_dive_climb_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2E35u;
+	handler = fm_effect_dive_climb_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4625,7 +4625,7 @@ uint32_t fm_effect_2d_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2EAAu;
+	handler = fm_effect_2d_zigzag_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4722,7 +4722,7 @@ uint32_t fm_effect_2e_note(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x2F3Cu;
+	handler = fm_effect_2e_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4770,7 +4770,7 @@ uint32_t fm_effect_2e_trill_start(uint16_t channel, uint8_t attenuation)
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xCu;
 	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	handler = 0x2F76u;
+	handler = fm_effect_2e_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4807,7 +4807,7 @@ uint32_t fm_effect_2e_trill(uint16_t channel, uint32_t carry)
 	z80_block(93);
 	step = 0x200u;
 	t1 = 0xA00u - carry;
-	carry = z80_carry_sub16(0xC00u, 0x200u, carry);
+	carry = 0x200u + carry > 0xC00u;
 	base_pitch = t1;
 	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 	pitch = 0x600u;
@@ -4842,7 +4842,7 @@ uint32_t fm_effect_2f_note(uint16_t channel, uint8_t length)
 	z80_block(17);
 	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	handler = 0x2FD0u;
+	handler = fm_effect_2f_swell_and_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4924,7 +4924,7 @@ uint32_t fm_effect_30(uint16_t channel)
 	length = 0x14u;
 	carry = fm_effect_30_note(channel, length);
 	z80_block(20);
-	handler = 0x3042u;
+	handler = fm_effect_30_sweep_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -4970,7 +4970,7 @@ uint32_t fm_effect_30_slow_sweep_start(uint16_t channel, uint8_t attenuation)
 	length = 0x30u;
 	carry = fm_effect_30_note(channel, length);
 	z80_block(20);
-	handler = 0x306Fu;
+	handler = fm_effect_30_slow_sweep_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5033,7 +5033,7 @@ uint32_t fm_effect_31_note(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x30CFu;
+	handler = fm_effect_31_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5081,7 +5081,7 @@ uint32_t fm_effect_31_trill_start(uint16_t channel, uint8_t attenuation)
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
 	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	handler = 0x3109u;
+	handler = fm_effect_31_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5118,7 +5118,7 @@ uint32_t fm_effect_31_trill(uint16_t channel, uint32_t carry)
 	z80_block(93);
 	step = 0x200u;
 	t1 = 0x800u - carry;
-	carry = z80_carry_sub16(0xA00u, 0x200u, carry);
+	carry = 0x200u + carry > 0xA00u;
 	base_pitch = t1;
 	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 	pitch = 0x400u;
@@ -5159,7 +5159,7 @@ uint32_t fm_effect_32_note(uint16_t channel, uint8_t attenuation)
 	carry = fm_key_on(channel);
 	z80_block(40);
 	fm_effect_32_timer = 0x30u;
-	handler = 0x3181u;
+	handler = fm_effect_32_bend_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5235,7 +5235,7 @@ uint32_t fm_effect_34(uint16_t channel)
 
 	z80_block(137);
 	fm_effect_34_on = 1u;
-	CHANNEL(FM_EFFECT_6)->handler = 0x329Cu;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_34_warbles_ADDRESS;
 	CHANNEL(FM_EFFECT_6)->sound = CHANNEL(channel)->sound;
 	CHANNEL(FM_EFFECT_6)->priority = CHANNEL(channel)->priority;
 	voice = 0x31B5u;
@@ -5253,7 +5253,7 @@ uint32_t fm_effect_34(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x320Du;
+	handler = fm_effect_34_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5308,7 +5308,7 @@ uint32_t fm_effect_34_trill_start(uint16_t channel)
 	z80_block(58);
 	CHANNEL(channel)->fm_effect.timer = 6u;
 	CHANNEL(channel)->fm_effect.count = 5u;
-	handler = 0x3258u;
+	handler = fm_effect_34_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5340,7 +5340,7 @@ uint32_t fm_effect_34_trill(uint16_t channel)
 	fm_effect_warble(channel, &step, &carry);
 	z80_block(83);
 	t1 = 0xA00u - step - carry;
-	carry = z80_carry_sub16(0xA00u, step, carry);
+	carry = step + carry > 0xA00u;
 	base_pitch = t1;
 	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 	pitch = 0x400u;
@@ -5381,7 +5381,7 @@ uint32_t fm_effect_34_warble_note(uint16_t channel, uint8_t length)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x32D4u;
+	handler = fm_effect_34_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5462,7 +5462,7 @@ uint32_t fm_effect_36(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x3353u;
+	handler = fm_effect_36_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5497,7 +5497,7 @@ uint32_t fm_effect_36_rise(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x3388u;
+	handler = fm_effect_36_hold_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5518,7 +5518,7 @@ void fm_effect_36_hold(uint16_t channel)
 	}
 	z80_block(30);
 	fm_effect_36_timer = 0x30u;
-	handler = 0x3395u;
+	handler = fm_effect_36_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -5563,7 +5563,7 @@ uint32_t fm_effect_38(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x33E9u;
+	handler = fm_effect_38_trill_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5646,7 +5646,7 @@ uint32_t fm_effect_39_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x345Fu;
+	handler = fm_effect_39_next_note_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5724,7 +5724,7 @@ uint32_t fm_effect_3a_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x34C3u;
+	handler = fm_effect_3a_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5821,7 +5821,7 @@ uint32_t fm_effect_3b_note(uint16_t channel, uint8_t length)
 	CHANNEL(channel)->fm_effect.period = length;
 	carry = fm_effect_restart_note(channel);
 	z80_block(20);
-	handler = 0x354Cu;
+	handler = fm_effect_3b_swell_and_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5896,7 +5896,7 @@ uint32_t fm_effect_3c_note(uint16_t pitch, uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x35A6u;
+	handler = fm_effect_3c_warble_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -5945,8 +5945,8 @@ uint32_t fm_effect_3c_warble(uint16_t channel)
 uint32_t fm_effect_3d(uint16_t channel)
 {
 	z80_block(137);
-	CHANNEL(FM_EFFECT_6)->handler = 0x35FDu;
-	CHANNEL(FM_EFFECT_7)->handler = 0x3604u;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_3d_on_channel_6_ADDRESS;
+	CHANNEL(FM_EFFECT_7)->handler = fm_effect_3d_on_channel_7_ADDRESS;
 	CHANNEL(FM_EFFECT_6)->sound = 0x22u;
 	CHANNEL(FM_EFFECT_7)->sound = 0x22u;
 	CHANNEL(FM_EFFECT_6)->priority = 0x15u;
@@ -6003,7 +6003,7 @@ uint32_t fm_effect_3d_delay(uint16_t attenuation, uint16_t channel, uint8_t wait
 	z80_block(17);
 	carry = fm_fast_release(channel);
 	z80_block(20);
-	handler = 0x361Au;
+	handler = fm_effect_3d_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -6034,7 +6034,7 @@ uint32_t fm_effect_3e(uint16_t channel)
 	uint16_t saved_channel = 0;
 
 	z80_block(105);
-	CHANNEL(FM_EFFECT_6)->handler = 0x363Au;
+	CHANNEL(FM_EFFECT_6)->handler = fm_effect_3e_delay_ADDRESS;
 	CHANNEL(FM_EFFECT_6)->sound = 0x3Eu;
 	CHANNEL(FM_EFFECT_6)->priority = 0x15u;
 	saved_channel = channel;
@@ -6053,7 +6053,7 @@ void fm_effect_3e_delay(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->fm_effect.timer = 0x10u;
-	handler = 0x3644u;
+	handler = fm_effect_3e_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -6113,7 +6113,7 @@ uint32_t fm_effect_fall_and_trills_start(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x3694u;
+	handler = fm_effect_fall_and_trills_fall_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -6156,7 +6156,7 @@ uint32_t fm_effect_fall_and_trills_round(uint16_t channel, uint8_t attenuation)
 	AT8(CHANNEL(channel)->fm_effect.pitch, 1) = 0xAu;
 	carry = set_fm_volume_from_record(channel);
 	z80_block(20);
-	handler = 0x36C8u;
+	handler = fm_effect_fall_and_trills_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -6199,7 +6199,7 @@ uint32_t fm_effect_fall_and_trills(uint16_t channel, uint32_t carry)
 	z80_block(93);
 	step = 0x200u;
 	t2 = 0x800u - carry;
-	carry = z80_carry_sub16(0xA00u, 0x200u, carry);
+	carry = 0x200u + carry > 0xA00u;
 	base_pitch = t2;
 	CHANNEL(channel)->fm_effect.base_pitch = base_pitch;
 	pitch = 0x400u;
@@ -6252,7 +6252,7 @@ uint32_t fm_effect_41(uint16_t channel)
 	z80_block(17);
 	carry = fm_key_on(channel);
 	z80_block(20);
-	handler = 0x3769u;
+	handler = fm_effect_41_rise_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }

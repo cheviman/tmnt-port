@@ -3,7 +3,7 @@
  *    Description: the palettes: requests queued and done a frame later, the palette effects
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* a palette request, its kind, banks and data, queued to be done a frame later */
-uint32_t post_palette_request(uint16_t kind, uint32_t data)
+void post_palette_request(uint16_t kind, uint32_t data)
 {
 	uint32_t palette_request = 0;
 
@@ -24,11 +24,11 @@ uint32_t post_palette_request(uint16_t kind, uint32_t data)
 	if (palette_request > 0x60BEFu)
 		palette_request = PALETTE_REQUEST_ADDRESS(0);
 	palette_queue_write = palette_request;
-	return palette_request;
+	object_loop_leftover = palette_request;
 }
 
 /* Unused: every palette request of a list queued, up to its end mark */
-void unreached_009264(uint32_t requests)
+void post_palette_request_list(uint32_t requests)
 {
 	uint16_t kind = 0;
 	uint32_t data = 0;
@@ -46,7 +46,7 @@ void unreached_009264(uint32_t requests)
 }
 
 /* a bank of the palette requests a frame: the one under way, or the next one queued */
-void run_palette_requests(uint16_t d7)
+void run_palette_requests(uint16_t bank_bits)
 {
 	uint16_t banks = 0, request_kind = 0, second_half_offset = 0;
 	uint32_t data = 0, palette_request = 0, palettes = 0;
@@ -55,21 +55,21 @@ void run_palette_requests(uint16_t d7)
 
 	if (palette_area_banks != 0u)
 	{
-		banks = (uint16_t)((d7 & ~0xFFu) | palette_area_banks);
-		palette_request_area(banks);
+		bank_bits = (uint16_t)((bank_bits & ~0xFFu) | palette_area_banks);
+		palette_request_area(bank_bits);
 		return;
 	}
 	if (palette_set_banks != 0u)
 	{
-		banks = (uint16_t)((d7 & ~0xFFu) | palette_set_banks);
+		bank_bits = (uint16_t)((bank_bits & ~0xFFu) | palette_set_banks);
 		palettes = palette_set;
-		palette_request_set_next_bank(banks, palettes);
+		palette_request_set_next_bank(bank_bits, palettes);
 		return;
 	}
 	if (palette_black_banks != 0u)
 	{
-		banks = (uint16_t)((d7 & ~0xFFu) | palette_black_banks);
-		palette_request_black(banks);
+		bank_bits = (uint16_t)((bank_bits & ~0xFFu) | palette_black_banks);
+		palette_request_black(bank_bits);
 		return;
 	}
 	if (palette_second_half != 0u)
@@ -170,7 +170,7 @@ void palette_request_area(uint16_t banks)
 {
 	uint8_t done_bank = 0;
 	uint16_t area_offset = 0, bank = 0, palette_count = 0;
-	uint32_t a5 = 0, palettes = 0;
+	uint32_t bank_lists = 0, bank_place = 0, palettes = 0;
 
 	bank = 0u;
 	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
@@ -188,17 +188,18 @@ void palette_request_area(uint16_t banks)
 	offset_high_word = 0u;
 	palette_count = palette_bank_counts[bank];
 	area_offset = (uint16_t)((uint32_t)stage << 2);
+	bank_lists = area_palettes[area_offset / 4u];
 	bank = (uint16_t)((uint32_t)bank << 2);
-	palettes = mem_read32(area_palettes[area_offset / 4u] + bank);
-	a5 = palette_bank_addresses[bank / 4u];
+	palettes = PALETTE_LIST_POINTER(bank_lists + (bank / 4u) * 0x4u);
+	bank_place = palette_bank_addresses[bank / 4u];
 	if (palette_second_half != 0u)
 	{
-		a5 += 0x200u;
+		bank_place += 0x200u;
 		palettes += 0x20u;
 	}
 	if (done_bank == 3u)
 		palette_second_half = 1u;
-	palette_place = a5;
+	palette_place = bank_place;
 	copy_palette_list(palette_count, palettes);
 	distance_low_byte = area_offset;
 }
@@ -206,10 +207,8 @@ void palette_request_area(uint16_t banks)
 /* the second half of the sprites' palettes of the area's set */
 void palette_request_area_second_half(uint16_t second_half_offset)
 {
-	uint16_t banks = 0;
-
-	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
-	palette_request_area(banks);
+	second_half_offset = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_area(second_half_offset);
 }
 
 /* a set of palettes into the banks asked for, a bank a frame */
@@ -224,7 +223,7 @@ void palette_request_set_next_bank(uint16_t banks, uint32_t bank_lists)
 {
 	uint8_t done_bank = 0;
 	uint16_t bank = 0, palette_count = 0;
-	uint32_t a5 = 0, palettes = 0;
+	uint32_t bank_place = 0, palettes = 0;
 
 	bank = 0u;
 	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
@@ -244,27 +243,26 @@ void palette_request_set_next_bank(uint16_t banks, uint32_t bank_lists)
 	palette_count = palette_bank_counts[bank];
 	bank = (uint16_t)((uint32_t)bank << 2);
 	palettes = PALETTE_LIST_POINTER(bank_lists + (bank / 4u) * 0x4u);
-	a5 = palette_bank_addresses[bank / 4u];
+	bank_place = palette_bank_addresses[bank / 4u];
 	if (palette_second_half != 0u)
 	{
-		a5 += 0x200u;
+		bank_place += 0x200u;
 		palettes += 0x20u;
 	}
 	if (done_bank == 3u)
 		palette_second_half = 2u;
-	palette_place = a5;
+	palette_place = bank_place;
 	copy_palette_list(palette_count, palettes);
 }
 
 /* the second half of the sprites' palettes of the set */
 void palette_request_set_second_half(uint16_t second_half_offset)
 {
-	uint16_t banks = 0;
 	uint32_t bank_lists = 0;
 
 	bank_lists = palette_set;
-	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
-	palette_request_set(banks, bank_lists);
+	second_half_offset = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_set(second_half_offset, bank_lists);
 }
 
 /* a list of palettes into one bank */
@@ -272,7 +270,7 @@ void palette_request_list(uint16_t banks, uint32_t palettes)
 {
 	uint8_t done_bank = 0;
 	uint16_t bank = 0, palette_count = 0;
-	uint32_t a5 = 0;
+	uint32_t bank_place = 0;
 
 	bank = 0u;
 	while (((banks | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
@@ -287,10 +285,10 @@ void palette_request_list(uint16_t banks, uint32_t palettes)
 	done_bank = (uint8_t)bank;
 	offset_high_word = 0u;
 	palette_count = palette_bank_counts[bank];
-	a5 = palette_bank_addresses[bank & 0x3FFFu];
+	bank_place = palette_bank_addresses[bank & 0x3FFFu];
 	if (palette_second_half != 0u)
 	{
-		a5 += 0x200u;
+		bank_place += 0x200u;
 		palettes += 0x20u;
 	}
 	if (done_bank == 3u)
@@ -298,19 +296,18 @@ void palette_request_list(uint16_t banks, uint32_t palettes)
 		palette_set = palettes;
 		palette_second_half = 3u;
 	}
-	palette_place = a5;
+	palette_place = bank_place;
 	copy_palette_list(palette_count, palettes);
 }
 
 /* the second half of the sprites' palettes of the list */
 void palette_request_list_second_half(uint16_t second_half_offset)
 {
-	uint16_t banks = 0;
 	uint32_t palettes = 0;
 
 	palettes = palette_set;
-	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
-	palette_request_list(banks, palettes);
+	second_half_offset = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_list(second_half_offset, palettes);
 }
 
 /* sixteen colours into one palette */
@@ -323,13 +320,15 @@ void palette_request_palette(uint32_t palette, uint32_t data)
 	bank_offset = (uint16_t)palette;
 	palette &= 0xFu;
 	bank_offset = bank_offset & ~0xFu;
-	colour_place = TABLE32(palette_bank_addresses, bank_offset >> 2) + (uint16_t)(palette << 6);
+	bank_offset = bank_offset >> 2;
+	palette = (uint16_t)(palette << 6);
+	colour_place = TABLE32(palette_bank_addresses, bank_offset) + palette;
 	count = 0xFu;
 	do
 	{
-		mem_write8(colour_place + 1u, COLOUR_BYTE(data));
+		io_write8(colour_place + 1u, COLOUR_BYTE(data));
 		data++;
-		mem_write8(colour_place + 3u, COLOUR_BYTE(data));
+		io_write8(colour_place + 3u, COLOUR_BYTE(data));
 		t1 = count - 1u;
 		count = t1;
 		data++;
@@ -343,29 +342,32 @@ void palette_request_palette(uint32_t palette, uint32_t data)
 void palette_request_colours(uint8_t bank, uint32_t data)
 {
 	uint16_t bank_offset = 0;
-	uint32_t a5 = 0, colour_number = 0, colour_place = 0, d6 = 0;
+	uint32_t bank_place = 0, colour_number = 0, colour_place = 0, palette_number = 0;
 	uint8_t colour_byte = 0;
 
 	bank_offset = (uint16_t)bank;
 	bank_offset = bank_offset & ~0xFu;
-	a5 = TABLE32(palette_bank_addresses, bank_offset >> 2);
+	bank_offset = bank_offset >> 2;
+	bank_place = TABLE32(palette_bank_addresses, bank_offset);
 	for (;;)
 	{
 		colour_byte = COLOUR_BYTE(data);
-		d6 = colour_byte;
+		palette_number = colour_byte;
 		data++;
 		if ((int8_t)colour_byte < 0)
 			break;
 		colour_number = COLOUR_BYTE(data);
-		colour_place = a5 + (uint16_t)(d6 << 6) + (uint16_t)(colour_number << 2);
+		palette_number = (uint16_t)(palette_number << 6);
+		colour_number = (uint16_t)(colour_number << 2);
+		colour_place = bank_place + palette_number + colour_number;
 		data++;
-		mem_write8(colour_place + 1u, COLOUR_BYTE(data));
+		io_write8(colour_place + 1u, COLOUR_BYTE(data));
 		data++;
-		mem_write8(colour_place + 3u, COLOUR_BYTE(data));
+		io_write8(colour_place + 3u, COLOUR_BYTE(data));
 		data++;
 	}
-	fade_banks = d6;
-	palette_place = a5;
+	fade_banks = palette_number;
+	palette_place = bank_place;
 }
 
 /* the banks asked for turned black, a bank a frame */
@@ -373,7 +375,7 @@ void palette_request_black(uint16_t banks)
 {
 	uint8_t done_bank = 0;
 	uint16_t bank = 0, palette_count = 0;
-	uint32_t a5 = 0;
+	uint32_t bank_place = 0;
 
 	bank = 0u;
 	while ((((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & shl32(1u, (int)(bank & 0x1Fu))) == 0u)
@@ -390,22 +392,20 @@ void palette_request_black(uint16_t banks)
 	palette_black_banks = ((banks & 0xFFFFu) | (offset_high_word & ~0xFFFFu)) & ~shl32(1u, (int)(bank & 0x1Fu));
 	offset_high_word = 0u;
 	palette_count = palette_bank_counts[bank];
-	a5 = palette_bank_addresses[bank & 0x3FFFu];
+	bank_place = palette_bank_addresses[bank & 0x3FFFu];
 	if (palette_second_half != 0u)
-		a5 += 0x200u;
+		bank_place += 0x200u;
 	if (done_bank == 3u)
 		palette_second_half = 6u;
-	palette_place = a5;
+	palette_place = bank_place;
 	blacken_palettes(palette_count);
 }
 
 /* the second half of the sprites' palettes turned black */
 void palette_request_black_second_half(uint16_t second_half_offset)
 {
-	uint16_t banks = 0;
-
-	banks = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
-	palette_request_black(banks);
+	second_half_offset = (uint16_t)((second_half_offset & ~0xFFu) | 8u);
+	palette_request_black(second_half_offset);
 }
 
 /* a spare palette request kind that does nothing */
@@ -427,9 +427,9 @@ void copy_palette_list(uint16_t count, uint32_t palettes)
 		palettes += 4u;
 		do
 		{
-			mem_write8(palette_place + 1u, COLOUR_BYTE(colours));
+			io_write8(palette_place + 1u, COLOUR_BYTE(colours));
 			colours++;
-			mem_write8(palette_place + 3u, COLOUR_BYTE(colours));
+			io_write8(palette_place + 3u, COLOUR_BYTE(colours));
 			palette_place += 4u;
 			t1 = count_2 - 1u;
 			count_2 = t1;
@@ -452,8 +452,8 @@ void blacken_palettes(uint16_t count)
 		count_2 = 0xFu;
 		do
 		{
-			mem_write8(palette_place + 1u, 0u);
-			mem_write8(palette_place + 3u, 0u);
+			io_write8(palette_place + 1u, 0u);
+			io_write8(palette_place + 3u, 0u);
 			t1 = count_2 - 1u;
 			count_2 = t1;
 			palette_place += 4u;
@@ -467,10 +467,15 @@ void blacken_palettes(uint16_t count)
 /* the palettes faded toward a list of palette sets, over the next frames */
 void copy_palette_sets(void)
 {
+	uint16_t fade = 0;
+	uint32_t target_palettes = 0;
+
 	switch ((uint32_t)(int8_t)fade_pass_step)
 	{
 	case 0:
-		fade_palettes_start();
+		fade = (uint16_t)(fade_banks & 0xFFFFu);
+		target_palettes = palette_place;
+		fade_palettes_start(fade, target_palettes);
 		return;
 	case 1:
 		fade_palettes_read();
@@ -485,15 +490,15 @@ void copy_palette_sets(void)
 }
 
 /* a fade toward a set of palettes starts */
-void fade_palettes_start(void)
+void fade_palettes_start(uint16_t fade, uint32_t target_palettes)
 {
 	fading = 1u;
 	fade_pass_step++;
 	fade_part = 0u;
 	fade_lists_left = 0u;
-	fade_part_mask = (uint8_t)(fade_banks >> 8u);
-	fade_rate = (uint8_t)fade_banks;
-	fade_target = palette_place;
+	fade_part_mask = (uint8_t)(fade >> 8u);
+	fade_rate = (uint8_t)fade;
+	fade_target = target_palettes;
 	fade_buffer_place = 0x63800u;
 	fade_palettes_read();
 }
@@ -512,9 +517,9 @@ void fade_palettes_read(void)
 			fade_palettes_part(&count, &buffer_place, &colour_place);
 			do
 			{
-				mem_write8(buffer_place, io_read8(colour_place + 1u));
+				FADE_COLOUR(buffer_place)->part = io_read8(colour_place + 1u);
 				buffer_place++;
-				mem_write8(buffer_place, io_read8(colour_place + 3u));
+				FADE_COLOUR(buffer_place)->part = io_read8(colour_place + 3u);
 				t1 = count - 1u;
 				count = t1;
 				buffer_place++;
@@ -555,9 +560,9 @@ void fade_palettes_write(void)
 			fade_palettes_part(&count, &buffer_place, &colour_place);
 			do
 			{
-				io_write8(colour_place + 1u, mem_read8(buffer_place));
+				io_write8(colour_place + 1u, FADE_COLOUR(buffer_place)->part);
 				buffer_place++;
-				io_write8(colour_place + 3u, mem_read8(buffer_place));
+				io_write8(colour_place + 3u, FADE_COLOUR(buffer_place)->part);
 				t1 = count - 1u;
 				count = t1;
 				buffer_place++;
@@ -625,13 +630,13 @@ void fade_palettes_step(void)
 		target_lists += 4u;
 		do
 		{
-			colour = mem_read16(buffer_place);
-			channels = table_loaded_by_lea_009872_ADDRESS;
+			colour = FADE_COLOUR(buffer_place)->colour;
+			channels = fade_colour_channels_ADDRESS;
 			new_colour = 0u;
 			fade_colour_part(rate, colour, target_colour, &new_colour, &channels);
 			fade_colour_part(rate, colour, target_colour, &new_colour, &channels);
 			fade_colour_part(rate, colour, target_colour, &new_colour, &channels);
-			mem_write16(buffer_place, new_colour);
+			FADE_COLOUR(buffer_place)->colour = new_colour;
 			t1 = count - 1u;
 			count = t1;
 			buffer_place += 2u;
@@ -660,11 +665,11 @@ void fade_colour_part(uint16_t rate, uint16_t colour, uint32_t target_colour, ui
 	uint16_t channel_mask = 0, channel_value = 0, step = 0, target_value = 0;
 	uint16_t t1 = 0;
 
-	channel_mask = mem_read16(channels);
+	channel_mask = COLOUR_CHANNEL(channels)->mask;
 	channel_value = colour & channel_mask;
 	channels += 2u;
-	step = (uint16_t)((uint32_t)rate * mem_read16(channels));
-	target_value = mem_read16(target_colour) & channel_mask;
+	step = (uint16_t)((uint32_t)rate * COLOUR_CHANNEL(channels - 0x2u)->step);
+	target_value = COLOUR_BYTE_16(target_colour) & channel_mask;
 	channels += 2u;
 	if (channel_value != target_value)
 	{
@@ -690,21 +695,21 @@ void fade_colour_part(uint16_t rate, uint16_t colour, uint32_t target_colour, ui
 }
 
 /* the palette effects of a list started in free slots */
-void start_palette_effects(uint32_t palette_effect_pointer)
+void start_palette_effects(uint32_t effect_list)
 {
 	uint16_t bank_offset = 0, colour_code = 0, count = 0;
 	uint32_t colour = 0, effect_steps = 0, palette_effect = 0;
 	uint16_t t1 = 0;
 
-	count = (uint16_t)(mem_read16(palette_effect_pointer) - 1u);
+	count = (uint16_t)(PALETTE_EFFECT_COUNT(effect_list) - 1u);
 	palette_effect = PALETTE_EFFECT_ADDRESS(0);
-	palette_effect_pointer += 2u;
+	effect_list += 2u;
 	for (;;)
 	{
 		if ((PALETTE_EFFECT(palette_effect)->flags & 0x80u) == 0u)
 		{
-			effect_steps = mem_read32(palette_effect_pointer);
-			colour_code = mem_read16(effect_steps);
+			effect_steps = PALETTE_EFFECT_POINTER(effect_list);
+			colour_code = PALETTE_EFFECT_CODE(effect_steps);
 			bank_offset = (colour_code & 0xF00u) >> 6;
 			colour = TABLE32(palette_effect_banks, bank_offset) + (uint16_t)((colour_code & 0xF0u) << 2) + (uint16_t)((colour_code & 0xFu) << 2);
 			PALETTE_EFFECT(palette_effect)->time = 0u;
@@ -713,7 +718,7 @@ void start_palette_effects(uint32_t palette_effect_pointer)
 			PALETTE_EFFECT(palette_effect)->colour = colour;
 			t1 = count - 1u;
 			count = t1;
-			palette_effect_pointer += 4u;
+			effect_list += 4u;
 			if (t1 != 0xFFFFu)
 				continue;
 			break;
@@ -786,7 +791,7 @@ void step_palette_effects(void)
 }
 
 /* Unused: every running palette effect stopped, each by its layer's own stop */
-void unreached_0099B4(uint8_t layers)
+void stop_every_palette_effect(uint8_t layers)
 {
 	uint16_t count = 0, effect_flags = 0;
 	uint32_t palette_effect = 0;
@@ -891,12 +896,6 @@ void request_game_step_palettes(void)
 	data = game_step_palettes[game_step];
 	kind = 0x20Fu;
 	post_palette_request(kind, data);
-}
-
-/* Unused: the game step's palette effects started */
-void unreached_009AA0(void)
-{
-	start_game_step_palette_effects();
 }
 
 /* the palette effects of the attract mode's screen started */

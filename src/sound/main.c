@@ -3,7 +3,7 @@
  *    Description: the program's frame: sound_main, the main loop, the channels' handlers and their stop
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -221,449 +221,449 @@ uint32_t run_channel_handler(uint16_t channel, uint32_t carry)
 	jump_target = CHANNEL(channel)->handler;
 	switch (jump_target)
 	{
-	case 0x000178u:
+	case speech_play_ADDRESS:
 		return speech_play(channel);
-	case 0x0001A4u:
+	case speech_wait_ADDRESS:
 		return speech_wait(channel, carry);
-	case 0x0005D0u:
+	case stop_channel_ADDRESS:
 		return stop_channel(channel);
-	case 0x0005D6u:
+	case free_channel_ADDRESS:
 		free_channel(channel);
 		return carry;
-	case 0x0005E7u:
+	case channel_idle_ADDRESS:
 		channel_idle();
 		return carry;
-	case 0x0005E8u:
+	case stop_pcm_channel_ADDRESS:
 		return stop_pcm_channel(channel);
-	case 0x000885u:
+	case music_track_start_ADDRESS:
 		return music_track_start(channel);
-	case 0x0008CDu:
+	case music_track_first_tick_ADDRESS:
 		return music_track_first_tick(channel);
-	case 0x0008D6u:
+	case music_track_tick_ADDRESS:
 		return music_track_tick(channel);
-	case 0x0010AFu:
+	case pcm_effect_countdown_ADDRESS:
 		return pcm_effect_countdown(channel);
-	case 0x0010D0u:
+	case pcm_effect_81_ADDRESS:
 		return pcm_effect_81(channel);
-	case 0x0010F8u:
+	case pcm_effect_81_next_ADDRESS:
 		return pcm_effect_81_next(channel);
-	case 0x001114u:
+	case pcm_effect_81_echo_ADDRESS:
 		pcm_effect_81_echo(channel);
 		return carry;
-	case 0x00111Eu:
+	case pcm_effect_81_echo_wait_ADDRESS:
 		return pcm_effect_81_echo_wait(channel, carry);
-	case 0x001125u:
+	case pcm_effect_82_ADDRESS:
 		return pcm_effect_82(channel);
-	case 0x00114Bu:
+	case pcm_effect_ducking_fade_ADDRESS:
 		return pcm_effect_ducking_fade(channel);
-	case 0x001165u:
+	case pcm_effect_83_ADDRESS:
 		return pcm_effect_83(channel);
-	case 0x001183u:
+	case pcm_effect_84_ADDRESS:
 		return pcm_effect_84(channel);
-	case 0x0011A1u:
+	case pcm_effect_85_ADDRESS:
 		return pcm_effect_85(channel);
-	case 0x0011AEu:
+	case pcm_effect_86_ADDRESS:
 		return pcm_effect_86(channel);
-	case 0x0011C8u:
+	case pcm_effect_86_countdown_ADDRESS:
 		return pcm_effect_86_countdown(channel);
-	case 0x0011F4u:
+	case pcm_effect_8d_ADDRESS:
 		pcm_effect_8d(channel);
 		return carry;
-	case 0x0011FEu:
+	case pcm_effect_8d_wait_ADDRESS:
 		return pcm_effect_8d_wait(channel, carry);
-	case 0x00120Eu:
+	case pcm_effect_87_ADDRESS:
 		return pcm_effect_87(channel);
-	case 0x00122Cu:
+	case pcm_effect_88_ADDRESS:
 		return pcm_effect_88(channel);
-	case 0x001232u:
+	case pcm_effect_88_play_ADDRESS:
 		return pcm_effect_88_play(channel);
-	case 0x001250u:
+	case pcm_effect_88_echo_ADDRESS:
 		pcm_effect_88_echo(channel);
 		return carry;
-	case 0x00125Au:
+	case pcm_effect_88_echo_wait_ADDRESS:
 		return pcm_effect_88_echo_wait(channel, carry);
-	case 0x001261u:
+	case pcm_effect_89_ADDRESS:
 		return pcm_effect_89(channel);
-	case 0x00128Cu:
+	case pcm_effect_89_next_ADDRESS:
 		return pcm_effect_89_next(channel, carry);
-	case 0x00129Cu:
+	case pcm_effect_8a_ADDRESS:
 		return pcm_effect_8a(channel);
-	case 0x0012BFu:
+	case pcm_effect_8a_next_ADDRESS:
 		return pcm_effect_8a_next(channel, carry);
-	case 0x0012D1u:
+	case pcm_effect_8b_ADDRESS:
 		return pcm_effect_8b(channel);
-	case 0x0012FCu:
+	case pcm_effect_8b_next_ADDRESS:
 		return pcm_effect_8b_next(channel, carry);
-	case 0x001338u:
+	case pcm_effect_8b_echo_ADDRESS:
 		pcm_effect_8b_echo(channel);
 		return carry;
-	case 0x001342u:
+	case pcm_effect_8b_echo_wait_ADDRESS:
 		return pcm_effect_8b_echo_wait(channel, carry);
-	case 0x00134Cu:
+	case pcm_effect_8c_ADDRESS:
 		return pcm_effect_8c(channel);
-	case 0x001359u:
+	case pcm_effect_8e_ADDRESS:
 		return pcm_effect_8e(channel);
-	case 0x00137Du:
+	case pcm_effect_8f_ADDRESS:
 		return pcm_effect_8f(channel);
-	case 0x0013A3u:
+	case pcm_effect_90_ADDRESS:
 		return pcm_effect_90(channel);
-	case 0x0013C1u:
+	case pcm_effect_91_ADDRESS:
 		return pcm_effect_91(channel);
-	case 0x0013CEu:
+	case pcm_effect_92_ADDRESS:
 		return pcm_effect_92(channel);
-	case 0x0013D4u:
+	case pcm_effect_93_ADDRESS:
 		return pcm_effect_93(channel);
-	case 0x001638u:
+	case fm_effect_01_ADDRESS:
 		return fm_effect_01(channel);
-	case 0x001662u:
+	case fm_effect_01_hold_ADDRESS:
 		return fm_effect_01_hold(channel);
-	case 0x00169Au:
+	case fm_effect_02_ADDRESS:
 		return fm_effect_02(channel);
-	case 0x0016CFu:
+	case fm_effect_02_slide_ADDRESS:
 		return fm_effect_02_slide(channel);
-	case 0x001727u:
+	case fm_effect_02_pause_ADDRESS:
 		return fm_effect_02_pause(channel, carry);
-	case 0x00174Fu:
+	case fm_effect_03_ADDRESS:
 		return fm_effect_03(channel);
-	case 0x00177Du:
+	case fm_effect_03_fall_ADDRESS:
 		return fm_effect_03_fall(channel);
-	case 0x0017ADu:
+	case fm_effect_03_trill_ADDRESS:
 		return fm_effect_03_trill(channel);
-	case 0x0017E7u:
+	case fm_effect_04_ADDRESS:
 		return fm_effect_04(channel);
-	case 0x001811u:
+	case fm_effect_05_ADDRESS:
 		return fm_effect_05(channel);
-	case 0x00183Fu:
+	case fm_effect_wobble_down_ADDRESS:
 		return fm_effect_wobble_down(channel);
-	case 0x001868u:
+	case fm_effect_wobble_hold_ADDRESS:
 		return fm_effect_wobble_hold(channel, carry);
-	case 0x001877u:
+	case fm_effect_37_ADDRESS:
 		fm_effect_37(channel);
 		return carry;
-	case 0x001881u:
+	case fm_effect_37_wait_ADDRESS:
 		return fm_effect_37_wait(channel, carry);
-	case 0x001888u:
+	case fm_effect_06_ADDRESS:
 		return fm_effect_06(channel);
-	case 0x0018A9u:
+	case fm_effect_06_fall_ADDRESS:
 		return fm_effect_06_fall(channel);
-	case 0x0018D9u:
+	case fm_effect_06_trill_ADDRESS:
 		return fm_effect_06_trill(channel);
-	case 0x00192Cu:
+	case fm_effect_07_ADDRESS:
 		return fm_effect_07(channel);
-	case 0x001962u:
+	case fm_effect_07_step_ADDRESS:
 		return fm_effect_07_step(channel);
-	case 0x0019D1u:
+	case fm_effect_08_ADDRESS:
 		return fm_effect_08(channel);
-	case 0x0019F9u:
+	case fm_effect_08_rise_and_warble_ADDRESS:
 		return fm_effect_08_rise_and_warble(channel);
-	case 0x001A23u:
+	case fm_effect_09_ADDRESS:
 		return fm_effect_09(channel);
-	case 0x001A43u:
+	case fm_effect_0a_ADDRESS:
 		return fm_effect_0a(channel);
-	case 0x001A98u:
+	case fm_effect_0a_rise_ADDRESS:
 		return fm_effect_0a_rise(channel);
-	case 0x001B1Bu:
+	case fm_effect_33_hold_ADDRESS:
 		return fm_effect_33_hold(channel);
-	case 0x001B4Fu:
+	case fm_effect_0b_ADDRESS:
 		return fm_effect_0b(channel);
-	case 0x001B79u:
+	case fm_effect_0b_hold_ADDRESS:
 		return fm_effect_0b_hold(channel);
-	case 0x001B9Cu:
+	case fm_effect_0b_slide_ADDRESS:
 		return fm_effect_0b_slide(channel);
-	case 0x001BDEu:
+	case fm_effect_0c_ADDRESS:
 		return fm_effect_0c(channel);
-	case 0x001C40u:
+	case fm_effect_zigzag_steps_ADDRESS:
 		return fm_effect_zigzag_steps(channel);
-	case 0x001CA0u:
+	case fm_effect_0d_ADDRESS:
 		return fm_effect_0d(channel);
-	case 0x001CCEu:
+	case fm_effect_0d_fall_ADDRESS:
 		return fm_effect_0d_fall(channel);
-	case 0x001D0Au:
+	case fm_effect_0d_trill_ADDRESS:
 		return fm_effect_0d_trill(channel);
-	case 0x001D4Fu:
+	case fm_effect_0d_pause_ADDRESS:
 		return fm_effect_0d_pause(channel, carry);
-	case 0x001D74u:
+	case fm_effect_0e_ADDRESS:
 		return fm_effect_0e(channel);
-	case 0x001D96u:
+	case fm_effect_0e_zigzag_down_ADDRESS:
 		return fm_effect_0e_zigzag_down(channel);
-	case 0x001DE4u:
+	case fm_effect_0e_zigzag_up_ADDRESS:
 		return fm_effect_0e_zigzag_up(channel);
-	case 0x001E33u:
+	case fm_effect_0f_ADDRESS:
 		return fm_effect_0f(channel);
-	case 0x001E4Cu:
+	case fm_effect_0f_drop_ADDRESS:
 		return fm_effect_0f_drop(channel);
-	case 0x001EB5u:
+	case fm_effect_burst_step_ADDRESS:
 		return fm_effect_burst_step(channel);
-	case 0x001F07u:
+	case fm_effect_10_ADDRESS:
 		return fm_effect_10(channel);
-	case 0x001F37u:
+	case fm_effect_10_fall_ADDRESS:
 		return fm_effect_10_fall(channel);
-	case 0x001F7Fu:
+	case fm_effect_10_trill_ADDRESS:
 		return fm_effect_10_trill(channel);
-	case 0x001FCBu:
+	case fm_effect_11_ADDRESS:
 		return fm_effect_11(channel);
-	case 0x001FE4u:
+	case fm_effect_drop_and_pcm_ADDRESS:
 		return fm_effect_drop_and_pcm(channel);
-	case 0x001FF6u:
+	case fm_effect_12_ADDRESS:
 		return fm_effect_12(channel);
-	case 0x002012u:
+	case fm_effect_13_ADDRESS:
 		return fm_effect_13(channel);
-	case 0x00203Eu:
+	case fm_effect_14_ADDRESS:
 		return fm_effect_14(channel);
-	case 0x002069u:
+	case fm_effect_14_fall_ADDRESS:
 		return fm_effect_14_fall(channel, carry);
-	case 0x0020ADu:
+	case fm_effect_15_ADDRESS:
 		return fm_effect_15(channel);
-	case 0x0020F5u:
+	case fm_effect_15_sink_ADDRESS:
 		return fm_effect_15_sink(channel, carry);
-	case 0x00212Cu:
+	case fm_effect_15_echo_ADDRESS:
 		fm_effect_15_echo(channel);
 		return carry;
-	case 0x002136u:
+	case fm_effect_15_echo_wait_ADDRESS:
 		return fm_effect_15_echo_wait(channel, carry);
-	case 0x00215Au:
+	case fm_effect_16_ADDRESS:
 		return fm_effect_16(channel);
-	case 0x002197u:
+	case fm_effect_long_rise_ADDRESS:
 		return fm_effect_long_rise(channel);
-	case 0x0021C6u:
+	case fm_effect_16_echo_ADDRESS:
 		return fm_effect_16_echo(channel);
-	case 0x0021D6u:
+	case fm_effect_16_echo_wait_ADDRESS:
 		return fm_effect_16_echo_wait(channel, carry);
-	case 0x0021F6u:
+	case fm_effect_17_ADDRESS:
 		return fm_effect_17(channel);
-	case 0x002226u:
+	case fm_effect_17_zigzag_ADDRESS:
 		return fm_effect_17_zigzag(channel);
-	case 0x002299u:
+	case fm_effect_18_ADDRESS:
 		return fm_effect_18(channel);
-	case 0x0022D2u:
+	case fm_effect_19_ADDRESS:
 		return fm_effect_19(channel);
-	case 0x002306u:
+	case fm_effect_ladder_ADDRESS:
 		return fm_effect_ladder(channel);
-	case 0x00234Eu:
+	case fm_effect_1a_ADDRESS:
 		return fm_effect_1a(channel);
-	case 0x002393u:
+	case fm_effect_1a_fall_ADDRESS:
 		return fm_effect_1a_fall(channel);
-	case 0x0023CAu:
+	case fm_effect_1a_burst_step_ADDRESS:
 		return fm_effect_1a_burst_step(channel);
-	case 0x00244Fu:
+	case fm_effect_1a_second_start_ADDRESS:
 		return fm_effect_1a_second_start(channel);
-	case 0x00247Au:
+	case fm_effect_1a_second_fall_ADDRESS:
 		return fm_effect_1a_second_fall(channel);
-	case 0x0024B7u:
+	case fm_effect_1a_second_burst_step_ADDRESS:
 		return fm_effect_1a_second_burst_step(channel);
-	case 0x00250Fu:
+	case fm_effect_1b_ADDRESS:
 		return fm_effect_1b(channel);
-	case 0x002531u:
+	case fm_effect_1b_rise_ADDRESS:
 		return fm_effect_1b_rise(channel);
-	case 0x002556u:
+	case fm_effect_1b_hold_ADDRESS:
 		return fm_effect_1b_hold(channel);
-	case 0x00257Fu:
+	case fm_effect_1c_ADDRESS:
 		return fm_effect_1c(channel);
-	case 0x0025B8u:
+	case fm_effect_pulses_ADDRESS:
 		return fm_effect_pulses(channel);
-	case 0x0025FEu:
+	case fm_effect_1c_echo_ADDRESS:
 		fm_effect_1c_echo(channel);
 		return carry;
-	case 0x002608u:
+	case fm_effect_1c_echo_wait_ADDRESS:
 		return fm_effect_1c_echo_wait(channel, carry);
-	case 0x00262Au:
+	case fm_effect_1d_ADDRESS:
 		return fm_effect_1d(channel);
-	case 0x00267Au:
+	case fm_effect_arpeggio_ADDRESS:
 		return fm_effect_arpeggio(channel, carry);
-	case 0x0026A5u:
+	case fm_effect_arpeggio_ring_ADDRESS:
 		return fm_effect_arpeggio_ring(channel, carry);
-	case 0x0026ACu:
+	case fm_effect_1d_echo_ADDRESS:
 		fm_effect_1d_echo(channel);
 		return carry;
-	case 0x0026B6u:
+	case fm_effect_1d_echo_wait_ADDRESS:
 		return fm_effect_1d_echo_wait(channel, carry);
-	case 0x0026C4u:
+	case fm_effect_1e_ADDRESS:
 		return fm_effect_1e(channel);
-	case 0x0026D4u:
+	case fm_effect_1e_wait_ADDRESS:
 		return fm_effect_1e_wait(channel, carry);
-	case 0x0026F6u:
+	case fm_effect_1f_ADDRESS:
 		return fm_effect_1f(channel);
-	case 0x002713u:
+	case fm_effect_1f_rise_ADDRESS:
 		return fm_effect_1f_rise(channel);
-	case 0x00274Du:
+	case fm_effect_1f_hold_ADDRESS:
 		return fm_effect_1f_hold(channel, carry);
-	case 0x002767u:
+	case fm_effect_20_ADDRESS:
 		return fm_effect_20(channel);
-	case 0x002785u:
+	case fm_effect_21_ADDRESS:
 		return fm_effect_21(channel);
-	case 0x0027A7u:
+	case fm_effect_21_rise_ADDRESS:
 		return fm_effect_21_rise(channel);
-	case 0x0027DDu:
+	case fm_effect_21_hold_ADDRESS:
 		return fm_effect_21_hold(channel);
-	case 0x002804u:
+	case fm_effect_22_ADDRESS:
 		return fm_effect_22(channel);
-	case 0x002857u:
+	case fm_effect_22_on_channel_7_ADDRESS:
 		return fm_effect_22_on_channel_7(channel);
-	case 0x00285Cu:
+	case fm_effect_22_on_channel_6_ADDRESS:
 		return fm_effect_22_on_channel_6(channel);
-	case 0x002861u:
+	case fm_effect_22_on_channel_5_ADDRESS:
 		return fm_effect_22_on_channel_5(channel);
-	case 0x002866u:
+	case fm_effect_22_on_channel_4_ADDRESS:
 		return fm_effect_22_on_channel_4(channel);
-	case 0x00286Bu:
+	case fm_effect_22_on_channel_3_ADDRESS:
 		return fm_effect_22_on_channel_3(channel);
-	case 0x002870u:
+	case fm_effect_22_on_channel_2_ADDRESS:
 		return fm_effect_22_on_channel_2(channel);
-	case 0x002875u:
+	case fm_effect_22_on_channel_1_ADDRESS:
 		return fm_effect_22_on_channel_1(channel);
-	case 0x00288Eu:
+	case fm_effect_22_wait_ADDRESS:
 		return fm_effect_22_wait(channel, carry);
-	case 0x0028B6u:
+	case fm_effect_23_ADDRESS:
 		return fm_effect_23(channel);
-	case 0x0028E1u:
+	case fm_effect_23_fall_ADDRESS:
 		return fm_effect_23_fall(channel, carry);
-	case 0x002925u:
+	case fm_effect_24_ADDRESS:
 		return fm_effect_24(channel);
-	case 0x002958u:
+	case fm_effect_24_fall_ADDRESS:
 		return fm_effect_24_fall(channel);
-	case 0x002998u:
+	case fm_effect_24_burst_step_ADDRESS:
 		return fm_effect_24_burst_step(channel);
-	case 0x0029EBu:
+	case fm_effect_25_ADDRESS:
 		return fm_effect_25(channel);
-	case 0x002A0Du:
+	case fm_effect_25_fall_ADDRESS:
 		return fm_effect_25_fall(channel, carry);
-	case 0x002A33u:
+	case fm_effect_25_bend_ADDRESS:
 		return fm_effect_25_bend(channel);
-	case 0x002A68u:
+	case fm_effect_26_ADDRESS:
 		return fm_effect_26(channel);
-	case 0x002AABu:
+	case fm_effect_26_play_ADDRESS:
 		return fm_effect_26_play(channel);
-	case 0x002B2Du:
+	case fm_effect_27_ADDRESS:
 		return fm_effect_27(channel);
-	case 0x002B52u:
+	case fm_effect_27_swell_and_warble_ADDRESS:
 		return fm_effect_27_swell_and_warble(channel);
-	case 0x002BDFu:
+	case fm_effect_28_ADDRESS:
 		return fm_effect_28(channel);
-	case 0x002C09u:
+	case fm_effect_28_jitter_ADDRESS:
 		return fm_effect_28_jitter(channel);
-	case 0x002C49u:
+	case fm_effect_29_ADDRESS:
 		return fm_effect_29(channel);
-	case 0x002C60u:
+	case fm_effect_29_fall_ADDRESS:
 		return fm_effect_29_fall(channel);
-	case 0x002C8Du:
+	case fm_effect_29_tick_ADDRESS:
 		return fm_effect_29_tick(channel);
-	case 0x002CBAu:
+	case fm_effect_29_drop_ADDRESS:
 		return fm_effect_29_drop(channel);
-	case 0x002CF5u:
+	case fm_effect_2a_ADDRESS:
 		return fm_effect_2a(channel);
-	case 0x002D1Du:
+	case fm_effect_2a_swell_and_warble_ADDRESS:
 		return fm_effect_2a_swell_and_warble(channel);
-	case 0x002D40u:
+	case fm_effect_2a_rest_ADDRESS:
 		return fm_effect_2a_rest(channel, carry);
-	case 0x002D7Du:
+	case fm_effect_2b_ADDRESS:
 		return fm_effect_2b(channel);
-	case 0x002D9Du:
+	case fm_effect_2b_drop_ADDRESS:
 		return fm_effect_2b_drop(channel);
-	case 0x002DBFu:
+	case fm_effect_2c_ADDRESS:
 		return fm_effect_2c(channel);
-	case 0x002DF6u:
+	case fm_effect_dive_ADDRESS:
 		return fm_effect_dive(channel);
-	case 0x002E35u:
+	case fm_effect_dive_climb_ADDRESS:
 		return fm_effect_dive_climb(channel, carry);
-	case 0x002E77u:
+	case fm_effect_2d_ADDRESS:
 		return fm_effect_2d(channel);
-	case 0x002EAAu:
+	case fm_effect_2d_zigzag_ADDRESS:
 		return fm_effect_2d_zigzag(channel, carry);
-	case 0x002F11u:
+	case fm_effect_2e_ADDRESS:
 		return fm_effect_2e(channel);
-	case 0x002F3Cu:
+	case fm_effect_2e_fall_ADDRESS:
 		return fm_effect_2e_fall(channel);
-	case 0x002F76u:
+	case fm_effect_2e_trill_ADDRESS:
 		return fm_effect_2e_trill(channel, carry);
-	case 0x002FA8u:
+	case fm_effect_2f_ADDRESS:
 		return fm_effect_2f(channel);
-	case 0x002FD0u:
+	case fm_effect_2f_swell_and_warble_ADDRESS:
 		return fm_effect_2f_swell_and_warble(channel);
-	case 0x003032u:
+	case fm_effect_30_ADDRESS:
 		return fm_effect_30(channel);
-	case 0x003042u:
+	case fm_effect_30_sweep_ADDRESS:
 		return fm_effect_30_sweep(channel);
-	case 0x00306Fu:
+	case fm_effect_30_slow_sweep_ADDRESS:
 		return fm_effect_30_slow_sweep(channel);
-	case 0x0030A4u:
+	case fm_effect_31_ADDRESS:
 		return fm_effect_31(channel);
-	case 0x0030CFu:
+	case fm_effect_31_fall_ADDRESS:
 		return fm_effect_31_fall(channel);
-	case 0x003109u:
+	case fm_effect_31_trill_ADDRESS:
 		return fm_effect_31_trill(channel, carry);
-	case 0x003154u:
+	case fm_effect_32_ADDRESS:
 		return fm_effect_32(channel);
-	case 0x003181u:
+	case fm_effect_32_bend_ADDRESS:
 		return fm_effect_32_bend(channel);
-	case 0x0031ADu:
+	case fm_effect_33_ADDRESS:
 		return fm_effect_33(channel);
-	case 0x0031CEu:
+	case fm_effect_34_ADDRESS:
 		return fm_effect_34(channel);
-	case 0x00320Du:
+	case fm_effect_34_fall_ADDRESS:
 		return fm_effect_34_fall(channel);
-	case 0x003258u:
+	case fm_effect_34_trill_ADDRESS:
 		return fm_effect_34_trill(channel);
-	case 0x00329Cu:
+	case fm_effect_34_warbles_ADDRESS:
 		return fm_effect_34_warbles(channel);
-	case 0x0032D4u:
+	case fm_effect_34_warble_ADDRESS:
 		return fm_effect_34_warble(channel);
-	case 0x003316u:
+	case fm_effect_35_ADDRESS:
 		return fm_effect_35(channel);
-	case 0x003336u:
+	case fm_effect_36_ADDRESS:
 		return fm_effect_36(channel);
-	case 0x003353u:
+	case fm_effect_36_rise_ADDRESS:
 		return fm_effect_36_rise(channel);
-	case 0x003388u:
+	case fm_effect_36_hold_ADDRESS:
 		fm_effect_36_hold(channel);
 		return carry;
-	case 0x003395u:
+	case fm_effect_36_fall_ADDRESS:
 		return fm_effect_36_fall(channel);
-	case 0x0033C2u:
+	case fm_effect_38_ADDRESS:
 		return fm_effect_38(channel);
-	case 0x0033E9u:
+	case fm_effect_38_trill_ADDRESS:
 		return fm_effect_38_trill(channel);
-	case 0x003432u:
+	case fm_effect_39_ADDRESS:
 		return fm_effect_39(channel);
-	case 0x00345Fu:
+	case fm_effect_39_next_note_ADDRESS:
 		return fm_effect_39_next_note(channel, carry);
-	case 0x00348Bu:
+	case fm_effect_3a_ADDRESS:
 		return fm_effect_3a(channel);
-	case 0x0034C3u:
+	case fm_effect_3a_warble_ADDRESS:
 		return fm_effect_3a_warble(channel);
-	case 0x003524u:
+	case fm_effect_3b_ADDRESS:
 		return fm_effect_3b(channel);
-	case 0x00354Cu:
+	case fm_effect_3b_swell_and_warble_ADDRESS:
 		return fm_effect_3b_swell_and_warble(channel);
-	case 0x003570u:
+	case fm_effect_3c_ADDRESS:
 		return fm_effect_3c(channel);
-	case 0x0035A6u:
+	case fm_effect_3c_warble_ADDRESS:
 		return fm_effect_3c_warble(channel);
-	case 0x0035D3u:
+	case fm_effect_3d_ADDRESS:
 		return fm_effect_3d(channel);
-	case 0x0035FDu:
+	case fm_effect_3d_on_channel_6_ADDRESS:
 		return fm_effect_3d_on_channel_6(channel);
-	case 0x003604u:
+	case fm_effect_3d_on_channel_7_ADDRESS:
 		return fm_effect_3d_on_channel_7(channel);
-	case 0x00361Au:
+	case fm_effect_3d_wait_ADDRESS:
 		return fm_effect_3d_wait(channel, carry);
-	case 0x003621u:
+	case fm_effect_3e_ADDRESS:
 		return fm_effect_3e(channel);
-	case 0x00363Au:
+	case fm_effect_3e_delay_ADDRESS:
 		fm_effect_3e_delay(channel);
 		return carry;
-	case 0x003644u:
+	case fm_effect_3e_wait_ADDRESS:
 		return fm_effect_3e_wait(channel, carry);
-	case 0x003664u:
+	case fm_effect_3f_ADDRESS:
 		return fm_effect_3f(channel);
-	case 0x003694u:
+	case fm_effect_fall_and_trills_fall_ADDRESS:
 		return fm_effect_fall_and_trills_fall(channel);
-	case 0x0036C8u:
+	case fm_effect_fall_and_trills_ADDRESS:
 		return fm_effect_fall_and_trills(channel, carry);
-	case 0x003703u:
+	case fm_effect_40_ADDRESS:
 		return fm_effect_40(channel);
-	case 0x00373Fu:
+	case fm_effect_41_ADDRESS:
 		return fm_effect_41(channel);
-	case 0x003769u:
+	case fm_effect_41_rise_ADDRESS:
 		return fm_effect_41_rise(channel, carry);
 	default:
 		sound_invalid_jump(jump_target);
@@ -691,7 +691,7 @@ void free_channel(uint16_t channel)
 	z80_block(48);
 	CHANNEL(channel)->sound = 0u;
 	CHANNEL(channel)->priority = 0u;
-	handler = 0x5E7u;
+	handler = channel_idle_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 

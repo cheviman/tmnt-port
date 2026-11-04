@@ -3,7 +3,7 @@
  *    Description: prototypes of the game's functions and the addresses of the code it holds as values
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -40,14 +40,899 @@ extern uint32_t offset_high_word;
    fade goes to (fade_palettes_start 009662 "move.l A5, $63414.l": the ending's and the opening's fades
    put them there) */
 extern uint32_t palette_place;
+/* what A1 holds through the object loop: what the turtles' and the layers' routines leave there, a
+   spawn's screen margins (spawn_enemies), the slot an object's routine left; the bosses' first states
+   take it for the player slot they go after */
+extern uint32_t object_loop_slot;
+/* what the object loop's routines leave in A5 for the next one: the last slot's turtle where the loop
+   starts (update_player_slots), a boss's target (boss_direction_to_target), the second nearest slot an
+   enemy found (enemy_think) */
+extern uint32_t object_loop_leftover;
 
 /* where the code the program holds as values is (handlers it stores and compares), as the game's own
    addresses */
 #define reset_ADDRESS 0x001000u
 #define draw_score_digits_ADDRESS 0x002032u
+#define demo_join_player_1_ADDRESS 0x0048B2u
+#define demo_join_player_2_ADDRESS 0x0048E6u
+#define demo_join_player_3_ADDRESS 0x00491Au
+#define demo_join_player_4_ADDRESS 0x00494Eu
+#define krang_appear_ADDRESS 0x00DF7Eu
+#define krang_walk_ADDRESS 0x00E03Cu
+#define krang_melee_ADDRESS 0x00E124u
+#define krang_fire_lasers_ADDRESS 0x00E1A8u
+#define krang_struck_ADDRESS 0x00E21Au
+#define krang_recoil_ADDRESS 0x00E2A8u
+#define krang_explode_ADDRESS 0x00E2DCu
+#define krang_escape_ADDRESS 0x00E39Cu
 #define krang_aim_charge_ADDRESS 0x00E708u
 #define krang_aim_walk_ADDRESS 0x00E718u
+#define krang_curtain_start_ADDRESS 0x00E962u
+#define krang_curtain_open_ADDRESS 0x00E992u
+#define krang_curtain_end_ADDRESS 0x00E9B6u
+#define krang_laser_start_ADDRESS 0x00EAB6u
+#define krang_laser_wait_ADDRESS 0x00EB2Au
+#define krang_laser_fly_ADDRESS 0x00EB3Eu
+#define krang_laser_spark_ADDRESS 0x00EB70u
+#define krang_fist_start_ADDRESS 0x00EBFEu
+#define krang_fist_launch_ADDRESS 0x00EC4Cu
+#define krang_fist_fly_ADDRESS 0x00EC76u
+#define ball_dropper_start_ADDRESS 0x00F8DAu
+#define ball_dropper_wait_ADDRESS 0x00F8F2u
+#define ball_start_ADDRESS 0x00F96Au
+#define ball_drop_ADDRESS 0x00F98Eu
+#define ball_bounce_ADDRESS 0x00F9DCu
+#define road_barrier_start_ADDRESS 0x00FA1Cu
+#define road_barrier_stay_ADDRESS 0x00FA5Au
+#define tire_stack_start_ADDRESS 0x00FA68u
+#define tire_stack_stay_ADDRESS 0x00FA9Au
+#define technodrome_ball_start_ADDRESS 0x00FAACu
+#define technodrome_ball_drop_ADDRESS 0x00FADCu
+#define technodrome_ball_bounce_ADDRESS 0x00FB34u
+#define hydrant_start_ADDRESS 0x00FBB4u
+#define hydrant_stay_ADDRESS 0x00FBD8u
+#define hydrant_spray_ADDRESS 0x00FBDEu
+#define hydrant_struck_ADDRESS 0x00FC1Cu
+#define hydrant_recover_ADDRESS 0x00FCA6u
+#define hydrant_water_start_ADDRESS 0x00FD3Au
+#define hydrant_water_fly_ADDRESS 0x00FDA4u
+#define roadside_cone_start_ADDRESS 0x00FDF2u
+#define roadside_pole_start_ADDRESS 0x00FDFCu
+#define roadside_stay_ADDRESS 0x00FE44u
+#define roadside_fly_ADDRESS 0x00FE4Cu
+#define roadside_speed_sign_struck_ADDRESS 0x00FE5Eu
+#define roadside_cone_struck_ADDRESS 0x00FE6Eu
+#define roadside_parking_meter_struck_ADDRESS 0x00FE7Eu
+#define rat_start_ADDRESS 0x00FEE2u
+#define rat_drop_ADDRESS 0x00FF70u
+#define rat_sit_ADDRESS 0x00FFA0u
+#define rat_run_ADDRESS 0x00FFBEu
+#define alligator_start_ADDRESS 0x010026u
+#define alligator_swim_ADDRESS 0x010058u
+#define alligator_snap_ADDRESS 0x010080u
+#define skateboarder_start_ADDRESS 0x0100ACu
+#define skateboarder_idle_ADDRESS 0x0100D4u
+#define skateboarder_glide_ADDRESS 0x0100D6u
+#define skateboarder_struck_ADDRESS 0x0100DAu
+#define pizza_start_ADDRESS 0x010108u
+#define pizza_wait_ADDRESS 0x010158u
+#define pizza_vanish_ADDRESS 0x0101DCu
+#define billboard_start_ADDRESS 0x0101F8u
+#define billboard_wait_ADDRESS 0x01023Au
+#define billboard_fall_ADDRESS 0x0102BCu
+#define billboard_land_ADDRESS 0x0102E0u
+#define billboard_soldier_start_ADDRESS 0x010354u
+#define billboard_soldier_wait_ADDRESS 0x010398u
+#define billboard_soldier_jump_down_ADDRESS 0x0103C0u
+#define billboard_soldier_become_boomerang_soldier_ADDRESS 0x0103F2u
+#define oil_drum_start_ADDRESS 0x01042Cu
+#define oil_drum_stay_ADDRESS 0x010450u
+#define oil_drum_blow_up_ADDRESS 0x010458u
+#define oil_drum_become_wreck_ADDRESS 0x010490u
+#define oil_drum_struck_ADDRESS 0x0104C2u
+#define oil_drum_recover_ADDRESS 0x010520u
+#define turret_start_ADDRESS 0x010554u
+#define turret_move_ADDRESS 0x01059Eu
+#define turret_fire_ADDRESS 0x0105BCu
+#define turret_wreck_ADDRESS 0x010602u
+#define turret_struck_ADDRESS 0x010674u
+#define turret_recover_ADDRESS 0x0106D6u
+#define turret_shot_start_ADDRESS 0x01080Au
+#define turret_shot_fly_ADDRESS 0x010880u
+#define turret_shot_vanish_ADDRESS 0x0108B6u
+#define waiting_soldier_start_ADDRESS 0x0108D4u
+#define waiting_soldier_wait_ADDRESS 0x0108FCu
+#define waiting_soldier_become_knife_soldier_ADDRESS 0x01090Cu
+#define one_way_sign_start_ADDRESS 0x01092Eu
+#define one_way_sign_stay_ADDRESS 0x010952u
+#define one_way_sign_spin_ADDRESS 0x010958u
+#define one_way_sign_idle_ADDRESS 0x010970u
+#define one_way_sign_struck_ADDRESS 0x010972u
+#define nozzle_row_start_ADDRESS 0x0109D2u
+#define nozzle_row_run_ADDRESS 0x0109F8u
+#define nozzle_row_done_ADDRESS 0x010AD4u
+#define freeze_nozzle_start_ADDRESS 0x010B22u
+#define freeze_nozzle_rise_ADDRESS 0x010B4Au
+#define freeze_nozzle_spray_ADDRESS 0x010B6Au
+#define freeze_nozzle_sink_ADDRESS 0x010BE0u
+#define freeze_nozzle_struck_ADDRESS 0x010BF8u
+#define freeze_nozzle_broken_ADDRESS 0x010C46u
+#define electric_beam_start_ADDRESS 0x010C56u
+#define electric_beam_wait_ADDRESS 0x010C76u
+#define electric_beam_shine_ADDRESS 0x010CB2u
+#define electric_vent_start_ADDRESS 0x010CDAu
+#define electric_vent_wait_ADDRESS 0x010CFAu
+#define electric_vent_wait_column_ADDRESS 0x010D36u
+#define electric_column_start_ADDRESS 0x010DA8u
+#define electric_column_rise_ADDRESS 0x010DD4u
+#define electric_column_flicker_ADDRESS 0x010DE8u
+#define electric_column_leave_ADDRESS 0x010E0Cu
+#define grille_start_ADDRESS 0x010E50u
+#define grille_idle_ADDRESS 0x010E76u
 #define start_small_blast_ADDRESS 0x011000u
+#define explosion_small_start_ADDRESS 0x0110A8u
+#define explosion_big_start_ADDRESS 0x0110B2u
+#define explosion_drum_start_ADDRESS 0x0110BCu
+#define explosion_rocket_start_ADDRESS 0x0110C6u
+#define explosion_medium_start_ADDRESS 0x0110D0u
+#define explosion_end_ADDRESS 0x0110F4u
+#define spiked_pole_start_ADDRESS 0x011116u
+#define spiked_pole_wait_ADDRESS 0x01115Au
+#define spiked_pole_hold_up_ADDRESS 0x011190u
+#define spiked_pole_drop_ADDRESS 0x0111C6u
+#define spiked_pole_hold_down_ADDRESS 0x011208u
+#define spiked_pole_rise_ADDRESS 0x01123Eu
+#define sewer_launcher_start_ADDRESS 0x01129Cu
+#define sewer_launcher_wait_ADDRESS 0x0112DAu
+#define sewer_launcher_fired_ADDRESS 0x01133Au
+#define sewer_launcher_remove_ADDRESS 0x011374u
+#define sewer_missile_start_ADDRESS 0x01147Eu
+#define sewer_missile_rise_ADDRESS 0x0114C6u
+#define sewer_missile_fly_ADDRESS 0x0114F6u
+#define sewer_missile_remove_ADDRESS 0x0114FEu
+#define sewer_missile_struck_ADDRESS 0x011502u
+#define sewer_missile_vanish_ADDRESS 0x011528u
+#define rock_soldier_site_enter_ADDRESS 0x01154Eu
+#define rock_soldier_site_think_ADDRESS 0x0116CCu
+#define rock_soldier_site_fire_ADDRESS 0x01186Cu
+#define rock_soldier_site_finish_attack_ADDRESS 0x0118CAu
+#define rock_soldier_struck_ADDRESS 0x0118ECu
+#define rock_soldier_recover_ADDRESS 0x0119A0u
+#define rock_soldier_defeated_ADDRESS 0x0119DEu
+#define gun_blast_start_ADDRESS 0x012024u
+#define gun_blast_fly_ADDRESS 0x012076u
+#define rubble_start_ADDRESS 0x012110u
+#define rubble_fall_ADDRESS 0x01214Eu
+#define rubble_stay_ADDRESS 0x01217Au
+#define rock_soldier_technodrome_enter_ADDRESS 0x012198u
+#define rock_soldier_technodrome_think_ADDRESS 0x0122C8u
+#define rock_soldier_technodrome_fire_ADDRESS 0x012422u
+#define rock_soldier_technodrome_finish_blow_ADDRESS 0x012430u
+#define wall_slab_start_ADDRESS 0x0126A0u
+#define wall_slab_fly_ADDRESS 0x0126F0u
+#define missile_start_ADDRESS 0x01277Eu
+#define missile_fly_ADDRESS 0x0127D6u
+#define missile_explode_ADDRESS 0x012830u
+#define missile_idle_ADDRESS 0x012862u
+#define missile_struck_ADDRESS 0x012864u
+#define missile_vanish_ADDRESS 0x01287Au
+#define shock_bars_start_ADDRESS 0x0128D8u
+#define shock_bars_blink_in_ADDRESS 0x0128FEu
+#define shock_bars_on_ADDRESS 0x012924u
+#define shock_bars_blink_out_ADDRESS 0x01293Cu
+#define shock_bars_hit_box_start_ADDRESS 0x0129A6u
+#define shock_bars_hit_box_zap_ADDRESS 0x0129E2u
+#define parked_car_start_ADDRESS 0x012A2Eu
+#define parked_car_draw_ADDRESS 0x012A68u
+#define parked_car_wait_ADDRESS 0x012A88u
+#define parked_car_start_drive_ADDRESS 0x012AA6u
+#define parked_car_drive_off_ADDRESS 0x012AE2u
+#define parked_car_release_soldiers_ADDRESS 0x012B3Cu
+#define car_hit_box_start_ADDRESS 0x012C1Cu
+#define car_hit_box_move_ADDRESS 0x012C58u
+#define car_soldier_start_ADDRESS 0x012CB2u
+#define car_soldier_leap_ADDRESS 0x012D06u
+#define helicopter_start_ADDRESS 0x012D4Eu
+#define helicopter_hover_ADDRESS 0x012DCEu
+#define helicopter_fire_bullets_ADDRESS 0x012E06u
+#define helicopter_drop_missiles_ADDRESS 0x012E50u
+#define helicopter_struck_ADDRESS 0x012E9Au
+#define helicopter_recover_ADDRESS 0x012F10u
+#define helicopter_destroyed_ADDRESS 0x012F40u
+#define copter_bullet_start_ADDRESS 0x0131B8u
+#define copter_bullet_fly_ADDRESS 0x01320Cu
+#define copter_bullet_burst_ADDRESS 0x013260u
+#define copter_bullet_vanish_ADDRESS 0x013264u
+#define falling_missile_start_ADDRESS 0x0132A2u
+#define falling_missile_fall_ADDRESS 0x013310u
+#define falling_missile_explode_ADDRESS 0x013340u
+#define flying_drone_enter_ADDRESS 0x0134B6u
+#define flying_drone_fly_ADDRESS 0x0135B4u
+#define flying_drone_fire_ADDRESS 0x01360Cu
+#define flying_drone_struck_ADDRESS 0x013656u
+#define flying_drone_recover_ADDRESS 0x0136BAu
+#define flying_drone_destroyed_ADDRESS 0x0136EAu
+#define drone_shot_start_ADDRESS 0x013AFCu
+#define drone_shot_flash_ADDRESS 0x013B8Au
+#define drone_shot_fly_ADDRESS 0x013BB6u
+#define drone_shot_vanish_ADDRESS 0x013C0Cu
+#define stockman_enter_ADDRESS 0x013C32u
+#define stockman_fly_ADDRESS 0x013DA8u
+#define stockman_drop_mouser_ADDRESS 0x013E36u
+#define stockman_idle_ADDRESS 0x013E64u
+#define stockman_struck_ADDRESS 0x013E66u
+#define stockman_recover_ADDRESS 0x013EC0u
+#define stockman_defeated_ADDRESS 0x013EF4u
+#define falling_mouser_start_ADDRESS 0x014336u
+#define falling_mouser_fall_ADDRESS 0x014366u
+#define falling_mouser_idle_ADDRESS 0x0143BAu
+#define falling_mouser_struck_ADDRESS 0x0143BCu
+#define remove_object_ADDRESS 0x01832Au
+#define enemy_foot_soldier_start_ADDRESS 0x0489E2u
+#define enemy_enter_ADDRESS 0x048A60u
+#define enemy_think_ADDRESS 0x048A94u
+#define enemy_attack_ADDRESS 0x048D8Au
+#define enemy_hit_ADDRESS 0x048DBAu
+#define enemy_react_ADDRESS 0x048EDAu
+#define enemy_step_over_edge_ADDRESS 0x048F02u
+#define enemy_hop_crouch_ADDRESS 0x048F62u
+#define enemy_hop_down_ADDRESS 0x048F72u
+#define enemy_hop_fall_ADDRESS 0x048FBAu
+#define enemy_hop_land_ADDRESS 0x048FFAu
+#define enemy_hop_right_ADDRESS 0x04901Au
+#define enemy_hop_left_ADDRESS 0x049078u
+#define enemy_hop_up_crouch_ADDRESS 0x0490D6u
+#define enemy_hop_up_ADDRESS 0x0490E6u
+#define enemy_hop_up_fall_ADDRESS 0x04911Cu
+#define enemy_hop_up_right_ADDRESS 0x04916Cu
+#define enemy_hop_up_fall_blocked_ADDRESS 0x0491A8u
+#define enemy_hop_up_left_ADDRESS 0x0491F8u
+#define enemy_shuffle_start_ADDRESS 0x049260u
+#define enemy_shuffle_step_ADDRESS 0x049276u
+#define enemy_shuffle_turn_ADDRESS 0x0492A8u
+#define enemy_shuffle_end_ADDRESS 0x0492DEu
+#define enemy_retreat_start_ADDRESS 0x049300u
+#define enemy_retreat_step_ADDRESS 0x04933Au
+#define enemy_circle_start_ADDRESS 0x049378u
+#define enemy_circle_step_ADDRESS 0x0493CAu
+#define enemy_charge_start_ADDRESS 0x049420u
+#define enemy_charge_run_ADDRESS 0x049468u
+#define enemy_charge_brake_ADDRESS 0x04949Eu
+#define enemy_crash_into_scenery_start_ADDRESS 0x0494DAu
+#define enemy_crash_into_scenery_end_ADDRESS 0x049534u
+#define enemy_crash_into_scenery_low_start_ADDRESS 0x049570u
+#define enemy_walk_to_target_start_ADDRESS 0x0495DEu
+#define enemy_walk_to_target_step_ADDRESS 0x049604u
+#define enemy_walk_to_side_start_ADDRESS 0x04966Eu
+#define enemy_walk_to_side_step_ADDRESS 0x049694u
+#define enemy_walk_to_side_crouch_ADDRESS 0x0496FAu
+#define enemy_walk_to_side_turn_ADDRESS 0x04971Eu
+#define enemy_walk_to_side_hold_ADDRESS 0x04973Eu
+#define enemy_keep_distance_start_ADDRESS 0x0497A6u
+#define enemy_keep_distance_watch_ADDRESS 0x0497C2u
+#define enemy_keep_distance_back_off_ADDRESS 0x04984Cu
+#define enemy_keep_distance_close_in_ADDRESS 0x049868u
+#define enemy_back_off_start_ADDRESS 0x0498B2u
+#define enemy_back_off_walk_ADDRESS 0x0498EEu
+#define enemy_back_off_wait_ADDRESS 0x04991Eu
+#define enemy_run_away_start_ADDRESS 0x049948u
+#define enemy_run_away_step_ADDRESS 0x049980u
+#define enemy_walk_across_start_ADDRESS 0x0499B8u
+#define enemy_walk_across_step_ADDRESS 0x0499EAu
+#define enemy_jab_ADDRESS 0x049A06u
+#define enemy_jab_start_ADDRESS 0x049A1Au
+#define enemy_attack_end_ADDRESS 0x049A42u
+#define enemy_chop_ADDRESS 0x049A52u
+#define enemy_chop_start_ADDRESS 0x049A66u
+#define enemy_swing_ADDRESS 0x049A8Eu
+#define enemy_swing_start_ADDRESS 0x049AA2u
+#define enemy_high_kick_ADDRESS 0x049ACAu
+#define enemy_high_kick_start_ADDRESS 0x049ADEu
+#define enemy_jump_kick_ADDRESS 0x049B06u
+#define enemy_jump_kick_crouch_ADDRESS 0x049B2Eu
+#define enemy_jump_kick_leap_ADDRESS 0x049B56u
+#define enemy_jump_kick_fly_ADDRESS 0x049B82u
+#define enemy_long_jump_kick_ADDRESS 0x049BBCu
+#define enemy_long_jump_kick_crouch_ADDRESS 0x049BE4u
+#define enemy_long_jump_kick_leap_ADDRESS 0x049C0Cu
+#define enemy_long_jump_kick_fly_ADDRESS 0x049C38u
+#define enemy_attack_none_after_long_jump_kick_ADDRESS 0x049C72u
+#define enemy_attack_none_before_grab_ADDRESS 0x049C74u
+#define enemy_grab_ADDRESS 0x049C76u
+#define enemy_grab_start_ADDRESS 0x049C92u
+#define enemy_grab_run_ADDRESS 0x049D06u
+#define enemy_grab_hold_ADDRESS 0x049D7Eu
+#define enemy_grab_end_ADDRESS 0x049DD0u
+#define enemy_flinch_back_start_ADDRESS 0x049DF0u
+#define enemy_flinch_end_ADDRESS 0x049E00u
+#define enemy_flinch_bent_start_ADDRESS 0x049E24u
+#define enemy_flinch_reel_start_ADDRESS 0x049E48u
+#define enemy_flinch_hunched_start_ADDRESS 0x049E6Cu
+#define enemy_killed_back_start_ADDRESS 0x049EACu
+#define enemy_killed_back_fly_ADDRESS 0x049EC8u
+#define enemy_killed_back_lie_ADDRESS 0x049F38u
+#define enemy_killed_back_on_wall_ADDRESS 0x049F6Au
+#define enemy_killed_back_slide_down_ADDRESS 0x049F78u
+#define enemy_killed_back_down_ADDRESS 0x049FA0u
+#define enemy_killed_forward_start_ADDRESS 0x049FE8u
+#define enemy_killed_forward_fly_ADDRESS 0x04A004u
+#define enemy_killed_forward_lie_ADDRESS 0x04A074u
+#define enemy_killed_forward_on_wall_ADDRESS 0x04A0A6u
+#define enemy_killed_forward_slide_down_ADDRESS 0x04A0B4u
+#define enemy_killed_forward_down_ADDRESS 0x04A0DCu
+#define enemy_knocked_forward_start_ADDRESS 0x04A120u
+#define enemy_knocked_forward_fly_ADDRESS 0x04A13Cu
+#define enemy_knocked_forward_lie_ADDRESS 0x04A176u
+#define enemy_knocked_forward_wait_ADDRESS 0x04A1BAu
+#define enemy_thrown_by_donatello_start_ADDRESS 0x04A202u
+#define enemy_thrown_by_donatello_swing_ADDRESS 0x04A214u
+#define enemy_thrown_fly_ADDRESS 0x04A25Au
+#define enemy_thrown_by_michelangelo_start_ADDRESS 0x04A396u
+#define enemy_thrown_by_michelangelo_swing_ADDRESS 0x04A3A8u
+#define enemy_thrown_by_raphael_start_ADDRESS 0x04A454u
+#define enemy_thrown_by_raphael_swing_ADDRESS 0x04A466u
+#define enemy_thrown_by_leonardo_start_ADDRESS 0x04A512u
+#define enemy_thrown_by_leonardo_swing_ADDRESS 0x04A524u
+#define enemy_knocked_back_start_ADDRESS 0x04A5CEu
+#define enemy_knocked_back_fly_ADDRESS 0x04A5F8u
+#define enemy_knocked_back_lie_ADDRESS 0x04A632u
+#define enemy_knocked_back_wait_ADDRESS 0x04A676u
+#define enemy_knocked_back_get_up_ADDRESS 0x04A690u
+#define enemy_die_start_ADDRESS 0x04A6C6u
+#define enemy_die_vanish_ADDRESS 0x04A6E6u
+#define enemy_die_on_back_start_ADDRESS 0x04A718u
+#define boss_shutter_start_ADDRESS 0x04A744u
+#define boss_shutter_wait_ADDRESS 0x04A76Au
+#define boss_shutter_open_ADDRESS 0x04A7AAu
+#define scenery_lamp_start_ADDRESS 0x04A7F8u
+#define scenery_stay_ADDRESS 0x04A814u
+#define scenery_open_manhole_start_ADDRESS 0x04A830u
+#define scenery_gone_off_screen_ADDRESS 0x04A856u
+#define scenery_chair_start_ADDRESS 0x04A880u
+#define scenery_fire_start_ADDRESS 0x04A8E6u
+#define foot_car_start_ADDRESS 0x04A97Eu
+#define foot_car_drive_ADDRESS 0x04A9B6u
+#define falling_debris_start_ADDRESS 0x04AA82u
+#define falling_debris_wait_ADDRESS 0x04AAAAu
+#define falling_debris_fall_ADDRESS 0x04AAE4u
+#define falling_debris_burn_ADDRESS 0x04AB2Au
+#define motorbike_start_ADDRESS 0x04AB5Eu
+#define motorbike_ride_ADDRESS 0x04ABCAu
+#define motorbike_ride_off_ADDRESS 0x04AC0Eu
+#define motorbike_struck_ADDRESS 0x04AC22u
+#define enemy_sword_soldier_start_ADDRESS 0x04ACB0u
+#define enemy_hammer_soldier_start_ADDRESS 0x04AD3Cu
+#define enemy_walk_to_target_sword_start_ADDRESS 0x04ADC8u
+#define enemy_walk_to_side_sword_start_ADDRESS 0x04AE0Eu
+#define enemy_walk_to_side_sword_crouch_ADDRESS 0x04AE34u
+#define enemy_walk_to_side_sword_turn_ADDRESS 0x04AE58u
+#define enemy_walk_past_sword_start_ADDRESS 0x04AE8Cu
+#define enemy_walk_past_sword_step_ADDRESS 0x04AEBCu
+#define enemy_back_off_sword_start_ADDRESS 0x04AF3Cu
+#define enemy_back_off_sword_walk_ADDRESS 0x04AF78u
+#define enemy_back_off_sword_wait_ADDRESS 0x04AFA8u
+#define enemy_walk_to_line_sword_start_ADDRESS 0x04AFD2u
+#define enemy_walk_to_line_sword_step_ADDRESS 0x04B00Au
+#define enemy_walk_to_target_hammer_start_ADDRESS 0x04B04Eu
+#define enemy_walk_to_side_hammer_start_ADDRESS 0x04B08Cu
+#define enemy_walk_to_side_far_step_ADDRESS 0x04B0B2u
+#define enemy_walk_to_side_far_hold_ADDRESS 0x04B118u
+#define enemy_stalk_hammer_start_ADDRESS 0x04B146u
+#define enemy_stalk_hammer_approach_ADDRESS 0x04B168u
+#define enemy_stalk_hammer_step_ADDRESS 0x04B1ACu
+#define enemy_walk_away_hammer_start_ADDRESS 0x04B250u
+#define enemy_walk_away_hammer_walk_ADDRESS 0x04B284u
+#define enemy_walk_away_hammer_wait_ADDRESS 0x04B2BCu
+#define enemy_slash_sword_ADDRESS 0x04B2DAu
+#define enemy_slash_sword_start_ADDRESS 0x04B2EEu
+#define enemy_low_slash_sword_ADDRESS 0x04B316u
+#define enemy_low_slash_sword_start_ADDRESS 0x04B32Au
+#define enemy_leaping_slash_sword_ADDRESS 0x04B352u
+#define enemy_leaping_slash_sword_start_ADDRESS 0x04B37Au
+#define enemy_leaping_slash_sword_leap_ADDRESS 0x04B3A2u
+#define enemy_leaping_slash_sword_fly_ADDRESS 0x04B3F0u
+#define enemy_jump_slash_sword_ADDRESS 0x04B42Au
+#define enemy_jump_slash_sword_start_ADDRESS 0x04B452u
+#define enemy_jump_slash_sword_leap_ADDRESS 0x04B47Au
+#define enemy_jump_slash_sword_fly_ADDRESS 0x04B4A6u
+#define enemy_flying_slash_sword_ADDRESS 0x04B4E0u
+#define enemy_flying_slash_sword_start_ADDRESS 0x04B508u
+#define enemy_flying_slash_sword_leap_ADDRESS 0x04B530u
+#define enemy_flying_slash_sword_fly_ADDRESS 0x04B588u
+#define enemy_smash_hammer_ADDRESS 0x04B5D6u
+#define enemy_smash_hammer_start_ADDRESS 0x04B5EAu
+#define enemy_smash_hammer_end_ADDRESS 0x04B622u
+#define enemy_flinch_back_sword_start_ADDRESS 0x04B646u
+#define enemy_flinch_bent_sword_start_ADDRESS 0x04B66Au
+#define enemy_flinch_reel_sword_start_ADDRESS 0x04B68Eu
+#define enemy_flinch_hunched_sword_start_ADDRESS 0x04B6B2u
+#define enemy_flinch_back_hammer_start_ADDRESS 0x04B6D6u
+#define enemy_flinch_bent_hammer_start_ADDRESS 0x04B6FAu
+#define whip_arm_start_ADDRESS 0x04B7F8u
+#define whip_arm_follow_ADDRESS 0x04B828u
+#define whip_arm_let_go_ADDRESS 0x04B88Eu
+#define whip_arm_drag_ADDRESS 0x04B89Eu
+#define whip_arm_struck_ADDRESS 0x04B900u
+#define laser_bolt_start_ADDRESS 0x04B9C2u
+#define laser_bolt_fly_ADDRESS 0x04BA04u
+#define laser_bolt_vanish_ADDRESS 0x04BA34u
+#define rolling_manhole_cover_start_ADDRESS 0x04BA56u
+#define rolling_wait_hittable_ADDRESS 0x04BAB2u
+#define rolling_roll_ADDRESS 0x04BAC4u
+#define rolling_struck_ADDRESS 0x04BAE8u
+#define knife_start_ADDRESS 0x04BB32u
+#define knife_fly_ADDRESS 0x04BB88u
+#define knife_vanish_ADDRESS 0x04BBB6u
+#define knife_struck_ADDRESS 0x04BBD8u
+#define spear_start_ADDRESS 0x04BC0Eu
+#define spear_fly_ADDRESS 0x04BC50u
+#define spear_vanish_ADDRESS 0x04BC60u
+#define spear_struck_ADDRESS 0x04BC6Eu
+#define axe_start_ADDRESS 0x04BC98u
+#define axe_fly_ADDRESS 0x04BCEEu
+#define gun_shot_start_ADDRESS 0x04BD2Cu
+#define gun_shot_fly_ADDRESS 0x04BD78u
+#define gun_shot_vanish_ADDRESS 0x04BD9Eu
+#define gun_shot_struck_ADDRESS 0x04BDC0u
+#define boomerang_start_ADDRESS 0x04BE12u
+#define boomerang_fly_out_ADDRESS 0x04BE5Au
+#define boomerang_fly_back_ADDRESS 0x04BE92u
+#define boomerang_fly_on_ADDRESS 0x04BEBAu
+#define boomerang_struck_ADDRESS 0x04BECEu
+#define boomerang_vanish_ADDRESS 0x04BEE8u
+#define shuriken_start_ADDRESS 0x04BF0Au
+#define shuriken_fly_ADDRESS 0x04BF4Cu
+#define shuriken_vanish_ADDRESS 0x04BF96u
+#define shuriken_struck_ADDRESS 0x04BFA4u
+#define rocksteady_bullet_start_ADDRESS 0x04BFE6u
+#define rocksteady_bullet_fly_ADDRESS 0x04C054u
+#define rocksteady_bullet_vanish_ADDRESS 0x04C078u
+#define bebop_shot_start_ADDRESS 0x04C0AEu
+#define bebop_shot_fly_ADDRESS 0x04C0F0u
+#define rolling_tire_start_ADDRESS 0x04C11Au
+#define shredder_piece_start_ADDRESS 0x04C17Cu
+#define shredder_piece_bounce_ADDRESS 0x04C1B6u
+#define shredder_ray_start_ADDRESS 0x04C204u
+#define shredder_ray_shine_ADDRESS 0x04C23Cu
+#define rocket_start_ADDRESS 0x04C264u
+#define rocket_fly_ADDRESS 0x04C2CEu
+#define rocket_explode_ADDRESS 0x04C30Cu
+#define dynamite_start_ADDRESS 0x04C32Au
+#define dynamite_throw_ADDRESS 0x04C35Eu
+#define dynamite_bounce_ADDRESS 0x04C386u
+#define dynamite_explode_ADDRESS 0x04C3F2u
+#define kicked_door_start_ADDRESS 0x04C4E6u
+#define kicked_door_wait_ADDRESS 0x04C4FCu
+#define kicked_door_break_ADDRESS 0x04C522u
+#define kicked_door_become_foot_soldier_ADDRESS 0x04C552u
+#define door_piece_start_ADDRESS 0x04C5F4u
+#define door_piece_fly_ADDRESS 0x04C63Au
+#define elevator_start_ADDRESS 0x04C6E8u
+#define elevator_wait_on_screen_ADDRESS 0x04C716u
+#define elevator_open_ADDRESS 0x04C730u
+#define elevator_scroll_off_ADDRESS 0x04C784u
+#define enemy_step_out_start_ADDRESS 0x04C824u
+#define enemy_step_out_wait_ADDRESS 0x04C840u
+#define enemy_step_out_walk_ADDRESS 0x04C860u
+#define tire_soldier_start_ADDRESS 0x04C89Cu
+#define tire_soldier_wait_ADDRESS 0x04C8E0u
+#define tire_soldier_jump_ADDRESS 0x04C906u
+#define tire_soldier_fly_ADDRESS 0x04C936u
+#define tire_soldier_throw_ADDRESS 0x04C964u
+#define manhole_soldier_start_ADDRESS 0x04C9C6u
+#define manhole_soldier_wait_ADDRESS 0x04CA06u
+#define manhole_soldier_jump_out_ADDRESS 0x04CA2Cu
+#define manhole_soldier_fly_ADDRESS 0x04CA68u
+#define manhole_soldier_throw_ADDRESS 0x04CA98u
+#define thrower_become_foot_soldier_ADDRESS 0x04CAD2u
+#define window_soldier_drop_start_ADDRESS 0x04CBFCu
+#define window_soldier_drop_jump_out_ADDRESS 0x04CC2Eu
+#define window_soldier_drop_break_window_ADDRESS 0x04CC76u
+#define window_soldier_drop_fall_ADDRESS 0x04CCA0u
+#define window_soldier_become_foot_soldier_ADDRESS 0x04CCECu
+#define window_soldier_dive_start_ADDRESS 0x04CD80u
+#define window_soldier_dive_wait_ADDRESS 0x04CDAAu
+#define window_soldier_dive_fall_ADDRESS 0x04CE06u
+#define glass_shards_start_ADDRESS 0x04CECAu
+#define glass_shards_fall_ADDRESS 0x04CF10u
+#define enemy_walk_in_on_ledge_start_ADDRESS 0x04CF74u
+#define enemy_walk_in_on_ledge_walk_ADDRESS 0x04CF9Au
+#define enemy_jump_down_leap_ADDRESS 0x04CFD6u
+#define enemy_jump_down_fall_stairs_ADDRESS 0x04D006u
+#define enemy_jump_down_fall_ADDRESS 0x04D00Cu
+#define enemy_jump_down_land_ADDRESS 0x04D04Au
+#define enemy_step_down_start_ADDRESS 0x04D072u
+#define enemy_step_down_wait_ADDRESS 0x04D08Eu
+#define sewer_ripple_start_ADDRESS 0x04D1AEu
+#define sewer_ripple_swim_ADDRESS 0x04D1DEu
+#define sewer_ripple_leap_out_ADDRESS 0x04D24Cu
+#define sewer_ripple_vanish_ADDRESS 0x04D288u
+#define sewer_ripple_swim_again_ADDRESS 0x04D2A6u
+#define enemy_leap_out_start_ADDRESS 0x04D2D4u
+#define enemy_leap_out_fly_ADDRESS 0x04D2FEu
+#define enemy_leap_out_land_ADDRESS 0x04D330u
+#define bomber_start_ADDRESS 0x04D46Cu
+#define bomber_wait_ADDRESS 0x04D488u
+#define bomber_lean_out_ADDRESS 0x04D4B0u
+#define bomber_throw_ADDRESS 0x04D4D0u
+#define bomber_step_out_ADDRESS 0x04D4FEu
+#define bomber_walk_in_ADDRESS 0x04D52Cu
+#define enemy_rocket_soldier_start_ADDRESS 0x04D564u
+#define enemy_rocket_soldier_line_up_ADDRESS 0x04D58Eu
+#define enemy_rocket_soldier_fire_ADDRESS 0x04D5EEu
+#define enemy_rocket_soldier_unarmed_ADDRESS 0x04D624u
+#define enemy_rocket_soldier_struck_ADDRESS 0x04D64Cu
+#define double_door_start_ADDRESS 0x04D6C8u
+#define double_door_wait_ADDRESS 0x04D6CEu
+#define double_door_open_ADDRESS 0x04D722u
+#define technodrome_door_start_ADDRESS 0x04D76Cu
+#define technodrome_door_wait_ADDRESS 0x04D782u
+#define technodrome_door_open_ADDRESS 0x04D7D0u
+#define technodrome_door_let_out_ADDRESS 0x04D7E8u
+#define enemy_hang_in_start_ADDRESS 0x04D820u
+#define enemy_hang_in_move_ADDRESS 0x04D856u
+#define enemy_hang_in_drop_ADDRESS 0x04D884u
+#define enemy_hang_in_land_ADDRESS 0x04D8ACu
+#define enemy_kick_in_start_ADDRESS 0x04D8E0u
+#define enemy_kick_in_run_ADDRESS 0x04D91Cu
+#define enemy_kick_in_leap_ADDRESS 0x04D93Au
+#define enemy_kick_in_fly_ADDRESS 0x04D96Cu
+#define enemy_kick_in_land_ADDRESS 0x04D9A6u
+#define enemy_run_in_start_ADDRESS 0x04D9C2u
+#define enemy_run_in_run_ADDRESS 0x04D9F8u
+#define enemy_dive_in_start_ADDRESS 0x04DA2Cu
+#define enemy_dive_in_run_ADDRESS 0x04DA58u
+#define enemy_dive_in_leap_ADDRESS 0x04DA92u
+#define enemy_dive_in_dive_ADDRESS 0x04DACAu
+#define enemy_dive_in_curl_ADDRESS 0x04DAF6u
+#define enemy_dive_in_uncurl_ADDRESS 0x04DB1Au
+#define enemy_dive_in_land_ADDRESS 0x04DB36u
+#define enemy_walk_in_start_ADDRESS 0x04DB76u
+#define enemy_walk_in_walk_ADDRESS 0x04DBAEu
+#define enemy_walk_in_ready_ADDRESS 0x04DBD4u
+#define enemy_knife_soldier_start_ADDRESS 0x04DC04u
+#define enemy_spear_soldier_start_ADDRESS 0x04DC9Eu
+#define enemy_walk_to_target_spear_start_ADDRESS 0x04DD50u
+#define enemy_walk_to_side_spear_start_ADDRESS 0x04DD8Eu
+#define enemy_walk_off_line_spear_start_ADDRESS 0x04DDC8u
+#define enemy_walk_off_line_spear_step_ADDRESS 0x04DDF8u
+#define enemy_back_off_spear_start_ADDRESS 0x04DE78u
+#define enemy_back_off_spear_walk_ADDRESS 0x04DEB2u
+#define enemy_step_aside_spear_start_ADDRESS 0x04DEF6u
+#define enemy_step_aside_spear_step_ADDRESS 0x04DF40u
+#define enemy_walk_to_target_knife_start_ADDRESS 0x04DF80u
+#define enemy_walk_to_side_knife_start_ADDRESS 0x04DFBEu
+#define enemy_circle_knife_start_ADDRESS 0x04E018u
+#define enemy_circle_knife_step_ADDRESS 0x04E06Au
+#define enemy_keep_distance_knife_start_ADDRESS 0x04E0C4u
+#define enemy_keep_distance_knife_watch_ADDRESS 0x04E0E0u
+#define enemy_keep_distance_knife_back_off_ADDRESS 0x04E16Au
+#define enemy_keep_distance_knife_close_in_ADDRESS 0x04E186u
+#define enemy_back_off_knife_start_ADDRESS 0x04E1D0u
+#define enemy_back_off_knife_walk_ADDRESS 0x04E20Au
+#define enemy_back_off_knife_wait_ADDRESS 0x04E23Eu
+#define enemy_step_aside_knife_start_ADDRESS 0x04E268u
+#define enemy_step_aside_knife_step_ADDRESS 0x04E2A0u
+#define enemy_spear_thrust_ADDRESS 0x04E2C4u
+#define enemy_spear_thrust_start_ADDRESS 0x04E2D8u
+#define enemy_spear_thrust_end_ADDRESS 0x04E300u
+#define enemy_spear_throw_ADDRESS 0x04E336u
+#define enemy_spear_throw_start_ADDRESS 0x04E354u
+#define enemy_spear_throw_release_ADDRESS 0x04E380u
+#define enemy_spear_throw_end_ADDRESS 0x04E3A0u
+#define enemy_knife_stab_ADDRESS 0x04E3C4u
+#define enemy_knife_stab_start_ADDRESS 0x04E3D8u
+#define enemy_high_kick_knife_ADDRESS 0x04E400u
+#define enemy_high_kick_knife_start_ADDRESS 0x04E414u
+#define enemy_jump_kick_knife_ADDRESS 0x04E43Cu
+#define enemy_jump_kick_knife_crouch_ADDRESS 0x04E464u
+#define enemy_jump_kick_knife_leap_ADDRESS 0x04E48Cu
+#define enemy_jump_kick_knife_fly_ADDRESS 0x04E4B8u
+#define enemy_throw_knife_ADDRESS 0x04E4F2u
+#define enemy_throw_knife_start_ADDRESS 0x04E510u
+#define enemy_throw_knife_release_ADDRESS 0x04E53Cu
+#define enemy_throw_knife_end_ADDRESS 0x04E556u
+#define enemy_flinch_back_spear_start_ADDRESS 0x04E57Au
+#define enemy_flinch_bent_spear_start_ADDRESS 0x04E59Eu
+#define enemy_flinch_reel_spear_start_ADDRESS 0x04E5C2u
+#define enemy_flinch_hunched_spear_start_ADDRESS 0x04E5E6u
+#define enemy_flinch_back_knife_start_ADDRESS 0x04E60Au
+#define enemy_flinch_bent_knife_start_ADDRESS 0x04E62Eu
+#define enemy_flinch_reel_knife_start_ADDRESS 0x04E652u
+#define enemy_flinch_hunched_knife_start_ADDRESS 0x04E676u
+#define enemy_axe_soldier_start_ADDRESS 0x04E6A2u
+#define enemy_gun_soldier_start_ADDRESS 0x04E736u
+#define enemy_walk_to_target_gun_start_ADDRESS 0x04E7CEu
+#define enemy_walk_to_side_gun_start_ADDRESS 0x04E80Cu
+#define enemy_walk_to_range_gun_start_ADDRESS 0x04E84Au
+#define enemy_walk_to_range_step_ADDRESS 0x04E870u
+#define enemy_walk_to_range_hold_ADDRESS 0x04E8D8u
+#define enemy_back_off_gun_start_ADDRESS 0x04E912u
+#define enemy_back_off_gun_walk_ADDRESS 0x04E94Cu
+#define enemy_back_off_gun_wait_ADDRESS 0x04E97Cu
+#define enemy_run_away_gun_start_ADDRESS 0x04E9A6u
+#define enemy_run_away_gun_step_ADDRESS 0x04E9DEu
+#define enemy_walk_to_target_axe_start_ADDRESS 0x04EA26u
+#define enemy_walk_to_side_axe_start_ADDRESS 0x04EA64u
+#define enemy_walk_to_range_axe_start_ADDRESS 0x04EAA2u
+#define enemy_back_off_axe_start_ADDRESS 0x04EAE0u
+#define enemy_back_off_axe_walk_ADDRESS 0x04EB1Cu
+#define enemy_back_off_axe_wait_ADDRESS 0x04EB4Cu
+#define enemy_run_away_axe_start_ADDRESS 0x04EB76u
+#define enemy_run_away_axe_step_ADDRESS 0x04EBAEu
+#define enemy_throw_axes_ADDRESS 0x04EBD6u
+#define enemy_throw_axes_start_ADDRESS 0x04EBF4u
+#define enemy_throw_axes_release_ADDRESS 0x04EC20u
+#define enemy_high_kick_axe_ADDRESS 0x04EC5Eu
+#define enemy_high_kick_axe_start_ADDRESS 0x04EC72u
+#define enemy_gun_swing_ADDRESS 0x04EC9Au
+#define enemy_gun_swing_start_ADDRESS 0x04ECAEu
+#define enemy_shoot_gun_ADDRESS 0x04ECD6u
+#define enemy_shoot_gun_start_ADDRESS 0x04ECF4u
+#define enemy_shoot_gun_fire_ADDRESS 0x04ED20u
+#define enemy_flinch_back_gun_start_ADDRESS 0x04ED72u
+#define enemy_flinch_bent_gun_start_ADDRESS 0x04ED96u
+#define enemy_flinch_back_axe_start_ADDRESS 0x04EDBAu
+#define enemy_flinch_bent_axe_start_ADDRESS 0x04EDDEu
+#define enemy_flinch_reel_axe_start_ADDRESS 0x04EE02u
+#define enemy_boomerang_soldier_start_ADDRESS 0x04EE2Eu
+#define enemy_shuriken_soldier_start_ADDRESS 0x04EEC8u
+#define enemy_skateboard_soldier_start_ADDRESS 0x04EF58u
+#define enemy_skateboard_think_ADDRESS 0x04EFECu
+#define enemy_skateboard_attack_ADDRESS 0x04F002u
+#define enemy_skateboard_hit_ADDRESS 0x04F014u
+#define enemy_skateboard_react_ADDRESS 0x04F026u
+#define enemy_throw_shuriken_ADDRESS 0x04F076u
+#define enemy_throw_shuriken_start_ADDRESS 0x04F094u
+#define enemy_throw_shuriken_release_ADDRESS 0x04F0C0u
+#define enemy_boomerang_throw_ADDRESS 0x04F0E4u
+#define enemy_boomerang_throw_wind_up_ADDRESS 0x04F10Au
+#define enemy_boomerang_throw_aim_ADDRESS 0x04F11Au
+#define enemy_boomerang_throw_release_ADDRESS 0x04F150u
+#define enemy_boomerang_throw_wait_ADDRESS 0x04F186u
+#define enemy_rocksteady_start_ADDRESS 0x04F1D2u
+#define enemy_rocksteady_enter_ADDRESS 0x04F28Au
+#define enemy_rocksteady_enter_wait_ADDRESS 0x04F2AEu
+#define enemy_rocksteady_enter_taunt_ADDRESS 0x04F2CEu
+#define enemy_rocksteady_enter_ready_ADDRESS 0x04F318u
+#define enemy_rocksteady_enter_walk_in_ADDRESS 0x04F340u
+#define enemy_rocksteady_enter_wait_for_signal_ADDRESS 0x04F35Eu
+#define enemy_rocksteady_enter_walk_in_with_bebop_ADDRESS 0x04F380u
+#define enemy_rocksteady_think_ADDRESS 0x04F3BAu
+#define enemy_rocksteady_attack_ADDRESS 0x04F5E4u
+#define enemy_rocksteady_hit_ADDRESS 0x04F622u
+#define enemy_rocksteady_react_ADDRESS 0x04F680u
+#define enemy_rocksteady_raise_fist_start_ADDRESS 0x04F736u
+#define enemy_rocksteady_laugh_start_ADDRESS 0x04F764u
+#define enemy_rocksteady_shake_fist_start_ADDRESS 0x04F792u
+#define enemy_rocksteady_hold_pose_ADDRESS 0x04F7ACu
+#define enemy_rocksteady_draw_gun_start_ADDRESS 0x04F7C6u
+#define enemy_rocksteady_pose_end_ADDRESS 0x04F7E0u
+#define enemy_rocksteady_put_gun_away_start_ADDRESS 0x04F802u
+#define enemy_rocksteady_circle_start_ADDRESS 0x04F830u
+#define enemy_rocksteady_circle_step_ADDRESS 0x04F862u
+#define enemy_rocksteady_line_up_start_ADDRESS 0x04F8B0u
+#define enemy_rocksteady_line_up_step_ADDRESS 0x04F8CCu
+#define enemy_rocksteady_close_in_start_ADDRESS 0x04F936u
+#define enemy_rocksteady_close_in_step_ADDRESS 0x04F952u
+#define enemy_rocksteady_shoot_around_start_ADDRESS 0x04F9F2u
+#define enemy_rocksteady_shoot_around_fire_ADDRESS 0x04FA0Au
+#define enemy_rocksteady_pincer_charge_ADDRESS 0x04FA96u
+#define enemy_rocksteady_pincer_charge_start_ADDRESS 0x04FAE6u
+#define enemy_rocksteady_pincer_charge_run_to_edge_ADDRESS 0x04FB06u
+#define enemy_rocksteady_pincer_charge_wait_for_bebop_ADDRESS 0x04FB3Cu
+#define enemy_rocksteady_pincer_charge_get_ready_ADDRESS 0x04FB82u
+#define enemy_rocksteady_pincer_charge_run_ADDRESS 0x04FB86u
+#define enemy_rocksteady_pincer_charge_crash_ADDRESS 0x04FBEEu
+#define enemy_rocksteady_charge_ADDRESS 0x04FC04u
+#define enemy_rocksteady_charge_start_ADDRESS 0x04FC1Cu
+#define enemy_rocksteady_charge_get_ready_ADDRESS 0x04FC4Au
+#define enemy_rocksteady_charge_run_ADDRESS 0x04FC76u
+#define enemy_rocksteady_punch_ADDRESS 0x04FCD4u
+#define enemy_rocksteady_punch_start_ADDRESS 0x04FCE8u
+#define enemy_rocksteady_blow_end_ADDRESS 0x04FD2Cu
+#define enemy_rocksteady_gun_butt_ADDRESS 0x04FD4Cu
+#define enemy_rocksteady_gun_butt_start_ADDRESS 0x04FD60u
+#define enemy_rocksteady_shoot_ADDRESS 0x04FD88u
+#define enemy_rocksteady_shoot_start_ADDRESS 0x04FDB8u
+#define enemy_rocksteady_shoot_fire_ADDRESS 0x04FE02u
+#define enemy_rocksteady_flinch_start_ADDRESS 0x04FE5Eu
+#define enemy_rocksteady_flinch_end_ADDRESS 0x04FE7Au
+#define enemy_rocksteady_reel_start_ADDRESS 0x04FEC6u
+#define enemy_rocksteady_flinch_from_behind_start_ADDRESS 0x04FEFEu
+#define enemy_rocksteady_knocked_down_start_ADDRESS 0x04FF5Eu
+#define enemy_rocksteady_knocked_down_fall_ADDRESS 0x04FF98u
+#define enemy_rocksteady_knocked_down_slide_ADDRESS 0x04FFCEu
+#define enemy_rocksteady_knocked_down_lie_ADDRESS 0x04FFFCu
+#define enemy_rocksteady_knocked_down_get_up_ADDRESS 0x050036u
+#define enemy_rocksteady_defeated_start_ADDRESS 0x0500AEu
+#define enemy_rocksteady_defeated_fall_ADDRESS 0x0500F0u
+#define enemy_rocksteady_defeated_slide_ADDRESS 0x050152u
+#define enemy_rocksteady_defeated_blink_ADDRESS 0x050180u
+#define enemy_bebop_start_ADDRESS 0x0501C6u
+#define enemy_bebop_enter_ADDRESS 0x05027Au
+#define enemy_bebop_enter_wait_for_scroll_ADDRESS 0x0502A6u
+#define enemy_bebop_enter_wait_ADDRESS 0x0502DCu
+#define enemy_bebop_enter_drop_ADDRESS 0x0502F2u
+#define enemy_bebop_enter_jump_ADDRESS 0x050320u
+#define enemy_bebop_enter_in_air_ADDRESS 0x050340u
+#define enemy_bebop_enter_ready_ADDRESS 0x05036Eu
+#define enemy_bebop_enter_wait_for_signal_ADDRESS 0x050392u
+#define enemy_bebop_enter_walk_in_ADDRESS 0x0503B2u
+#define enemy_bebop_think_ADDRESS 0x0503ECu
+#define enemy_bebop_attack_ADDRESS 0x050612u
+#define enemy_bebop_hit_ADDRESS 0x050622u
+#define enemy_bebop_react_ADDRESS 0x05066Eu
+#define enemy_bebop_stand_start_ADDRESS 0x0506A2u
+#define enemy_bebop_stand_wait_ADDRESS 0x0506D2u
+#define enemy_bebop_walk_to_front_start_ADDRESS 0x0506ECu
+#define enemy_bebop_walk_to_front_step_ADDRESS 0x050708u
+#define enemy_bebop_walk_level_step_ADDRESS 0x050784u
+#define enemy_bebop_walk_start_ADDRESS 0x050802u
+#define enemy_bebop_close_in_step_ADDRESS 0x05081Eu
+#define enemy_bebop_pincer_charge_ADDRESS 0x0508A0u
+#define enemy_bebop_pincer_charge_start_ADDRESS 0x0508F0u
+#define enemy_bebop_pincer_charge_run_to_edge_ADDRESS 0x050952u
+#define enemy_bebop_pincer_charge_wait_for_rocksteady_ADDRESS 0x050988u
+#define enemy_bebop_pincer_charge_get_ready_ADDRESS 0x0509CEu
+#define enemy_bebop_pincer_charge_run_ADDRESS 0x0509D2u
+#define enemy_bebop_pincer_charge_crash_ADDRESS 0x050AB8u
+#define enemy_bebop_punch_ADDRESS 0x050ADCu
+#define enemy_bebop_punch_start_ADDRESS 0x050AF0u
+#define enemy_bebop_punch_end_ADDRESS 0x050B38u
+#define enemy_bebop_charge_ADDRESS 0x050B8Cu
+#define enemy_bebop_charge_start_ADDRESS 0x050BA4u
+#define enemy_bebop_charge_get_ready_ADDRESS 0x050BD2u
+#define enemy_bebop_charge_run_ADDRESS 0x050BFEu
+#define enemy_bebop_shoot_ADDRESS 0x050C68u
+#define enemy_bebop_shoot_start_ADDRESS 0x050C82u
+#define enemy_bebop_shoot_fire_ADDRESS 0x050CAEu
+#define enemy_bebop_flinch_start_ADDRESS 0x050CFAu
+#define enemy_bebop_strike_back_ADDRESS 0x050D0Au
+#define enemy_bebop_flinch_from_behind_start_ADDRESS 0x050D40u
+#define enemy_bebop_flinch_from_behind_end_ADDRESS 0x050D56u
+#define enemy_bebop_knocked_down_start_ADDRESS 0x050DA4u
+#define enemy_bebop_knocked_down_fall_ADDRESS 0x050DCCu
+#define enemy_bebop_knocked_down_slide_ADDRESS 0x050E00u
+#define enemy_bebop_knocked_down_lie_ADDRESS 0x050E2Eu
+#define enemy_bebop_defeated_start_ADDRESS 0x050E8Eu
+#define enemy_bebop_defeated_fall_ADDRESS 0x050EC0u
+#define enemy_bebop_defeated_slide_ADDRESS 0x050F20u
+#define enemy_bebop_defeated_blink_ADDRESS 0x050F4Eu
+#define enemy_mouser_start_ADDRESS 0x050F98u
+#define enemy_mouser_enter_ADDRESS 0x051002u
+#define enemy_mouser_enter_start_ADDRESS 0x05103Au
+#define enemy_mouser_enter_hop_ADDRESS 0x05106Eu
+#define enemy_mouser_enter_fall_ADDRESS 0x0510B2u
+#define enemy_mouser_enter_land_ADDRESS 0x0510E4u
+#define enemy_mouser_think_ADDRESS 0x0510F4u
+#define enemy_mouser_bite_ADDRESS 0x051314u
+#define enemy_mouser_bite_start_ADDRESS 0x05135Cu
+#define enemy_mouser_bite_fly_ADDRESS 0x0513A2u
+#define enemy_mouser_bite_land_ADDRESS 0x051404u
+#define enemy_mouser_bite_hold_ADDRESS 0x051414u
+#define enemy_mouser_hit_ADDRESS 0x05144Eu
+#define enemy_mouser_step_over_edge_ADDRESS 0x051492u
+#define enemy_mouser_hop_down_ADDRESS 0x0514EEu
+#define enemy_mouser_hop_fall_ADDRESS 0x05152Cu
+#define enemy_mouser_hop_land_ADDRESS 0x05156Cu
+#define enemy_mouser_hop_right_ADDRESS 0x051588u
+#define enemy_mouser_hop_left_ADDRESS 0x0515D8u
+#define enemy_mouser_hop_up_ADDRESS 0x051628u
+#define enemy_mouser_hop_up_fall_ADDRESS 0x051654u
+#define enemy_mouser_hop_up_right_ADDRESS 0x0516A0u
+#define enemy_mouser_hop_up_fall_blocked_ADDRESS 0x0516D2u
+#define enemy_mouser_hop_up_left_ADDRESS 0x05171Eu
+#define enemy_mouser_chase_start_ADDRESS 0x051774u
+#define enemy_mouser_chase_run_ADDRESS 0x0517A0u
+#define enemy_mouser_chase_pause_ADDRESS 0x051812u
+#define enemy_mouser_chase_wait_ADDRESS 0x05181Cu
+#define enemy_mouser_creep_to_side_start_ADDRESS 0x05183Eu
+#define enemy_mouser_creep_to_side_step_ADDRESS 0x05185Cu
+#define enemy_mouser_back_off_start_ADDRESS 0x0518D4u
+#define enemy_mouser_back_off_run_ADDRESS 0x05190Eu
+#define enemy_mouser_sit_ADDRESS 0x05192Cu
+#define enemy_mouser_back_off_wait_ADDRESS 0x05194Cu
+#define enemy_mouser_thrown_off_start_ADDRESS 0x051980u
+#define enemy_mouser_break_down_start_ADDRESS 0x0519E4u
+#define enemy_mouser_knocked_flying_start_ADDRESS 0x051A2Cu
+#define enemy_mouser_fly_and_crash_ADDRESS 0x051A6Cu
+#define enemy_mouser_remove_ADDRESS 0x051AB0u
+#define mouser_hole_start_ADDRESS 0x051B56u
+#define mouser_hole_wait_ADDRESS 0x051BA2u
+#define mouser_hole_open_ADDRESS 0x051BDAu
+#define mouser_hole_let_out_ADDRESS 0x051BF4u
+#define enemy_rodney_start_ADDRESS 0x051C44u
+#define enemy_rodney_enter_ADDRESS 0x051CACu
+#define enemy_rodney_enter_wait_ADDRESS 0x051CC8u
+#define enemy_rodney_enter_burst_out_ADDRESS 0x051CFCu
+#define enemy_rodney_enter_fall_ADDRESS 0x051D36u
+#define enemy_rodney_enter_land_ADDRESS 0x051D72u
+#define enemy_rodney_think_ADDRESS 0x051D80u
+#define enemy_rodney_hit_ADDRESS 0x051FA0u
+#define enemy_rodney_rush_start_ADDRESS 0x05200Eu
+#define enemy_rodney_rush_run_ADDRESS 0x05207Au
+#define enemy_rodney_brake_ADDRESS 0x052116u
+#define enemy_rodney_rush_across_start_ADDRESS 0x05214Eu
+#define enemy_rodney_rush_across_run_ADDRESS 0x052188u
+#define enemy_rodney_back_off_start_ADDRESS 0x052244u
+#define enemy_rodney_slide_to_stop_ADDRESS 0x052286u
+#define enemy_rodney_back_off_turn_ADDRESS 0x0522CCu
+#define enemy_rodney_back_off_wait_ADDRESS 0x0522F0u
+#define enemy_rodney_shoot_ADDRESS 0x052306u
+#define enemy_rodney_shoot_start_ADDRESS 0x052330u
+#define enemy_rodney_shoot_turn_ADDRESS 0x052378u
+#define enemy_rodney_shoot_ready_ADDRESS 0x0523A8u
+#define enemy_rodney_shoot_fire_ADDRESS 0x0523C6u
+#define enemy_rodney_shoot_end_ADDRESS 0x05240Eu
+#define enemy_rodney_whip_ADDRESS 0x052422u
+#define enemy_rodney_whip_start_ADDRESS 0x052484u
+#define enemy_rodney_whip_slow_down_ADDRESS 0x05248Cu
+#define enemy_rodney_whip_wind_up_ADDRESS 0x052494u
+#define enemy_rodney_whip_throw_arm_ADDRESS 0x0524D2u
+#define enemy_rodney_whip_reach_ADDRESS 0x052530u
+#define enemy_rodney_whip_lash_ADDRESS 0x0525D0u
+#define enemy_rodney_whip_retract_ADDRESS 0x0525E6u
+#define enemy_rodney_knocked_back_start_ADDRESS 0x052624u
+#define enemy_rodney_knocked_back_fall_ADDRESS 0x05265Cu
+#define enemy_rodney_knocked_back_end_ADDRESS 0x05268Au
+#define enemy_rodney_destroyed_start_ADDRESS 0x0526CCu
+#define enemy_rodney_destroyed_fall_ADDRESS 0x052704u
+#define enemy_rodney_destroyed_land_ADDRESS 0x05273Cu
+#define enemy_rodney_destroyed_end_ADDRESS 0x052756u
+#define enemy_shredder_start_ADDRESS 0x052790u
+#define enemy_shredder_enter_ADDRESS 0x052830u
+#define enemy_shredder_think_ADDRESS 0x052840u
+#define enemy_shredder_attack_ADDRESS 0x052B84u
+#define enemy_shredder_hit_ADDRESS 0x052BC8u
+#define enemy_shredder_react_ADDRESS 0x052C68u
+#define enemy_shredder_appear_wait_ADDRESS 0x052CAEu
+#define enemy_shredder_appear_step_out_ADDRESS 0x052CDCu
+#define enemy_shredder_appear_walk_in_ADDRESS 0x052D20u
+#define enemy_shredder_split_start_ADDRESS 0x052D62u
+#define enemy_shredder_split_blink_ADDRESS 0x052DB2u
+#define enemy_shredder_clone_appear_start_ADDRESS 0x052DE4u
+#define enemy_shredder_clone_appear_blink_ADDRESS 0x052E1Au
+#define enemy_shredder_walk_to_side_start_ADDRESS 0x052E84u
+#define enemy_shredder_walk_to_side_step_ADDRESS 0x052EAEu
+#define enemy_shredder_walk_to_side_crouch_ADDRESS 0x052F20u
+#define enemy_shredder_walk_to_side_turn_ADDRESS 0x052F52u
+#define enemy_shredder_walk_to_side_hold_ADDRESS 0x052F80u
+#define enemy_shredder_walk_to_target_start_ADDRESS 0x052FECu
+#define enemy_shredder_walk_to_target_step_ADDRESS 0x053016u
+#define enemy_shredder_guard_start_ADDRESS 0x053084u
+#define enemy_shredder_guard_counter_ADDRESS 0x0530B0u
+#define enemy_shredder_back_off_start_ADDRESS 0x053102u
+#define enemy_shredder_back_off_walk_ADDRESS 0x05314Cu
+#define enemy_shredder_back_off_wait_ADDRESS 0x053198u
+#define enemy_shredder_lose_bar_start_ADDRESS 0x0531C8u
+#define enemy_shredder_lose_bar_end_ADDRESS 0x0531E4u
+#define enemy_shredder_flinch_start_ADDRESS 0x053256u
+#define enemy_shredder_flinch_end_ADDRESS 0x0532AAu
+#define enemy_shredder_flinch_from_behind_start_ADDRESS 0x0532E8u
+#define enemy_shredder_defeated_start_ADDRESS 0x053368u
+#define enemy_shredder_defeated_fall_ADDRESS 0x053398u
+#define enemy_shredder_defeated_land_ADDRESS 0x0533D2u
+#define enemy_shredder_defeated_wait_ADDRESS 0x053422u
+#define enemy_shredder_defeated_stay_ADDRESS 0x05343Eu
+#define enemy_shredder_vanish_start_ADDRESS 0x053458u
+#define enemy_shredder_vanish_wait_ADDRESS 0x053482u
+#define enemy_shredder_vanish_blink_ADDRESS 0x053496u
+#define enemy_shredder_kick_ADDRESS 0x0534C4u
+#define enemy_shredder_kick_start_ADDRESS 0x0534D8u
+#define enemy_shredder_blow_end_ADDRESS 0x05350Eu
+#define enemy_shredder_thrust_ADDRESS 0x053524u
+#define enemy_shredder_thrust_start_ADDRESS 0x053538u
+#define enemy_shredder_slash_ADDRESS 0x05356Eu
+#define enemy_shredder_slash_start_ADDRESS 0x053582u
+#define enemy_shredder_sweep_ADDRESS 0x0535B8u
+#define enemy_shredder_sweep_start_ADDRESS 0x0535CCu
+#define enemy_shredder_ray_ADDRESS 0x053602u
+#define enemy_shredder_ray_start_ADDRESS 0x053628u
+#define enemy_shredder_ray_line_up_ADDRESS 0x053644u
+#define enemy_shredder_ray_charge_ADDRESS 0x0536CAu
+#define enemy_shredder_ray_fire_ADDRESS 0x0536EAu
+#define enemy_shredder_ray_end_ADDRESS 0x05373Au
 
 /* engine/directions.c: the direction from one object to another */
 uint32_t direction_to(uint32_t direction, uint16_t screen_x, uint16_t target_y, uint32_t object);
@@ -59,18 +944,18 @@ uint32_t draw_sprites(uint32_t object);
 void step_animation(uint32_t object, uint32_t frame);
 void check_attacks(void);
 void turtle_collide_with_objects(uint32_t object);
-uint32_t enemy_collide_with_objects(uint32_t object, uint32_t other_box);
+void enemy_collide_with_objects(uint32_t object);
 void start_player_slots(void);
-uint32_t run_objects(uint32_t a1);
-uint32_t update_player_slots(void);
+void run_objects(void);
+void update_player_slots(void);
 void update_object_screen_place(uint32_t object);
-uint32_t set_animation(uint32_t d1, uint32_t object, uint32_t animation);
+uint32_t set_animation(uint32_t kept_bits, uint32_t object, uint32_t animation);
 void take_free_object_in_group(uint16_t group, uint32_t *p_object, uint32_t *p_zero);
 void start_object_from_record(uint32_t object, uint32_t record, uint32_t *p_started, uint32_t *p_zero);
 void start_shot(uint32_t object, uint32_t record, uint32_t *p_shot, uint32_t *p_zero);
 uint32_t place_from_record(uint32_t object, uint32_t placement, uint32_t object_2);
-void speeds_from_direction(uint8_t direction, uint8_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed, uint32_t *p_sines);
-void unreached_047D0E(uint8_t direction);
+void speeds_from_direction(uint8_t direction, uint16_t speed, uint32_t *p_x_speed, uint32_t *p_y_speed);
+void speeds_from_direction_unscaled(uint8_t direction);
 uint32_t direction_to_object(uint32_t direction, uint32_t object, uint32_t object_2);
 
 /* objects/air_attacks.c: the helicopters of the skateboard ride, the missiles that fall on idle turtles, the flying drones */
@@ -100,18 +985,18 @@ void start_falling_missile_at_turtle(uint32_t object, uint32_t object_2);
 void start_flying_drones(void);
 void start_flying_drone(uint16_t aim, uint32_t drone);
 void release_flying_drones(void);
-uint32_t flying_drone_enter(uint32_t object, uint32_t a5);
+void flying_drone_enter(uint32_t object);
 void flying_drone_start(uint32_t object);
 void flying_drone_wait(uint32_t object);
 void flying_drone_take_off(uint32_t object);
-uint32_t flying_drone_ready(uint32_t object);
-uint32_t flying_drone_fly(uint32_t object, uint32_t a5);
-uint32_t flying_drone_fire(uint32_t object, uint32_t a5);
+void flying_drone_ready(uint32_t object);
+void flying_drone_fly(uint32_t object);
+void flying_drone_fire(uint32_t object);
 void flying_drone_struck(uint32_t object);
 void flying_drone_recover(uint32_t object);
 void flying_drone_destroyed(uint32_t object);
 void flying_drone_shake(uint32_t object);
-uint32_t flying_drone_steer(uint32_t object, uint32_t choices);
+void flying_drone_steer(uint32_t object);
 void flying_drone_keep_in_area(uint32_t object);
 void flying_drone_bob_low(uint32_t object);
 void flying_drone_bob(uint32_t object);
@@ -119,7 +1004,7 @@ void flying_drone_move(uint32_t object);
 void flying_drone_animate(uint32_t object);
 void flying_drone_random_wait(uint32_t object);
 void sound_flying_drones(uint32_t object);
-uint32_t flying_drone_start_shot(uint32_t object, uint32_t shot);
+void flying_drone_start_shot(uint32_t object, uint32_t shot);
 void drone_shot_start(uint32_t object);
 void drone_shot_flash(uint32_t object);
 void drone_shot_fly(uint32_t object);
@@ -127,7 +1012,7 @@ void drone_shot_vanish(uint32_t object);
 
 /* objects/explosions.c: the explosions other objects start */
 void start_small_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2);
-uint32_t boss_start_explosion(uint32_t object, uint32_t explosion);
+void boss_start_explosion(uint32_t object, uint32_t explosion);
 void start_big_explosion(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t object_2);
 void explode_small(uint32_t object, uint32_t explosion);
 void start_small_blast(uint16_t x_offset, uint16_t height_offset, uint32_t object, uint32_t blast);
@@ -140,53 +1025,53 @@ void explosion_medium_start(uint32_t object);
 void explosion_end(uint32_t object);
 
 /* objects/helpers.c: small routines the objects of these files share: their stats, moves, free objects, the bosses' targets */
-void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_picked, uint32_t *p_choices);
-void boss_aim_at_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_y_speed, uint32_t *p_target);
+void boss_pick_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_picked);
+void boss_aim_at_target(uint32_t object, uint32_t *p_direction_offset, uint32_t *p_y_speed);
 void set_object_stats(uint32_t object, uint32_t stats);
 void move_by_speeds(uint32_t object);
 void find_free_object(uint32_t *p_objects_left, uint32_t *p_object);
 void remove_if_off_screen(uint32_t object);
 void remove_object(uint32_t object);
-void boss_direction_to_target(uint32_t object, uint32_t *p_direction, uint32_t *p_target);
+uint32_t boss_direction_to_target(uint32_t object);
 void place_at_object(uint32_t object, uint32_t object_2);
 
 /* objects/krang.c: Krang's android body (area 9), his fist, his lasers and the curtain he appears behind */
-uint32_t krang_appear(uint32_t object, uint32_t a5);
+void krang_appear(uint32_t object);
 void krang_appear_setup(uint32_t object);
 void krang_appear_wait(uint32_t object);
-uint32_t krang_appear_end(uint32_t object, uint32_t a5);
-uint32_t krang_walk(uint32_t object, uint32_t a5);
-uint32_t krang_walk_at_target(uint32_t object, uint32_t a5);
-uint32_t krang_walk_on(uint32_t object, uint32_t a5);
-uint32_t krang_charge(uint32_t object, uint32_t a5);
-uint32_t krang_pose_end(uint32_t object, uint32_t a5);
-uint32_t krang_walk_step(uint32_t object, uint32_t a5, uint32_t aim_routine);
-uint32_t krang_next_move(uint32_t last_move, uint32_t object, uint32_t a5);
-uint32_t krang_melee(uint32_t object, uint32_t a5);
-uint32_t krang_kick_end(uint32_t object, uint32_t a5);
+void krang_appear_end(uint32_t object);
+void krang_walk(uint32_t object);
+void krang_walk_at_target(uint32_t object);
+void krang_walk_on(uint32_t object);
+void krang_charge(uint32_t object);
+void krang_pose_end(uint32_t object);
+void krang_walk_step(uint32_t object, uint32_t aim_routine);
+void krang_next_move(uint32_t last_move, uint32_t object);
+void krang_melee(uint32_t object);
+void krang_kick_end(uint32_t object);
 void krang_punch_throw(uint32_t object);
-uint32_t krang_punch_wait(uint32_t object, uint32_t a5);
-uint32_t krang_fire_lasers(uint32_t object, uint32_t a5);
-uint32_t krang_lasers_fire(uint32_t object, uint32_t a5);
+void krang_punch_wait(uint32_t object);
+void krang_fire_lasers(uint32_t object);
+void krang_lasers_fire(uint32_t object);
 void krang_lasers_wait(uint32_t object);
-uint32_t krang_lasers_end(uint32_t object, uint32_t a5);
+void krang_lasers_end(uint32_t object);
 void krang_struck(uint32_t object);
-uint32_t krang_recoil(uint32_t object, uint32_t a5);
-uint32_t krang_explode(uint32_t object, uint32_t a5);
+void krang_recoil(uint32_t object);
+void krang_explode(uint32_t object);
 void krang_explode_start(uint32_t object);
 void krang_explode_wait(uint32_t object);
-uint32_t krang_explode_burst(uint32_t object, uint32_t a5);
-void unreached_00E364(void);
+void krang_explode_burst(uint32_t object);
+void lone_return_before_krang_explode_next(void);
 void krang_explode_next(uint32_t object);
-void krang_escape(uint16_t routine_offset, uint32_t object);
-void krang_escape_start(uint16_t routine_offset, uint32_t object);
+void krang_escape(uint16_t on_right, uint32_t object);
+void krang_escape_start(uint16_t on_right, uint32_t object);
 void krang_escape_wait(uint32_t object);
 void krang_escape_dip(uint32_t object);
 void krang_escape_fly(uint32_t object);
 void krang_gone(uint32_t object);
 void krang_hover(uint32_t object);
-uint32_t krang_pick_move(uint32_t last_move, uint32_t object, uint32_t a5);
-uint32_t krang_start_walk(uint32_t object);
+void krang_pick_move(uint32_t last_move, uint32_t object);
+void krang_start_walk(uint32_t object);
 void krang_start_walk_on(uint32_t object);
 void krang_start_charge(uint32_t object);
 void krang_start_pose(uint32_t object);
@@ -196,9 +1081,9 @@ void krang_start_lasers(uint32_t object);
 void krang_start_lasers_far(uint32_t object);
 void krang_start_punch(uint32_t object);
 void krang_set_move_time(uint32_t range, uint32_t object);
-void krang_aim_charge(uint32_t object, uint32_t *p_d7, uint32_t *p_a5);
-void krang_aim_walk(uint32_t object, uint32_t *p_d7, uint32_t *p_a5);
-uint32_t krang_set_speeds(uint16_t direction, uint32_t d7, uint32_t object, uint32_t speeds);
+uint32_t krang_aim_charge(uint32_t phase, uint32_t object);
+uint32_t krang_aim_walk(uint32_t phase, uint32_t object);
+uint32_t krang_set_speeds(uint16_t direction, uint32_t phase, uint32_t object, uint32_t speeds);
 void krang_count_down(uint32_t object);
 void krang_move(uint32_t object);
 uint32_t krang_find_close_turtle(uint32_t object);
@@ -206,7 +1091,7 @@ uint32_t krang_find_turtle_in_front(uint32_t object);
 void krang_curtain_start(uint32_t object);
 void krang_curtain_open(uint32_t object);
 void krang_curtain_end(uint32_t object);
-uint32_t krang_start_laser(uint32_t object, uint32_t laser);
+void krang_start_laser(uint32_t object, uint32_t laser);
 void krang_laser_start(uint32_t object);
 void krang_laser_wait(uint32_t object);
 void krang_laser_fly(uint32_t object);
@@ -217,64 +1102,64 @@ void krang_fist_launch(uint32_t object);
 void krang_fist_fly(uint32_t object);
 
 /* objects/rock_soldiers.c: the two rock soldier bosses (areas 7 and 8), their shots, bars and rubble */
-uint32_t rock_soldier_site_enter(uint16_t routine_offset, uint32_t object, uint32_t a5);
+void rock_soldier_site_enter(uint16_t on_right, uint32_t object);
 void rock_soldier_site_start(uint32_t object);
 void rock_soldier_site_enter_wait_for_scroll(uint32_t object);
 void rock_soldier_site_enter_wait(uint32_t object);
-void rock_soldier_site_enter_drop(uint16_t routine_offset, uint32_t object);
-uint32_t rock_soldier_site_enter_land(uint32_t object, uint32_t a5);
+void rock_soldier_site_enter_drop(uint16_t on_right, uint32_t object);
+void rock_soldier_site_enter_land(uint32_t object);
 void rock_soldier_site_enter_end(uint32_t object);
 void rock_soldier_site_shake_screen(void);
-uint32_t rock_soldier_site_think(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_site_walk(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_site_walk_on(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_site_stand(uint32_t object, uint32_t a5);
+void rock_soldier_site_think(uint32_t object);
+void rock_soldier_site_walk(uint32_t object);
+void rock_soldier_site_walk_on(uint32_t object);
+void rock_soldier_site_stand(uint32_t object);
 void rock_soldier_site_jump(uint32_t object);
-uint32_t rock_soldier_site_jump_land(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_site_move_done(uint32_t last_move, uint32_t object, uint32_t a5);
+void rock_soldier_site_jump_land(uint32_t object);
+void rock_soldier_site_move_done(uint32_t last_move, uint32_t object);
 void rock_soldier_site_fire(uint32_t object);
-uint32_t rock_soldier_site_finish_attack(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_struck(uint32_t object);
-uint32_t rock_soldier_recover(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_defeated(uint32_t object, uint32_t a5);
+void rock_soldier_site_finish_attack(uint32_t object);
+void rock_soldier_struck(uint32_t object);
+void rock_soldier_recover(uint32_t object);
+void rock_soldier_defeated(uint32_t object);
 void rock_soldier_defeated_start(uint32_t object);
 void rock_soldier_defeated_wait(uint32_t object);
-uint32_t rock_soldier_defeated_explode(uint32_t object, uint32_t a5);
+void rock_soldier_defeated_explode(uint32_t object);
 void rock_soldier_defeated_next_explosion(uint32_t object);
-uint32_t rock_soldier_defeated_crumble(uint32_t object, uint32_t a5);
+void rock_soldier_defeated_crumble(uint32_t object);
 void rock_soldier_defeated_stay(void);
 uint32_t rock_soldier_find_close_turtle(uint32_t object);
 uint32_t rock_soldier_find_turtle_ahead(uint32_t object);
-uint32_t rock_soldier_site_next_move(uint32_t last_move, uint32_t object, uint32_t a5);
-uint32_t rock_soldier_site_walk_start(uint32_t object);
+void rock_soldier_site_next_move(uint32_t last_move, uint32_t object);
+void rock_soldier_site_walk_start(uint32_t object);
 void rock_soldier_site_walk_on_start(uint32_t object);
 void rock_soldier_site_stand_start(uint32_t object);
 void rock_soldier_site_jump_start(uint32_t object);
 void rock_soldier_site_random_move_time(uint32_t range, uint32_t object);
 void rock_soldier_technodrome_weak_flash(uint32_t object);
 void rock_soldier_site_weak_flash(uint32_t object);
-void rock_soldier_weak_flash(uint8_t colour, uint32_t object);
+void rock_soldier_weak_flash(uint8_t colour, uint8_t colour_2, uint32_t object);
 void rock_soldier_site_move(uint32_t object);
 void gun_blast_start(uint32_t object);
 void gun_blast_fly(uint32_t object);
 void rubble_start(uint32_t object);
 void rubble_fall(uint32_t object);
 void rubble_stay(void);
-uint32_t rock_soldier_technodrome_enter(uint32_t object, uint32_t a5);
+void rock_soldier_technodrome_enter(uint32_t object);
 void rock_soldier_technodrome_start(uint32_t object);
 void rock_soldier_technodrome_enter_wait_for_scroll(uint32_t object);
 void rock_soldier_technodrome_enter_wait(uint32_t object);
-uint32_t rock_soldier_technodrome_enter_appear(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_think(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_walk(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_walk_on(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_stand(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_taunt(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_move_done(uint32_t last_move, uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_fire(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_finish_blow(uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_next_move(uint32_t last_move, uint32_t object, uint32_t a5);
-uint32_t rock_soldier_technodrome_walk_start(uint32_t object);
+void rock_soldier_technodrome_enter_appear(uint32_t object);
+void rock_soldier_technodrome_think(uint32_t object);
+void rock_soldier_technodrome_walk(uint32_t object);
+void rock_soldier_technodrome_walk_on(uint32_t object);
+void rock_soldier_technodrome_stand(uint32_t object);
+void rock_soldier_technodrome_taunt(uint32_t object);
+void rock_soldier_technodrome_move_done(uint32_t last_move, uint32_t object);
+void rock_soldier_technodrome_fire(uint32_t object);
+void rock_soldier_technodrome_finish_blow(uint32_t object);
+void rock_soldier_technodrome_next_move(uint32_t last_move, uint32_t object);
+void rock_soldier_technodrome_walk_start(uint32_t object);
 void rock_soldier_technodrome_walk_on_start(uint32_t object);
 void rock_soldier_technodrome_stand_start(uint32_t object);
 void rock_soldier_technodrome_taunt_start(uint32_t object);
@@ -283,9 +1168,9 @@ void rock_soldier_technodrome_move(uint32_t object);
 void rock_soldier_technodrome_start_wall_slab(uint32_t object, uint32_t slab);
 void wall_slab_start(uint32_t object);
 void wall_slab_fly(uint32_t object);
-uint32_t rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile);
+void rock_soldier_technodrome_start_missile(uint32_t object, uint32_t missile);
 void missile_start(uint32_t object);
-uint32_t missile_fly(uint32_t object, uint32_t a5);
+void missile_fly(uint32_t object);
 void missile_explode(uint32_t object);
 void missile_idle(void);
 void missile_struck(uint32_t object);
@@ -347,7 +1232,7 @@ void skateboarder_idle(void);
 void skateboarder_glide(uint32_t object);
 void skateboarder_struck(uint32_t object);
 void pizza_start(uint32_t object);
-void pizza_wait(uint16_t routine_offset, uint32_t object);
+void pizza_wait(uint16_t on_right, uint32_t object);
 void pizza_vanish(uint32_t object);
 void billboard_start(uint32_t object);
 void billboard_wait(uint32_t object);
@@ -367,8 +1252,8 @@ void oil_drum_recover(uint32_t object);
 void turret_start(uint32_t object);
 void turret_move(uint32_t object);
 void turret_fire(uint32_t object);
-uint32_t turret_wreck(uint32_t object, uint32_t a5);
-uint32_t turret_wreck_explode(uint32_t object, uint32_t a5);
+void turret_wreck(uint32_t object);
+void turret_wreck_explode(uint32_t object);
 void turret_wreck_next(uint32_t object);
 void turret_wreck_stay(uint32_t object);
 void turret_struck(uint32_t object);
@@ -388,11 +1273,11 @@ void one_way_sign_spin(uint32_t object);
 void one_way_sign_idle(void);
 void one_way_sign_struck(uint32_t object);
 void nozzle_row_start(uint32_t object);
-uint32_t nozzle_row_run(uint32_t object, uint32_t a5);
-uint32_t nozzle_row_watch(uint32_t object);
+void nozzle_row_run(uint32_t object);
+void nozzle_row_watch(uint32_t object);
 void nozzle_row_wait(uint32_t object);
 void nozzle_row_done(uint32_t object);
-uint32_t nozzle_row_start_nozzle(uint32_t nozzle_place, uint32_t object, uint32_t nozzle);
+void nozzle_row_start_nozzle(uint32_t nozzle_place, uint32_t object, uint32_t nozzle);
 void freeze_nozzle_start(uint32_t object);
 void freeze_nozzle_rise(uint32_t object);
 void freeze_nozzle_spray(uint32_t object);
@@ -401,11 +1286,11 @@ void freeze_nozzle_spray_stop(uint32_t object);
 void freeze_nozzle_sink(uint32_t object);
 void freeze_nozzle_struck(uint32_t object);
 void freeze_nozzle_broken(uint32_t object);
-uint32_t electric_beam_start(uint32_t object);
+void electric_beam_start(uint32_t object);
 void electric_beam_wait(uint32_t object);
-uint32_t electric_beam_shine(uint32_t object, uint32_t a5);
-uint32_t electric_vent_start(uint32_t object);
-uint32_t electric_vent_wait(uint32_t object, uint32_t a5);
+void electric_beam_shine(uint32_t object);
+void electric_vent_start(uint32_t object);
+void electric_vent_wait(uint32_t object);
 void electric_vent_wait_column(uint32_t object);
 void electric_random_wait(uint32_t object, uint32_t waits);
 void electric_vent_start_column(uint32_t vent, uint32_t column);
@@ -439,13 +1324,13 @@ void sewer_missile_vanish(uint32_t object);
 void parked_car_start(uint32_t object);
 void parked_car_draw(uint32_t object);
 void parked_car_wait(uint32_t object);
-uint32_t parked_car_start_drive(uint32_t object, uint32_t a5);
+void parked_car_start_drive(uint32_t object);
 void parked_car_drive_off(uint32_t object);
 void parked_car_release_soldiers(uint32_t object);
 void parked_car_follow_object(uint32_t object);
 void parked_car_set_scroll(uint32_t object);
 void parked_car_blank_row(uint32_t object);
-uint32_t parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t object_2);
+void parked_car_start_hit_box(uint16_t count, uint32_t object, uint32_t object_2);
 void car_hit_box_start(uint32_t object);
 void car_hit_box_move(uint32_t object);
 void parked_car_start_soldier(uint32_t object, uint32_t soldier);
@@ -454,30 +1339,30 @@ void car_soldier_leap(uint32_t object);
 
 /* objects/spawns.c: the enemies' spawn lists, by the scroll */
 void start_area_spawns(void);
-uint32_t spawn_enemies(uint32_t offset);
-void unreached_047B1C(uint32_t spawn);
+void spawn_enemies(void);
+void spawn_enemy_level_with_scroll(uint32_t spawn);
 uint32_t spawn_offset(uint32_t spawn_record);
 void take_free_object(uint32_t spawn_record, uint32_t *p_object, uint32_t *p_zero);
 
 /* objects/states.c: the objects' state dispatcher and the objects' handlers (provisional: by subject later) */
-uint32_t run_object_state(uint32_t object, uint32_t slot, uint32_t a5, uint32_t states);
+void run_object_state(uint32_t object, uint32_t states);
 void move_object_with_height(uint32_t object);
 void move_object(uint32_t object);
 void move_object_with_height_blocked(uint32_t object);
 void move_object_blocked(uint32_t object);
 void enemy_attack_chance(uint32_t object, uint32_t *p_chance, uint32_t *p_attack);
 void enemy_look_at_target(uint32_t object, uint32_t turtle, uint32_t *p_dx, uint32_t *p_dy);
-void enemy_nearest_turtles(uint32_t object, uint32_t *p_next_closest, uint32_t *p_closest);
-void enemy_nearest_slots(uint32_t object, uint32_t *p_next_closest, uint32_t *p_closest);
+uint32_t enemy_nearest_turtles(uint32_t object, uint32_t closest);
+uint32_t enemy_nearest_slots(uint32_t object, uint32_t closest);
 uint32_t random_below(uint16_t range, uint32_t object);
-void unreached_048480(uint32_t enemy, uint32_t a5);
-uint32_t enemy_face_object(uint8_t direction, uint32_t object, uint32_t animations, uint32_t object_2);
-uint32_t enemy_set_facing_animation(uint8_t facing, uint32_t object, uint32_t animations);
-uint32_t enemy_turn_to_object(uint8_t direction, uint32_t object, uint32_t animations, uint32_t object_2);
-uint32_t enemy_turn_animation(uint8_t facing, uint32_t object, uint32_t animations);
+void enemy_target_distance_band(uint32_t enemy, uint32_t distances);
+void enemy_face_object(uint8_t direction, uint32_t object, uint32_t object_2);
+void enemy_set_facing_animation(uint8_t facing, uint32_t object);
+void enemy_turn_to_object(uint8_t direction, uint32_t object, uint32_t object_2);
+void enemy_turn_animation(uint8_t facing, uint32_t object);
 uint32_t enemy_facing_bits(uint8_t direction, uint32_t facing_bits, uint32_t object, uint32_t object_2);
-uint32_t enemy_face_direction(uint8_t direction, uint32_t object, uint32_t animations);
-uint32_t enemy_turn_to_direction(uint8_t direction, uint32_t object, uint32_t animations);
+void enemy_face_direction(uint8_t direction, uint32_t object);
+void enemy_turn_to_direction(uint8_t direction, uint32_t object);
 uint32_t direction_facing_bits(uint8_t direction, uint32_t facing_bits);
 void enemy_keep_on_screen(uint32_t object);
 uint32_t enemy_on_screen(uint32_t object);
@@ -489,12 +1374,12 @@ void enemy_back_to_thinking_hittable(uint32_t object);
 uint32_t enemy_landed(uint32_t object);
 void enemy_start_arc(uint32_t object, uint32_t arc);
 void enemy_arc_step(uint32_t object, uint32_t arc);
-void enemy_leave_side(uint32_t object, uint32_t player_slot);
+uint32_t enemy_leave_side(uint32_t object, uint32_t left_slot);
 void enemy_give_side_back(uint32_t object, uint32_t player_slot);
 uint32_t enemy_face_target_animation(uint32_t direction, uint32_t object, uint32_t animations);
 void enemy_flash_when_weak(uint8_t colour, uint32_t object);
 void enemy_set_floor(uint32_t object);
-void enemy_floor_contacts(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down, uint32_t *p_a5);
+void enemy_floor_contacts(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down);
 void enemy_floor_edges(uint32_t object, uint32_t *p_floor_right, uint32_t *p_floor_left, uint32_t *p_floor_up, uint32_t *p_floor_down);
 uint32_t enemy_check_floor_edge(uint8_t floor_right, uint8_t floor_left, uint8_t floor_up, uint8_t floor_down, uint32_t object, uint32_t slot);
 void enemy_follow_stairs(uint32_t object);
@@ -502,14 +1387,14 @@ void enemy_follow_stairs_down(uint32_t object);
 void enemy_stairs_down(uint32_t object, uint32_t floor_cell_place);
 void enemy_follow_stairs_up(uint32_t object);
 void enemy_stairs_up(uint32_t object, uint32_t floor_cell_place);
-uint32_t enemy_foot_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_foot_soldier_setup(uint32_t object, uint32_t a5, uint32_t player_slot);
-void enemy_enter(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_step_over_edge(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
+void enemy_foot_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_foot_soldier_setup(uint32_t object, uint32_t player_slot);
+void enemy_enter(uint32_t object);
+void enemy_think(uint32_t object, uint32_t second_slot);
+void enemy_attack(uint32_t object);
+void enemy_hit(uint32_t object);
+void enemy_react(uint32_t object);
+void enemy_step_over_edge(uint32_t object);
 void enemy_hop_crouch(uint32_t object);
 void enemy_hop_down(uint32_t object);
 void enemy_hop_fall(uint32_t object);
@@ -522,134 +1407,134 @@ void enemy_hop_up_fall(uint32_t object);
 void enemy_hop_up_right(uint32_t object);
 void enemy_hop_up_fall_blocked(uint32_t object);
 void enemy_hop_up_left(uint32_t object);
-uint32_t enemy_shuffle(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shuffle(uint32_t object);
 void enemy_shuffle_start(uint32_t object);
 void enemy_shuffle_step(uint32_t object);
 void enemy_shuffle_turn(uint32_t object);
 void enemy_shuffle_end(uint32_t object);
-void unreached_0492EC(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_retreat(uint32_t object);
 void enemy_retreat_start(uint32_t object);
 void enemy_retreat_step(uint32_t object);
-uint32_t enemy_circle(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_circle_start(uint32_t object);
-uint32_t enemy_circle_aim(uint8_t direction, uint32_t object);
-uint32_t enemy_circle_step(uint32_t object, uint32_t a5);
-uint32_t enemy_charge(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_circle(uint32_t object);
+void enemy_circle_start(uint32_t object);
+void enemy_circle_aim(uint8_t direction, uint32_t object);
+void enemy_circle_step(uint32_t object);
+void enemy_charge(uint32_t object);
 void enemy_charge_start(uint32_t object);
 void enemy_charge_run(uint32_t object);
 void enemy_charge_brake(uint32_t object);
-uint32_t enemy_crash_into_scenery(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_crash_into_scenery(uint32_t object);
 void enemy_crash_into_scenery_start(uint32_t object);
 void enemy_crash_into_scenery_end(uint32_t object);
-uint32_t enemy_crash_into_scenery_low(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_crash_into_scenery_low(uint32_t object);
 void enemy_crash_into_scenery_low_start(uint32_t object);
-uint32_t enemy_walk_to_target(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_walk_to_side(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target(uint32_t object);
+void enemy_walk_to_target_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side(uint32_t object);
+void enemy_walk_to_side_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_step(uint32_t object, uint32_t player_slot);
 void enemy_walk_to_side_crouch(uint32_t object);
-uint32_t enemy_walk_to_side_turn(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_walk_to_side_hold(uint32_t object, uint32_t player_slot);
-uint32_t enemy_keep_distance(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_walk_to_side_turn(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_hold(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance(uint32_t object);
 void enemy_keep_distance_start(uint32_t object);
-uint32_t enemy_keep_distance_watch(uint32_t object, uint32_t player_slot, uint32_t a5);
-uint32_t enemy_keep_distance_back_off(uint32_t object, uint32_t player_slot);
-uint32_t enemy_keep_distance_close_in(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_walk(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_watch(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_back_off(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_close_in(uint32_t object, uint32_t player_slot);
+void enemy_back_off(uint32_t object);
+void enemy_back_off_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_walk(uint32_t object, uint32_t player_slot);
 void enemy_back_off_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_run_away_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_across(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_across_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_across_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_jab(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_run_away(uint32_t object);
+void enemy_run_away_start(uint32_t object, uint32_t player_slot);
+void enemy_run_away_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_across(uint32_t object);
+void enemy_walk_across_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_across_step(uint32_t object, uint32_t player_slot);
+void enemy_jab(uint32_t object);
 void enemy_jab_start(uint32_t object);
 void enemy_attack_end(uint32_t object);
-uint32_t enemy_chop(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_chop(uint32_t object);
 void enemy_chop_start(uint32_t object);
-uint32_t enemy_swing(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_swing(uint32_t object);
 void enemy_swing_start(uint32_t object);
-uint32_t enemy_high_kick(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_high_kick(uint32_t object);
 void enemy_high_kick_start(uint32_t object);
-uint32_t enemy_jump_kick(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_jump_kick(uint32_t object);
 void enemy_jump_kick_crouch(uint32_t object);
 void enemy_jump_kick_leap(uint32_t object);
 void enemy_jump_kick_fly(uint32_t object);
-uint32_t enemy_long_jump_kick(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_long_jump_kick(uint32_t object);
 void enemy_long_jump_kick_crouch(uint32_t object);
 void enemy_long_jump_kick_leap(uint32_t object);
 void enemy_long_jump_kick_fly(uint32_t object);
 void enemy_attack_none_after_long_jump_kick(void);
 void enemy_attack_none_before_grab(void);
-uint32_t enemy_grab(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_grab_start(uint32_t object, uint32_t player_slot, uint32_t a5);
-uint32_t enemy_grab_run(uint32_t object, uint32_t player_slot, uint32_t a5);
+void enemy_grab(uint32_t object);
+void enemy_grab_start(uint32_t object, uint32_t player_slot);
+void enemy_grab_run(uint32_t object);
 void enemy_grab_hold(uint32_t object, uint32_t player_slot);
 void enemy_grab_end(uint32_t object);
-uint32_t enemy_flinch_back(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back(uint32_t object);
 void enemy_flinch_back_start(uint32_t object);
 void enemy_flinch_end(uint32_t object);
-uint32_t enemy_flinch_bent(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent(uint32_t object);
 void enemy_flinch_bent_start(uint32_t object);
-uint32_t enemy_flinch_reel(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_reel(uint32_t object);
 void enemy_flinch_reel_start(uint32_t object);
-uint32_t enemy_flinch_hunched(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_hunched(uint32_t object);
 void enemy_flinch_hunched_start(uint32_t object);
-uint32_t enemy_killed_back(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_killed_back_start(uint32_t object, uint32_t player_slot);
+void enemy_killed_back(uint32_t object);
+void enemy_killed_back_start(uint32_t object);
 void enemy_killed_back_fly(uint32_t object);
 void enemy_killed_back_lie(uint32_t object, uint32_t player_slot);
 void enemy_killed_back_on_wall(uint32_t object);
 void enemy_killed_back_slide_down(uint32_t object);
 void enemy_killed_back_down(uint32_t object, uint32_t player_slot);
-uint32_t enemy_killed_forward(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_killed_forward_start(uint32_t object, uint32_t player_slot);
+void enemy_killed_forward(uint32_t object);
+void enemy_killed_forward_start(uint32_t object);
 void enemy_killed_forward_fly(uint32_t object);
 void enemy_killed_forward_lie(uint32_t object, uint32_t player_slot);
 void enemy_killed_forward_on_wall(uint32_t object);
 void enemy_killed_forward_slide_down(uint32_t object);
 void enemy_killed_forward_down(uint32_t object, uint32_t player_slot);
-uint32_t enemy_knocked_forward(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_knocked_forward_start(uint32_t object, uint32_t player_slot);
+void enemy_knocked_forward(uint32_t object);
+void enemy_knocked_forward_start(uint32_t object);
 void enemy_knocked_forward_fly(uint32_t object);
 void enemy_knocked_forward_lie(uint32_t object, uint32_t player_slot);
 void enemy_knocked_forward_wait(uint32_t object);
-uint32_t enemy_thrown_by_donatello(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_thrown_by_donatello(uint32_t object);
 void enemy_thrown_by_donatello_start(uint32_t object);
-uint32_t enemy_thrown_by_donatello_swing(uint32_t object, uint32_t player_slot, uint32_t placement);
+void enemy_thrown_by_donatello_swing(uint32_t object);
 void enemy_thrown_fly(uint32_t object);
 void enemy_take_damage(uint16_t damage, uint32_t object);
 void enemy_place_by(uint32_t object, uint32_t placement, uint32_t object_2);
-uint32_t enemy_let_go_by_donatello(uint32_t object, uint32_t player_slot);
-uint32_t enemy_thrown_by_michelangelo(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_let_go_by_donatello(uint32_t object);
+void enemy_thrown_by_michelangelo(uint32_t object);
 void enemy_thrown_by_michelangelo_start(uint32_t object);
-uint32_t enemy_thrown_by_michelangelo_swing(uint32_t object, uint32_t player_slot, uint32_t placement);
-uint32_t enemy_let_go_by_michelangelo(uint32_t object, uint32_t player_slot);
-uint32_t enemy_thrown_by_raphael(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_thrown_by_michelangelo_swing(uint32_t object);
+void enemy_let_go_by_michelangelo(uint32_t object);
+void enemy_thrown_by_raphael(uint32_t object);
 void enemy_thrown_by_raphael_start(uint32_t object);
-uint32_t enemy_thrown_by_raphael_swing(uint32_t object, uint32_t player_slot, uint32_t placement);
-uint32_t enemy_let_go_by_raphael(uint32_t object, uint32_t player_slot);
-uint32_t enemy_thrown_by_leonardo(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_thrown_by_raphael_swing(uint32_t object);
+void enemy_let_go_by_raphael(uint32_t object);
+void enemy_thrown_by_leonardo(uint32_t object);
 void enemy_thrown_by_leonardo_start(uint32_t object);
-uint32_t enemy_thrown_by_leonardo_swing(uint32_t object, uint32_t player_slot, uint32_t placement);
-uint32_t enemy_let_go_by_leonardo(uint32_t object, uint32_t player_slot);
-uint32_t enemy_knocked_back(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_knocked_back_start(uint32_t object, uint32_t player_slot);
+void enemy_thrown_by_leonardo_swing(uint32_t object);
+void enemy_let_go_by_leonardo(uint32_t object);
+void enemy_knocked_back(uint32_t object);
+void enemy_knocked_back_start(uint32_t object);
 void enemy_knocked_back_fly(uint32_t object);
 void enemy_knocked_back_lie(uint32_t object, uint32_t player_slot);
 void enemy_knocked_back_wait(uint32_t object);
 void enemy_knocked_back_get_up(uint32_t object);
-uint32_t enemy_die(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_die(uint32_t object);
 void enemy_die_start(uint32_t object);
 void enemy_die_vanish(uint32_t object);
-uint32_t enemy_die_on_back(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_die_on_back(uint32_t object);
 void enemy_die_on_back_start(uint32_t object);
-uint32_t boss_shutter_start(uint32_t object);
+void boss_shutter_start(uint32_t object);
 void boss_shutter_wait(uint32_t object);
 void boss_shutter_open(uint32_t object);
 void scenery_lamp_start(uint32_t object);
@@ -662,83 +1547,83 @@ void start_foot_car(void);
 void foot_car_start(uint32_t object);
 void foot_car_drive(uint32_t object);
 void falling_debris_start(uint32_t object);
-uint32_t falling_debris_wait(uint32_t object, uint32_t a5, uint32_t routine_entry);
+void falling_debris_wait(uint32_t object, uint32_t routine_entry);
 void falling_debris_fall(uint32_t object);
 void falling_debris_burn(uint32_t object);
 void motorbike_start(uint32_t object);
-uint32_t motorbike_ride(uint32_t object, uint32_t a5, uint32_t target_turtle);
+void motorbike_ride(uint32_t object, uint32_t target_turtle);
 void motorbike_ride_off(uint32_t object);
-uint32_t motorbike_struck(uint32_t object);
-uint32_t enemy_sword_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_hammer_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_walk_to_target_sword(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_sword_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_sword(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_sword_start(uint32_t object, uint32_t player_slot);
+void motorbike_struck(uint32_t object);
+void enemy_sword_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_hammer_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_sword(uint32_t object);
+void enemy_walk_to_target_sword_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_sword(uint32_t object);
+void enemy_walk_to_side_sword_start(uint32_t object, uint32_t player_slot);
 void enemy_walk_to_side_sword_crouch(uint32_t object);
-uint32_t enemy_walk_to_side_sword_turn(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_walk_past_sword(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_past_sword_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_past_sword_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_sword(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_sword_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_sword_walk(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_sword_turn(uint32_t object, uint32_t player_slot);
+void enemy_walk_past_sword(uint32_t object);
+void enemy_walk_past_sword_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_past_sword_step(uint32_t object, uint32_t player_slot);
+void enemy_back_off_sword(uint32_t object);
+void enemy_back_off_sword_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_sword_walk(uint32_t object, uint32_t player_slot);
 void enemy_back_off_sword_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_line_sword(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_line_sword_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_line_sword_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_target_hammer(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_hammer_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_hammer(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_hammer_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_far_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_far_hold(uint32_t object, uint32_t player_slot);
-uint32_t enemy_stalk_hammer(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_stalk_hammer_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_stalk_hammer_approach(uint32_t object, uint32_t player_slot);
-uint32_t enemy_stalk_hammer_step(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_walk_away_hammer(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_away_hammer_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_away_hammer_walk(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_line_sword(uint32_t object);
+void enemy_walk_to_line_sword_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_line_sword_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_hammer(uint32_t object);
+void enemy_walk_to_target_hammer_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_hammer(uint32_t object);
+void enemy_walk_to_side_hammer_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_far_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_far_hold(uint32_t object);
+void enemy_stalk_hammer(uint32_t object);
+void enemy_stalk_hammer_start(uint32_t object, uint32_t player_slot);
+void enemy_stalk_hammer_approach(uint32_t object, uint32_t player_slot);
+void enemy_stalk_hammer_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_away_hammer(uint32_t object);
+void enemy_walk_away_hammer_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_away_hammer_walk(uint32_t object, uint32_t player_slot);
 void enemy_walk_away_hammer_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_slash_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_slash_sword(uint32_t object);
 void enemy_slash_sword_start(uint32_t object);
-uint32_t enemy_low_slash_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_low_slash_sword(uint32_t object);
 void enemy_low_slash_sword_start(uint32_t object);
-uint32_t enemy_leaping_slash_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_leaping_slash_sword(uint32_t object);
 void enemy_leaping_slash_sword_start(uint32_t object);
 void enemy_leaping_slash_sword_leap(uint32_t object);
 void enemy_leaping_slash_sword_fly(uint32_t object);
-uint32_t enemy_jump_slash_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_jump_slash_sword(uint32_t object);
 void enemy_jump_slash_sword_start(uint32_t object);
 void enemy_jump_slash_sword_leap(uint32_t object);
 void enemy_jump_slash_sword_fly(uint32_t object);
-uint32_t enemy_flying_slash_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flying_slash_sword(uint32_t object);
 void enemy_flying_slash_sword_start(uint32_t object);
 void enemy_flying_slash_sword_leap(uint32_t object);
 void enemy_flying_slash_sword_fly(uint32_t object);
-uint32_t enemy_smash_hammer(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_smash_hammer(uint32_t object);
 void enemy_smash_hammer_start(uint32_t object);
 void enemy_smash_hammer_end(uint32_t object);
-uint32_t enemy_flinch_back_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back_sword(uint32_t object);
 void enemy_flinch_back_sword_start(uint32_t object);
-uint32_t enemy_flinch_bent_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_sword(uint32_t object);
 void enemy_flinch_bent_sword_start(uint32_t object);
-uint32_t enemy_flinch_reel_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_reel_sword(uint32_t object);
 void enemy_flinch_reel_sword_start(uint32_t object);
-uint32_t enemy_flinch_hunched_sword(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_hunched_sword(uint32_t object);
 void enemy_flinch_hunched_sword_start(uint32_t object);
-uint32_t enemy_flinch_back_hammer(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back_hammer(uint32_t object);
 void enemy_flinch_back_hammer_start(uint32_t object);
-uint32_t enemy_flinch_bent_hammer(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_hammer(uint32_t object);
 void enemy_flinch_bent_hammer_start(uint32_t object);
-uint32_t enemy_flinch_hunched_hammer(uint32_t object, uint32_t slot, uint32_t a5);
-void unreached_04B716(uint32_t object);
-uint32_t whip_arm_start(uint16_t routine_offset, uint32_t object);
-uint32_t whip_arm_follow(uint32_t routine_offset, uint32_t object);
-uint32_t whip_arm_let_go(uint32_t object);
-uint32_t whip_arm_drag(uint32_t object);
-uint32_t whip_arm_struck(uint32_t routine_offset, uint32_t object);
+void enemy_flinch_hunched_hammer(uint32_t object);
+void enemy_flinch_hunched_hammer_start(uint32_t object);
+void whip_arm_start(uint16_t routine_offset, uint32_t object);
+void whip_arm_follow(uint32_t routine_offset, uint32_t object);
+void whip_arm_let_go(uint32_t object);
+void whip_arm_drag(uint32_t object);
+void whip_arm_struck(uint32_t routine_offset, uint32_t object);
 uint32_t whip_arm_place(uint32_t routine_offset, uint32_t object, uint32_t rodney, uint32_t offsets);
 void laser_bolt_start(uint32_t object);
 void laser_bolt_fly(uint32_t object);
@@ -769,13 +1654,13 @@ void boomerang_struck(uint32_t object);
 void boomerang_vanish(uint32_t object);
 void shuriken_start(uint32_t object);
 void shuriken_fly(uint32_t object);
-void unreached_04BF5A(uint32_t object);
+void shuriken_struck_without_sound(uint32_t object);
 void shuriken_vanish(uint32_t object);
 void shuriken_struck(uint32_t object);
-uint32_t rocksteady_bullet_start(uint32_t object);
+void rocksteady_bullet_start(uint32_t object);
 void rocksteady_bullet_fly(uint32_t object);
 void rocksteady_bullet_vanish(uint32_t object);
-void unreached_04C086(uint32_t object);
+void rocksteady_bullet_burst(uint32_t object);
 void bebop_shot_start(uint32_t object);
 void bebop_shot_fly(uint32_t object);
 void rolling_tire_start(uint32_t object);
@@ -787,18 +1672,18 @@ void rocket_start(uint32_t object);
 void rocket_fly(uint32_t object);
 void rocket_explode(uint32_t object);
 void dynamite_start(uint32_t object);
-uint32_t dynamite_throw(uint32_t object, uint32_t next_closest, uint32_t routine_entry);
+void dynamite_throw(uint32_t object, uint32_t routine_entry);
 void dynamite_bounce(uint32_t object);
 void dynamite_explode(uint32_t object);
 void kicked_door_start(uint32_t object);
 void kicked_door_wait(uint32_t object);
-uint32_t kicked_door_break(uint32_t object, uint32_t a5);
+void kicked_door_break(uint32_t object);
 void kicked_door_become_foot_soldier(uint32_t object);
-uint32_t door_piece_start(uint32_t object);
+void door_piece_start(uint32_t object);
 void door_piece_fly(uint32_t object);
 void elevator_start(uint32_t object);
-uint32_t elevator_wait_on_screen(uint32_t object);
-uint32_t elevator_open(uint32_t object, uint32_t a5);
+void elevator_wait_on_screen(uint32_t object);
+void elevator_open(uint32_t object);
 void elevator_scroll_off(uint32_t object);
 void enemy_step_out_start(uint32_t object);
 void enemy_step_out_wait(uint32_t object);
@@ -807,25 +1692,25 @@ void tire_soldier_start(uint32_t object);
 void tire_soldier_wait(uint32_t object);
 void tire_soldier_jump(uint32_t object);
 void tire_soldier_fly(uint32_t object);
-uint32_t tire_soldier_throw(uint32_t object, uint32_t record);
+void tire_soldier_throw(uint32_t object);
 void manhole_soldier_start(uint32_t object);
 void manhole_soldier_wait(uint32_t object);
-uint32_t manhole_soldier_jump_out(uint32_t object, uint32_t record);
+void manhole_soldier_jump_out(uint32_t object);
 void manhole_soldier_fly(uint32_t object);
-uint32_t manhole_soldier_throw(uint32_t object, uint32_t record);
+void manhole_soldier_throw(uint32_t object);
 void thrower_become_foot_soldier(uint32_t object);
-uint32_t window_soldier_drop_start(uint32_t object);
-uint32_t window_soldier_drop_jump_out(uint32_t object, uint32_t record);
-uint32_t window_soldier_drop_break_window(uint32_t object, uint32_t a5);
+void window_soldier_drop_start(uint32_t object);
+void window_soldier_drop_jump_out(uint32_t object);
+void window_soldier_drop_break_window(uint32_t object);
 void window_soldier_drop_fall(uint32_t object);
 void window_soldier_become_foot_soldier(uint32_t object);
 void window_soldier_dive_start(uint32_t object);
-uint32_t window_soldier_dive_wait(uint32_t object, uint32_t record);
+void window_soldier_dive_wait(uint32_t object);
 void window_soldier_dive_fall(uint32_t object);
 void glass_shards_start(uint32_t object);
 void glass_shards_fall(uint32_t object);
 void enemy_walk_in_on_ledge_start(uint32_t object);
-uint32_t enemy_walk_in_on_ledge_walk(uint32_t object, uint32_t a5, uint32_t object_2);
+void enemy_walk_in_on_ledge_walk(uint32_t object, uint32_t object_2);
 void enemy_jump_down_leap(uint32_t object);
 void enemy_jump_down_fall_stairs(uint32_t object);
 void enemy_jump_down_fall(uint32_t object);
@@ -834,30 +1719,30 @@ void enemy_step_down_start(uint32_t object);
 void enemy_step_down_wait(uint32_t object);
 void sewer_ripple_start(uint32_t object);
 void sewer_ripple_swim(uint32_t object);
-uint32_t sewer_ripple_leap_out(uint32_t object, uint32_t record);
+void sewer_ripple_leap_out(uint32_t object);
 void sewer_ripple_vanish(uint32_t object);
 void sewer_ripple_swim_again(uint32_t object);
 void enemy_leap_out_start(uint32_t object);
 void enemy_leap_out_fly(uint32_t object);
 void enemy_leap_out_land(uint32_t object);
-uint32_t bomber_start(uint32_t object);
+void bomber_start(uint32_t object);
 void bomber_wait(uint32_t object);
 void bomber_lean_out(uint32_t object);
-uint32_t bomber_throw(uint32_t object, uint32_t record);
+void bomber_throw(uint32_t object);
 void bomber_step_out(uint32_t object);
 void bomber_walk_in(uint32_t object);
 void enemy_rocket_soldier_start(uint32_t object);
-uint32_t enemy_rocket_soldier_line_up(uint32_t object, uint32_t a5);
-uint32_t enemy_rocket_soldier_fire(uint32_t object, uint32_t record);
+void enemy_rocket_soldier_line_up(uint32_t object);
+void enemy_rocket_soldier_fire(uint32_t object);
 void enemy_rocket_soldier_unarmed(uint32_t object);
-void enemy_rocket_soldier_struck(uint32_t object, uint32_t *p_a1, uint32_t *p_record);
+void enemy_rocket_soldier_struck(uint32_t object);
 void double_door_start(uint32_t object);
-uint32_t double_door_wait(uint32_t object, uint32_t record);
+void double_door_wait(uint32_t object);
 void double_door_open(uint32_t object);
 void technodrome_door_start(uint32_t object);
-uint32_t technodrome_door_wait(uint32_t object, uint32_t record);
+void technodrome_door_wait(uint32_t object);
 void technodrome_door_open(uint32_t object);
-uint32_t technodrome_door_let_out(uint32_t object, uint32_t record);
+void technodrome_door_let_out(uint32_t object);
 void enemy_hang_in_start(uint32_t object);
 void enemy_hang_in_move(uint32_t object);
 void enemy_hang_in_drop(uint32_t object);
@@ -870,7 +1755,7 @@ void enemy_kick_in_land(uint32_t object);
 void enemy_run_in_start(uint32_t object);
 void enemy_run_in_run(uint32_t object);
 void enemy_dive_in_start(uint32_t object);
-uint32_t enemy_dive_in_run(uint32_t object, uint32_t a5, uint32_t object_2);
+void enemy_dive_in_run(uint32_t object, uint32_t object_2);
 void enemy_dive_in_leap(uint32_t object);
 void enemy_dive_in_dive(uint32_t object);
 void enemy_dive_in_curl(uint32_t object);
@@ -879,222 +1764,222 @@ void enemy_dive_in_land(uint32_t object);
 void enemy_walk_in_start(uint32_t object);
 void enemy_walk_in_walk(uint32_t object);
 void enemy_walk_in_ready(uint32_t object);
-uint32_t enemy_knife_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_spear_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_walk_to_target_spear(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_spear_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_spear(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_spear_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_off_line_spear(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_off_line_spear_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_off_line_spear_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_spear(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_spear_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_spear_walk(uint32_t object, uint32_t player_slot);
-uint32_t enemy_step_aside_spear(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_step_aside_spear_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_step_aside_spear_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_target_knife(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_knife_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_knife(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_knife_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_circle_knife(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_circle_knife_start(uint32_t object);
-uint32_t enemy_circle_knife_aim(uint8_t direction, uint32_t object);
-uint32_t enemy_circle_knife_step(uint32_t object, uint32_t a5);
-uint32_t enemy_keep_distance_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_knife_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_spear_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_spear(uint32_t object);
+void enemy_walk_to_target_spear_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_spear(uint32_t object);
+void enemy_walk_to_side_spear_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_off_line_spear(uint32_t object);
+void enemy_walk_off_line_spear_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_off_line_spear_step(uint32_t object, uint32_t player_slot);
+void enemy_back_off_spear(uint32_t object);
+void enemy_back_off_spear_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_spear_walk(uint32_t object, uint32_t player_slot);
+void enemy_step_aside_spear(uint32_t object);
+void enemy_step_aside_spear_start(uint32_t object, uint32_t player_slot);
+void enemy_step_aside_spear_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_knife(uint32_t object);
+void enemy_walk_to_target_knife_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_knife(uint32_t object);
+void enemy_walk_to_side_knife_start(uint32_t object, uint32_t player_slot);
+void enemy_circle_knife(uint32_t object);
+void enemy_circle_knife_start(uint32_t object);
+void enemy_circle_knife_aim(uint8_t direction, uint32_t object);
+void enemy_circle_knife_step(uint32_t object);
+void enemy_keep_distance_knife(uint32_t object);
 void enemy_keep_distance_knife_start(uint32_t object);
-uint32_t enemy_keep_distance_knife_watch(uint32_t object, uint32_t player_slot, uint32_t a5);
-uint32_t enemy_keep_distance_knife_back_off(uint32_t object, uint32_t player_slot);
-uint32_t enemy_keep_distance_knife_close_in(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_knife(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_knife_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_knife_walk(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_knife_watch(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_knife_back_off(uint32_t object, uint32_t player_slot);
+void enemy_keep_distance_knife_close_in(uint32_t object, uint32_t player_slot);
+void enemy_back_off_knife(uint32_t object);
+void enemy_back_off_knife_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_knife_walk(uint32_t object, uint32_t player_slot);
 void enemy_back_off_knife_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_step_aside_knife(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_step_aside_knife_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_step_aside_knife_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_spear_thrust(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_step_aside_knife(uint32_t object);
+void enemy_step_aside_knife_start(uint32_t object, uint32_t player_slot);
+void enemy_step_aside_knife_step(uint32_t object, uint32_t player_slot);
+void enemy_spear_thrust(uint32_t object);
 void enemy_spear_thrust_start(uint32_t object);
 void enemy_spear_thrust_end(uint32_t object);
-uint32_t enemy_spear_throw(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_spear_throw(uint32_t object);
 void enemy_spear_throw_start(uint32_t object);
-uint32_t enemy_spear_throw_release(uint32_t object, uint32_t record);
-uint32_t enemy_spear_throw_end(uint32_t object, uint32_t player_slot, uint32_t a5, uint32_t player_slot_2);
-uint32_t enemy_knife_stab(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_spear_throw_release(uint32_t object);
+void enemy_spear_throw_end(uint32_t object, uint32_t player_slot);
+void enemy_knife_stab(uint32_t object);
 void enemy_knife_stab_start(uint32_t object);
-uint32_t enemy_high_kick_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_high_kick_knife(uint32_t object);
 void enemy_high_kick_knife_start(uint32_t object);
-uint32_t enemy_jump_kick_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_jump_kick_knife(uint32_t object);
 void enemy_jump_kick_knife_crouch(uint32_t object);
 void enemy_jump_kick_knife_leap(uint32_t object);
 void enemy_jump_kick_knife_fly(uint32_t object);
-uint32_t enemy_throw_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_throw_knife(uint32_t object);
 void enemy_throw_knife_start(uint32_t object);
-uint32_t enemy_throw_knife_release(uint32_t object, uint32_t record);
+void enemy_throw_knife_release(uint32_t object);
 void enemy_throw_knife_end(uint32_t object);
-uint32_t enemy_flinch_back_spear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back_spear(uint32_t object);
 void enemy_flinch_back_spear_start(uint32_t object);
-uint32_t enemy_flinch_bent_spear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_spear(uint32_t object);
 void enemy_flinch_bent_spear_start(uint32_t object);
-uint32_t enemy_flinch_reel_spear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_reel_spear(uint32_t object);
 void enemy_flinch_reel_spear_start(uint32_t object);
-uint32_t enemy_flinch_hunched_spear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_hunched_spear(uint32_t object);
 void enemy_flinch_hunched_spear_start(uint32_t object);
-uint32_t enemy_flinch_back_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back_knife(uint32_t object);
 void enemy_flinch_back_knife_start(uint32_t object);
-uint32_t enemy_flinch_bent_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_knife(uint32_t object);
 void enemy_flinch_bent_knife_start(uint32_t object);
-uint32_t enemy_flinch_reel_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_reel_knife(uint32_t object);
 void enemy_flinch_reel_knife_start(uint32_t object);
-uint32_t enemy_flinch_hunched_knife(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_hunched_knife(uint32_t object);
 void enemy_flinch_hunched_knife_start(uint32_t object);
-uint32_t enemy_axe_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_gun_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_walk_to_target_gun(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_gun_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_gun(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_gun_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_range_gun(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_range_gun_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_range_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_range_hold(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_back_off_gun(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_gun_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_gun_walk(uint32_t object, uint32_t player_slot);
+void enemy_axe_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_gun_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_gun(uint32_t object);
+void enemy_walk_to_target_gun_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_gun(uint32_t object);
+void enemy_walk_to_side_gun_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_range_gun(uint32_t object);
+void enemy_walk_to_range_gun_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_range_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_range_hold(uint32_t object, uint32_t player_slot);
+void enemy_back_off_gun(uint32_t object);
+void enemy_back_off_gun_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_gun_walk(uint32_t object, uint32_t player_slot);
 void enemy_back_off_gun_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away_gun(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_run_away_gun_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away_gun_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_target_axe(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_target_axe_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_side_axe(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_side_axe_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_walk_to_range_axe(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_walk_to_range_axe_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_axe(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_back_off_axe_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_back_off_axe_walk(uint32_t object, uint32_t player_slot);
+void enemy_run_away_gun(uint32_t object);
+void enemy_run_away_gun_start(uint32_t object, uint32_t player_slot);
+void enemy_run_away_gun_step(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_target_axe(uint32_t object);
+void enemy_walk_to_target_axe_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_side_axe(uint32_t object);
+void enemy_walk_to_side_axe_start(uint32_t object, uint32_t player_slot);
+void enemy_walk_to_range_axe(uint32_t object);
+void enemy_walk_to_range_axe_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_axe(uint32_t object);
+void enemy_back_off_axe_start(uint32_t object, uint32_t player_slot);
+void enemy_back_off_axe_walk(uint32_t object, uint32_t player_slot);
 void enemy_back_off_axe_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away_axe(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_run_away_axe_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_run_away_axe_step(uint32_t object, uint32_t player_slot);
-uint32_t enemy_throw_axes(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_run_away_axe(uint32_t object);
+void enemy_run_away_axe_start(uint32_t object, uint32_t player_slot);
+void enemy_run_away_axe_step(uint32_t object, uint32_t player_slot);
+void enemy_throw_axes(uint32_t object);
 void enemy_throw_axes_start(uint32_t object);
-uint32_t enemy_throw_axes_release(uint32_t object, uint32_t record);
-uint32_t enemy_high_kick_axe(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_throw_axes_release(uint32_t object);
+void enemy_high_kick_axe(uint32_t object);
 void enemy_high_kick_axe_start(uint32_t object);
-uint32_t enemy_gun_swing(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_gun_swing(uint32_t object);
 void enemy_gun_swing_start(uint32_t object);
-uint32_t enemy_shoot_gun(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shoot_gun(uint32_t object);
 void enemy_shoot_gun_start(uint32_t object);
-uint32_t enemy_shoot_gun_fire(uint32_t object, uint32_t record);
-uint32_t enemy_flinch_back_gun(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shoot_gun_fire(uint32_t object);
+void enemy_flinch_back_gun(uint32_t object);
 void enemy_flinch_back_gun_start(uint32_t object);
-uint32_t enemy_flinch_bent_gun(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_gun(uint32_t object);
 void enemy_flinch_bent_gun_start(uint32_t object);
-uint32_t enemy_flinch_back_axe(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_back_axe(uint32_t object);
 void enemy_flinch_back_axe_start(uint32_t object);
-uint32_t enemy_flinch_bent_axe(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_bent_axe(uint32_t object);
 void enemy_flinch_bent_axe_start(uint32_t object);
-uint32_t enemy_flinch_reel_axe(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_flinch_reel_axe(uint32_t object);
 void enemy_flinch_reel_axe_start(uint32_t object);
-uint32_t enemy_boomerang_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_shuriken_soldier_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_skateboard_soldier_start(uint32_t object, uint32_t next_closest, uint32_t player_slot);
-void enemy_skateboard_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_skateboard_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_skateboard_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_skateboard_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
+void enemy_boomerang_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_shuriken_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_skateboard_soldier_start(uint32_t object, uint32_t player_slot);
+void enemy_skateboard_think(uint32_t object, uint32_t second_slot);
+void enemy_skateboard_attack(uint32_t object);
+void enemy_skateboard_hit(uint32_t object);
+void enemy_skateboard_react(uint32_t object);
 void enemy_skateboard_stand(uint32_t object);
-uint32_t enemy_throw_shuriken(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_throw_shuriken(uint32_t object);
 void enemy_throw_shuriken_start(uint32_t object);
-uint32_t enemy_throw_shuriken_release(uint32_t object, uint32_t record);
-uint32_t enemy_boomerang_throw(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_throw_shuriken_release(uint32_t object);
+void enemy_boomerang_throw(uint32_t object);
 void enemy_boomerang_throw_wind_up(uint32_t object);
 void enemy_boomerang_throw_aim(uint32_t object);
-uint32_t enemy_boomerang_throw_release(uint32_t object, uint32_t record);
+void enemy_boomerang_throw_release(uint32_t object);
 void enemy_boomerang_throw_wait(uint32_t object);
-uint32_t enemy_rocksteady_start(uint32_t object, uint32_t a5, uint32_t target);
-uint32_t enemy_rocksteady_enter(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_start(uint32_t object, uint32_t target);
+void enemy_rocksteady_enter(uint32_t object);
 void enemy_rocksteady_enter_wait(uint32_t object);
 void enemy_rocksteady_enter_taunt(uint16_t state_offset, uint32_t object);
 void enemy_rocksteady_enter_ready(uint32_t object);
 void enemy_rocksteady_enter_walk_in(uint32_t object);
 void enemy_rocksteady_enter_wait_for_signal(uint32_t object);
-uint32_t enemy_rocksteady_enter_walk_in_with_bebop(uint32_t object, uint32_t a5);
-void enemy_rocksteady_think(uint32_t object, uint32_t target, uint32_t *p_turtle, uint32_t *p_a5);
+void enemy_rocksteady_enter_walk_in_with_bebop(uint32_t object);
+void enemy_rocksteady_think(uint32_t object, uint32_t target);
 void enemy_rocksteady_pick_attack(uint32_t object, uint32_t moves, uint32_t *p_range, uint32_t *p_attack_waits);
-void enemy_rocksteady_attack(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_boss_attack_move(uint32_t object, uint32_t *p_turtle, uint32_t *p_a5);
-void enemy_rocksteady_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_rocksteady_react(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_boss_react_move(uint32_t object, uint32_t *p_attacker, uint32_t *p_a5);
+void enemy_rocksteady_attack(uint32_t object);
+void enemy_boss_attack_move(uint32_t object);
+void enemy_rocksteady_hit(uint32_t object);
+void enemy_rocksteady_react(uint32_t object);
+void enemy_boss_react_move(uint32_t object);
 void start_rocksteady(void);
-uint32_t enemy_rocksteady_raise_fist(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_raise_fist_start(uint32_t object, uint32_t target);
-uint32_t enemy_rocksteady_laugh(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_laugh_start(uint32_t object, uint32_t target);
-uint32_t enemy_rocksteady_shake_fist(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_shake_fist_start(uint32_t object, uint32_t target);
+void enemy_rocksteady_raise_fist(uint32_t object);
+void enemy_rocksteady_raise_fist_start(uint32_t object);
+void enemy_rocksteady_laugh(uint32_t object);
+void enemy_rocksteady_laugh_start(uint32_t object);
+void enemy_rocksteady_shake_fist(uint32_t object);
+void enemy_rocksteady_shake_fist_start(uint32_t object);
 void enemy_rocksteady_hold_pose(uint32_t object);
-uint32_t enemy_rocksteady_draw_gun(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_draw_gun_start(uint32_t object, uint32_t target);
+void enemy_rocksteady_draw_gun(uint32_t object);
+void enemy_rocksteady_draw_gun_start(uint32_t object);
 void enemy_rocksteady_pose_end(uint32_t object);
-uint32_t enemy_rocksteady_put_gun_away(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_put_gun_away_start(uint32_t object, uint32_t target);
-uint32_t enemy_rocksteady_circle(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_rocksteady_circle_start(uint32_t object, uint32_t target, uint32_t a5);
-uint32_t enemy_rocksteady_circle_step(uint32_t object, uint32_t target, uint32_t a5);
-uint32_t enemy_rocksteady_line_up(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_line_up_start(uint32_t object, uint32_t target);
-void enemy_rocksteady_line_up_step(uint32_t object, uint32_t target);
-uint32_t enemy_rocksteady_close_in(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_rocksteady_close_in_start(uint32_t object, uint32_t turtle, uint32_t a5);
-uint32_t enemy_rocksteady_close_in_step(uint32_t object, uint32_t turtle, uint32_t a5);
+void enemy_rocksteady_put_gun_away(uint32_t object);
+void enemy_rocksteady_put_gun_away_start(uint32_t object);
+void enemy_rocksteady_circle(uint32_t object);
+void enemy_rocksteady_circle_start(uint32_t object);
+void enemy_rocksteady_circle_step(uint32_t object);
+void enemy_rocksteady_line_up(uint32_t object);
+void enemy_rocksteady_line_up_start(uint32_t object);
+void enemy_rocksteady_line_up_step(uint32_t object);
+void enemy_rocksteady_close_in(uint32_t object);
+void enemy_rocksteady_close_in_start(uint32_t object);
+void enemy_rocksteady_close_in_step(uint32_t object, uint32_t turtle);
 void enemy_boss_face_target(uint32_t object, uint32_t target);
-uint32_t enemy_rocksteady_shoot_around(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_rocksteady_shoot_around_start(uint32_t object, uint32_t record);
-uint32_t enemy_rocksteady_shoot_around_fire(uint32_t object, uint32_t record);
-uint32_t enemy_rocksteady_pincer_charge(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_shoot_around(uint32_t object);
+void enemy_rocksteady_shoot_around_start(uint32_t object);
+void enemy_rocksteady_shoot_around_fire(uint32_t object);
+void enemy_rocksteady_pincer_charge(uint32_t object);
 void enemy_rocksteady_pincer_charge_start(uint32_t object);
 void enemy_rocksteady_pincer_charge_run_to_edge(uint32_t object);
 void enemy_rocksteady_pincer_charge_wait_for_bebop(uint32_t object);
 void enemy_rocksteady_pincer_charge_get_ready(uint32_t object);
 void enemy_rocksteady_pincer_charge_run(uint32_t object);
 void enemy_rocksteady_pincer_charge_crash(uint32_t object);
-uint32_t enemy_rocksteady_charge(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_charge(uint32_t object);
 void enemy_rocksteady_charge_start(uint32_t object);
 void enemy_rocksteady_charge_get_ready(uint32_t object);
 void enemy_rocksteady_charge_run(uint32_t object);
-uint32_t enemy_rocksteady_punch(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_punch(uint32_t object);
 void enemy_rocksteady_punch_start(uint32_t object);
 void enemy_rocksteady_blow_end(uint32_t object);
-uint32_t enemy_rocksteady_gun_butt(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_gun_butt(uint32_t object);
 void enemy_rocksteady_gun_butt_start(uint32_t object);
-uint32_t enemy_rocksteady_shoot(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_rocksteady_shoot_start(uint32_t object, uint32_t turtle);
-uint32_t enemy_rocksteady_shoot_fire(uint32_t object, uint32_t record);
-uint32_t enemy_rocksteady_flinch(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_shoot(uint32_t object);
+void enemy_rocksteady_shoot_start(uint32_t object, uint32_t turtle);
+void enemy_rocksteady_shoot_fire(uint32_t object);
+void enemy_rocksteady_flinch(uint32_t object);
 void enemy_rocksteady_flinch_start(uint32_t object);
 void enemy_rocksteady_flinch_end(uint32_t object);
-uint32_t enemy_rocksteady_reel(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_reel(uint32_t object);
 void enemy_rocksteady_reel_start(uint32_t object);
-uint32_t enemy_rocksteady_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rocksteady_flinch_from_behind(uint32_t object);
 void enemy_rocksteady_flinch_from_behind_start(uint32_t object);
-uint32_t enemy_rocksteady_knocked_down(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_knocked_down_start(uint32_t object, uint32_t target);
+void enemy_rocksteady_knocked_down(uint32_t object);
+void enemy_rocksteady_knocked_down_start(uint32_t object);
 void enemy_rocksteady_knocked_down_fall(uint32_t object);
 void enemy_rocksteady_knocked_down_slide(uint32_t object);
 void enemy_rocksteady_knocked_down_lie(uint32_t object);
 void enemy_rocksteady_knocked_down_get_up(uint32_t object);
-uint32_t enemy_rocksteady_defeated(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rocksteady_defeated_start(uint32_t object, uint32_t target);
+void enemy_rocksteady_defeated(uint32_t object);
+void enemy_rocksteady_defeated_start(uint32_t object);
 void enemy_rocksteady_defeated_fall(uint32_t object);
 void enemy_rocksteady_defeated_slide(uint32_t object);
 void enemy_rocksteady_defeated_blink(uint32_t object);
-uint32_t enemy_bebop_start(uint32_t object, uint32_t a5, uint32_t target);
-uint32_t enemy_bebop_enter(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_start(uint32_t object, uint32_t target);
+void enemy_bebop_enter(uint32_t object);
 void enemy_bebop_enter_wait_for_scroll(uint32_t object);
 void enemy_bebop_enter_wait(uint32_t object);
 void enemy_bebop_enter_drop(uint32_t object);
@@ -1102,23 +1987,23 @@ void enemy_bebop_enter_jump(uint32_t object);
 void enemy_bebop_enter_in_air(uint32_t object);
 void enemy_bebop_enter_ready(uint32_t object);
 void enemy_bebop_enter_wait_for_signal(uint32_t object);
-uint32_t enemy_bebop_enter_walk_in(uint32_t object, uint32_t a5);
-void enemy_bebop_think(uint32_t routine_offset, uint32_t object, uint32_t target, uint32_t *p_turtle, uint32_t *p_a5);
-void enemy_bebop_attack(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_bebop_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_bebop_react(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-uint32_t enemy_bebop_stand(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_bebop_stand_start(uint32_t object, uint32_t target);
+void enemy_bebop_enter_walk_in(uint32_t object);
+void enemy_bebop_think(uint32_t on_right, uint32_t object, uint32_t target);
+void enemy_bebop_attack(uint32_t object);
+void enemy_bebop_hit(uint32_t object);
+void enemy_bebop_react(uint32_t object);
+void enemy_bebop_stand(uint32_t object);
+void enemy_bebop_stand_start(uint32_t object);
 void enemy_bebop_stand_wait(uint32_t object);
-uint32_t enemy_bebop_walk_to_front(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_bebop_walk_to_front_start(uint32_t object, uint32_t turtle, uint32_t a5);
-uint32_t enemy_bebop_walk_to_front_step(uint32_t object, uint32_t turtle, uint32_t a5);
-uint32_t enemy_bebop_walk_level(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_bebop_walk_level_step(uint32_t object, uint32_t target);
-uint32_t enemy_bebop_close_in(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_bebop_walk_start(uint32_t object, uint32_t turtle, uint32_t a5);
-uint32_t enemy_bebop_close_in_step(uint32_t object, uint32_t turtle, uint32_t a5);
-uint32_t enemy_bebop_pincer_charge(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_walk_to_front(uint32_t object);
+void enemy_bebop_walk_to_front_start(uint32_t object);
+void enemy_bebop_walk_to_front_step(uint32_t object, uint32_t turtle);
+void enemy_bebop_walk_level(uint32_t object);
+void enemy_bebop_walk_level_step(uint32_t object);
+void enemy_bebop_close_in(uint32_t object);
+void enemy_bebop_walk_start(uint32_t object);
+void enemy_bebop_close_in_step(uint32_t object, uint32_t turtle);
+void enemy_bebop_pincer_charge(uint32_t object);
 void enemy_bebop_pincer_charge_start(uint32_t object);
 void enemy_pincer_charge_take_edge(uint32_t object);
 void enemy_bebop_pincer_charge_run_to_edge(uint32_t object);
@@ -1126,48 +2011,48 @@ void enemy_bebop_pincer_charge_wait_for_rocksteady(uint32_t object);
 void enemy_bebop_pincer_charge_get_ready(uint32_t object);
 void enemy_bebop_pincer_charge_run(uint32_t object);
 void enemy_bebop_pincer_charge_crash(uint32_t object);
-uint32_t enemy_bebop_punch(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_punch(uint32_t object);
 void enemy_bebop_punch_start(uint32_t object);
 void enemy_bebop_punch_end(uint32_t object);
-uint32_t enemy_bebop_charge(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_charge(uint32_t object);
 void enemy_bebop_charge_start(uint32_t object);
 void enemy_bebop_charge_get_ready(uint32_t object);
 void enemy_bebop_charge_run(uint32_t object);
-uint32_t enemy_bebop_shoot(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_shoot(uint32_t object);
 void enemy_bebop_shoot_start(uint32_t object);
-uint32_t enemy_bebop_shoot_fire(uint32_t object, uint32_t record);
-uint32_t enemy_bebop_flinch(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_shoot_fire(uint32_t object);
+void enemy_bebop_flinch(uint32_t object);
 void enemy_bebop_flinch_start(uint32_t object);
 void enemy_bebop_strike_back(uint32_t object);
-uint32_t enemy_bebop_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_bebop_flinch_from_behind(uint32_t object);
 void enemy_bebop_flinch_from_behind_start(uint32_t object);
 void enemy_bebop_flinch_from_behind_end(uint32_t object);
-uint32_t enemy_bebop_knocked_down(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_bebop_knocked_down_start(uint32_t object, uint32_t target);
+void enemy_bebop_knocked_down(uint32_t object);
+void enemy_bebop_knocked_down_start(uint32_t object);
 void enemy_bebop_knocked_down_fall(uint32_t object);
 void enemy_bebop_knocked_down_slide(uint32_t object);
 void enemy_bebop_knocked_down_lie(uint32_t object);
-uint32_t enemy_bebop_defeated(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_bebop_defeated_start(uint32_t object, uint32_t target);
+void enemy_bebop_defeated(uint32_t object);
+void enemy_bebop_defeated_start(uint32_t object);
 void enemy_bebop_defeated_fall(uint32_t object);
 void enemy_bebop_defeated_slide(uint32_t object);
 void enemy_bebop_defeated_blink(uint32_t object);
-uint32_t enemy_mouser_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_mouser_enter(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_mouser_start(uint32_t object, uint32_t player_slot);
+void enemy_mouser_enter(uint32_t object);
 void enemy_mouser_enter_start(uint32_t object);
 void enemy_mouser_enter_hop(uint32_t object);
 void enemy_mouser_enter_fall(uint32_t object);
 void enemy_mouser_enter_land(uint32_t object);
-void enemy_mouser_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_mouser_leave_side(uint32_t object, uint32_t player_slot);
+void enemy_mouser_think(uint32_t object, uint32_t second_slot);
+uint32_t enemy_mouser_leave_side(uint32_t object, uint32_t left_slot);
 void enemy_mouser_give_side_back(uint32_t object, uint32_t player_slot);
-void enemy_mouser_bite(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
+void enemy_mouser_bite(uint32_t object);
 void enemy_mouser_bite_start(uint32_t object);
-void enemy_mouser_bite_fly(uint32_t object, uint32_t player_slot);
+void enemy_mouser_bite_fly(uint32_t object);
 void enemy_mouser_bite_land(uint32_t object);
 void enemy_mouser_bite_hold(uint32_t object);
-void enemy_mouser_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_mouser_step_over_edge(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
+void enemy_mouser_hit(uint32_t object);
+void enemy_mouser_step_over_edge(uint32_t object);
 void enemy_mouser_hop_down(uint32_t object);
 void enemy_mouser_hop_fall(uint32_t object);
 void enemy_mouser_hop_land(uint32_t object);
@@ -1178,178 +2063,178 @@ void enemy_mouser_hop_up_fall(uint32_t object);
 void enemy_mouser_hop_up_right(uint32_t object);
 void enemy_mouser_hop_up_fall_blocked(uint32_t object);
 void enemy_mouser_hop_up_left(uint32_t object);
-uint32_t enemy_mouser_chase(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_mouser_chase_start(uint8_t direction, uint32_t object);
-uint32_t enemy_mouser_chase_run(uint32_t object, uint32_t player_slot, uint32_t animations);
+void enemy_mouser_chase(uint32_t object);
+void enemy_mouser_chase_start(uint8_t direction, uint32_t object);
+void enemy_mouser_chase_run(uint32_t object, uint32_t player_slot);
 void enemy_mouser_chase_pause(uint32_t object);
 void enemy_mouser_chase_wait(uint32_t object);
-uint32_t enemy_mouser_creep_to_side(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_mouser_creep_to_side_start(uint8_t direction, uint32_t object);
-uint32_t enemy_mouser_creep_to_side_step(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_mouser_back_off(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_mouser_back_off_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_mouser_back_off_run(uint8_t direction, uint32_t object);
+void enemy_mouser_creep_to_side(uint32_t object);
+void enemy_mouser_creep_to_side_start(uint8_t direction, uint32_t object);
+void enemy_mouser_creep_to_side_step(uint32_t object, uint32_t player_slot);
+void enemy_mouser_back_off(uint32_t object);
+void enemy_mouser_back_off_start(uint32_t object, uint32_t player_slot);
+void enemy_mouser_back_off_run(uint8_t direction, uint32_t object);
 void enemy_mouser_sit(uint32_t object);
 void enemy_mouser_back_off_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_mouser_thrown_off(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_mouser_thrown_off(uint32_t object);
 void enemy_mouser_thrown_off_start(uint32_t object);
-uint32_t enemy_mouser_break_down(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_mouser_break_down(uint32_t object);
 void enemy_mouser_break_down_start(uint32_t object);
-uint32_t enemy_mouser_knocked_flying(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_mouser_knocked_flying_start(uint32_t object, uint32_t player_slot);
+void enemy_mouser_knocked_flying(uint32_t object);
+void enemy_mouser_knocked_flying_start(uint32_t object);
 void enemy_mouser_fly_and_crash(uint32_t object);
 void enemy_mouser_remove(uint32_t object, uint32_t player_slot);
 void mouser_hole_start(uint32_t object);
 void mouser_hole_wait(uint32_t object);
 void mouser_hole_open(uint32_t object);
-uint32_t mouser_hole_let_out(uint32_t object, uint32_t record);
-uint32_t enemy_rodney_start(uint32_t object, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_rodney_enter(uint32_t object, uint32_t slot, uint32_t a5);
+void mouser_hole_let_out(uint32_t object);
+void enemy_rodney_start(uint32_t object, uint32_t player_slot);
+void enemy_rodney_enter(uint32_t object);
 void enemy_rodney_enter_wait(uint32_t object);
 void enemy_rodney_enter_burst_out(uint32_t object);
 void enemy_rodney_enter_fall(uint32_t object);
 void enemy_rodney_enter_land(uint32_t object);
-void enemy_rodney_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_rodney_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_rodney_leave_side(uint32_t object, uint32_t player_slot);
+void enemy_rodney_think(uint32_t object, uint32_t second_slot);
+void enemy_rodney_hit(uint32_t object);
+uint32_t enemy_rodney_leave_side(uint32_t object, uint32_t left_slot);
 void enemy_rodney_give_side_back(uint32_t object, uint32_t player_slot);
-uint32_t enemy_rodney_rush(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_rodney_rush_start(uint32_t object, uint32_t player_slot);
+void enemy_rodney_rush(uint32_t object);
+void enemy_rodney_rush_start(uint32_t object, uint32_t player_slot);
 void enemy_rodney_rush_run(uint32_t object);
 void enemy_rodney_brake(uint32_t object);
-uint32_t enemy_rodney_rush_across(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rodney_rush_across(uint32_t object);
 void enemy_rodney_rush_across_start(uint32_t object);
 void enemy_rodney_rush_across_run(uint32_t object);
-uint32_t enemy_rodney_back_off(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rodney_back_off(uint32_t object);
 void enemy_rodney_back_off_start(uint32_t object);
 void enemy_rodney_slide_to_stop(uint32_t object);
 void enemy_rodney_back_off_turn(uint32_t object);
 void enemy_rodney_back_off_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_rodney_shoot(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rodney_shoot(uint32_t object);
 void enemy_rodney_shoot_start(uint32_t object);
 void enemy_rodney_shoot_turn(uint32_t object);
 void enemy_rodney_shoot_ready(uint32_t object);
-uint32_t enemy_rodney_shoot_fire(uint32_t object, uint32_t record);
+void enemy_rodney_shoot_fire(uint32_t object);
 void enemy_rodney_shoot_end(uint32_t object);
-uint32_t enemy_rodney_whip(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_rodney_whip(uint32_t object);
 void enemy_rodney_whip_start(uint32_t object);
 void enemy_rodney_whip_slow_down(uint32_t object);
 void enemy_rodney_whip_wind_up(uint32_t object);
-uint32_t enemy_rodney_whip_throw_arm(uint32_t object, uint32_t record);
+void enemy_rodney_whip_throw_arm(uint32_t object);
 void enemy_rodney_follow_row(uint32_t object);
 void enemy_rodney_whip_reach(uint32_t object);
 void enemy_rodney_whip_pull_in(uint32_t object);
 void enemy_rodney_whip_lash(uint32_t object);
 void enemy_rodney_whip_retract(uint32_t object);
-uint32_t enemy_rodney_knocked_back(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rodney_knocked_back_start(uint32_t object, uint32_t player_slot);
+void enemy_rodney_knocked_back(uint32_t object);
+void enemy_rodney_knocked_back_start(uint32_t object);
 void enemy_rodney_knocked_back_fall(uint32_t object);
 void enemy_rodney_knocked_back_end(uint32_t object);
-uint32_t enemy_rodney_destroyed(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_rodney_destroyed_start(uint32_t object, uint32_t player_slot);
+void enemy_rodney_destroyed(uint32_t object);
+void enemy_rodney_destroyed_start(uint32_t object);
 void enemy_rodney_destroyed_fall(uint32_t object);
 void enemy_rodney_destroyed_land(uint32_t object);
 void enemy_rodney_destroyed_end(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_start(uint32_t object, uint32_t slot, uint32_t a5, uint32_t player_slot);
-uint32_t enemy_shredder_enter(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_shredder_think(uint32_t object, uint32_t second_slot, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_shredder_attack(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-void enemy_shredder_hit(uint32_t object, uint32_t *p_a1, uint32_t *p_a5);
-void enemy_shredder_react(uint32_t object, uint32_t *p_slot, uint32_t *p_a5);
-uint32_t enemy_shredder_appear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_enter(uint32_t object);
+void enemy_shredder_think(uint32_t object, uint32_t second_slot);
+void enemy_shredder_attack(uint32_t object);
+void enemy_shredder_hit(uint32_t object);
+void enemy_shredder_react(uint32_t object);
+void enemy_shredder_appear(uint32_t object);
 void enemy_shredder_appear_wait(uint32_t object);
 void enemy_shredder_appear_step_out(uint32_t object);
 void enemy_shredder_appear_walk_in(uint32_t object);
-uint32_t enemy_shredder_split(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_shredder_split_start(uint32_t object);
+void enemy_shredder_split(uint32_t object);
+void enemy_shredder_split_start(uint32_t object);
 void enemy_shredder_split_blink(uint32_t object);
-uint32_t enemy_shredder_clone_appear(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_clone_appear(uint32_t object);
 void enemy_shredder_clone_appear_start(uint32_t object);
 void enemy_shredder_clone_appear_blink(uint32_t object);
-uint32_t enemy_shredder_walk_to_side(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_shredder_walk_to_side_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_walk_to_side_step(uint32_t object, uint32_t player_slot);
+void enemy_shredder_walk_to_side(uint32_t object);
+void enemy_shredder_walk_to_side_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_walk_to_side_step(uint32_t object, uint32_t player_slot);
 void enemy_shredder_walk_to_side_crouch(uint32_t object);
-uint32_t enemy_shredder_walk_to_side_turn(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_shredder_walk_to_side_hold(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_walk_to_target(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_shredder_walk_to_target_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_walk_to_target_step(uint32_t object, uint32_t player_slot, uint32_t animations);
-uint32_t enemy_shredder_guard(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_walk_to_side_turn(uint32_t object, uint32_t player_slot);
+void enemy_shredder_walk_to_side_hold(uint32_t object, uint32_t player_slot);
+void enemy_shredder_walk_to_target(uint32_t object);
+void enemy_shredder_walk_to_target_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_walk_to_target_step(uint32_t object, uint32_t player_slot);
+void enemy_shredder_guard(uint32_t object);
 void enemy_shredder_guard_start(uint32_t object);
 void enemy_shredder_guard_counter(uint32_t object);
-uint32_t enemy_shredder_back_off(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_shredder_back_off_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_back_off_walk(uint32_t object, uint32_t player_slot);
+void enemy_shredder_back_off(uint32_t object);
+void enemy_shredder_back_off_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_back_off_walk(uint32_t object, uint32_t player_slot);
 void enemy_shredder_back_off_wait(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_lose_bar(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_lose_bar(uint32_t object);
 void enemy_shredder_lose_bar_start(uint32_t object);
-uint32_t enemy_shredder_lose_bar_end(uint32_t object, uint32_t record);
+void enemy_shredder_lose_bar_end(uint32_t object);
 void enemy_shredder_flash(uint32_t object);
-uint32_t enemy_shredder_flinch(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_flinch(uint32_t object);
 void enemy_shredder_flinch_start(uint32_t object);
 void enemy_shredder_flinch_end(uint32_t object);
-uint32_t enemy_shredder_flinch_from_behind(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_flinch_from_behind(uint32_t object);
 void enemy_shredder_flinch_from_behind_start(uint32_t object);
-uint32_t enemy_shredder_defeated(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_shredder_defeated_start(uint32_t object, uint32_t target);
+void enemy_shredder_defeated(uint32_t object);
+void enemy_shredder_defeated_start(uint32_t object);
 void enemy_shredder_defeated_fall(uint32_t object);
 void enemy_shredder_defeated_land(uint32_t object);
 void enemy_shredder_defeated_wait(uint32_t object);
 void enemy_shredder_defeated_stay(void);
-uint32_t enemy_shredder_vanish(uint32_t object, uint32_t slot, uint32_t a5);
-void enemy_shredder_vanish_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_vanish(uint32_t object);
+void enemy_shredder_vanish_start(uint32_t object);
 void enemy_shredder_vanish_wait(uint32_t object);
 void enemy_shredder_vanish_blink(uint32_t object);
-uint32_t enemy_shredder_kick(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_kick(uint32_t object);
 void enemy_shredder_kick_start(uint32_t object);
 void enemy_shredder_blow_end(uint32_t object);
-uint32_t enemy_shredder_thrust(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_thrust(uint32_t object);
 void enemy_shredder_thrust_start(uint32_t object);
-uint32_t enemy_shredder_slash(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_slash(uint32_t object);
 void enemy_shredder_slash_start(uint32_t object);
-uint32_t enemy_shredder_sweep(uint32_t object, uint32_t slot, uint32_t a5);
+void enemy_shredder_sweep(uint32_t object);
 void enemy_shredder_sweep_start(uint32_t object);
-uint32_t enemy_shredder_ray(uint32_t object, uint32_t slot, uint32_t a5);
-uint32_t enemy_shredder_ray_start(uint32_t object, uint32_t player_slot);
-uint32_t enemy_shredder_ray_line_up(uint32_t object, uint32_t player_slot);
+void enemy_shredder_ray(uint32_t object);
+void enemy_shredder_ray_start(uint32_t object, uint32_t player_slot);
+void enemy_shredder_ray_line_up(uint32_t object, uint32_t player_slot);
 void enemy_shredder_ray_charge(uint32_t object);
-uint32_t enemy_shredder_ray_fire(uint32_t object, uint32_t record);
+void enemy_shredder_ray_fire(uint32_t object);
 void enemy_shredder_ray_end(uint32_t object);
 
 /* objects/stockman.c: Baxter Stockman (area 3) and the Mousers he drops */
-uint32_t stockman_enter(uint16_t routine_offset, uint32_t object, uint32_t a5);
+void stockman_enter(uint16_t on_right, uint32_t object);
 void stockman_start(uint32_t object);
-uint32_t stockman_wait_for_last_enemy(uint32_t object, uint32_t a5);
+void stockman_wait_for_last_enemy(uint32_t object);
 void stockman_wait(uint32_t object);
-uint32_t stockman_fly_in(uint32_t routine_offset, uint32_t object, uint32_t a5);
-uint32_t stockman_fly(uint32_t object, uint32_t a5);
-uint32_t stockman_drop_mouser(uint32_t object, uint32_t choices);
+void stockman_fly_in(uint32_t on_right, uint32_t object);
+void stockman_fly(uint32_t object);
+void stockman_drop_mouser(uint32_t object);
 void stockman_idle(void);
 void stockman_struck(uint32_t object);
-uint32_t stockman_recover(uint32_t object, uint32_t choices);
-uint32_t stockman_defeated(uint32_t object, uint32_t a5);
-uint32_t stockman_defeated_explode(uint32_t object, uint32_t a5);
+void stockman_recover(uint32_t object);
+void stockman_defeated(uint32_t object);
+void stockman_defeated_explode(uint32_t object);
 void stockman_defeated_next_explosion(uint32_t object);
 void stockman_defeated_vanish(uint32_t object);
 void stockman_shake(uint32_t object);
-uint32_t stockman_steer(uint32_t object, uint32_t choices);
+void stockman_steer(uint32_t object);
 void stockman_keep_in_area(uint32_t object);
 void stockman_bob(uint32_t object);
 void stockman_move(uint32_t object);
 void stockman_random_drop_time(uint32_t object);
 void stockman_set_floor(uint32_t object);
 uint32_t highest_player_in_play(void);
-uint32_t stockman_start_mouser(uint32_t object, uint32_t a5, uint32_t object_2);
+void stockman_start_mouser(uint32_t object, uint32_t object_2);
 void falling_mouser_start(uint32_t object);
 void falling_mouser_fall(uint32_t object);
 void falling_mouser_idle(void);
 void falling_mouser_struck(uint32_t object);
 
 /* objects/turtles.c: the turtles: joining the game, the area's start and entry, and every turtle's frame: the controls, the moves and the scroll they push, the jumps, the attacks, the hits and the floor map's walls */
-uint32_t turtle_join(uint8_t players);
-uint32_t turtle_respawn(uint8_t players);
-uint32_t turtle_start_area(uint8_t starting_players);
+void turtle_join(uint8_t players);
+void turtle_respawn(uint8_t players);
+void turtle_start_area(uint8_t starting_players);
 uint32_t turtle_init(uint8_t kind, uint8_t by_entry, uint32_t turtle);
 void turtle_place_at_start(uint32_t kind_offset, uint32_t object);
 void turtle_start_fall_in(uint32_t kind_offset, uint32_t object);
@@ -1364,10 +2249,10 @@ void area_entry_jump_in(void);
 void start_jump_in_entry(void);
 void turtle_jump_in_step(void);
 uint32_t turtle_skateboard_shadow(void);
-uint32_t update_players(void);
-uint32_t turtle_run_all(void);
+void update_players(void);
+void turtle_run_all(void);
 void turtle_collide(uint32_t object, uint32_t inputs);
-void unreached_01AC7E(uint32_t object);
+void jump_to_read_floor_cells(uint32_t object);
 void turtle_check_walls(uint32_t object, uint32_t inputs, uint32_t floor_cell_place);
 void turtle_move(uint32_t object, uint32_t inputs);
 void turtle_push_scroll_left(uint32_t object, uint32_t inputs, uint32_t *p_new_column_x, uint32_t *p_phase_step, uint32_t *p_carry);
@@ -1384,13 +2269,13 @@ void turtle_start_jump(uint32_t object, uint32_t inputs, uint32_t presses);
 void turtle_start_combo(uint32_t object, uint32_t inputs);
 void turtle_start_attack(uint8_t move, uint32_t object);
 void turtle_set_attack(uint16_t move, uint16_t attack, uint32_t object);
-void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_d1, uint32_t *p_d4, uint32_t *p_d6);
-uint32_t turtle_set_animation(uint32_t d1, uint32_t object);
+void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_player_offset, uint32_t *p_bank, uint32_t *p_fourth_row_tile);
+uint32_t turtle_set_animation(uint32_t held, uint32_t object);
 void turtle_stand(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses);
 void turtle_walk(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses);
-void turtle_jump(uint8_t d1, uint32_t object, uint32_t inputs, uint32_t presses);
+void turtle_jump(uint8_t held, uint32_t object, uint32_t inputs, uint32_t presses);
 void turtle_jump_rise(uint32_t object, uint32_t inputs);
-void turtle_jump_top(uint32_t d1, uint32_t object, uint32_t inputs);
+void turtle_jump_top(uint32_t held, uint32_t object, uint32_t inputs);
 void turtle_jump_fall(uint32_t object);
 void turtle_land_on_ground(uint32_t object);
 void turtle_land(uint32_t object);
@@ -1449,7 +2334,7 @@ void turtle_held_throw_off_struggle(uint32_t object, uint32_t presses);
 void turtle_hit_fly(uint32_t object);
 void turtle_show_prompt(uint32_t prompt_place, uint16_t prompt_y, uint32_t object);
 void turtle_erase_prompt(uint32_t object);
-void turtle_save_health(uint32_t object);
+void turtle_save_health(uint32_t job, uint32_t object);
 void turtle_knockback_arc(uint16_t jump_speed, uint32_t object);
 void turtle_fire_gun(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses);
 void turtle_floor_contact(uint8_t new_contacts, uint32_t object);
@@ -1512,15 +2397,15 @@ void exit_car_street_van_start_up(uint16_t on_right);
 void exit_car_street_van_drives_off(void);
 void exit_car_street_april_hug_start(void);
 void exit_car_street_april_hug(void);
-void move_in_direction(uint8_t direction, uint8_t speed, uint32_t object);
+void move_in_direction(uint8_t direction, uint16_t speed, uint32_t object);
 void update_screen_place(uint32_t object);
 void turtle_exit_highway(void);
 void run_exit_skateboard(void);
 uint32_t turtle_exit_skateboard_gather(void);
 uint32_t turtle_exit_skateboard_board(void);
 uint32_t exit_skateboard_van_door(void);
-uint32_t exit_skateboard_van_drives(uint32_t on_right, uint32_t a0);
-uint32_t exit_skateboard_crash_picture(uint32_t a0);
+uint32_t exit_skateboard_van_drives(uint32_t on_right, uint32_t step_object);
+uint32_t exit_skateboard_crash_picture(uint32_t step_object);
 void finish_area_exit(void);
 void exit_skateboard_road_round(void);
 void turtle_exit_go_to_place(uint32_t object);
@@ -1529,7 +2414,7 @@ void exit_building_site_free_splinter(void);
 void turtle_exit_building_site_walk(void);
 void turtle_exit_building_site_jump(void);
 void exit_building_site_splinter_picture(void);
-void unreached_02D1D6(uint32_t counter);
+void add_four_to_counter(uint32_t counter);
 void exit_building_site_splinter_thanks(void);
 void turtle_exit_building_site_drop(void);
 void turtle_exit_building_site_land(void);
@@ -1576,7 +2461,7 @@ void attract_end(void);
 void attract_end_clear(void);
 void attract_end_reset(void);
 void attract_end_restart(void);
-void unreached_005266(void);
+void copy_sprites_and_fill_layer_b(void);
 void attract_begin(void);
 void attract_coin_screen(void);
 void coin_screen_setup(void);
@@ -1715,7 +2600,7 @@ void play_entry(void);
 void play_entry_palettes(void);
 void play_entry_layers(void);
 void play_entry_show_game_over(void);
-void play_entry_start(uint16_t substep_offset);
+void play_entry_start(uint16_t count);
 void play_entry_run(void);
 void play_main(void);
 void play_frame(void);
@@ -1739,7 +2624,7 @@ void intro_climb_start(void);
 void intro_climb(void);
 void intro_roof_start(void);
 void intro_roof_land(void);
-uint32_t intro_animate_fire(uint32_t d0);
+uint32_t intro_animate_fire(uint32_t kept_bits);
 uint32_t draw_tile_square_8x8(uint32_t square);
 uint32_t draw_tile_square_4x4(uint32_t square);
 
@@ -1776,9 +2661,9 @@ void back_to_attract(void);
 uint32_t draw_ranking_background(void);
 void draw_initials(uint16_t count);
 void draw_initial(uint8_t attribute, uint16_t initial, uint32_t tile_place);
-uint32_t draw_ranking_frame(uint32_t d6, uint16_t count);
+uint32_t draw_ranking_frame(uint32_t colour, uint16_t count);
 void draw_ranking_label(uint8_t colour, uint16_t count);
-void draw_ranking_place(uint16_t count, uint32_t a0);
+void draw_ranking_place(uint16_t count, uint32_t places);
 uint32_t ranking_frame_colour(uint32_t player_number);
 void reset_ranking(void);
 
@@ -1797,11 +2682,11 @@ void check_cleared_final(void);
 uint32_t players_ready(void);
 
 /* stage/drill_arrival.c: the drill pod that comes down through the ceiling in areas 1 and 7 and lets out Rocksteady or the flying drones */
-uint32_t run_drill_arrival(uint32_t a1);
+void run_drill_arrival(void);
 void drill_arrival_wait(void);
 void drill_arrival_rumble(void);
 void shake_layers_and_objects(void);
-uint32_t drill_arrival_descend(uint32_t object);
+void drill_arrival_descend(void);
 void drill_arrival_open(void);
 void drill_arrival_end(void);
 
@@ -1809,9 +2694,9 @@ void drill_arrival_end(void);
 void animate_fire_tiles(uint32_t *p_third_row_offset, uint32_t *p_second_row_offset);
 
 /* stage/floor_map.c: the floor map's cells around an object, for the turtles, the enemies and the missiles */
-void read_floor_cells_on_screen(uint32_t object, uint32_t *p_a5, uint32_t *p_a6);
+uint32_t read_floor_cells_on_screen(uint32_t object);
 uint32_t read_floor_cells(uint32_t object);
-void read_floor_cells_at(uint8_t feet_y, uint16_t floor_column, uint32_t object, uint32_t *p_height_cell_place, uint32_t *p_floor_cell_place);
+uint32_t read_floor_cells_at(uint8_t feet_y, uint16_t floor_column, uint32_t object);
 
 /* stage/layers.c: the areas' layers: their maps of blocks drawn as the scroll goes on */
 void draw_whole_layer_and_floor(uint32_t tile_place);
@@ -1831,36 +2716,36 @@ void load_layer_a(void);
 void load_layer_b(void);
 void save_layer_a(void);
 void save_layer_b(void);
-uint32_t draw_new_row_and_column_and_floor(uint32_t floor_place);
+void draw_new_row_and_column_and_floor(void);
 void draw_new_row_and_column(void);
-uint32_t update_area_layers(uint32_t a1);
+void update_area_layers(void);
 void set_layers_scroll(void);
-uint32_t update_layers_building(uint16_t on_right, uint32_t wall_place);
-uint32_t update_layers_apartment(uint32_t wall_place);
+void update_layers_building(uint16_t on_right);
+void update_layers_apartment(void);
 void april_wait_for_rescue(void);
-uint32_t update_layers_street(uint32_t stage_offset, uint32_t right_half_place);
-uint32_t draw_tv_picture(uint8_t tile_attribute, uint32_t tiles);
-uint32_t animate_tv_picture(uint32_t tv_frame);
-uint32_t update_layers_sewer(uint32_t wall_column);
+void update_layers_street(uint32_t stage_offset);
+void draw_tv_picture(uint8_t tile_attribute, uint32_t tiles);
+void animate_tv_picture(uint32_t tv_frame);
+void update_layers_sewer(void);
 void update_layers_car_street(void);
 void update_layers_final(void);
-uint32_t update_layers_building_site(uint32_t a1);
-uint32_t update_layers_technodrome(uint32_t a1);
+void update_layers_building_site(void);
+void update_layers_technodrome(void);
 void technodrome_reach_lift(void);
-uint32_t technodrome_ride_lift(uint32_t wall_place);
-uint32_t technodrome_leave_lift(uint32_t a1);
+void technodrome_ride_lift(void);
+void technodrome_leave_lift(void);
 void fill_floor_map_rows(uint8_t rows, uint32_t cells, uint32_t floor_place);
 void place_lift_edge(void);
-uint32_t update_layers_highway(uint32_t a1);
-uint32_t highway_first_car(uint32_t a1);
-uint32_t highway_first_car_drive(uint32_t right_wheel_place);
-uint32_t highway_second_car(uint32_t a1);
-uint32_t highway_second_car_drive(uint32_t right_wheel_place);
-uint32_t highway_third_car(uint32_t a1);
-uint32_t highway_third_car_drive(uint32_t right_wheel_place);
+void update_layers_highway(void);
+void highway_first_car(void);
+void highway_first_car_drive(void);
+void highway_second_car(void);
+void highway_second_car_drive(void);
+void highway_third_car(void);
+void highway_third_car_drive(void);
 void highway_cars_over(void);
-uint32_t drive_foot_car(uint32_t right_wheel_place);
-uint32_t draw_screen_picture(void);
+void drive_foot_car(uint8_t colour_offset);
+void draw_screen_picture(uint8_t colour_offset);
 void update_layers_skateboard(void);
 void skateboard_road_first_loop(void);
 void skateboard_road_go_on(void);
@@ -1907,14 +2792,14 @@ uint32_t new_coin_presses(uint32_t presses);
 void pulse_coin_counter(uint32_t coin_slot);
 void count_coin(uint32_t coin_slot);
 uint32_t add_credit_lives(void);
-void unreached_003DAA(uint8_t tile_code);
+void fill_tile_column(uint8_t tile_code);
 void vblank_interrupt(void);
-uint32_t read_inputs(uint32_t d7);
+uint32_t read_inputs(uint32_t kept_bits);
 void run_startup(void);
 void startup_begin(void);
 void startup_wait(void);
 void startup_end(void);
-void unreached_004068(void);
+void run_on_into_set_screen_flip(void);
 void set_screen_flip(void);
 void run_attract(void);
 void run_game(void);
@@ -1934,18 +2819,18 @@ void use_life_player_3(void);
 void use_life_player_4(void);
 void use_life(uint8_t player_number, uint32_t player);
 void reset_score(uint32_t player);
-uint32_t update_players_in_game(uint32_t marker);
+void update_players_in_game(void);
 void redraw_new_lives(void);
-uint32_t join_players(uint32_t marker);
-uint32_t respawn_players(uint32_t marker);
+void join_players(void);
+void respawn_players(void);
 void update_player_messages(void);
-void update_player_message(uint8_t count);
-void unreached_0044EE(uint16_t box_flags);
+void update_player_message(uint8_t count, uint32_t player_bits);
+void queue_player_boxes(uint16_t box_flags);
 void clear_play(void);
 void zero_ram_below(uint16_t count, uint32_t ram_end);
 void zero_fill_registers(uint32_t *p_fill, uint32_t *p_fill_2, uint32_t *p_fill_3, uint32_t *p_fill_4, uint32_t *p_fill_5, uint32_t *p_fill_6, uint32_t *p_fill_7, uint32_t *p_fill_8);
 void clear_area_variables(void);
-void unreached_00456A(void);
+void clear_players_and_ram(void);
 void clear_player_1(void);
 void clear_player_2(void);
 void clear_player_3(void);
@@ -1957,11 +2842,11 @@ void clear_engine_ram(void);
 void clear_spare_ram(void);
 void clear_objects(void);
 void clear_sprite_ram(void);
-void unreached_004620(uint16_t d0);
-void unreached_00462E(uint16_t d0);
-void unreached_00463C(uint16_t d0);
-void unreached_00464A(uint16_t d0);
-void unreached_004658(uint16_t d0);
+void zero_ram_below_object_0(uint16_t kept_bits);
+void zero_ram_below_object_12(uint16_t kept_bits);
+void zero_ram_below_object_24(uint16_t kept_bits);
+void zero_ram_below_object_4(uint16_t kept_bits);
+void zero_ram_below_object_32(uint16_t kept_bits);
 
 /* system/palette_editor.c: an unused colour editor for the palette RAM, worked with the first player's joystick */
 void palette_editor(void);
@@ -1987,12 +2872,12 @@ void start_mask_rom_sums(void);
 void show_mask_rom_check(void);
 void mask_rom_check_wait(void);
 void sum_mask_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t job_parameter);
-uint32_t sum_sprite_roms_low(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t last_bank, uint32_t a0);
-uint32_t sum_sprite_roms_high(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t job_parameter, uint32_t a0);
-void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t last_bank);
-void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t job_parameter, uint32_t a0);
-void add_to_rom_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t fourth_byte);
-void unreached_001D9E(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t fourth_byte);
+uint32_t sum_sprite_roms_low(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t job_parameter, uint32_t sums);
+uint32_t sum_sprite_roms_high(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint16_t job_parameter, uint32_t sums);
+void sum_sprite_rom_banks(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t job_parameter);
+void sum_tile_roms(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t job_parameter, uint32_t sums);
+void add_to_rom_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t fourth_byte);
+void add_mask_rom_bits_to_sums(uint32_t first_byte, uint32_t second_byte, uint32_t third_byte, uint32_t fourth_byte);
 void job_none_before_clear_layers(void);
 void clear_layers_job(uint8_t layers);
 void blank_tile(uint32_t *p_blank_attribute, uint32_t *p_space_tile);
@@ -2025,13 +2910,13 @@ void sound_test_page(void);
 void sound_test_clear(void);
 void draw_sound_test(void);
 void sound_test_play(void);
-void unreached_005C0C(void);
+void lone_return_before_dip_switch_page(void);
 void dip_switch_page(void);
 void dip_switch_clear(void);
 void draw_dip_switch_page(void);
 void show_dip_settings(void);
 void show_coinage(void);
-void unreached_005CF6(void);
+void show_free_play_setting(void);
 void show_difficulty(void);
 void show_lives_setting(void);
 void show_demo_sound(void);
@@ -2043,9 +2928,9 @@ void stop_test_sound(void);
 void queue_test_sound(uint8_t sound);
 
 /* video/palettes.c: the palettes: requests queued and done a frame later, the palette effects */
-uint32_t post_palette_request(uint16_t kind, uint32_t data);
-void unreached_009264(uint32_t requests);
-void run_palette_requests(uint16_t d7);
+void post_palette_request(uint16_t kind, uint32_t data);
+void post_palette_request_list(uint32_t requests);
+void run_palette_requests(uint16_t bank_bits);
 void palette_request_none(void);
 void palette_request_area(uint16_t banks);
 void palette_request_area_second_half(uint16_t second_half_offset);
@@ -2062,15 +2947,15 @@ void palette_request_spare(void);
 void copy_palette_list(uint16_t count, uint32_t palettes);
 void blacken_palettes(uint16_t count);
 void copy_palette_sets(void);
-void fade_palettes_start(void);
+void fade_palettes_start(uint16_t fade, uint32_t target_palettes);
 void fade_palettes_read(void);
 void fade_palettes_write(void);
 void fade_palettes_part(uint32_t *p_part, uint32_t *p_buffer_place, uint32_t *p_colour_place);
 void fade_palettes_step(void);
 void fade_colour_part(uint16_t rate, uint16_t colour, uint32_t target_colour, uint32_t *p_new_colour, uint32_t *p_channels);
-void start_palette_effects(uint32_t palette_effect_pointer);
+void start_palette_effects(uint32_t effect_list);
 void step_palette_effects(void);
-void unreached_0099B4(uint8_t layers);
+void stop_every_palette_effect(uint8_t layers);
 void stop_fixed_layer_effect(uint8_t layers, uint32_t palette_effect);
 void stop_layer_a_effect(uint8_t layers, uint32_t palette_effect);
 void stop_layer_b_effect(uint8_t layers, uint32_t palette_effect);
@@ -2078,16 +2963,15 @@ void stop_sprite_effect(uint8_t layers, uint32_t palette_effect);
 void clear_palette_effect(uint32_t palette_effect);
 void clear_palette_effects(void);
 void request_game_step_palettes(void);
-void unreached_009AA0(void);
 void start_game_step_palette_effects(void);
 void start_area_palette_effects(void);
 void start_palette_effect_lists(uint32_t effect_lists);
 
 /* video/speech_balloons.c: the speech balloons in the fixed layer with their speeches, and the lines said with them */
-uint32_t draw_balloon_pointer(uint32_t a6);
+uint32_t draw_balloon_pointer(uint32_t balloon_tile_place);
 uint32_t say_we_gotta_save_splinter(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_lets_move_it(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
-void say_youre_dead_shell_brain(uint16_t screen_x, uint16_t screen_y, uint32_t *p_on_right, uint32_t *p_a6);
+void say_youre_dead_shell_brain(uint16_t screen_x, uint16_t screen_y, uint32_t *p_on_right, uint32_t *p_balloon_tile_place);
 uint32_t say_turtle_soup(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_im_invincible(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_crash_the_turtles(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
@@ -2095,17 +2979,17 @@ void say_do_not_resist_us(uint32_t on_right, uint16_t screen_x, uint16_t screen_
 uint32_t say_help_me(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_attack(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_pizza_time(uint32_t on_right, uint16_t screen_x, uint16_t screen_y, uint32_t object);
-void unreached_030062(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
-void unreached_03006C(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
-void say_shell_shock(uint32_t on_right, uint16_t screen_x, uint16_t screen_y, uint32_t object, uint32_t *p_d4, uint32_t *p_d6);
+void say_speedy(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
+void say_zappy(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
+void say_shell_shock(uint32_t on_right, uint16_t screen_x, uint16_t screen_y, uint32_t object, uint32_t *p_bank, uint32_t *p_fourth_row_tile);
 void say_yippee_i_ay(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
-void say_your_prayers_toitles(uint32_t on_right, uint8_t screen_x, uint16_t screen_y);
+void say_your_prayers_toitles(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
 void say_they_aint_getting_prettier(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
-uint32_t say_watch_your_mouth(uint32_t on_right, uint16_t screen_x, uint16_t screen_y, uint32_t target);
-void say_overgrown_cork_screw(uint32_t on_right, uint8_t screen_x, uint16_t screen_y);
-uint32_t draw_wide_balloon_pointer(uint32_t a6);
-void show_balloon_beside(uint16_t screen_x, uint16_t screen_y, uint16_t line, uint32_t *p_on_right, uint32_t *p_bank, uint32_t *p_fourth_row_tile, uint32_t *p_a6);
-void show_balloon(uint32_t screen_x, uint16_t screen_y, uint16_t line, uint32_t *p_on_right, uint32_t *p_bank, uint32_t *p_fourth_row_tile, uint32_t *p_a6);
+uint32_t say_watch_your_mouth(uint32_t on_right, uint16_t screen_x, uint16_t screen_y, uint32_t balloon_tile_place);
+void say_overgrown_cork_screw(uint32_t on_right, uint16_t screen_x, uint16_t screen_y);
+uint32_t draw_wide_balloon_pointer(uint32_t balloon_tile_place);
+void show_balloon_beside(uint16_t screen_x, uint16_t screen_y, uint16_t line, uint32_t *p_on_right, uint32_t *p_bank, uint32_t *p_fourth_row_tile, uint32_t *p_balloon_tile_place);
+void show_balloon(uint32_t screen_x, uint16_t screen_y, uint16_t line, uint32_t *p_on_right, uint32_t *p_bank, uint32_t *p_fourth_row_tile, uint32_t *p_balloon_tile_place);
 void erase_balloon(void);
 void draw_balloon_rows(uint8_t erasing, uint8_t tile_attribute, uint8_t first_row_tile, uint16_t count, uint32_t *p_second_row_tile, uint32_t *p_fourth_row_tile, uint32_t *p_tile_place);
 
@@ -2116,7 +3000,7 @@ void print_game_text(uint16_t text_number);
 void print_table_text(uint16_t text_number, uint32_t texts);
 void set_text_colour(uint16_t colour_number);
 void set_spare_text_colour(uint16_t colour_number);
-uint32_t add_point(uint32_t d4, uint16_t players);
+uint32_t add_point(uint32_t kept_bits, uint16_t players);
 void add_point_to_score(uint32_t score_end);
 void draw_scores(uint8_t players);
 void draw_score_player_1(void);
@@ -2130,30 +3014,30 @@ uint32_t draw_digit(uint8_t digit, uint32_t tile_place);
 void clear_scores(uint8_t players);
 void print_plain_text(uint32_t tile_place, uint32_t text);
 void draw_score_labels(uint8_t which_labels);
-void unreached_00218A(void);
+void word_to_decimal_digits(void);
 void print_colour_text(uint16_t text_number);
 void job_none_after_print_colour_text(void);
 uint32_t draw_tile_picture(uint16_t picture_number);
 void job_none_after_draw_tile_picture(void);
 void draw_player_boxes(uint16_t box_flags, uint32_t *p_players, uint32_t *p_box_offset, uint32_t *p_player);
-void draw_player_box(uint8_t player, uint8_t box_flags, uint32_t *p_d4, uint32_t *p_box_offset);
-uint32_t draw_box_frame_and_label(uint32_t label_offset, uint16_t box_offset, uint8_t player, uint8_t box_flags, uint32_t part_place, uint32_t box_places);
-uint32_t draw_lives(uint32_t lives, uint8_t player, uint8_t box_flags, uint32_t part_place);
-uint32_t draw_health_bar(uint8_t player, uint8_t box_flags, uint32_t part_place);
-uint32_t player_box_colour(uint32_t colour, uint8_t player);
+void draw_player_box(uint16_t player, uint8_t box_flags, uint32_t *p_drawn, uint32_t *p_box_offset);
+void draw_box_frame_and_label(uint16_t player, uint8_t box_flags, uint32_t part_place, uint32_t box_places, uint32_t *p_label_offset, uint32_t *p_box_offset);
+uint32_t draw_lives(uint32_t drawn, uint16_t player, uint8_t box_flags, uint32_t part_place);
+uint32_t draw_health_bar(uint16_t player, uint8_t box_flags, uint32_t part_place);
+uint32_t player_box_colour(uint32_t colour, uint16_t player);
 void clear_lives_digits(uint8_t colour, uint32_t part_place);
 uint32_t clear_health_bar(uint8_t colour, uint32_t part_place);
 void draw_box_frame(uint8_t colour, uint8_t box_flags, uint32_t part_place);
-uint32_t draw_box_label(uint8_t colour, uint32_t label_offset, uint16_t box_offset, uint8_t player, uint8_t box_flags, uint32_t box_places);
-void unreached_0025C8(void);
+uint32_t draw_box_label(uint8_t colour, uint32_t label_offset, uint16_t box_offset, uint16_t player, uint8_t box_flags, uint32_t box_places);
+void draw_box_frame_by_rows(void);
 void print_stage_title(void);
-void draw_player_message(uint8_t player_message, uint32_t *p_d4, uint32_t *p_message_offset);
-void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6);
-void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6);
-void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6);
-void message_clear(uint8_t player_message, uint32_t player, uint32_t *p_d4, uint32_t *p_d6);
-uint32_t print_text_at(uint32_t d4, uint16_t text_number, uint8_t player_message);
-uint32_t draw_big_character(uint8_t character);
+void draw_player_message(uint8_t player_message, uint32_t *p_colour, uint32_t *p_message_offset);
+void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number);
+void message_press_start(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number);
+void message_out_of_lives(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number);
+void message_clear(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number);
+uint32_t print_text_at(uint32_t colour_bits, uint16_t text_number, uint8_t player_message);
+uint32_t draw_big_character(uint16_t pattern_bits, uint8_t character);
 uint32_t big_character_colour(uint32_t colour_number);
 void print_tall_text(uint8_t text_number, uint32_t *p_colour, uint32_t *p_character);
 uint32_t draw_tall_character(uint8_t colour, uint16_t character, uint32_t tile_place, uint32_t font_tiles);
@@ -2161,11 +3045,11 @@ uint32_t erase_tall_character(uint32_t tile_place);
 uint32_t tall_text_colour(uint32_t colour_number);
 
 /* video/tile_blocks.c: blocks of tiles drawn into the layers, and texts typed a character at a time */
-void start_typed_text_at_once(uint32_t text);
+uint32_t start_typed_text_at_once(uint32_t text);
 void type_next_character(void);
-uint32_t start_typed_text(uint32_t text);
+void start_typed_text(uint32_t *p_colour_number, uint32_t *p_text);
 void draw_tile_block(uint16_t place, uint32_t block);
-void unreached_01845E(void);
+void show_spawn_scroll_place(void);
 void draw_hex_digits(uint16_t count, uint32_t number, uint32_t tile_place);
 void start_text_typed_in_colours(uint8_t delay_shift, uint32_t text, uint32_t extend);
 void type_text_in_colours(void);
@@ -2173,7 +3057,7 @@ void type_colour_pass(uint16_t count, uint32_t typed_pass);
 uint32_t start_typed_line(uint32_t typed_pass, uint32_t text);
 void start_box_opening(void);
 void grow_tile_box(void);
-void unreached_0186E2(void);
+void start_wide_box_opening(void);
 void draw_tile_box(uint16_t count, uint16_t count_2, uint8_t tile_code, uint32_t corner_place);
 
 #endif

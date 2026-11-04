@@ -3,7 +3,7 @@
  *    Description: the game's variables, tables, board registers and structures
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    03-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -202,30 +202,30 @@
 #define demo_inputs_3 RAM32(demo_inputs_3_ADDRESS)
 #define demo_inputs_4_ADDRESS 0x0600D6u
 #define demo_inputs_4 RAM32(demo_inputs_4_ADDRESS)
-#define unk_060100_ADDRESS 0x060100u
-#define unk_060100(index) RAM16(unk_060100_ADDRESS + (index) * 2u)
-#define unk_060104_ADDRESS 0x060104u
-#define unk_060104 RAM16(unk_060104_ADDRESS)
-#define unk_060106_ADDRESS 0x060106u
-#define unk_060106(index) RAM8(unk_060106_ADDRESS + (index))
+#define player_1_lives_ADDRESS 0x060100u
+#define player_1_lives(index) RAM16(player_1_lives_ADDRESS + (index) * 2u)
+#define player_1_score_ADDRESS 0x060104u
+#define player_1_score RAM16(player_1_score_ADDRESS)
+#define player_1_health_bars_ADDRESS 0x060106u
+#define player_1_health_bars(index) RAM8(player_1_health_bars_ADDRESS + (index))
 #define unk_060108_ADDRESS 0x060108u
 #define unk_060108 RAM8(unk_060108_ADDRESS)
-#define unk_06010C_ADDRESS 0x06010Cu
-#define unk_06010C RAM16(unk_06010C_ADDRESS)
-#define unk_06010E_ADDRESS 0x06010Eu
-#define unk_06010E RAM8(unk_06010E_ADDRESS)
+#define player_2_score_ADDRESS 0x06010Cu
+#define player_2_score RAM16(player_2_score_ADDRESS)
+#define player_2_health_bars_ADDRESS 0x06010Eu
+#define player_2_health_bars RAM8(player_2_health_bars_ADDRESS)
 #define unk_060110_ADDRESS 0x060110u
 #define unk_060110 RAM8(unk_060110_ADDRESS)
-#define unk_060114_ADDRESS 0x060114u
-#define unk_060114 RAM16(unk_060114_ADDRESS)
-#define unk_060116_ADDRESS 0x060116u
-#define unk_060116 RAM8(unk_060116_ADDRESS)
+#define player_3_score_ADDRESS 0x060114u
+#define player_3_score RAM16(player_3_score_ADDRESS)
+#define player_3_health_bars_ADDRESS 0x060116u
+#define player_3_health_bars RAM8(player_3_health_bars_ADDRESS)
 #define unk_060118_ADDRESS 0x060118u
 #define unk_060118 RAM8(unk_060118_ADDRESS)
-#define unk_06011C_ADDRESS 0x06011Cu
-#define unk_06011C RAM16(unk_06011C_ADDRESS)
-#define unk_06011E_ADDRESS 0x06011Eu
-#define unk_06011E RAM8(unk_06011E_ADDRESS)
+#define player_4_score_ADDRESS 0x06011Cu
+#define player_4_score RAM16(player_4_score_ADDRESS)
+#define player_4_health_bars_ADDRESS 0x06011Eu
+#define player_4_health_bars RAM8(player_4_health_bars_ADDRESS)
 #define area_ADDRESS 0x060120u
 #define area RAM8(area_ADDRESS)
 #define stage_ADDRESS 0x060121u
@@ -302,8 +302,8 @@
 #define intro_over RAM8(intro_over_ADDRESS)
 #define area_entry_done_ADDRESS 0x061109u
 #define area_entry_done RAM8(area_entry_done_ADDRESS)
-#define unused_area_frames_ADDRESS 0x06110Au
-#define unused_area_frames(index) RAM16(unused_area_frames_ADDRESS + (index) * 2u)
+#define throw_timers_ADDRESS 0x06110Au
+#define throw_timers(index) RAM16(throw_timers_ADDRESS + (index) * 2u)
 #define drill_arrival_time_ADDRESS 0x06110Eu
 #define drill_arrival_time RAM8(drill_arrival_time_ADDRESS)
 #define shake_step_ADDRESS 0x06110Fu
@@ -314,8 +314,8 @@
 #define bebop_exchange_lines RAM8(bebop_exchange_lines_ADDRESS)
 #define balloon_on_right_ADDRESS 0x061113u
 #define balloon_on_right RAM8(balloon_on_right_ADDRESS)
-#define unused_area_frames_copy_ADDRESS 0x061114u
-#define unused_area_frames_copy(index) RAM16(unused_area_frames_copy_ADDRESS + (index) * 2u)
+#define throw_timers_2_ADDRESS 0x061114u
+#define throw_timers_2(index) RAM16(throw_timers_2_ADDRESS + (index) * 2u)
 #define floor_cell_down_ADDRESS 0x061118u
 #define floor_cell_down RAM8(floor_cell_down_ADDRESS)
 #define difficulty_from_time_ADDRESS 0x06111Eu
@@ -978,9 +978,9 @@
 #define initials_buttons_held RAM8(initials_buttons_held_ADDRESS)
 
 /* the program's data the code reads by name, which the game loads from its assets */
-#define indexed_table_of_32_bit_values_0013DE_ADDRESS 0x0013DEu
-extern const void *indexed_table_of_32_bit_values_0013DE_data;
-#define indexed_table_of_32_bit_values_0013DE ((const uint32_t *)indexed_table_of_32_bit_values_0013DE_data)
+#define job_handlers_ADDRESS 0x0013DEu
+extern const void *job_handlers_data;
+#define job_handlers ((const uint32_t *)job_handlers_data)
 #define lives_settings_ADDRESS 0x001426u
 extern const void *lives_settings_data;
 #define lives_settings ((const uint8_t *)lives_settings_data)
@@ -1002,9 +1002,9 @@ extern const void *boot_texts_data;
 #define text_colours_ADDRESS 0x001F1Au
 extern const void *text_colours_data;
 #define text_colours ((const uint8_t *)text_colours_data)
-#define indexed_table_of_32_bit_values_002678_ADDRESS 0x002678u
-extern const void *indexed_table_of_32_bit_values_002678_data;
-#define indexed_table_of_32_bit_values_002678 ((const uint32_t *)indexed_table_of_32_bit_values_002678_data)
+#define player_message_handlers_ADDRESS 0x002678u
+extern const void *player_message_handlers_data;
+#define player_message_handlers ((const uint32_t *)player_message_handlers_data)
 #define text_layer_places_ADDRESS 0x0027A2u
 extern const void *text_layer_places_data;
 #define text_layer_places ((const uint32_t *)text_layer_places_data)
@@ -1050,18 +1050,18 @@ extern const void *positioned_texts_data;
 #define tall_texts_ADDRESS 0x00375Cu
 extern const void *tall_texts_data;
 #define tall_texts ((const uint32_t *)tall_texts_data)
-#define indexed_table_of_32_bit_values_003E60_ADDRESS 0x003E60u
-extern const void *indexed_table_of_32_bit_values_003E60_data;
-#define indexed_table_of_32_bit_values_003E60 ((const uint32_t *)indexed_table_of_32_bit_values_003E60_data)
-#define indexed_table_of_32_bit_values_003F8E_ADDRESS 0x003F8Eu
-extern const void *indexed_table_of_32_bit_values_003F8E_data;
-#define indexed_table_of_32_bit_values_003F8E ((const uint32_t *)indexed_table_of_32_bit_values_003F8E_data)
-#define indexed_table_of_32_bit_values_004100_ADDRESS 0x004100u
-extern const void *indexed_table_of_32_bit_values_004100_data;
-#define indexed_table_of_32_bit_values_004100 ((const uint32_t *)indexed_table_of_32_bit_values_004100_data)
-#define indexed_table_of_32_bit_values_00413A_ADDRESS 0x00413Au
-extern const void *indexed_table_of_32_bit_values_00413A_data;
-#define indexed_table_of_32_bit_values_00413A ((const uint32_t *)indexed_table_of_32_bit_values_00413A_data)
+#define game_state_handlers_ADDRESS 0x003E60u
+extern const void *game_state_handlers_data;
+#define game_state_handlers ((const uint32_t *)game_state_handlers_data)
+#define startup_steps_ADDRESS 0x003F8Eu
+extern const void *startup_steps_data;
+#define startup_steps ((const uint32_t *)startup_steps_data)
+#define attract_steps_ADDRESS 0x004100u
+extern const void *attract_steps_data;
+#define attract_steps ((const uint32_t *)attract_steps_data)
+#define game_scene_handlers_ADDRESS 0x00413Au
+extern const void *game_scene_handlers_data;
+#define game_scene_handlers ((const uint32_t *)game_scene_handlers_data)
 #define demo_settings_table_ADDRESS 0x004E88u
 extern const void *demo_settings_table_data;
 #define demo_settings_table ((const uint8_t *)demo_settings_table_data)
@@ -1119,18 +1119,6 @@ extern const void *area_music_data;
 #define technodrome_explosion_sounds_ADDRESS 0x006DFCu
 extern const void *technodrome_explosion_sounds_data;
 #define technodrome_explosion_sounds ((const uint8_t *)technodrome_explosion_sounds_data)
-#define rom_0071EE_ADDRESS 0x0071EEu
-extern const void *rom_0071EE_data;
-#define rom_0071EE (*(const uint16_t *)rom_0071EE_data)
-#define rom_0071F0_ADDRESS 0x0071F0u
-extern const void *rom_0071F0_data;
-#define rom_0071F0 (*(const uint32_t *)rom_0071F0_data)
-#define rom_0071F4_ADDRESS 0x0071F4u
-extern const void *rom_0071F4_data;
-#define rom_0071F4 (*(const uint16_t *)rom_0071F4_data)
-#define rom_0071F6_ADDRESS 0x0071F6u
-extern const void *rom_0071F6_data;
-#define rom_0071F6 (*(const uint32_t *)rom_0071F6_data)
 #define technodrome_explosion_x_ADDRESS 0x0072E2u
 extern const void *technodrome_explosion_x_data;
 #define technodrome_explosion_x ((const int16_t *)technodrome_explosion_x_data)
@@ -1185,12 +1173,12 @@ extern const void *best_players_places_data;
 #define best_players_colours_ADDRESS 0x009186u
 extern const void *best_players_colours_data;
 #define best_players_colours ((const uint8_t *)best_players_colours_data)
-#define indexed_table_of_32_bit_values_009310_ADDRESS 0x009310u
-extern const void *indexed_table_of_32_bit_values_009310_data;
-#define indexed_table_of_32_bit_values_009310 ((const uint32_t *)indexed_table_of_32_bit_values_009310_data)
-#define rom_009334_ADDRESS 0x009334u
-extern const void *rom_009334_data;
-#define rom_009334 ((const uint32_t *)rom_009334_data)
+#define palette_request_handlers_ADDRESS 0x009310u
+extern const void *palette_request_handlers_data;
+#define palette_request_handlers ((const uint32_t *)palette_request_handlers_data)
+#define palette_request_second_halves_ADDRESS 0x009334u
+extern const void *palette_request_second_halves_data;
+#define palette_request_second_halves ((const uint32_t *)palette_request_second_halves_data)
 #define palette_bank_counts_ADDRESS 0x0095D2u
 extern const void *palette_bank_counts_data;
 #define palette_bank_counts ((const uint8_t *)palette_bank_counts_data)
@@ -1203,9 +1191,9 @@ extern const void *palette_banks_data;
 #define palette_effect_banks_ADDRESS 0x0098F2u
 extern const void *palette_effect_banks_data;
 #define palette_effect_banks ((const uint32_t *)palette_effect_banks_data)
-#define indexed_table_of_32_bit_values_0099F0_ADDRESS 0x0099F0u
-extern const void *indexed_table_of_32_bit_values_0099F0_data;
-#define indexed_table_of_32_bit_values_0099F0 ((const uint32_t *)indexed_table_of_32_bit_values_0099F0_data)
+#define palette_effect_stops_ADDRESS 0x0099F0u
+extern const void *palette_effect_stops_data;
+#define palette_effect_stops ((const uint32_t *)palette_effect_stops_data)
 #define game_step_palettes_ADDRESS 0x009A7Cu
 extern const void *game_step_palettes_data;
 #define game_step_palettes ((const uint32_t *)game_step_palettes_data)
@@ -1215,9 +1203,9 @@ extern const void *game_step_palette_effects_data;
 #define area_palette_effects_ADDRESS 0x009B28u
 extern const void *area_palette_effects_data;
 #define area_palette_effects ((const uint32_t *)area_palette_effects_data)
-#define indexed_table_of_32_bit_values_009C30_ADDRESS 0x009C30u
-extern const void *indexed_table_of_32_bit_values_009C30_data;
-#define indexed_table_of_32_bit_values_009C30 ((const uint32_t *)indexed_table_of_32_bit_values_009C30_data)
+#define palette_editor_states_ADDRESS 0x009C30u
+extern const void *palette_editor_states_data;
+#define palette_editor_states ((const uint32_t *)palette_editor_states_data)
 #define palette_editor_limits_ADDRESS 0x009D40u
 extern const void *palette_editor_limits_data;
 #define palette_editor_limits ((const uint8_t *)palette_editor_limits_data)
@@ -1251,36 +1239,36 @@ extern const void *hex_digit_tiles_data;
 #define area_palettes_ADDRESS 0x009F56u
 extern const void *area_palettes_data;
 #define area_palettes ((const uint32_t *)area_palettes_data)
-#define indexed_table_of_32_bit_values_00DF92_ADDRESS 0x00DF92u
-extern const void *indexed_table_of_32_bit_values_00DF92_data;
-#define indexed_table_of_32_bit_values_00DF92 ((const uint32_t *)indexed_table_of_32_bit_values_00DF92_data)
-#define indexed_table_of_32_bit_values_00E082_ADDRESS 0x00E082u
-extern const void *indexed_table_of_32_bit_values_00E082_data;
-#define indexed_table_of_32_bit_values_00E082 ((const uint32_t *)indexed_table_of_32_bit_values_00E082_data)
-#define indexed_table_of_32_bit_values_00E13C_ADDRESS 0x00E13Cu
-extern const void *indexed_table_of_32_bit_values_00E13C_data;
-#define indexed_table_of_32_bit_values_00E13C ((const uint32_t *)indexed_table_of_32_bit_values_00E13C_data)
-#define indexed_table_of_32_bit_values_00E1C0_ADDRESS 0x00E1C0u
-extern const void *indexed_table_of_32_bit_values_00E1C0_data;
-#define indexed_table_of_32_bit_values_00E1C0 ((const uint32_t *)indexed_table_of_32_bit_values_00E1C0_data)
-#define indexed_table_of_32_bit_values_00E2F0_ADDRESS 0x00E2F0u
-extern const void *indexed_table_of_32_bit_values_00E2F0_data;
-#define indexed_table_of_32_bit_values_00E2F0 ((const uint32_t *)indexed_table_of_32_bit_values_00E2F0_data)
-#define indexed_table_of_32_bit_values_00E3B0_ADDRESS 0x00E3B0u
-extern const void *indexed_table_of_32_bit_values_00E3B0_data;
-#define indexed_table_of_32_bit_values_00E3B0 ((const uint32_t *)indexed_table_of_32_bit_values_00E3B0_data)
+#define krang_appear_states_ADDRESS 0x00DF92u
+extern const void *krang_appear_states_data;
+#define krang_appear_states ((const uint32_t *)krang_appear_states_data)
+#define krang_walk_states_ADDRESS 0x00E082u
+extern const void *krang_walk_states_data;
+#define krang_walk_states ((const uint32_t *)krang_walk_states_data)
+#define krang_melee_states_ADDRESS 0x00E13Cu
+extern const void *krang_melee_states_data;
+#define krang_melee_states ((const uint32_t *)krang_melee_states_data)
+#define krang_lasers_states_ADDRESS 0x00E1C0u
+extern const void *krang_lasers_states_data;
+#define krang_lasers_states ((const uint32_t *)krang_lasers_states_data)
+#define krang_explode_states_ADDRESS 0x00E2F0u
+extern const void *krang_explode_states_data;
+#define krang_explode_states ((const uint32_t *)krang_explode_states_data)
+#define krang_escape_states_ADDRESS 0x00E3B0u
+extern const void *krang_escape_states_data;
+#define krang_escape_states ((const uint32_t *)krang_escape_states_data)
 #define krang_hover_heights_ADDRESS 0x00E48Au
 extern const void *krang_hover_heights_data;
 #define krang_hover_heights ((const uint16_t *)krang_hover_heights_data)
 #define krang_move_chances_ADDRESS 0x00E4FEu
 extern const void *krang_move_chances_data;
 #define krang_move_chances (*(const uint8_t *)krang_move_chances_data)
-#define indexed_table_of_32_bit_values_00E546_ADDRESS 0x00E546u
-extern const void *indexed_table_of_32_bit_values_00E546_data;
-#define indexed_table_of_32_bit_values_00E546 ((const uint32_t *)indexed_table_of_32_bit_values_00E546_data)
-#define indexed_table_of_32_bit_values_00E582_ADDRESS 0x00E582u
-extern const void *indexed_table_of_32_bit_values_00E582_data;
-#define indexed_table_of_32_bit_values_00E582 ((const uint32_t *)indexed_table_of_32_bit_values_00E582_data)
+#define krang_attacks_in_front_ADDRESS 0x00E546u
+extern const void *krang_attacks_in_front_data;
+#define krang_attacks_in_front ((const uint32_t *)krang_attacks_in_front_data)
+#define krang_attacks_close_by_ADDRESS 0x00E582u
+extern const void *krang_attacks_close_by_data;
+#define krang_attacks_close_by ((const uint32_t *)krang_attacks_close_by_data)
 #define krang_move_times_ADDRESS 0x00E700u
 extern const void *krang_move_times_data;
 #define krang_move_times ((const uint8_t *)krang_move_times_data)
@@ -1320,9 +1308,9 @@ extern const void *pizza_stats_by_kind_data;
 #define billboard_trigger_x_ADDRESS 0x010232u
 extern const void *billboard_trigger_x_data;
 #define billboard_trigger_x ((const uint16_t *)billboard_trigger_x_data)
-#define indexed_table_of_32_bit_values_010616_ADDRESS 0x010616u
-extern const void *indexed_table_of_32_bit_values_010616_data;
-#define indexed_table_of_32_bit_values_010616 ((const uint32_t *)indexed_table_of_32_bit_values_010616_data)
+#define turret_wreck_states_ADDRESS 0x010616u
+extern const void *turret_wreck_states_data;
+#define turret_wreck_states ((const uint32_t *)turret_wreck_states_data)
 #define turret_waits_ADDRESS 0x0107AEu
 extern const void *turret_waits_data;
 #define turret_waits ((const uint8_t *)turret_waits_data)
@@ -1332,9 +1320,9 @@ extern const void *nozzle_row_routines_data;
 #define nozzle_rows_ADDRESS 0x010AB2u
 extern const void *nozzle_rows_data;
 #define nozzle_rows ((const uint32_t *)nozzle_rows_data)
-#define indexed_table_of_32_bit_values_010B7E_ADDRESS 0x010B7Eu
-extern const void *indexed_table_of_32_bit_values_010B7E_data;
-#define indexed_table_of_32_bit_values_010B7E ((const uint32_t *)indexed_table_of_32_bit_values_010B7E_data)
+#define freeze_nozzle_spray_states_ADDRESS 0x010B7Eu
+extern const void *freeze_nozzle_spray_states_data;
+#define freeze_nozzle_spray_states ((const uint32_t *)freeze_nozzle_spray_states_data)
 #define turret_wreck_sounds_ADDRESS 0x010EAAu
 extern const void *turret_wreck_sounds_data;
 #define turret_wreck_sounds ((const uint8_t *)turret_wreck_sounds_data)
@@ -1362,18 +1350,18 @@ extern const void *sewer_launcher_drift_x_data;
 #define sewer_launcher_drift_y_ADDRESS 0x0113C0u
 extern const void *sewer_launcher_drift_y_data;
 #define sewer_launcher_drift_y ((const int16_t *)sewer_launcher_drift_y_data)
-#define indexed_table_of_32_bit_values_011562_ADDRESS 0x011562u
-extern const void *indexed_table_of_32_bit_values_011562_data;
-#define indexed_table_of_32_bit_values_011562 ((const uint32_t *)indexed_table_of_32_bit_values_011562_data)
+#define rock_soldier_site_enter_states_ADDRESS 0x011562u
+extern const void *rock_soldier_site_enter_states_data;
+#define rock_soldier_site_enter_states ((const uint32_t *)rock_soldier_site_enter_states_data)
 #define rock_soldier_site_attack_reaches_ADDRESS 0x01175Au
 extern const void *rock_soldier_site_attack_reaches_data;
 #define rock_soldier_site_attack_reaches ((const uint8_t *)rock_soldier_site_attack_reaches_data)
-#define rom_011782_ADDRESS 0x011782u
-extern const void *rom_011782_data;
-#define rom_011782 ((const uint32_t *)rom_011782_data)
-#define indexed_table_of_32_bit_values_0119F2_ADDRESS 0x0119F2u
-extern const void *indexed_table_of_32_bit_values_0119F2_data;
-#define indexed_table_of_32_bit_values_0119F2 ((const uint32_t *)indexed_table_of_32_bit_values_0119F2_data)
+#define rock_soldier_site_states_ADDRESS 0x011782u
+extern const void *rock_soldier_site_states_data;
+#define rock_soldier_site_states ((const uint32_t *)rock_soldier_site_states_data)
+#define rock_soldier_defeated_states_ADDRESS 0x0119F2u
+extern const void *rock_soldier_defeated_states_data;
+#define rock_soldier_defeated_states ((const uint32_t *)rock_soldier_defeated_states_data)
 #define rock_soldier_crumble_times_ADDRESS 0x011AD2u
 extern const void *rock_soldier_crumble_times_data;
 #define rock_soldier_crumble_times (*(const uint8_t *)rock_soldier_crumble_times_data)
@@ -1392,12 +1380,12 @@ extern const void *rubble_place_x_data;
 #define rubble_place_y_ADDRESS 0x012109u
 extern const void *rubble_place_y_data;
 #define rubble_place_y ((const int8_t *)rubble_place_y_data)
-#define indexed_table_of_32_bit_values_0121AC_ADDRESS 0x0121ACu
-extern const void *indexed_table_of_32_bit_values_0121AC_data;
-#define indexed_table_of_32_bit_values_0121AC ((const uint32_t *)indexed_table_of_32_bit_values_0121AC_data)
-#define rom_012360_ADDRESS 0x012360u
-extern const void *rom_012360_data;
-#define rom_012360 ((const uint32_t *)rom_012360_data)
+#define rock_soldier_technodrome_enter_states_ADDRESS 0x0121ACu
+extern const void *rock_soldier_technodrome_enter_states_data;
+#define rock_soldier_technodrome_enter_states ((const uint32_t *)rock_soldier_technodrome_enter_states_data)
+#define rock_soldier_technodrome_states_ADDRESS 0x012360u
+extern const void *rock_soldier_technodrome_states_data;
+#define rock_soldier_technodrome_states ((const uint32_t *)rock_soldier_technodrome_states_data)
 #define rock_soldier_technodrome_moves_ADDRESS 0x01255Eu
 extern const void *rock_soldier_technodrome_moves_data;
 #define rock_soldier_technodrome_moves ((const uint8_t *)rock_soldier_technodrome_moves_data)
@@ -1419,9 +1407,9 @@ extern const void *helicopter_bob_heights_data;
 #define flying_drone_starts_ADDRESS 0x013486u
 extern const void *flying_drone_starts_data;
 #define flying_drone_starts ((const uint8_t *)flying_drone_starts_data)
-#define indexed_table_of_32_bit_values_0134CA_ADDRESS 0x0134CAu
-extern const void *indexed_table_of_32_bit_values_0134CA_data;
-#define indexed_table_of_32_bit_values_0134CA ((const uint32_t *)indexed_table_of_32_bit_values_0134CA_data)
+#define flying_drone_enter_states_ADDRESS 0x0134CAu
+extern const void *flying_drone_enter_states_data;
+#define flying_drone_enter_states ((const uint32_t *)flying_drone_enter_states_data)
 #define flying_drone_shake_heights_ADDRESS 0x0138ACu
 extern const void *flying_drone_shake_heights_data;
 #define flying_drone_shake_heights ((const uint16_t *)flying_drone_shake_heights_data)
@@ -1455,15 +1443,15 @@ extern const void *drone_shot_x_speeds_data;
 #define drone_shot_y_speeds_ADDRESS 0x013B74u
 extern const void *drone_shot_y_speeds_data;
 #define drone_shot_y_speeds ((const int16_t *)drone_shot_y_speeds_data)
-#define indexed_table_of_32_bit_values_013C46_ADDRESS 0x013C46u
-extern const void *indexed_table_of_32_bit_values_013C46_data;
-#define indexed_table_of_32_bit_values_013C46 ((const uint32_t *)indexed_table_of_32_bit_values_013C46_data)
+#define stockman_enter_states_ADDRESS 0x013C46u
+extern const void *stockman_enter_states_data;
+#define stockman_enter_states ((const uint32_t *)stockman_enter_states_data)
 #define stockman_fly_moves_ADDRESS 0x013E30u
 extern const void *stockman_fly_moves_data;
 #define stockman_fly_moves ((const uint8_t *)stockman_fly_moves_data)
-#define indexed_table_of_32_bit_values_013F08_ADDRESS 0x013F08u
-extern const void *indexed_table_of_32_bit_values_013F08_data;
-#define indexed_table_of_32_bit_values_013F08 ((const uint32_t *)indexed_table_of_32_bit_values_013F08_data)
+#define stockman_defeated_states_ADDRESS 0x013F08u
+extern const void *stockman_defeated_states_data;
+#define stockman_defeated_states ((const uint32_t *)stockman_defeated_states_data)
 #define stockman_shake_heights_ADDRESS 0x01416Eu
 extern const void *stockman_shake_heights_data;
 #define stockman_shake_heights ((const uint16_t *)stockman_shake_heights_data)
@@ -1641,9 +1629,9 @@ extern const void *profile_texts_data;
 #define area_title_texts_ADDRESS 0x019866u
 extern const void *area_title_texts_data;
 #define area_title_texts ((const uint32_t *)area_title_texts_data)
-#define indexed_table_of_32_bit_values_019D54_ADDRESS 0x019D54u
-extern const void *indexed_table_of_32_bit_values_019D54_data;
-#define indexed_table_of_32_bit_values_019D54 ((const uint32_t *)indexed_table_of_32_bit_values_019D54_data)
+#define area_turtle_starts_ADDRESS 0x019D54u
+extern const void *area_turtle_starts_data;
+#define area_turtle_starts ((const uint32_t *)area_turtle_starts_data)
 #define turtle_jump_in_x_ADDRESS 0x019EB2u
 extern const void *turtle_jump_in_x_data;
 #define turtle_jump_in_x ((const int16_t *)turtle_jump_in_x_data)
@@ -1656,36 +1644,36 @@ extern const void *turtle_jump_in_speeds_data;
 #define turtle_marker_animations_ADDRESS 0x019F24u
 extern const void *turtle_marker_animations_data;
 #define turtle_marker_animations ((const uint32_t *)turtle_marker_animations_data)
-#define indexed_table_of_32_bit_values_019F92_ADDRESS 0x019F92u
-extern const void *indexed_table_of_32_bit_values_019F92_data;
-#define indexed_table_of_32_bit_values_019F92 ((const uint32_t *)indexed_table_of_32_bit_values_019F92_data)
-#define indexed_table_of_32_bit_values_019FDE_ADDRESS 0x019FDEu
-extern const void *indexed_table_of_32_bit_values_019FDE_data;
-#define indexed_table_of_32_bit_values_019FDE ((const uint32_t *)indexed_table_of_32_bit_values_019FDE_data)
-#define indexed_table_of_32_bit_values_01A14E_ADDRESS 0x01A14Eu
-extern const void *indexed_table_of_32_bit_values_01A14E_data;
-#define indexed_table_of_32_bit_values_01A14E ((const uint32_t *)indexed_table_of_32_bit_values_01A14E_data)
+#define area_entry_handlers_ADDRESS 0x019F92u
+extern const void *area_entry_handlers_data;
+#define area_entry_handlers ((const uint32_t *)area_entry_handlers_data)
+#define fall_in_entry_states_ADDRESS 0x019FDEu
+extern const void *fall_in_entry_states_data;
+#define fall_in_entry_states ((const uint32_t *)fall_in_entry_states_data)
+#define jump_in_entry_states_ADDRESS 0x01A14Eu
+extern const void *jump_in_entry_states_data;
+#define jump_in_entry_states ((const uint32_t *)jump_in_entry_states_data)
 #define turtle_jump_in_heights_ADDRESS 0x01A2D2u
 extern const void *turtle_jump_in_heights_data;
 #define turtle_jump_in_heights ((const uint8_t *)turtle_jump_in_heights_data)
 #define stage_scroll_locks_ADDRESS 0x01A3C0u
 extern const void *stage_scroll_locks_data;
 #define stage_scroll_locks ((const uint8_t *)stage_scroll_locks_data)
-#define indexed_table_of_32_bit_values_01A88C_ADDRESS 0x01A88Cu
-extern const void *indexed_table_of_32_bit_values_01A88C_data;
-#define indexed_table_of_32_bit_values_01A88C ((const uint32_t *)indexed_table_of_32_bit_values_01A88C_data)
-#define indexed_table_of_32_bit_values_01AC9A_ADDRESS 0x01AC9Au
-extern const void *indexed_table_of_32_bit_values_01AC9A_data;
-#define indexed_table_of_32_bit_values_01AC9A ((const uint32_t *)indexed_table_of_32_bit_values_01AC9A_data)
+#define area_cleared_checks_ADDRESS 0x01A88Cu
+extern const void *area_cleared_checks_data;
+#define area_cleared_checks ((const uint32_t *)area_cleared_checks_data)
+#define turtle_wall_checks_ADDRESS 0x01AC9Au
+extern const void *turtle_wall_checks_data;
+#define turtle_wall_checks ((const uint32_t *)turtle_wall_checks_data)
 #define turtle_walk_speeds_ADDRESS 0x01B5B2u
 extern const void *turtle_walk_speeds_data;
 #define turtle_walk_speeds (*(const uint16_t *)turtle_walk_speeds_data)
-#define indexed_table_of_32_bit_values_01B714_ADDRESS 0x01B714u
-extern const void *indexed_table_of_32_bit_values_01B714_data;
-#define indexed_table_of_32_bit_values_01B714 ((const uint32_t *)indexed_table_of_32_bit_values_01B714_data)
-#define indexed_table_of_32_bit_values_01BA88_ADDRESS 0x01BA88u
-extern const void *indexed_table_of_32_bit_values_01BA88_data;
-#define indexed_table_of_32_bit_values_01BA88 ((const uint32_t *)indexed_table_of_32_bit_values_01BA88_data)
+#define turtle_actions_ADDRESS 0x01B714u
+extern const void *turtle_actions_data;
+#define turtle_actions ((const uint32_t *)turtle_actions_data)
+#define turtle_jump_states_ADDRESS 0x01BA88u
+extern const void *turtle_jump_states_data;
+#define turtle_jump_states ((const uint32_t *)turtle_jump_states_data)
 #define turtle_throw_moves_ADDRESS 0x01C072u
 extern const void *turtle_throw_moves_data;
 #define turtle_throw_moves ((const uint16_t *)turtle_throw_moves_data)
@@ -1698,60 +1686,60 @@ extern const void *turtle_hit_animation_tables_data;
 #define turtle_attack_firsts_ADDRESS 0x01C20Eu
 extern const void *turtle_attack_firsts_data;
 #define turtle_attack_firsts ((const uint8_t *)turtle_attack_firsts_data)
-#define indexed_table_of_32_bit_values_01C272_ADDRESS 0x01C272u
-extern const void *indexed_table_of_32_bit_values_01C272_data;
-#define indexed_table_of_32_bit_values_01C272 ((const uint32_t *)indexed_table_of_32_bit_values_01C272_data)
+#define turtle_hit_handlers_ADDRESS 0x01C272u
+extern const void *turtle_hit_handlers_data;
+#define turtle_hit_handlers ((const uint32_t *)turtle_hit_handlers_data)
 #define turtle_hit_speeds_ADDRESS 0x01C546u
 extern const void *turtle_hit_speeds_data;
 #define turtle_hit_speeds (*(const int16_t *)turtle_hit_speeds_data)
 #define turtle_hit_waits_ADDRESS 0x01C596u
 extern const void *turtle_hit_waits_data;
 #define turtle_hit_waits ((const uint16_t *)turtle_hit_waits_data)
-#define indexed_table_of_32_bit_values_01C678_ADDRESS 0x01C678u
-extern const void *indexed_table_of_32_bit_values_01C678_data;
-#define indexed_table_of_32_bit_values_01C678 ((const uint32_t *)indexed_table_of_32_bit_values_01C678_data)
+#define turtle_knocked_down_states_ADDRESS 0x01C678u
+extern const void *turtle_knocked_down_states_data;
+#define turtle_knocked_down_states ((const uint32_t *)turtle_knocked_down_states_data)
 #define turtle_knocked_down_steps_ADDRESS 0x01C764u
 extern const void *turtle_knocked_down_steps_data;
 #define turtle_knocked_down_steps ((const uint32_t *)turtle_knocked_down_steps_data)
-#define indexed_table_of_32_bit_values_01C7D0_ADDRESS 0x01C7D0u
-extern const void *indexed_table_of_32_bit_values_01C7D0_data;
-#define indexed_table_of_32_bit_values_01C7D0 ((const uint32_t *)indexed_table_of_32_bit_values_01C7D0_data)
+#define turtle_knocked_back_states_ADDRESS 0x01C7D0u
+extern const void *turtle_knocked_back_states_data;
+#define turtle_knocked_back_states ((const uint32_t *)turtle_knocked_back_states_data)
 #define turtle_knocked_back_steps_ADDRESS 0x01C8CAu
 extern const void *turtle_knocked_back_steps_data;
 #define turtle_knocked_back_steps ((const uint32_t *)turtle_knocked_back_steps_data)
-#define indexed_table_of_32_bit_values_01C8F8_ADDRESS 0x01C8F8u
-extern const void *indexed_table_of_32_bit_values_01C8F8_data;
-#define indexed_table_of_32_bit_values_01C8F8 ((const uint32_t *)indexed_table_of_32_bit_values_01C8F8_data)
+#define turtle_knocked_flying_states_ADDRESS 0x01C8F8u
+extern const void *turtle_knocked_flying_states_data;
+#define turtle_knocked_flying_states ((const uint32_t *)turtle_knocked_flying_states_data)
 #define turtle_knocked_flying_steps_ADDRESS 0x01CA82u
 extern const void *turtle_knocked_flying_steps_data;
 #define turtle_knocked_flying_steps ((const uint32_t *)turtle_knocked_flying_steps_data)
-#define indexed_table_of_32_bit_values_01CAC2_ADDRESS 0x01CAC2u
-extern const void *indexed_table_of_32_bit_values_01CAC2_data;
-#define indexed_table_of_32_bit_values_01CAC2 ((const uint32_t *)indexed_table_of_32_bit_values_01CAC2_data)
+#define turtle_knocked_flying_from_behind_states_ADDRESS 0x01CAC2u
+extern const void *turtle_knocked_flying_from_behind_states_data;
+#define turtle_knocked_flying_from_behind_states ((const uint32_t *)turtle_knocked_flying_from_behind_states_data)
 #define turtle_knocked_flying_from_behind_steps_ADDRESS 0x01CC6Eu
 extern const void *turtle_knocked_flying_from_behind_steps_data;
 #define turtle_knocked_flying_from_behind_steps ((const uint32_t *)turtle_knocked_flying_from_behind_steps_data)
-#define indexed_table_of_32_bit_values_01CCAA_ADDRESS 0x01CCAAu
-extern const void *indexed_table_of_32_bit_values_01CCAA_data;
-#define indexed_table_of_32_bit_values_01CCAA ((const uint32_t *)indexed_table_of_32_bit_values_01CCAA_data)
-#define indexed_table_of_32_bit_values_01CD44_ADDRESS 0x01CD44u
-extern const void *indexed_table_of_32_bit_values_01CD44_data;
-#define indexed_table_of_32_bit_values_01CD44 ((const uint32_t *)indexed_table_of_32_bit_values_01CD44_data)
-#define indexed_table_of_32_bit_values_01CDBC_ADDRESS 0x01CDBCu
-extern const void *indexed_table_of_32_bit_values_01CDBC_data;
-#define indexed_table_of_32_bit_values_01CDBC ((const uint32_t *)indexed_table_of_32_bit_values_01CDBC_data)
-#define indexed_table_of_32_bit_values_01CE52_ADDRESS 0x01CE52u
-extern const void *indexed_table_of_32_bit_values_01CE52_data;
-#define indexed_table_of_32_bit_values_01CE52 ((const uint32_t *)indexed_table_of_32_bit_values_01CE52_data)
-#define indexed_table_of_32_bit_values_01CF4E_ADDRESS 0x01CF4Eu
-extern const void *indexed_table_of_32_bit_values_01CF4E_data;
-#define indexed_table_of_32_bit_values_01CF4E ((const uint32_t *)indexed_table_of_32_bit_values_01CF4E_data)
-#define indexed_table_of_32_bit_values_01D028_ADDRESS 0x01D028u
-extern const void *indexed_table_of_32_bit_values_01D028_data;
-#define indexed_table_of_32_bit_values_01D028 ((const uint32_t *)indexed_table_of_32_bit_values_01D028_data)
-#define indexed_table_of_32_bit_values_01D100_ADDRESS 0x01D100u
-extern const void *indexed_table_of_32_bit_values_01D100_data;
-#define indexed_table_of_32_bit_values_01D100 ((const uint32_t *)indexed_table_of_32_bit_values_01D100_data)
+#define turtle_frozen_states_ADDRESS 0x01CCAAu
+extern const void *turtle_frozen_states_data;
+#define turtle_frozen_states ((const uint32_t *)turtle_frozen_states_data)
+#define turtle_shocked_states_ADDRESS 0x01CD44u
+extern const void *turtle_shocked_states_data;
+#define turtle_shocked_states ((const uint32_t *)turtle_shocked_states_data)
+#define turtle_fall_in_manhole_states_ADDRESS 0x01CDBCu
+extern const void *turtle_fall_in_manhole_states_data;
+#define turtle_fall_in_manhole_states ((const uint32_t *)turtle_fall_in_manhole_states_data)
+#define turtle_held_states_ADDRESS 0x01CE52u
+extern const void *turtle_held_states_data;
+#define turtle_held_states ((const uint32_t *)turtle_held_states_data)
+#define turtle_held_briefly_states_ADDRESS 0x01CF4Eu
+extern const void *turtle_held_briefly_states_data;
+#define turtle_held_briefly_states ((const uint32_t *)turtle_held_briefly_states_data)
+#define turtle_held_knock_off_states_ADDRESS 0x01D028u
+extern const void *turtle_held_knock_off_states_data;
+#define turtle_held_knock_off_states ((const uint32_t *)turtle_held_knock_off_states_data)
+#define turtle_held_throw_off_states_ADDRESS 0x01D100u
+extern const void *turtle_held_throw_off_states_data;
+#define turtle_held_throw_off_states ((const uint32_t *)turtle_held_throw_off_states_data)
 #define turtle_struggle_bits_ADDRESS 0x01D200u
 extern const void *turtle_struggle_bits_data;
 #define turtle_struggle_bits ((const uint8_t *)turtle_struggle_bits_data)
@@ -1770,9 +1758,9 @@ extern const void *turtle_attack_damages_data;
 #define turtle_combos_ADDRESS 0x01D5F2u
 extern const void *turtle_combos_data;
 #define turtle_combos ((const uint32_t *)turtle_combos_data)
-#define indexed_table_of_32_bit_values_01E2DA_ADDRESS 0x01E2DAu
-extern const void *indexed_table_of_32_bit_values_01E2DA_data;
-#define indexed_table_of_32_bit_values_01E2DA ((const uint32_t *)indexed_table_of_32_bit_values_01E2DA_data)
+#define area_layer_starts_ADDRESS 0x01E2DAu
+extern const void *area_layer_starts_data;
+#define area_layer_starts ((const uint32_t *)area_layer_starts_data)
 #define area_layer_a_x_ADDRESS 0x01E5A0u
 extern const void *area_layer_a_x_data;
 #define area_layer_a_x ((const uint32_t *)area_layer_a_x_data)
@@ -1803,21 +1791,21 @@ extern const void *area_layer_a_map_widths_data;
 #define area_layer_b_map_widths_ADDRESS 0x01E5C2u
 extern const void *area_layer_b_map_widths_data;
 #define area_layer_b_map_widths ((const uint16_t *)area_layer_b_map_widths_data)
-#define indexed_table_of_32_bit_values_01ECEC_ADDRESS 0x01ECECu
-extern const void *indexed_table_of_32_bit_values_01ECEC_data;
-#define indexed_table_of_32_bit_values_01ECEC ((const uint32_t *)indexed_table_of_32_bit_values_01ECEC_data)
+#define area_layer_updates_ADDRESS 0x01ECECu
+extern const void *area_layer_updates_data;
+#define area_layer_updates ((const uint32_t *)area_layer_updates_data)
 #define street_tv_pictures_ADDRESS 0x01F158u
 extern const void *street_tv_pictures_data;
 #define street_tv_pictures ((const uint32_t *)street_tv_pictures_data)
-#define indexed_table_of_32_bit_values_01F43A_ADDRESS 0x01F43Au
-extern const void *indexed_table_of_32_bit_values_01F43A_data;
-#define indexed_table_of_32_bit_values_01F43A ((const uint32_t *)indexed_table_of_32_bit_values_01F43A_data)
-#define indexed_table_of_32_bit_values_01F82C_ADDRESS 0x01F82Cu
-extern const void *indexed_table_of_32_bit_values_01F82C_data;
-#define indexed_table_of_32_bit_values_01F82C ((const uint32_t *)indexed_table_of_32_bit_values_01F82C_data)
-#define indexed_table_of_32_bit_values_01FC96_ADDRESS 0x01FC96u
-extern const void *indexed_table_of_32_bit_values_01FC96_data;
-#define indexed_table_of_32_bit_values_01FC96 ((const uint32_t *)indexed_table_of_32_bit_values_01FC96_data)
+#define technodrome_lift_steps_ADDRESS 0x01F43Au
+extern const void *technodrome_lift_steps_data;
+#define technodrome_lift_steps ((const uint32_t *)technodrome_lift_steps_data)
+#define highway_car_steps_ADDRESS 0x01F82Cu
+extern const void *highway_car_steps_data;
+#define highway_car_steps ((const uint32_t *)highway_car_steps_data)
+#define skateboard_road_steps_ADDRESS 0x01FC96u
+extern const void *skateboard_road_steps_data;
+#define skateboard_road_steps ((const uint32_t *)skateboard_road_steps_data)
 #define fire_tiles_ADDRESS 0x0200F2u
 extern const void *fire_tiles_data;
 #define fire_tiles ((const uint32_t *)fire_tiles_data)
@@ -1830,33 +1818,33 @@ extern const void *area_scroll_segments_data;
 #define turtle_animation_sets_ADDRESS 0x0208C0u
 extern const void *turtle_animation_sets_data;
 #define turtle_animation_sets ((const uint32_t *)turtle_animation_sets_data)
-#define indexed_table_of_32_bit_values_02B2C6_ADDRESS 0x02B2C6u
-extern const void *indexed_table_of_32_bit_values_02B2C6_data;
-#define indexed_table_of_32_bit_values_02B2C6 ((const uint32_t *)indexed_table_of_32_bit_values_02B2C6_data)
-#define indexed_table_of_32_bit_values_02B62A_ADDRESS 0x02B62Au
-extern const void *indexed_table_of_32_bit_values_02B62A_data;
-#define indexed_table_of_32_bit_values_02B62A ((const uint32_t *)indexed_table_of_32_bit_values_02B62A_data)
-#define indexed_table_of_32_bit_values_02B728_ADDRESS 0x02B728u
-extern const void *indexed_table_of_32_bit_values_02B728_data;
-#define indexed_table_of_32_bit_values_02B728 ((const uint32_t *)indexed_table_of_32_bit_values_02B728_data)
-#define indexed_table_of_32_bit_values_02BB16_ADDRESS 0x02BB16u
-extern const void *indexed_table_of_32_bit_values_02BB16_data;
-#define indexed_table_of_32_bit_values_02BB16 ((const uint32_t *)indexed_table_of_32_bit_values_02BB16_data)
+#define area_exit_starts_ADDRESS 0x02B2C6u
+extern const void *area_exit_starts_data;
+#define area_exit_starts ((const uint32_t *)area_exit_starts_data)
+#define area_exit_handlers_ADDRESS 0x02B62Au
+extern const void *area_exit_handlers_data;
+#define area_exit_handlers ((const uint32_t *)area_exit_handlers_data)
+#define exit_apartment_steps_ADDRESS 0x02B728u
+extern const void *exit_apartment_steps_data;
+#define exit_apartment_steps ((const uint32_t *)exit_apartment_steps_data)
+#define turtle_exit_street_steps_ADDRESS 0x02BB16u
+extern const void *turtle_exit_street_steps_data;
+#define turtle_exit_street_steps ((const uint32_t *)turtle_exit_street_steps_data)
 #define exit_street_jump_animations_ADDRESS 0x02BC56u
 extern const void *exit_street_jump_animations_data;
 #define exit_street_jump_animations ((const uint32_t *)exit_street_jump_animations_data)
-#define indexed_table_of_32_bit_values_02BC98_ADDRESS 0x02BC98u
-extern const void *indexed_table_of_32_bit_values_02BC98_data;
-#define indexed_table_of_32_bit_values_02BC98 ((const uint32_t *)indexed_table_of_32_bit_values_02BC98_data)
-#define indexed_table_of_32_bit_values_02BD44_ADDRESS 0x02BD44u
-extern const void *indexed_table_of_32_bit_values_02BD44_data;
-#define indexed_table_of_32_bit_values_02BD44 ((const uint32_t *)indexed_table_of_32_bit_values_02BD44_data)
-#define indexed_table_of_32_bit_values_02BF10_ADDRESS 0x02BF10u
-extern const void *indexed_table_of_32_bit_values_02BF10_data;
-#define indexed_table_of_32_bit_values_02BF10 ((const uint32_t *)indexed_table_of_32_bit_values_02BF10_data)
-#define indexed_table_of_32_bit_values_02C04C_ADDRESS 0x02C04Cu
-extern const void *indexed_table_of_32_bit_values_02C04C_data;
-#define indexed_table_of_32_bit_values_02C04C ((const uint32_t *)indexed_table_of_32_bit_values_02C04C_data)
+#define exit_sewer_steps_ADDRESS 0x02BC98u
+extern const void *exit_sewer_steps_data;
+#define exit_sewer_steps ((const uint32_t *)exit_sewer_steps_data)
+#define turtle_exit_sewer_steps_ADDRESS 0x02BD44u
+extern const void *turtle_exit_sewer_steps_data;
+#define turtle_exit_sewer_steps ((const uint32_t *)turtle_exit_sewer_steps_data)
+#define exit_car_street_steps_ADDRESS 0x02BF10u
+extern const void *exit_car_street_steps_data;
+#define exit_car_street_steps ((const uint32_t *)exit_car_street_steps_data)
+#define turtle_exit_car_street_steps_ADDRESS 0x02C04Cu
+extern const void *turtle_exit_car_street_steps_data;
+#define turtle_exit_car_street_steps ((const uint32_t *)turtle_exit_car_street_steps_data)
 #define car_street_exit_x_ADDRESS 0x02C0F0u
 extern const void *car_street_exit_x_data;
 #define car_street_exit_x ((const uint16_t *)car_street_exit_x_data)
@@ -1869,18 +1857,18 @@ extern const void *van_start_x_shakes_data;
 #define van_start_y_shakes_ADDRESS 0x02C3BCu
 extern const void *van_start_y_shakes_data;
 #define van_start_y_shakes ((const int16_t *)van_start_y_shakes_data)
-#define indexed_table_of_32_bit_values_02C93A_ADDRESS 0x02C93Au
-extern const void *indexed_table_of_32_bit_values_02C93A_data;
-#define indexed_table_of_32_bit_values_02C93A ((const uint32_t *)indexed_table_of_32_bit_values_02C93A_data)
+#define exit_skateboard_steps_ADDRESS 0x02C93Au
+extern const void *exit_skateboard_steps_data;
+#define exit_skateboard_steps ((const uint32_t *)exit_skateboard_steps_data)
 #define exit_places_x_ADDRESS 0x02CE62u
 extern const void *exit_places_x_data;
 #define exit_places_x ((const uint16_t *)exit_places_x_data)
 #define exit_places_y_ADDRESS 0x02CE64u
 extern const void *exit_places_y_data;
 #define exit_places_y ((const uint16_t *)exit_places_y_data)
-#define indexed_table_of_32_bit_values_02CE8E_ADDRESS 0x02CE8Eu
-extern const void *indexed_table_of_32_bit_values_02CE8E_data;
-#define indexed_table_of_32_bit_values_02CE8E ((const uint32_t *)indexed_table_of_32_bit_values_02CE8E_data)
+#define exit_building_site_steps_ADDRESS 0x02CE8Eu
+extern const void *exit_building_site_steps_data;
+#define exit_building_site_steps ((const uint32_t *)exit_building_site_steps_data)
 #define building_site_exit_x_ADDRESS 0x02D304u
 extern const void *building_site_exit_x_data;
 #define building_site_exit_x ((const uint16_t *)building_site_exit_x_data)
@@ -1896,36 +1884,36 @@ extern const void *building_site_exit_drifts_data;
 #define exit_building_site_rise_animations_ADDRESS 0x02D4F4u
 extern const void *exit_building_site_rise_animations_data;
 #define exit_building_site_rise_animations ((const uint32_t *)exit_building_site_rise_animations_data)
-#define indexed_table_of_32_bit_values_02D616_ADDRESS 0x02D616u
-extern const void *indexed_table_of_32_bit_values_02D616_data;
-#define indexed_table_of_32_bit_values_02D616 ((const uint32_t *)indexed_table_of_32_bit_values_02D616_data)
-#define indexed_table_of_32_bit_values_02F654_ADDRESS 0x02F654u
-extern const void *indexed_table_of_32_bit_values_02F654_data;
-#define indexed_table_of_32_bit_values_02F654 ((const uint32_t *)indexed_table_of_32_bit_values_02F654_data)
+#define exit_final_steps_ADDRESS 0x02D616u
+extern const void *exit_final_steps_data;
+#define exit_final_steps ((const uint32_t *)exit_final_steps_data)
+#define area_scroll_holds_ADDRESS 0x02F654u
+extern const void *area_scroll_holds_data;
+#define area_scroll_holds ((const uint32_t *)area_scroll_holds_data)
 #define enemy_limits_ADDRESS 0x02F67Cu
 extern const void *enemy_limits_data;
 #define enemy_limits ((const uint8_t *)enemy_limits_data)
-#define indexed_table_of_32_bit_values_02F8C6_ADDRESS 0x02F8C6u
-extern const void *indexed_table_of_32_bit_values_02F8C6_data;
-#define indexed_table_of_32_bit_values_02F8C6 ((const uint32_t *)indexed_table_of_32_bit_values_02F8C6_data)
+#define opening_steps_ADDRESS 0x02F8C6u
+extern const void *opening_steps_data;
+#define opening_steps ((const uint32_t *)opening_steps_data)
 #define opening_turtle_y_speeds_ADDRESS 0x02FBE0u
 extern const void *opening_turtle_y_speeds_data;
 #define opening_turtle_y_speeds ((const int16_t *)opening_turtle_y_speeds_data)
 #define balloon_records_ADDRESS 0x030350u
 extern const void *balloon_records_data;
 #define balloon_records ((const uint8_t *)balloon_records_data)
-#define indexed_table_of_32_bit_values_0303EE_ADDRESS 0x0303EEu
-extern const void *indexed_table_of_32_bit_values_0303EE_data;
-#define indexed_table_of_32_bit_values_0303EE ((const uint32_t *)indexed_table_of_32_bit_values_0303EE_data)
+#define drill_arrival_steps_ADDRESS 0x0303EEu
+extern const void *drill_arrival_steps_data;
+#define drill_arrival_steps ((const uint32_t *)drill_arrival_steps_data)
 #define shake_x_ADDRESS 0x030652u
 extern const void *shake_x_data;
 #define shake_x ((const int8_t *)shake_x_data)
 #define shake_y_ADDRESS 0x030653u
 extern const void *shake_y_data;
 #define shake_y ((const int8_t *)shake_y_data)
-#define indexed_table_of_32_bit_values_030996_ADDRESS 0x030996u
-extern const void *indexed_table_of_32_bit_values_030996_data;
-#define indexed_table_of_32_bit_values_030996 ((const uint32_t *)indexed_table_of_32_bit_values_030996_data)
+#define intro_steps_ADDRESS 0x030996u
+extern const void *intro_steps_data;
+#define intro_steps ((const uint32_t *)intro_steps_data)
 #define intro_fire_frames_ADDRESS 0x031152u
 extern const void *intro_fire_frames_data;
 #define intro_fire_frames ((const uint32_t *)intro_fire_frames_data)
@@ -2141,6 +2129,10 @@ extern const void *enemy_ways_in_data;
 /* data in the program symbols.txt and the assets label */
 #define vectors_000000_ADDRESS 0x000000u
 #define unused_dip_settings_ADDRESS 0x00142Au
+#define palette_ram_chip_bits_ADDRESS 0x0016C4u
+#define tile_ram_chip_bits_ADDRESS 0x0016C6u
+#define work_ram_chip_bits_ADDRESS 0x0016C8u
+#define sprite_ram_chip_bits_ADDRESS 0x0016CAu
 #define program_chips_ADDRESS 0x0016CCu
 #define chip_sum_places_ADDRESS 0x0016E8u
 #define good_chip_sums_ADDRESS 0x0016F8u
@@ -2148,7 +2140,11 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_001958_ADDRESS 0x001958u
 #define good_mask_rom_sums_ADDRESS 0x001E34u
 #define one_point_ADDRESS 0x002030u
-#define table_loaded_by_lea_0020EC_ADDRESS 0x0020ECu
+#define text_1up_ADDRESS 0x0020ECu
+#define text_2up_ADDRESS 0x0020F0u
+#define text_3up_ADDRESS 0x0020F4u
+#define text_4up_ADDRESS 0x0020F8u
+#define text_high_ADDRESS 0x0020FCu
 #define table_loaded_by_lea_0021EE_ADDRESS 0x0021EEu
 #define game_texts_ADDRESS 0x00292Au
 #define unexplained_002989_ADDRESS 0x002989u
@@ -2183,9 +2179,11 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_0049DA_ADDRESS 0x0049DAu
 #define indexed_table_of_32_bit_values_0049F8_ADDRESS 0x0049F8u
 #define indexed_table_of_32_bit_values_004AB4_ADDRESS 0x004AB4u
-#define indexed_table_of_16_bit_values_004B58_ADDRESS 0x004B58u
+#define title_logo_places_ADDRESS 0x004B58u
+#define hero_title_logo_places_ADDRESS 0x004B64u
 #define indexed_table_of_32_bit_values_004B88_ADDRESS 0x004B88u
-#define table_loaded_by_lea_004C76_ADDRESS 0x004C76u
+#define ninja_title_jobs_ADDRESS 0x004C76u
+#define hero_title_jobs_ADDRESS 0x004C7Cu
 #define indexed_table_of_32_bit_values_004CD2_ADDRESS 0x004CD2u
 #define indexed_table_of_32_bit_values_004EE8_ADDRESS 0x004EE8u
 #define indexed_table_of_32_bit_values_004F06_ADDRESS 0x004F06u
@@ -2199,15 +2197,15 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_0056D8_ADDRESS 0x0056D8u
 #define indexed_table_of_32_bit_values_005736_ADDRESS 0x005736u
 #define indexed_table_of_32_bit_values_005794_ADDRESS 0x005794u
-#define table_loaded_by_lea_005846_ADDRESS 0x005846u
+#define color_test_jobs_ADDRESS 0x005846u
 #define indexed_table_of_32_bit_values_00586A_ADDRESS 0x00586Au
-#define table_loaded_by_lea_005896_ADDRESS 0x005896u
+#define io_test_jobs_ADDRESS 0x005896u
 #define indexed_table_of_32_bit_values_005A12_ADDRESS 0x005A12u
-#define table_loaded_by_lea_005A58_ADDRESS 0x005A58u
+#define coin_counter_test_jobs_ADDRESS 0x005A58u
 #define indexed_table_of_32_bit_values_005B5E_ADDRESS 0x005B5Eu
-#define table_loaded_by_lea_005B9C_ADDRESS 0x005B9Cu
+#define sound_test_jobs_ADDRESS 0x005B9Cu
 #define indexed_table_of_32_bit_values_005C32_ADDRESS 0x005C32u
-#define table_loaded_by_lea_005C5E_ADDRESS 0x005C5Eu
+#define dip_switch_page_jobs_ADDRESS 0x005C5Eu
 #define test_mode_texts_ADDRESS 0x005E1Eu
 #define unexplained_005E8D_ADDRESS 0x005E8Du
 #define texts_005E8E_ADDRESS 0x005E8Eu
@@ -2234,12 +2232,13 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_006C18_ADDRESS 0x006C18u
 #define indexed_table_of_32_bit_values_006CDE_ADDRESS 0x006CDEu
 #define indexed_table_of_32_bit_values_006EE6_ADDRESS 0x006EE6u
-#define table_loaded_by_lea_007018_ADDRESS 0x007018u
+#define staff_roll_jobs_ADDRESS 0x007018u
 #define indexed_table_of_32_bit_values_0070BE_ADDRESS 0x0070BEu
 #define record_0071DC_ADDRESS 0x0071DCu
 #define technodrome_wreck_parts_ADDRESS 0x007276u
 #define staff_roll_credits_ADDRESS 0x007612u
 #define staff_roll_names_ADDRESS 0x0076F2u
+#define blank_credit_name_ADDRESS 0x0077D2u
 #define indexed_table_of_32_bit_values_00783A_ADDRESS 0x00783Au
 #define indexed_table_of_32_bit_values_007860_ADDRESS 0x007860u
 #define indexed_table_of_32_bit_values_0078F8_ADDRESS 0x0078F8u
@@ -2252,21 +2251,46 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_0088F0_ADDRESS 0x0088F0u
 #define indexed_table_of_32_bit_values_00890E_ADDRESS 0x00890Eu
 #define indexed_table_of_32_bit_values_008A0A_ADDRESS 0x008A0Au
-#define table_loaded_by_lea_008ABE_ADDRESS 0x008ABEu
+#define coin_screen_jobs_ADDRESS 0x008ABEu
 #define indexed_table_of_32_bit_values_008D12_ADDRESS 0x008D12u
 #define indexed_table_of_32_bit_values_008D30_ADDRESS 0x008D30u
 #define indexed_table_of_32_bit_values_008E6A_ADDRESS 0x008E6Au
 #define indexed_table_of_32_bit_values_008E88_ADDRESS 0x008E88u
-#define palettes_008F58_ADDRESS 0x008F58u
+#define best_players_palette_ADDRESS 0x008F58u
 #define unexplained_008F7D_ADDRESS 0x008F7Du
 #define indexed_table_of_32_bit_values_008F94_ADDRESS 0x008F94u
+#define best_players_jobs_ADDRESS 0x009190u
 #define indexed_table_of_32_bit_values_009632_ADDRESS 0x009632u
-#define table_loaded_by_lea_009872_ADDRESS 0x009872u
-#define table_loaded_by_lea_009C5C_ADDRESS 0x009C5Cu
+#define fade_colour_channels_ADDRESS 0x009872u
+#define unused_game_over_effect_lists_ADDRESS 0x009AA0u
+#define intro_roof_palette_effects_ADDRESS 0x009C08u
+#define palette_editor_jobs_ADDRESS 0x009C5Cu
+#define boot_palettes_ADDRESS 0x00A01Eu
+#define ranking_palettes_ADDRESS 0x00A02Eu
+#define ending_palettes_ADDRESS 0x00A03Eu
+#define startup_palettes_ADDRESS 0x00A05Eu
+#define test_mode_palettes_ADDRESS 0x00A07Eu
+#define game_over_dim_palettes_ADDRESS 0x00A08Eu
+#define opening_city_palettes_ADDRESS 0x00A0AEu
+#define staff_roll_palettes_ADDRESS 0x00A0DEu
+#define intro_palettes_ADDRESS 0x00A0EEu
+#define intro_rooftop_palettes_ADDRESS 0x00A0FEu
+#define intro_climb_palettes_ADDRESS 0x00A10Eu
+#define april_hug_palettes_ADDRESS 0x00A11Eu
+#define splinter_picture_palettes_ADDRESS 0x00A12Eu
+#define kidnap_picture_palettes_ADDRESS 0x00A13Eu
+#define skateboard_crash_picture_palettes_ADDRESS 0x00A14Eu
+#define technodrome_drop_palettes_ADDRESS 0x00A15Eu
+#define villains_picture_palettes_ADDRESS 0x00A16Eu
 #define unexplained_00A1DE_ADDRESS 0x00A1DEu
 #define palettes_00A1FE_ADDRESS 0x00A1FEu
 #define unexplained_00B606_ADDRESS 0x00B606u
 #define palettes_00B608_ADDRESS 0x00B608u
+#define stockman_palette_ADDRESS 0x00C6C4u
+#define boss_shutter_palette_ADDRESS 0x00C704u
+#define skateboard_exit_van_palette_ADDRESS 0x00C824u
+#define skateboard_exit_van_palette_2_ADDRESS 0x00C844u
+#define tied_april_palette_ADDRESS 0x00CA04u
 #define unexplained_00CD44_ADDRESS 0x00CD44u
 #define palettes_00CD48_ADDRESS 0x00CD48u
 #define unexplained_00CD68_ADDRESS 0x00CD68u
@@ -2275,13 +2299,19 @@ extern const void *enemy_ways_in_data;
 #define palettes_00CD90_ADDRESS 0x00CD90u
 #define unexplained_00CDB0_ADDRESS 0x00CDB0u
 #define palettes_00CDB4_ADDRESS 0x00CDB4u
+#define bebop_palette_ADDRESS 0x00D094u
+#define rocksteady_palette_ADDRESS 0x00D0B4u
 #define palette_effects_00D134_ADDRESS 0x00D134u
+#define game_over_palette_effects_ADDRESS 0x00D2C4u
+#define game_over_palette_effects_2_ADDRESS 0x00D2E6u
 #define code_table_00DF5E_ADDRESS 0x00DF5Eu
-#define indexed_table_of_16_bit_values_00E750_ADDRESS 0x00E750u
+#define krang_walk_speeds_ADDRESS 0x00E750u
+#define krang_charge_speeds_ADDRESS 0x00E790u
 #define code_table_00E956_ADDRESS 0x00E956u
 #define code_table_00E9C6_ADDRESS 0x00E9C6u
 #define code_table_00EB80_ADDRESS 0x00EB80u
 #define sprite_lists_00F03C_ADDRESS 0x00F03Cu
+#define krang_explode_shadow_ADDRESS 0x00F66Cu
 #define sprite_lists_00F6E8_ADDRESS 0x00F6E8u
 #define sprite_lists_00F862_ADDRESS 0x00F862u
 #define code_table_00F8D2_ADDRESS 0x00F8D2u
@@ -2305,7 +2335,7 @@ extern const void *enemy_ways_in_data;
 #define code_table_010AD8_ADDRESS 0x010AD8u
 #define code_table_010C4A_ADDRESS 0x010C4Au
 #define code_table_010CCE_ADDRESS 0x010CCEu
-#define indexed_table_of_8_bit_values_010D5A_ADDRESS 0x010D5Au
+#define electric_beam_waits_ADDRESS 0x010D5Au
 #define electric_waits_ADDRESS 0x010D62u
 #define code_table_010E48_ADDRESS 0x010E48u
 #define code_table_011080_ADDRESS 0x011080u
@@ -2313,7 +2343,7 @@ extern const void *enemy_ways_in_data;
 #define code_table_01128C_ADDRESS 0x01128Cu
 #define code_table_011432_ADDRESS 0x011432u
 #define code_table_011532_ADDRESS 0x011532u
-#define table_loaded_by_lea_011C42_ADDRESS 0x011C42u
+#define rock_soldier_site_move_chances_ADDRESS 0x011C42u
 #define rock_soldier_site_speeds_ADDRESS 0x011EB2u
 #define boss_speeds_ADDRESS 0x011EF2u
 #define code_table_011FC4_ADDRESS 0x011FC4u
@@ -2321,7 +2351,7 @@ extern const void *enemy_ways_in_data;
 #define code_table_01217C_ADDRESS 0x01217Cu
 #define rock_soldier_technodrome_reaches_ADDRESS 0x012338u
 #define rock_soldier_technodrome_reaches_2_ADDRESS 0x01234Cu
-#define table_loaded_by_lea_012486_ADDRESS 0x012486u
+#define rock_soldier_technodrome_move_chances_ADDRESS 0x012486u
 #define unexplained_012624_ADDRESS 0x012624u
 #define code_table_012660_ADDRESS 0x012660u
 #define code_table_0126FE_ADDRESS 0x0126FEu
@@ -2438,7 +2468,7 @@ extern const void *enemy_ways_in_data;
 #define skateboard_shadows_ADDRESS 0x01A308u
 #define prompt_tiles_ADDRESS 0x01D35Cu
 #define prompt_tiles_2_ADDRESS 0x01D3ACu
-#define record_01F0D8_ADDRESS 0x01F0D8u
+#define april_tv_picture_ADDRESS 0x01F0D8u
 #define tv_picture_tiles_ADDRESS 0x01F118u
 #define sewer_water_tiles_ADDRESS 0x01F242u
 #define screen_picture_tiles_ADDRESS 0x01F970u
@@ -2459,7 +2489,7 @@ extern const void *enemy_ways_in_data;
 #define april_hug_animations_2_ADDRESS 0x02C650u
 #define skateboard_crash_picture_animations_ADDRESS 0x02CD74u
 #define splinter_picture_tiles_ADDRESS 0x02D164u
-#define animations_02D796_ADDRESS 0x02D796u
+#define drill_arrival_rumble_animation_ADDRESS 0x02D796u
 #define drill_ceiling_area_1_animation_ADDRESS 0x02D7BAu
 #define drill_ceiling_animation_ADDRESS 0x02D7F8u
 #define drill_pod_animation_ADDRESS 0x02D836u
@@ -2493,7 +2523,7 @@ extern const void *enemy_ways_in_data;
 #define turtle_cheer_animation_ADDRESS 0x02E134u
 #define april_tied_up_picture_animation_ADDRESS 0x02E162u
 #define unexplained_02E16E_ADDRESS 0x02E16Eu
-#define animations_02E192_ADDRESS 0x02E192u
+#define exit_sewer_villains_taunt_animation_ADDRESS 0x02E192u
 #define turtle_jump_in_animation_ADDRESS 0x02E1C0u
 #define sprite_lists_02E1E0_ADDRESS 0x02E1E0u
 #define common_shadow_ADDRESS 0x02E928u
@@ -2504,13 +2534,13 @@ extern const void *enemy_ways_in_data;
 #define intro_rooftop_turtle_animations_ADDRESS 0x030D7Eu
 #define intro_object_animations_ADDRESS 0x030DFCu
 #define described_table_030E00_ADDRESS 0x030E00u
-#define layers_031280_ADDRESS 0x031280u
+#define splinter_picture_map_ADDRESS 0x031280u
 #define splinter_picture_blocks_ADDRESS 0x031380u
 #define unexplained_0314C3_ADDRESS 0x0314C3u
-#define layers_0314C4_ADDRESS 0x0314C4u
+#define villains_picture_map_ADDRESS 0x0314C4u
 #define villains_picture_blocks_ADDRESS 0x0315C4u
 #define unexplained_03163B_ADDRESS 0x03163Bu
-#define layers_03163C_ADDRESS 0x03163Cu
+#define villains_picture_map_2_ADDRESS 0x03163Cu
 #define villains_picture_blocks_2_ADDRESS 0x03173Cu
 #define unexplained_032311_ADDRESS 0x032311u
 #define fire_blocks_ADDRESS 0x032312u
@@ -2525,26 +2555,26 @@ extern const void *enemy_ways_in_data;
 #define unexplained_03AB05_ADDRESS 0x03AB05u
 #define layers_03AB06_ADDRESS 0x03AB06u
 #define unexplained_03E989_ADDRESS 0x03E989u
-#define layers_03E98A_ADDRESS 0x03E98Au
+#define opening_layer_b_map_ADDRESS 0x03E98Au
 #define opening_layer_b_blocks_ADDRESS 0x03EB8Au
 #define unexplained_03F195_ADDRESS 0x03F195u
-#define layers_03F196_ADDRESS 0x03F196u
+#define opening_layer_a_map_ADDRESS 0x03F196u
 #define opening_layer_a_blocks_ADDRESS 0x03F796u
 #define unexplained_044C8F_ADDRESS 0x044C8Fu
 #define layers_044C90_ADDRESS 0x044C90u
 #define unexplained_0458F7_ADDRESS 0x0458F7u
-#define layers_0458F8_ADDRESS 0x0458F8u
+#define technodrome_screen_map_ADDRESS 0x0458F8u
 #define technodrome_screen_blocks_ADDRESS 0x0459F8u
-#define technodrome_screen_map_ADDRESS 0x045D4Au
+#define technodrome_screen_map_2_ADDRESS 0x045D4Au
 #define technodrome_screen_blocks_2_ADDRESS 0x045E4Au
 #define unexplained_04618B_ADDRESS 0x04618Bu
-#define layers_04618C_ADDRESS 0x04618Cu
+#define intro_roof_map_ADDRESS 0x04618Cu
 #define intro_roof_blocks_ADDRESS 0x04628Cu
 #define april_hug_map_ADDRESS 0x046622u
 #define april_hug_map_2_ADDRESS 0x046722u
 #define april_hug_blocks_ADDRESS 0x046822u
 #define unexplained_046C51_ADDRESS 0x046C51u
-#define layers_046C52_ADDRESS 0x046C52u
+#define april_hug_first_map_ADDRESS 0x046C52u
 #define april_hug_first_blocks_ADDRESS 0x046D52u
 #define sprite_sizes_ADDRESS 0x04716Eu
 #define area_spawn_lists_ADDRESS 0x04796Au
@@ -2561,71 +2591,71 @@ extern const void *enemy_ways_in_data;
 #define code_table_0490C6_ADDRESS 0x0490C6u
 #define code_table_04915C_ADDRESS 0x04915Cu
 #define code_table_0491E8_ADDRESS 0x0491E8u
-#define indexed_table_of_32_bit_values_049240_ADDRESS 0x049240u
-#define animations_049258_ADDRESS 0x049258u
-#define indexed_table_of_32_bit_values_0492F8_ADDRESS 0x0492F8u
-#define indexed_table_of_32_bit_values_049350_ADDRESS 0x049350u
-#define animations_049358_ADDRESS 0x049358u
-#define indexed_table_of_32_bit_values_049414_ADDRESS 0x049414u
-#define indexed_table_of_32_bit_values_0494D2_ADDRESS 0x0494D2u
-#define indexed_table_of_32_bit_values_049568_ADDRESS 0x049568u
-#define indexed_table_of_32_bit_values_0495D6_ADDRESS 0x0495D6u
-#define indexed_table_of_32_bit_values_04965A_ADDRESS 0x04965Au
-#define indexed_table_of_32_bit_values_049796_ADDRESS 0x049796u
-#define indexed_table_of_32_bit_values_0498A6_ADDRESS 0x0498A6u
-#define indexed_table_of_32_bit_values_049940_ADDRESS 0x049940u
-#define indexed_table_of_32_bit_values_0499B0_ADDRESS 0x0499B0u
-#define indexed_table_of_32_bit_values_049A12_ADDRESS 0x049A12u
-#define indexed_table_of_32_bit_values_049A5E_ADDRESS 0x049A5Eu
-#define indexed_table_of_32_bit_values_049A9A_ADDRESS 0x049A9Au
-#define indexed_table_of_32_bit_values_049AD6_ADDRESS 0x049AD6u
-#define indexed_table_of_32_bit_values_049B12_ADDRESS 0x049B12u
+#define enemy_shuffle_states_ADDRESS 0x049240u
+#define enemy_walk_animations_ADDRESS 0x049258u
+#define enemy_retreat_states_ADDRESS 0x0492F8u
+#define enemy_circle_states_ADDRESS 0x049350u
+#define enemy_run_animations_ADDRESS 0x049358u
+#define enemy_charge_states_ADDRESS 0x049414u
+#define enemy_crash_into_scenery_states_ADDRESS 0x0494D2u
+#define enemy_crash_into_scenery_low_states_ADDRESS 0x049568u
+#define enemy_walk_to_target_states_ADDRESS 0x0495D6u
+#define enemy_walk_to_side_states_ADDRESS 0x04965Au
+#define enemy_keep_distance_states_ADDRESS 0x049796u
+#define enemy_back_off_states_ADDRESS 0x0498A6u
+#define enemy_run_away_states_ADDRESS 0x049940u
+#define enemy_walk_across_states_ADDRESS 0x0499B0u
+#define enemy_jab_states_ADDRESS 0x049A12u
+#define enemy_chop_states_ADDRESS 0x049A5Eu
+#define enemy_swing_states_ADDRESS 0x049A9Au
+#define enemy_high_kick_states_ADDRESS 0x049AD6u
+#define enemy_jump_kick_states_ADDRESS 0x049B12u
 #define enemy_jump_kick_arc_ADDRESS 0x049B22u
-#define indexed_table_of_32_bit_values_049BC8_ADDRESS 0x049BC8u
+#define enemy_long_jump_kick_states_ADDRESS 0x049BC8u
 #define enemy_long_jump_kick_arc_ADDRESS 0x049BD8u
-#define indexed_table_of_32_bit_values_049C82_ADDRESS 0x049C82u
-#define indexed_table_of_32_bit_values_049DE8_ADDRESS 0x049DE8u
-#define indexed_table_of_32_bit_values_049E1C_ADDRESS 0x049E1Cu
-#define indexed_table_of_32_bit_values_049E40_ADDRESS 0x049E40u
-#define indexed_table_of_32_bit_values_049E64_ADDRESS 0x049E64u
-#define indexed_table_of_32_bit_values_049E88_ADDRESS 0x049E88u
+#define enemy_grab_states_ADDRESS 0x049C82u
+#define enemy_flinch_back_states_ADDRESS 0x049DE8u
+#define enemy_flinch_bent_states_ADDRESS 0x049E1Cu
+#define enemy_flinch_reel_states_ADDRESS 0x049E40u
+#define enemy_flinch_hunched_states_ADDRESS 0x049E64u
+#define enemy_killed_back_states_ADDRESS 0x049E88u
 #define enemy_killed_back_arc_ADDRESS 0x049EA0u
-#define indexed_table_of_32_bit_values_049FC4_ADDRESS 0x049FC4u
+#define enemy_killed_forward_states_ADDRESS 0x049FC4u
 #define enemy_killed_forward_arc_ADDRESS 0x049FDCu
-#define indexed_table_of_32_bit_values_04A100_ADDRESS 0x04A100u
+#define enemy_knocked_forward_states_ADDRESS 0x04A100u
 #define enemy_knocked_forward_arc_ADDRESS 0x04A114u
-#define indexed_table_of_32_bit_values_04A1E0_ADDRESS 0x04A1E0u
+#define enemy_thrown_by_donatello_states_ADDRESS 0x04A1E0u
 #define thrown_by_donatello_placement_ADDRESS 0x04A1FCu
-#define record_04A332_ADDRESS 0x04A332u
-#define indexed_table_of_32_bit_values_04A374_ADDRESS 0x04A374u
+#define let_go_by_donatello_placement_ADDRESS 0x04A332u
+#define enemy_thrown_by_michelangelo_states_ADDRESS 0x04A374u
 #define thrown_by_michelangelo_placement_ADDRESS 0x04A390u
-#define record_04A3EE_ADDRESS 0x04A3EEu
-#define indexed_table_of_32_bit_values_04A432_ADDRESS 0x04A432u
+#define let_go_by_michelangelo_placement_ADDRESS 0x04A3EEu
+#define enemy_thrown_by_raphael_states_ADDRESS 0x04A432u
 #define thrown_by_raphael_placement_ADDRESS 0x04A44Eu
-#define record_04A4AC_ADDRESS 0x04A4ACu
-#define indexed_table_of_32_bit_values_04A4F0_ADDRESS 0x04A4F0u
+#define let_go_by_raphael_placement_ADDRESS 0x04A4ACu
+#define enemy_thrown_by_leonardo_states_ADDRESS 0x04A4F0u
 #define thrown_by_leonardo_placement_ADDRESS 0x04A50Cu
-#define record_04A56A_ADDRESS 0x04A56Au
-#define indexed_table_of_32_bit_values_04A5AE_ADDRESS 0x04A5AEu
+#define let_go_by_leonardo_placement_ADDRESS 0x04A56Au
+#define enemy_knocked_back_states_ADDRESS 0x04A5AEu
 #define enemy_knocked_back_arc_ADDRESS 0x04A5C2u
-#define indexed_table_of_32_bit_values_04A6BE_ADDRESS 0x04A6BEu
-#define indexed_table_of_32_bit_values_04A710_ADDRESS 0x04A710u
+#define enemy_die_states_ADDRESS 0x04A6BEu
+#define enemy_die_on_back_states_ADDRESS 0x04A710u
 #define code_table_04A738_ADDRESS 0x04A738u
 #define code_table_04A7DE_ADDRESS 0x04A7DEu
-#define animations_04A7E6_ADDRESS 0x04A7E6u
+#define scenery_lamp_start_animation_ADDRESS 0x04A7E6u
 #define sprite_lists_04A7F0_ADDRESS 0x04A7F0u
 #define code_table_04A816_ADDRESS 0x04A816u
-#define animations_04A81E_ADDRESS 0x04A81Eu
+#define scenery_open_manhole_start_animation_ADDRESS 0x04A81Eu
 #define code_table_04A866_ADDRESS 0x04A866u
-#define animations_04A86E_ADDRESS 0x04A86Eu
+#define scenery_chair_start_animation_ADDRESS 0x04A86Eu
 #define sprite_lists_04A878_ADDRESS 0x04A878u
 #define code_table_04A89C_ADDRESS 0x04A89Cu
 #define sprite_lists_04A8CE_ADDRESS 0x04A8CEu
 #define code_table_04A954_ADDRESS 0x04A954u
-#define animations_04A95C_ADDRESS 0x04A95Cu
+#define foot_car_start_animation_ADDRESS 0x04A95Cu
 #define sprite_lists_04A96E_ADDRESS 0x04A96Eu
 #define code_table_04A9CA_ADDRESS 0x04A9CAu
-#define animations_04A9DA_ADDRESS 0x04A9DAu
+#define falling_debris_start_animation_ADDRESS 0x04A9DAu
 #define falling_debris_animation_ADDRESS 0x04AA16u
 #define sprite_lists_04AA3A_ADDRESS 0x04AA3Au
 #define code_table_04AB3A_ADDRESS 0x04AB3Au
@@ -2633,32 +2663,33 @@ extern const void *enemy_ways_in_data;
 #define motorbike_wheelie_rider_record_ADDRESS 0x04AB56u
 #define code_table_04AC94_ADDRESS 0x04AC94u
 #define code_table_04AD20_ADDRESS 0x04AD20u
-#define indexed_table_of_32_bit_values_04ADB8_ADDRESS 0x04ADB8u
-#define animations_04ADC0_ADDRESS 0x04ADC0u
-#define indexed_table_of_32_bit_values_04ADFA_ADDRESS 0x04ADFAu
-#define indexed_table_of_32_bit_values_04AE84_ADDRESS 0x04AE84u
-#define indexed_table_of_32_bit_values_04AF30_ADDRESS 0x04AF30u
-#define indexed_table_of_32_bit_values_04AFCA_ADDRESS 0x04AFCAu
-#define indexed_table_of_32_bit_values_04B03E_ADDRESS 0x04B03Eu
-#define animations_04B046_ADDRESS 0x04B046u
-#define indexed_table_of_32_bit_values_04B080_ADDRESS 0x04B080u
-#define indexed_table_of_32_bit_values_04B13A_ADDRESS 0x04B13Au
-#define indexed_table_of_32_bit_values_04B244_ADDRESS 0x04B244u
-#define indexed_table_of_32_bit_values_04B2E6_ADDRESS 0x04B2E6u
-#define indexed_table_of_32_bit_values_04B322_ADDRESS 0x04B322u
-#define indexed_table_of_32_bit_values_04B35E_ADDRESS 0x04B35Eu
+#define enemy_walk_to_target_sword_states_ADDRESS 0x04ADB8u
+#define sword_soldier_walk_animations_ADDRESS 0x04ADC0u
+#define enemy_walk_to_side_sword_states_ADDRESS 0x04ADFAu
+#define enemy_walk_past_sword_states_ADDRESS 0x04AE84u
+#define enemy_back_off_sword_states_ADDRESS 0x04AF30u
+#define enemy_walk_to_line_sword_states_ADDRESS 0x04AFCAu
+#define enemy_walk_to_target_hammer_states_ADDRESS 0x04B03Eu
+#define hammer_soldier_walk_animations_ADDRESS 0x04B046u
+#define enemy_walk_to_side_hammer_states_ADDRESS 0x04B080u
+#define enemy_stalk_hammer_states_ADDRESS 0x04B13Au
+#define enemy_walk_away_hammer_states_ADDRESS 0x04B244u
+#define enemy_slash_sword_states_ADDRESS 0x04B2E6u
+#define enemy_low_slash_sword_states_ADDRESS 0x04B322u
+#define enemy_leaping_slash_sword_states_ADDRESS 0x04B35Eu
 #define enemy_leaping_slash_sword_arc_ADDRESS 0x04B36Eu
-#define indexed_table_of_32_bit_values_04B436_ADDRESS 0x04B436u
+#define enemy_jump_slash_sword_states_ADDRESS 0x04B436u
 #define enemy_jump_slash_sword_arc_ADDRESS 0x04B446u
-#define indexed_table_of_32_bit_values_04B4EC_ADDRESS 0x04B4ECu
+#define enemy_flying_slash_sword_states_ADDRESS 0x04B4ECu
 #define enemy_flying_slash_sword_arc_ADDRESS 0x04B4FCu
-#define indexed_table_of_32_bit_values_04B5E2_ADDRESS 0x04B5E2u
-#define indexed_table_of_32_bit_values_04B63E_ADDRESS 0x04B63Eu
-#define indexed_table_of_32_bit_values_04B662_ADDRESS 0x04B662u
-#define indexed_table_of_32_bit_values_04B686_ADDRESS 0x04B686u
-#define indexed_table_of_32_bit_values_04B6AA_ADDRESS 0x04B6AAu
-#define indexed_table_of_32_bit_values_04B6CE_ADDRESS 0x04B6CEu
-#define indexed_table_of_32_bit_values_04B6F2_ADDRESS 0x04B6F2u
+#define enemy_smash_hammer_states_ADDRESS 0x04B5E2u
+#define enemy_flinch_back_sword_states_ADDRESS 0x04B63Eu
+#define enemy_flinch_bent_sword_states_ADDRESS 0x04B662u
+#define enemy_flinch_reel_sword_states_ADDRESS 0x04B686u
+#define enemy_flinch_hunched_sword_states_ADDRESS 0x04B6AAu
+#define enemy_flinch_back_hammer_states_ADDRESS 0x04B6CEu
+#define enemy_flinch_bent_hammer_states_ADDRESS 0x04B6F2u
+#define enemy_flinch_hunched_hammer_states_ADDRESS 0x04B716u
 #define code_table_04B72E_ADDRESS 0x04B72Eu
 #define whip_arm_x_offsets_ADDRESS 0x04B776u
 #define whip_arm_animations_2_ADDRESS 0x04B790u
@@ -2682,25 +2713,25 @@ extern const void *enemy_ways_in_data;
 #define code_table_04C31A_ADDRESS 0x04C31Au
 #define flash_colour_past_its_table_ADDRESS 0x04C3F2u
 #define code_table_04C400_ADDRESS 0x04C400u
-#define animations_04C410_ADDRESS 0x04C410u
+#define kicked_door_start_animation_ADDRESS 0x04C410u
 #define kicked_door_animation_ADDRESS 0x04C41Au
 #define enemy_step_down_animation_ADDRESS 0x04C444u
 #define sprite_lists_04C44E_ADDRESS 0x04C44Eu
-#define record_04C4C6_ADDRESS 0x04C4C6u
+#define kicked_door_pieces_ADDRESS 0x04C4C6u
 #define code_table_04C564_ADDRESS 0x04C564u
 #define animations_04C56C_ADDRESS 0x04C56Cu
 #define sprite_lists_04C5B4_ADDRESS 0x04C5B4u
 #define code_table_04C64E_ADDRESS 0x04C64Eu
-#define animations_04C65E_ADDRESS 0x04C65Eu
+#define elevator_start_animation_ADDRESS 0x04C65Eu
 #define elevator_doors_animation_ADDRESS 0x04C668u
 #define sprite_lists_04C688_ADDRESS 0x04C688u
-#define record_04C6C8_ADDRESS 0x04C6C8u
+#define elevator_soldier_record_ADDRESS 0x04C6C8u
 #define elevator_door_record_ADDRESS 0x04C6D0u
 #define elevator_door_record_2_ADDRESS 0x04C6D8u
 #define elevator_stops_ADDRESS 0x04C6E0u
 #define elevator_stops_2_ADDRESS 0x04C6E4u
 #define code_table_04C79C_ADDRESS 0x04C79Cu
-#define animations_04C7B2_ADDRESS 0x04C7B2u
+#define enemy_step_out_animation_ADDRESS 0x04C7B2u
 #define sprite_lists_04C7F4_ADDRESS 0x04C7F4u
 #define code_table_04C87C_ADDRESS 0x04C87Cu
 #define thrown_tire_record_ADDRESS 0x04C894u
@@ -2708,38 +2739,38 @@ extern const void *enemy_ways_in_data;
 #define thrown_manhole_cover_record_ADDRESS 0x04C9B6u
 #define manhole_soldier_hole_record_ADDRESS 0x04C9BEu
 #define code_table_04CAEA_ADDRESS 0x04CAEAu
-#define animations_04CAFE_ADDRESS 0x04CAFEu
+#define window_soldier_drop_jump_out_animation_ADDRESS 0x04CAFEu
 #define enemy_drop_animation_ADDRESS 0x04CB1Eu
 #define sprite_lists_04CB34_ADDRESS 0x04CB34u
-#define record_04CBAC_ADDRESS 0x04CBACu
+#define window_drop_shards_record_ADDRESS 0x04CBACu
 #define object_tile_block_offsets_ADDRESS 0x04CBB4u
 #define object_tile_blocks_ADDRESS 0x04CBC0u
 #define code_table_04CD00_ADDRESS 0x04CD00u
-#define animations_04CD10_ADDRESS 0x04CD10u
+#define window_soldier_dive_wait_animation_ADDRESS 0x04CD10u
 #define window_soldier_dive_animation_ADDRESS 0x04CD26u
-#define record_04CD3C_ADDRESS 0x04CD3Cu
+#define window_dive_shards_record_ADDRESS 0x04CD3Cu
 #define object_tile_block_pairs_ADDRESS 0x04CD44u
 #define code_table_04CE52_ADDRESS 0x04CE52u
-#define animations_04CE5A_ADDRESS 0x04CE5Au
+#define glass_shards_start_animation_ADDRESS 0x04CE5Au
 #define glass_shards_animation_ADDRESS 0x04CE7Au
 #define sprite_lists_04CE9A_ADDRESS 0x04CE9Au
 #define code_table_04CF2A_ADDRESS 0x04CF2Au
-#define animations_04CF3E_ADDRESS 0x04CF3Eu
+#define enemy_crouch_to_hop_animation_ADDRESS 0x04CF3Eu
 #define enemy_hop_up_animation_ADDRESS 0x04CF5Eu
 #define enemy_hang_in_animation_ADDRESS 0x04CF68u
 #define code_table_04D05E_ADDRESS 0x04D05Eu
 #define code_table_04D0A8_ADDRESS 0x04D0A8u
-#define animations_04D0BC_ADDRESS 0x04D0BCu
+#define sewer_ripple_animation_ADDRESS 0x04D0BCu
 #define sewer_ripple_swim_animation_ADDRESS 0x04D0D6u
 #define sewer_ripple_leap_out_animation_ADDRESS 0x04D100u
 #define sprite_lists_04D13E_ADDRESS 0x04D13Eu
-#define record_04D1A6_ADDRESS 0x04D1A6u
+#define sewer_ripple_soldier_record_ADDRESS 0x04D1A6u
 #define code_table_04D2C8_ADDRESS 0x04D2C8u
 #define code_table_04D344_ADDRESS 0x04D344u
-#define animations_04D35C_ADDRESS 0x04D35Cu
+#define bomber_wait_animation_ADDRESS 0x04D35Cu
 #define bomber_throw_animation_ADDRESS 0x04D3A8u
 #define sprite_lists_04D3BE_ADDRESS 0x04D3BEu
-#define record_04D466_ADDRESS 0x04D466u
+#define bomber_bomb_shot_ADDRESS 0x04D466u
 #define code_table_04D544_ADDRESS 0x04D544u
 #define rocket_shot_record_ADDRESS 0x04D558u
 #define dropped_rocket_shot_record_ADDRESS 0x04D55Eu
@@ -2756,137 +2787,137 @@ extern const void *enemy_ways_in_data;
 #define code_table_04DB6A_ADDRESS 0x04DB6Au
 #define code_table_04DBE8_ADDRESS 0x04DBE8u
 #define code_table_04DC82_ADDRESS 0x04DC82u
-#define indexed_table_of_32_bit_values_04DD40_ADDRESS 0x04DD40u
-#define animations_04DD48_ADDRESS 0x04DD48u
-#define indexed_table_of_32_bit_values_04DD82_ADDRESS 0x04DD82u
-#define indexed_table_of_32_bit_values_04DDC0_ADDRESS 0x04DDC0u
-#define indexed_table_of_32_bit_values_04DE6C_ADDRESS 0x04DE6Cu
-#define indexed_table_of_32_bit_values_04DEEE_ADDRESS 0x04DEEEu
-#define indexed_table_of_32_bit_values_04DF70_ADDRESS 0x04DF70u
-#define animations_04DF78_ADDRESS 0x04DF78u
-#define indexed_table_of_32_bit_values_04DFB2_ADDRESS 0x04DFB2u
-#define indexed_table_of_32_bit_values_04DFF0_ADDRESS 0x04DFF0u
-#define animations_04DFF8_ADDRESS 0x04DFF8u
-#define indexed_table_of_32_bit_values_04E0B4_ADDRESS 0x04E0B4u
-#define indexed_table_of_32_bit_values_04E1C4_ADDRESS 0x04E1C4u
-#define indexed_table_of_32_bit_values_04E260_ADDRESS 0x04E260u
-#define indexed_table_of_32_bit_values_04E2D0_ADDRESS 0x04E2D0u
-#define indexed_table_of_32_bit_values_04E342_ADDRESS 0x04E342u
+#define enemy_walk_to_target_spear_states_ADDRESS 0x04DD40u
+#define spear_soldier_walk_animations_ADDRESS 0x04DD48u
+#define enemy_walk_to_side_spear_states_ADDRESS 0x04DD82u
+#define enemy_walk_off_line_spear_states_ADDRESS 0x04DDC0u
+#define enemy_back_off_spear_states_ADDRESS 0x04DE6Cu
+#define enemy_step_aside_spear_states_ADDRESS 0x04DEEEu
+#define enemy_walk_to_target_knife_states_ADDRESS 0x04DF70u
+#define knife_soldier_walk_animations_ADDRESS 0x04DF78u
+#define enemy_walk_to_side_knife_states_ADDRESS 0x04DFB2u
+#define enemy_circle_knife_states_ADDRESS 0x04DFF0u
+#define knife_soldier_run_animations_ADDRESS 0x04DFF8u
+#define enemy_keep_distance_knife_states_ADDRESS 0x04E0B4u
+#define enemy_back_off_knife_states_ADDRESS 0x04E1C4u
+#define enemy_step_aside_knife_states_ADDRESS 0x04E260u
+#define enemy_spear_thrust_states_ADDRESS 0x04E2D0u
+#define enemy_spear_throw_states_ADDRESS 0x04E342u
 #define spear_shot_record_ADDRESS 0x04E34Eu
-#define indexed_table_of_32_bit_values_04E3D0_ADDRESS 0x04E3D0u
-#define indexed_table_of_32_bit_values_04E40C_ADDRESS 0x04E40Cu
-#define indexed_table_of_32_bit_values_04E448_ADDRESS 0x04E448u
+#define enemy_knife_stab_states_ADDRESS 0x04E3D0u
+#define enemy_high_kick_knife_states_ADDRESS 0x04E40Cu
+#define enemy_jump_kick_knife_states_ADDRESS 0x04E448u
 #define enemy_jump_kick_knife_arc_ADDRESS 0x04E458u
-#define indexed_table_of_32_bit_values_04E4FE_ADDRESS 0x04E4FEu
+#define enemy_throw_knife_states_ADDRESS 0x04E4FEu
 #define knife_shot_record_ADDRESS 0x04E50Au
-#define indexed_table_of_32_bit_values_04E572_ADDRESS 0x04E572u
-#define indexed_table_of_32_bit_values_04E596_ADDRESS 0x04E596u
-#define indexed_table_of_32_bit_values_04E5BA_ADDRESS 0x04E5BAu
-#define indexed_table_of_32_bit_values_04E5DE_ADDRESS 0x04E5DEu
-#define indexed_table_of_32_bit_values_04E602_ADDRESS 0x04E602u
-#define indexed_table_of_32_bit_values_04E626_ADDRESS 0x04E626u
-#define indexed_table_of_32_bit_values_04E64A_ADDRESS 0x04E64Au
-#define indexed_table_of_32_bit_values_04E66E_ADDRESS 0x04E66Eu
+#define enemy_flinch_back_spear_states_ADDRESS 0x04E572u
+#define enemy_flinch_bent_spear_states_ADDRESS 0x04E596u
+#define enemy_flinch_reel_spear_states_ADDRESS 0x04E5BAu
+#define enemy_flinch_hunched_spear_states_ADDRESS 0x04E5DEu
+#define enemy_flinch_back_knife_states_ADDRESS 0x04E602u
+#define enemy_flinch_bent_knife_states_ADDRESS 0x04E626u
+#define enemy_flinch_reel_knife_states_ADDRESS 0x04E64Au
+#define enemy_flinch_hunched_knife_states_ADDRESS 0x04E66Eu
 #define code_table_04E686_ADDRESS 0x04E686u
 #define code_table_04E71A_ADDRESS 0x04E71Au
-#define indexed_table_of_32_bit_values_04E7BA_ADDRESS 0x04E7BAu
-#define animations_04E7C2_ADDRESS 0x04E7C2u
-#define indexed_table_of_32_bit_values_04E800_ADDRESS 0x04E800u
-#define indexed_table_of_32_bit_values_04E83E_ADDRESS 0x04E83Eu
-#define indexed_table_of_32_bit_values_04E906_ADDRESS 0x04E906u
-#define indexed_table_of_32_bit_values_04E99E_ADDRESS 0x04E99Eu
-#define indexed_table_of_32_bit_values_04EA12_ADDRESS 0x04EA12u
-#define animations_04EA1A_ADDRESS 0x04EA1Au
-#define indexed_table_of_32_bit_values_04EA58_ADDRESS 0x04EA58u
-#define indexed_table_of_32_bit_values_04EA96_ADDRESS 0x04EA96u
-#define indexed_table_of_32_bit_values_04EAD4_ADDRESS 0x04EAD4u
-#define indexed_table_of_32_bit_values_04EB6E_ADDRESS 0x04EB6Eu
-#define indexed_table_of_32_bit_values_04EBE2_ADDRESS 0x04EBE2u
+#define enemy_walk_to_target_gun_states_ADDRESS 0x04E7BAu
+#define gun_soldier_walk_animations_ADDRESS 0x04E7C2u
+#define enemy_walk_to_side_gun_states_ADDRESS 0x04E800u
+#define enemy_walk_to_range_gun_states_ADDRESS 0x04E83Eu
+#define enemy_back_off_gun_states_ADDRESS 0x04E906u
+#define enemy_run_away_gun_states_ADDRESS 0x04E99Eu
+#define enemy_walk_to_target_axe_states_ADDRESS 0x04EA12u
+#define axe_soldier_walk_animations_ADDRESS 0x04EA1Au
+#define enemy_walk_to_side_axe_states_ADDRESS 0x04EA58u
+#define enemy_walk_to_range_axe_states_ADDRESS 0x04EA96u
+#define enemy_back_off_axe_states_ADDRESS 0x04EAD4u
+#define enemy_run_away_axe_states_ADDRESS 0x04EB6Eu
+#define enemy_throw_axes_states_ADDRESS 0x04EBE2u
 #define axe_shot_record_ADDRESS 0x04EBEEu
-#define indexed_table_of_32_bit_values_04EC6A_ADDRESS 0x04EC6Au
-#define indexed_table_of_32_bit_values_04ECA6_ADDRESS 0x04ECA6u
-#define indexed_table_of_32_bit_values_04ECE2_ADDRESS 0x04ECE2u
+#define enemy_high_kick_axe_states_ADDRESS 0x04EC6Au
+#define enemy_gun_swing_states_ADDRESS 0x04ECA6u
+#define enemy_shoot_gun_states_ADDRESS 0x04ECE2u
 #define gun_shot_record_ADDRESS 0x04ECEEu
-#define indexed_table_of_32_bit_values_04ED6A_ADDRESS 0x04ED6Au
-#define indexed_table_of_32_bit_values_04ED8E_ADDRESS 0x04ED8Eu
-#define indexed_table_of_32_bit_values_04EDB2_ADDRESS 0x04EDB2u
-#define indexed_table_of_32_bit_values_04EDD6_ADDRESS 0x04EDD6u
-#define indexed_table_of_32_bit_values_04EDFA_ADDRESS 0x04EDFAu
+#define enemy_flinch_back_gun_states_ADDRESS 0x04ED6Au
+#define enemy_flinch_bent_gun_states_ADDRESS 0x04ED8Eu
+#define enemy_flinch_back_axe_states_ADDRESS 0x04EDB2u
+#define enemy_flinch_bent_axe_states_ADDRESS 0x04EDD6u
+#define enemy_flinch_reel_axe_states_ADDRESS 0x04EDFAu
 #define code_table_04EE12_ADDRESS 0x04EE12u
 #define code_table_04EEAC_ADDRESS 0x04EEACu
 #define code_table_04EF40_ADDRESS 0x04EF40u
-#define indexed_table_of_32_bit_values_04F082_ADDRESS 0x04F082u
+#define enemy_throw_shuriken_states_ADDRESS 0x04F082u
 #define shuriken_shot_record_ADDRESS 0x04F08Eu
-#define indexed_table_of_32_bit_values_04F0F0_ADDRESS 0x04F0F0u
+#define enemy_boomerang_throw_states_ADDRESS 0x04F0F0u
 #define boomerang_shot_record_ADDRESS 0x04F104u
 #define code_table_04F1BA_ADDRESS 0x04F1BAu
-#define indexed_table_of_32_bit_values_04F296_ADDRESS 0x04F296u
+#define enemy_rocksteady_enter_states_ADDRESS 0x04F296u
 #define rocksteady_close_attacks_ADDRESS 0x04F5BCu
 #define rocksteady_far_attacks_ADDRESS 0x04F5C0u
-#define indexed_table_of_32_bit_values_04F72E_ADDRESS 0x04F72Eu
-#define indexed_table_of_32_bit_values_04F75C_ADDRESS 0x04F75Cu
-#define indexed_table_of_32_bit_values_04F78A_ADDRESS 0x04F78Au
-#define indexed_table_of_32_bit_values_04F7BE_ADDRESS 0x04F7BEu
-#define indexed_table_of_32_bit_values_04F7FA_ADDRESS 0x04F7FAu
-#define indexed_table_of_32_bit_values_04F828_ADDRESS 0x04F828u
-#define indexed_table_of_32_bit_values_04F8A8_ADDRESS 0x04F8A8u
-#define indexed_table_of_32_bit_values_04F92E_ADDRESS 0x04F92Eu
-#define indexed_table_of_32_bit_values_04F9CC_ADDRESS 0x04F9CCu
+#define enemy_rocksteady_raise_fist_states_ADDRESS 0x04F72Eu
+#define enemy_rocksteady_laugh_states_ADDRESS 0x04F75Cu
+#define enemy_rocksteady_shake_fist_states_ADDRESS 0x04F78Au
+#define enemy_rocksteady_draw_gun_states_ADDRESS 0x04F7BEu
+#define enemy_rocksteady_put_gun_away_states_ADDRESS 0x04F7FAu
+#define enemy_rocksteady_circle_states_ADDRESS 0x04F828u
+#define enemy_rocksteady_line_up_states_ADDRESS 0x04F8A8u
+#define enemy_rocksteady_close_in_states_ADDRESS 0x04F92Eu
+#define enemy_rocksteady_shoot_around_states_ADDRESS 0x04F9CCu
 #define rocksteady_shoot_around_aims_ADDRESS 0x04F9D4u
-#define indexed_table_of_32_bit_values_04FACE_ADDRESS 0x04FACEu
-#define indexed_table_of_32_bit_values_04FC10_ADDRESS 0x04FC10u
-#define indexed_table_of_32_bit_values_04FCE0_ADDRESS 0x04FCE0u
-#define indexed_table_of_32_bit_values_04FD58_ADDRESS 0x04FD58u
-#define indexed_table_of_32_bit_values_04FD94_ADDRESS 0x04FD94u
+#define enemy_rocksteady_pincer_charge_states_ADDRESS 0x04FACEu
+#define enemy_rocksteady_charge_states_ADDRESS 0x04FC10u
+#define enemy_rocksteady_punch_states_ADDRESS 0x04FCE0u
+#define enemy_rocksteady_gun_butt_states_ADDRESS 0x04FD58u
+#define enemy_rocksteady_shoot_states_ADDRESS 0x04FD94u
 #define rocksteady_shoot_animations_ADDRESS 0x04FDA8u
 #define unexplained_04FDAC_ADDRESS 0x04FDACu
 #define animations_04FDB0_ADDRESS 0x04FDB0u
 #define unexplained_04FDB4_ADDRESS 0x04FDB4u
-#define indexed_table_of_32_bit_values_04FE4E_ADDRESS 0x04FE4Eu
-#define indexed_table_of_32_bit_values_04FEB6_ADDRESS 0x04FEB6u
-#define indexed_table_of_32_bit_values_04FEEE_ADDRESS 0x04FEEEu
-#define indexed_table_of_32_bit_values_04FF26_ADDRESS 0x04FF26u
+#define enemy_rocksteady_flinch_states_ADDRESS 0x04FE4Eu
+#define enemy_rocksteady_reel_states_ADDRESS 0x04FEB6u
+#define enemy_rocksteady_flinch_from_behind_states_ADDRESS 0x04FEEEu
+#define enemy_rocksteady_knocked_down_states_ADDRESS 0x04FF26u
 #define rocksteady_knocked_down_animations_ADDRESS 0x04FF3Au
 #define rocksteady_knocked_down_animations_2_ADDRESS 0x04FF52u
-#define indexed_table_of_32_bit_values_050082_ADDRESS 0x050082u
+#define enemy_rocksteady_defeated_states_ADDRESS 0x050082u
 #define rocksteady_defeated_animations_ADDRESS 0x050092u
 #define rocksteady_defeated_animations_2_ADDRESS 0x0500A2u
 #define code_table_0501AE_ADDRESS 0x0501AEu
-#define indexed_table_of_32_bit_values_050286_ADDRESS 0x050286u
+#define enemy_bebop_enter_states_ADDRESS 0x050286u
 #define bebop_attacks_ADDRESS 0x0505E2u
 #define bebop_far_moves_ADDRESS 0x050602u
-#define indexed_table_of_32_bit_values_05068A_ADDRESS 0x05068Au
-#define indexed_table_of_32_bit_values_0506E4_ADDRESS 0x0506E4u
-#define indexed_table_of_32_bit_values_05077C_ADDRESS 0x05077Cu
-#define indexed_table_of_32_bit_values_0507FA_ADDRESS 0x0507FAu
-#define indexed_table_of_32_bit_values_0508D8_ADDRESS 0x0508D8u
-#define indexed_table_of_32_bit_values_050AE8_ADDRESS 0x050AE8u
-#define indexed_table_of_32_bit_values_050B98_ADDRESS 0x050B98u
-#define indexed_table_of_32_bit_values_050C74_ADDRESS 0x050C74u
+#define enemy_bebop_stand_states_ADDRESS 0x05068Au
+#define enemy_bebop_walk_to_front_states_ADDRESS 0x0506E4u
+#define enemy_bebop_walk_level_states_ADDRESS 0x05077Cu
+#define enemy_bebop_close_in_states_ADDRESS 0x0507FAu
+#define enemy_bebop_pincer_charge_states_ADDRESS 0x0508D8u
+#define enemy_bebop_punch_states_ADDRESS 0x050AE8u
+#define enemy_bebop_charge_states_ADDRESS 0x050B98u
+#define enemy_bebop_shoot_states_ADDRESS 0x050C74u
 #define bebop_shot_record_ADDRESS 0x050C7Cu
-#define indexed_table_of_32_bit_values_050CF2_ADDRESS 0x050CF2u
-#define indexed_table_of_32_bit_values_050D38_ADDRESS 0x050D38u
-#define indexed_table_of_32_bit_values_050D84_ADDRESS 0x050D84u
+#define enemy_bebop_flinch_states_ADDRESS 0x050CF2u
+#define enemy_bebop_flinch_from_behind_states_ADDRESS 0x050D38u
+#define enemy_bebop_knocked_down_states_ADDRESS 0x050D84u
 #define enemy_bebop_knocked_down_arc_ADDRESS 0x050D98u
-#define indexed_table_of_32_bit_values_050E72_ADDRESS 0x050E72u
+#define enemy_bebop_defeated_states_ADDRESS 0x050E72u
 #define enemy_bebop_defeated_arc_ADDRESS 0x050E82u
 #define code_table_050F7C_ADDRESS 0x050F7Cu
-#define indexed_table_of_32_bit_values_05100E_ADDRESS 0x05100Eu
-#define indexed_table_of_32_bit_values_051340_ADDRESS 0x051340u
+#define enemy_mouser_enter_states_ADDRESS 0x05100Eu
+#define enemy_mouser_bite_states_ADDRESS 0x051340u
 #define enemy_mouser_bite_arc_ADDRESS 0x051350u
 #define code_table_05157C_ADDRESS 0x05157Cu
 #define code_table_0515CC_ADDRESS 0x0515CCu
 #define code_table_05161C_ADDRESS 0x05161Cu
 #define code_table_051694_ADDRESS 0x051694u
 #define code_table_051712_ADDRESS 0x051712u
-#define indexed_table_of_32_bit_values_05175C_ADDRESS 0x05175Cu
-#define animations_05176C_ADDRESS 0x05176Cu
-#define indexed_table_of_32_bit_values_051836_ADDRESS 0x051836u
-#define indexed_table_of_32_bit_values_0518BC_ADDRESS 0x0518BCu
-#define indexed_table_of_32_bit_values_051974_ADDRESS 0x051974u
-#define indexed_table_of_32_bit_values_0519CC_ADDRESS 0x0519CCu
+#define enemy_mouser_chase_states_ADDRESS 0x05175Cu
+#define mouser_walk_animations_ADDRESS 0x05176Cu
+#define enemy_mouser_creep_to_side_states_ADDRESS 0x051836u
+#define enemy_mouser_back_off_states_ADDRESS 0x0518BCu
+#define enemy_mouser_thrown_off_states_ADDRESS 0x051974u
+#define enemy_mouser_break_down_states_ADDRESS 0x0519CCu
 #define enemy_mouser_break_down_arc_ADDRESS 0x0519D8u
-#define indexed_table_of_32_bit_values_051A14_ADDRESS 0x051A14u
+#define enemy_mouser_knocked_flying_states_ADDRESS 0x051A14u
 #define enemy_mouser_knocked_flying_arc_ADDRESS 0x051A20u
 #define code_table_051AD2_ADDRESS 0x051AD2u
 #define animations_051B26_ADDRESS 0x051B26u
@@ -2896,43 +2927,43 @@ extern const void *enemy_ways_in_data;
 #define animations_051B46_ADDRESS 0x051B46u
 #define unexplained_051B4E_ADDRESS 0x051B4Eu
 #define code_table_051C2C_ADDRESS 0x051C2Cu
-#define indexed_table_of_32_bit_values_051CB8_ADDRESS 0x051CB8u
+#define enemy_rodney_enter_states_ADDRESS 0x051CB8u
 #define rodney_attacks_ADDRESS 0x051F94u
-#define indexed_table_of_32_bit_values_052002_ADDRESS 0x052002u
-#define indexed_table_of_32_bit_values_052142_ADDRESS 0x052142u
-#define indexed_table_of_32_bit_values_052234_ADDRESS 0x052234u
-#define indexed_table_of_32_bit_values_052312_ADDRESS 0x052312u
+#define enemy_rodney_rush_states_ADDRESS 0x052002u
+#define enemy_rodney_rush_across_states_ADDRESS 0x052142u
+#define enemy_rodney_back_off_states_ADDRESS 0x052234u
+#define enemy_rodney_shoot_states_ADDRESS 0x052312u
 #define laser_bolt_shot_record_ADDRESS 0x05232Au
-#define indexed_table_of_32_bit_values_05242E_ADDRESS 0x05242Eu
+#define enemy_rodney_whip_states_ADDRESS 0x05242Eu
 #define whip_arm_shot_record_ADDRESS 0x05244Au
-#define indexed_table_of_32_bit_values_05260C_ADDRESS 0x05260Cu
+#define enemy_rodney_knocked_back_states_ADDRESS 0x05260Cu
 #define enemy_rodney_knocked_back_arc_ADDRESS 0x052618u
-#define indexed_table_of_32_bit_values_0526B0_ADDRESS 0x0526B0u
+#define enemy_rodney_destroyed_states_ADDRESS 0x0526B0u
 #define enemy_rodney_destroyed_arc_ADDRESS 0x0526C0u
 #define code_table_052778_ADDRESS 0x052778u
 #define shredder_distance_moves_ADDRESS 0x052ACEu
-#define indexed_table_of_32_bit_values_052CA2_ADDRESS 0x052CA2u
-#define indexed_table_of_32_bit_values_052D52_ADDRESS 0x052D52u
+#define enemy_shredder_appear_states_ADDRESS 0x052CA2u
+#define enemy_shredder_split_states_ADDRESS 0x052D52u
 #define shredder_clone_record_ADDRESS 0x052D5Au
-#define indexed_table_of_32_bit_values_052DDC_ADDRESS 0x052DDCu
-#define indexed_table_of_32_bit_values_052E60_ADDRESS 0x052E60u
+#define enemy_shredder_clone_appear_states_ADDRESS 0x052DDCu
+#define enemy_shredder_walk_to_side_states_ADDRESS 0x052E60u
 #define shredder_walk_animations_ADDRESS 0x052E74u
 #define shredder_walk_hurt_animations_ADDRESS 0x052E7Cu
-#define indexed_table_of_32_bit_values_052FE4_ADDRESS 0x052FE4u
-#define indexed_table_of_32_bit_values_05307C_ADDRESS 0x05307Cu
-#define indexed_table_of_32_bit_values_0530F6_ADDRESS 0x0530F6u
-#define indexed_table_of_32_bit_values_0531BA_ADDRESS 0x0531BAu
+#define enemy_shredder_walk_to_target_states_ADDRESS 0x052FE4u
+#define enemy_shredder_guard_states_ADDRESS 0x05307Cu
+#define enemy_shredder_back_off_states_ADDRESS 0x0530F6u
+#define enemy_shredder_lose_bar_states_ADDRESS 0x0531BAu
 #define shredder_piece_shot_record_ADDRESS 0x0531C2u
-#define indexed_table_of_32_bit_values_05324E_ADDRESS 0x05324Eu
-#define indexed_table_of_32_bit_values_0532E0_ADDRESS 0x0532E0u
-#define indexed_table_of_32_bit_values_053348_ADDRESS 0x053348u
+#define enemy_shredder_flinch_states_ADDRESS 0x05324Eu
+#define enemy_shredder_flinch_from_behind_states_ADDRESS 0x0532E0u
+#define enemy_shredder_defeated_states_ADDRESS 0x053348u
 #define enemy_shredder_defeated_arc_ADDRESS 0x05335Cu
-#define indexed_table_of_32_bit_values_05344C_ADDRESS 0x05344Cu
-#define indexed_table_of_32_bit_values_0534D0_ADDRESS 0x0534D0u
-#define indexed_table_of_32_bit_values_053530_ADDRESS 0x053530u
-#define indexed_table_of_32_bit_values_05357A_ADDRESS 0x05357Au
-#define indexed_table_of_32_bit_values_0535C4_ADDRESS 0x0535C4u
-#define indexed_table_of_32_bit_values_05360E_ADDRESS 0x05360Eu
+#define enemy_shredder_vanish_states_ADDRESS 0x05344Cu
+#define enemy_shredder_kick_states_ADDRESS 0x0534D0u
+#define enemy_shredder_thrust_states_ADDRESS 0x053530u
+#define enemy_shredder_slash_states_ADDRESS 0x05357Au
+#define enemy_shredder_sweep_states_ADDRESS 0x0535C4u
+#define enemy_shredder_ray_states_ADDRESS 0x05360Eu
 #define shredder_ray_shot_record_ADDRESS 0x053622u
 #define body_boxes_ADDRESS 0x053756u
 #define spawn_offsets_ADDRESS 0x053A5Eu
@@ -2947,7 +2978,7 @@ extern const void *enemy_ways_in_data;
 #define boomerang_soldier_definition_ADDRESS 0x0542B6u
 #define shuriken_soldier_definition_ADDRESS 0x05433Eu
 #define unused_enemy_definitions_ADDRESS 0x0543C6u
-#define table_loaded_by_lea_054746_ADDRESS 0x054746u
+#define rocksteady_health_area_2_ADDRESS 0x054746u
 #define bebop_health_ADDRESS 0x054756u
 #define rocksteady_health_ADDRESS 0x054766u
 #define bebop_health_2_ADDRESS 0x054776u
@@ -2955,7 +2986,7 @@ extern const void *enemy_ways_in_data;
 #define shredder_bar_health_ADDRESS 0x054796u
 #define shredder_clone_health_ADDRESS 0x0547A6u
 #define shredder_clone_bar_health_ADDRESS 0x0547B6u
-#define animations_0547C6_ADDRESS 0x0547C6u
+#define enemy_foot_soldier_animation_ADDRESS 0x0547C6u
 #define bomber_step_out_animation_ADDRESS 0x0547F8u
 #define enemy_grab_animation_ADDRESS 0x054872u
 #define enemy_run_animation_ADDRESS 0x054908u
@@ -2995,7 +3026,7 @@ extern const void *enemy_ways_in_data;
 #define manhole_soldier_start_animation_ADDRESS 0x054F56u
 #define rolling_manhole_cover_animation_ADDRESS 0x054F60u
 #define sprite_lists_054F72_ADDRESS 0x054F72u
-#define animations_055722_ADDRESS 0x055722u
+#define enemy_sword_soldier_animation_ADDRESS 0x055722u
 #define enemy_sword_ready_animation_ADDRESS 0x055824u
 #define enemy_flying_slash_sword_leap_animation_ADDRESS 0x055830u
 #define enemy_flying_slash_sword_fly_animation_ADDRESS 0x055840u
@@ -3041,7 +3072,7 @@ extern const void *enemy_ways_in_data;
 #define enemy_flinch_back_gun_animation_ADDRESS 0x056B7Cu
 #define enemy_flinch_bent_gun_animation_ADDRESS 0x056BB0u
 #define sprite_lists_056BDA_ADDRESS 0x056BDAu
-#define animations_056F42_ADDRESS 0x056F42u
+#define enemy_knife_soldier_animation_ADDRESS 0x056F42u
 #define enemy_knife_crouch_animation_ADDRESS 0x057088u
 #define enemy_knife_stab_animation_ADDRESS 0x0570AAu
 #define enemy_throw_knife_animation_ADDRESS 0x0570DCu
@@ -3064,21 +3095,21 @@ extern const void *enemy_ways_in_data;
 #define enemy_flinch_bent_axe_animation_ADDRESS 0x0577B2u
 #define enemy_flinch_reel_axe_animation_ADDRESS 0x0577DCu
 #define sprite_lists_057806_ADDRESS 0x057806u
-#define animations_057B46_ADDRESS 0x057B46u
+#define enemy_hammer_soldier_animation_ADDRESS 0x057B46u
 #define enemy_hammer_walk_animation_ADDRESS 0x057BF2u
 #define enemy_smash_hammer_animation_ADDRESS 0x057BFEu
 #define enemy_flinch_back_hammer_animation_ADDRESS 0x057C62u
 #define enemy_flinch_bent_hammer_animation_ADDRESS 0x057C96u
 #define sprite_lists_057CD6_ADDRESS 0x057CD6u
-#define animations_058076_ADDRESS 0x058076u
+#define enemy_mouser_in_air_animation_ADDRESS 0x058076u
 #define enemy_mouser_animation_ADDRESS 0x05811Au
 #define enemy_mouser_hop_animation_ADDRESS 0x058134u
 #define enemy_mouser_tumble_animation_ADDRESS 0x058146u
 #define enemy_mouser_hop_up_animation_ADDRESS 0x0581BAu
 #define enemy_mouser_fall_animation_ADDRESS 0x0581C4u
 #define enemy_mouser_fly_and_crash_animation_ADDRESS 0x0581D0u
-#define sprite_lists_0582B4_ADDRESS 0x0582B4u
-#define animations_0585C4_ADDRESS 0x0585C4u
+#define enemy_mouser_shadow_ADDRESS 0x0582B4u
+#define enemy_rodney_animation_ADDRESS 0x0585C4u
 #define enemy_rodney_back_off_animation_ADDRESS 0x0585DEu
 #define enemy_rodney_slide_to_stop_animation_ADDRESS 0x05860Cu
 #define enemy_rodney_rush_animation_ADDRESS 0x058636u
@@ -3100,29 +3131,29 @@ extern const void *enemy_ways_in_data;
 #define animations_059066_ADDRESS 0x059066u
 #define enemy_rodney_whip_animation_ADDRESS 0x059150u
 #define sprite_lists_0592C0_ADDRESS 0x0592C0u
-#define animations_059618_ADDRESS 0x059618u
+#define enemy_rocksteady_gun_walk_animation_ADDRESS 0x059618u
 #define sprite_lists_05965A_ADDRESS 0x05965Au
-#define animations_0596BA_ADDRESS 0x0596BAu
+#define enemy_rocksteady_walk_animation_ADDRESS 0x0596BAu
 #define sprite_lists_0596FC_ADDRESS 0x0596FCu
-#define animations_05979C_ADDRESS 0x05979Cu
+#define enemy_rocksteady_line_up_start_animation_ADDRESS 0x05979Cu
 #define sprite_lists_0597DE_ADDRESS 0x0597DEu
-#define animations_05983E_ADDRESS 0x05983Eu
+#define enemy_rocksteady_charge_animation_ADDRESS 0x05983Eu
 #define sprite_lists_05988C_ADDRESS 0x05988Cu
 #define animations_0598E4_ADDRESS 0x0598E4u
-#define sprite_lists_059A18_ADDRESS 0x059A18u
-#define animations_059CB0_ADDRESS 0x059CB0u
+#define big_boss_shadow_ADDRESS 0x059A18u
+#define enemy_rocksteady_enter_wait_animation_ADDRESS 0x059CB0u
 #define enemy_rocksteady_animation_ADDRESS 0x059CBAu
 #define enemy_rocksteady_shake_fist_animation_ADDRESS 0x059CC4u
 #define enemy_rocksteady_raise_fist_animation_ADDRESS 0x059CFCu
 #define enemy_rocksteady_laugh_animation_ADDRESS 0x059D58u
 #define sprite_lists_059D9A_ADDRESS 0x059D9Au
-#define animations_059FAA_ADDRESS 0x059FAAu
+#define enemy_rocksteady_punch_start_animation_ADDRESS 0x059FAAu
 #define enemy_rocksteady_gun_butt_animation_ADDRESS 0x059FD2u
 #define sprite_lists_059FFA_ADDRESS 0x059FFAu
-#define animations_05A08A_ADDRESS 0x05A08Au
+#define enemy_rocksteady_draw_gun_start_animation_ADDRESS 0x05A08Au
 #define enemy_rocksteady_put_gun_away_animation_ADDRESS 0x05A0D2u
 #define sprite_lists_05A1E0_ADDRESS 0x05A1E0u
-#define animations_05A430_ADDRESS 0x05A430u
+#define enemy_bebop_walk_animation_ADDRESS 0x05A430u
 #define sprite_lists_05A472_ADDRESS 0x05A472u
 #define animations_05A562_ADDRESS 0x05A562u
 #define enemy_bebop_animation_ADDRESS 0x05A5AEu
@@ -3130,14 +3161,14 @@ extern const void *enemy_ways_in_data;
 #define enemy_bebop_enter_drop_animation_ADDRESS 0x05A61Eu
 #define enemy_bebop_enter_in_air_animation_ADDRESS 0x05A648u
 #define sprite_lists_05A65E_ADDRESS 0x05A65Eu
-#define animations_05A77E_ADDRESS 0x05A77Eu
+#define enemy_bebop_shoot_start_animation_ADDRESS 0x05A77Eu
 #define bebop_shot_animation_ADDRESS 0x05A7CAu
 #define sprite_lists_05A838_ADDRESS 0x05A838u
-#define animations_05A930_ADDRESS 0x05A930u
+#define enemy_bebop_charge_animation_ADDRESS 0x05A930u
 #define sprite_lists_05A97E_ADDRESS 0x05A97Eu
-#define animations_05A9BE_ADDRESS 0x05A9BEu
+#define enemy_bebop_punch_start_animation_ADDRESS 0x05A9BEu
 #define sprite_lists_05AA16_ADDRESS 0x05AA16u
-#define animations_05AAF6_ADDRESS 0x05AAF6u
+#define enemy_bebop_flinch_from_behind_start_animation_ADDRESS 0x05AAF6u
 #define enemy_bebop_flinch_animation_ADDRESS 0x05AB38u
 #define enemy_bebop_knocked_down_start_animation_ADDRESS 0x05AB58u
 #define enemy_bebop_knocked_down_fall_animation_ADDRESS 0x05AB6Eu
@@ -3145,21 +3176,21 @@ extern const void *enemy_ways_in_data;
 #define enemy_bebop_defeated_start_animation_ADDRESS 0x05AB9Au
 #define enemy_bebop_defeated_fall_animation_ADDRESS 0x05ABBAu
 #define sprite_lists_05ABC6_ADDRESS 0x05ABC6u
-#define animations_05AD06_ADDRESS 0x05AD06u
+#define enemy_rocksteady_pincer_charge_run_animation_ADDRESS 0x05AD06u
 #define enemy_bebop_pincer_animation_ADDRESS 0x05AD12u
 #define sprite_lists_05AD28_ADDRESS 0x05AD28u
-#define animations_05AD40_ADDRESS 0x05AD40u
+#define enemy_shredder_appear_wait_animation_ADDRESS 0x05AD40u
 #define sprite_lists_05AD92_ADDRESS 0x05AD92u
-#define animations_05B032_ADDRESS 0x05B032u
+#define enemy_shredder_stand_animation_ADDRESS 0x05B032u
 #define enemy_shredder_animation_ADDRESS 0x05B03Cu
 #define sprite_lists_05B046_ADDRESS 0x05B046u
-#define animations_05B07E_ADDRESS 0x05B07Eu
+#define enemy_shredder_appear_step_out_animation_ADDRESS 0x05B07Eu
 #define sprite_lists_05B102_ADDRESS 0x05B102u
 #define animations_05B22A_ADDRESS 0x05B22Au
 #define sprite_lists_05B2AE_ADDRESS 0x05B2AEu
 #define animations_05B3AE_ADDRESS 0x05B3AEu
 #define sprite_lists_05B3F2_ADDRESS 0x05B3F2u
-#define animations_05B4F2_ADDRESS 0x05B4F2u
+#define enemy_shredder_recoil_animation_ADDRESS 0x05B4F2u
 #define enemy_shredder_flinch_animation_ADDRESS 0x05B512u
 #define enemy_shredder_flinch_from_behind_animation_ADDRESS 0x05B532u
 #define enemy_shredder_flinch_from_behind_2_animation_ADDRESS 0x05B552u
@@ -3169,21 +3200,21 @@ extern const void *enemy_ways_in_data;
 #define shredder_piece_start_animation_ADDRESS 0x05B5BEu
 #define shredder_piece_bounce_animation_ADDRESS 0x05B5C8u
 #define sprite_lists_05B5F6_ADDRESS 0x05B5F6u
-#define animations_05B6EE_ADDRESS 0x05B6EEu
+#define enemy_shredder_guard_start_animation_ADDRESS 0x05B6EEu
 #define enemy_shredder_guard_animation_ADDRESS 0x05B6F8u
 #define sprite_lists_05B702_ADDRESS 0x05B702u
-#define animations_05B73A_ADDRESS 0x05B73Au
+#define enemy_shredder_slash_start_animation_ADDRESS 0x05B73Au
 #define enemy_shredder_slash_animation_ADDRESS 0x05B784u
 #define sprite_lists_05B7CE_ADDRESS 0x05B7CEu
-#define animations_05B91E_ADDRESS 0x05B91Eu
+#define enemy_shredder_kick_start_animation_ADDRESS 0x05B91Eu
 #define enemy_shredder_kick_animation_ADDRESS 0x05B968u
 #define enemy_shredder_crouch_animation_ADDRESS 0x05B9B2u
 #define enemy_shredder_crouch_walk_animation_ADDRESS 0x05B9BEu
 #define sprite_lists_05B9CA_ADDRESS 0x05B9CAu
-#define animations_05BB0A_ADDRESS 0x05BB0Au
+#define enemy_shredder_thrust_start_animation_ADDRESS 0x05BB0Au
 #define enemy_shredder_thrust_animation_ADDRESS 0x05BB54u
 #define sprite_lists_05BB9E_ADDRESS 0x05BB9Eu
-#define animations_05BD3E_ADDRESS 0x05BD3Eu
+#define enemy_shredder_sweep_start_animation_ADDRESS 0x05BD3Eu
 #define enemy_shredder_sweep_animation_ADDRESS 0x05BD88u
 #define sprite_lists_05BDD2_ADDRESS 0x05BDD2u
 #define animations_05BF42_ADDRESS 0x05BF42u
@@ -3191,54 +3222,55 @@ extern const void *enemy_ways_in_data;
 #define enemy_shredder_ray_charge_animation_ADDRESS 0x05BF8Au
 #define enemy_shredder_ray_fire_animation_ADDRESS 0x05BFAEu
 #define sprite_lists_05BFC8_ADDRESS 0x05BFC8u
-#define animations_05C220_ADDRESS 0x05C220u
+#define shredder_ray_start_animation_ADDRESS 0x05C220u
 #define sprite_lists_05C2EC_ADDRESS 0x05C2ECu
-#define animations_05C52C_ADDRESS 0x05C52Cu
+#define enemy_hang_in_start_animation_ADDRESS 0x05C52Cu
 #define sprite_lists_05C546_ADDRESS 0x05C546u
-#define animations_05C566_ADDRESS 0x05C566u
+#define enemy_dive_in_dive_animation_ADDRESS 0x05C566u
 #define sprite_lists_05C57C_ADDRESS 0x05C57Cu
-#define animations_05C5A4_ADDRESS 0x05C5A4u
+#define enemy_walk_in_walk_animation_ADDRESS 0x05C5A4u
 #define sprite_lists_05C5D2_ADDRESS 0x05C5D2u
-#define animations_05C632_ADDRESS 0x05C632u
+#define motorbike_start_animation_ADDRESS 0x05C632u
 #define motorbike_struck_animation_ADDRESS 0x05C65Cu
 #define motorbike_ride_animation_ADDRESS 0x05C686u
 #define motorbike_struck_wheelie_animation_ADDRESS 0x05C6B0u
 #define sprite_lists_05C6DA_ADDRESS 0x05C6DAu
 #define animations_05C7CA_ADDRESS 0x05C7CAu
 #define sprite_lists_05C7EE_ADDRESS 0x05C7EEu
-#define animations_05C846_ADDRESS 0x05C846u
+#define tire_soldier_wait_animation_ADDRESS 0x05C846u
 #define tire_soldier_animation_ADDRESS 0x05C87Au
 #define rolling_tire_animation_ADDRESS 0x05C890u
 #define sprite_lists_05C8A2_ADDRESS 0x05C8A2u
-#define animations_05C92A_ADDRESS 0x05C92Au
+#define enemy_rocket_soldier_start_animation_ADDRESS 0x05C92Au
 #define enemy_rocket_soldier_line_up_animation_ADDRESS 0x05C944u
 #define rocket_animation_ADDRESS 0x05C95Au
 #define sprite_lists_05C96C_ADDRESS 0x05C96Cu
-#define animations_05C9C4_ADDRESS 0x05C9C4u
+#define enemy_crash_into_scenery_animation_ADDRESS 0x05C9C4u
 #define sprite_lists_05CA02_ADDRESS 0x05CA02u
 #define animations_05CA3A_ADDRESS 0x05CA3Au
 #define skateboard_shadow_ADDRESS 0x05CA54u
 #define skateboard_shadow_2_ADDRESS 0x05CA5Cu
-#define animations_05CA64_ADDRESS 0x05CA64u
+#define bomber_lean_out_animation_ADDRESS 0x05CA64u
 #define dynamite_animation_ADDRESS 0x05CB10u
 #define sprite_lists_05CBB6_ADDRESS 0x05CBB6u
 #define animations_05CD46_ADDRESS 0x05CD46u
 #define sprite_lists_05CD60_ADDRESS 0x05CD60u
-#define animations_05CDA0_ADDRESS 0x05CDA0u
+#define double_door_wait_animation_ADDRESS 0x05CDA0u
 #define sprite_lists_05CDB6_ADDRESS 0x05CDB6u
-#define animations_05CE06_ADDRESS 0x05CE06u
+#define boss_shutter_start_animation_ADDRESS 0x05CE06u
 #define boss_shutter_animation_ADDRESS 0x05CE10u
 #define sprite_lists_05CE26_ADDRESS 0x05CE26u
-#define animations_05CE9E_ADDRESS 0x05CE9Eu
+#define technodrome_door_start_animation_ADDRESS 0x05CE9Eu
 #define technodrome_door_animation_ADDRESS 0x05CEA8u
 #define sprite_lists_05CEBE_ADDRESS 0x05CEBEu
-#define animations_05CEEE_ADDRESS 0x05CEEEu
+#define dynamite_bounce_animation_ADDRESS 0x05CEEEu
 #define sprite_lists_05CF92_ADDRESS 0x05CF92u
 #define unused_animation_list_ADDRESS 0x05D03Au
 #define enemies_05D506_ADDRESS 0x05D506u
 #define unexplained_05F402_ADDRESS 0x05F402u
 
 /* numbers the code uses, by name (symbols.txt constant lines) */
+#define VAN_START_X 0x5000u
 #define HIT_NEAR_LEFT_EDGE_X 0xE000u
 #define HIT_NEAR_RIGHT_EDGE_X 0x12000u
 #define LIFT_EDGE_RANGE 0x1A000u
@@ -3284,7 +3316,7 @@ struct object
 			uint16_t unk_2C;
 			uint8_t unk_2B;
 			uint8_t unk_2A;
-			uint16_t unk_28;
+			uint16_t hit_sound;
 			uint8_t unk_27;
 			uint8_t unk_26;
 			uint8_t unk_25;
@@ -5075,6 +5107,106 @@ struct spawn_direction
 	uint8_t y;
 };
 
+struct player_input
+{
+	uint8_t bits;
+};
+
+struct marker_timer
+{
+	uint8_t frames;
+};
+
+struct floor_map_cell
+{
+	uint8_t cell;
+};
+
+struct queued_job
+{
+	uint16_t job;
+};
+
+struct queued_sound
+{
+	uint8_t command;
+};
+
+struct hug_colour
+{
+	uint8_t colour;
+};
+
+struct fade_colour
+{
+	union
+	{
+		uint16_t colour;
+		struct
+		{
+			uint8_t pad_00[0x1];
+			uint8_t part;
+		};
+	};
+};
+
+struct mask_rom_total
+{
+	uint16_t sum;
+};
+
+struct draw_entry
+{
+	uint16_t object;
+};
+
+struct throw_timer
+{
+	uint16_t frames;
+};
+
+struct elevator_stop
+{
+	uint8_t pad_00[0x1];
+	uint8_t wait;
+	uint16_t x;
+};
+
+struct window_drop
+{
+	uint16_t times;
+	uint16_t trigger_x;
+};
+
+struct window_dive
+{
+	uint16_t trigger_y;
+};
+
+struct colour_channel
+{
+	uint16_t step;
+	uint16_t mask;
+};
+
+struct bcd_pair
+{
+	uint8_t digits;
+};
+
+struct ranking_score
+{
+	uint16_t score;
+};
+
+struct ranking_name
+{
+	uint8_t pad_00[0x1];
+	uint8_t third;
+	uint8_t second;
+	uint8_t first;
+};
+
 #pragma pack(pop)
 
 _Static_assert(sizeof(struct object) == 0x50, "struct object has the size of the game's blocks");
@@ -5121,6 +5253,23 @@ _Static_assert(sizeof(struct window_break_step) == 0x6, "struct window_break_ste
 _Static_assert(sizeof(struct dive_window) == 0xA, "struct dive_window has the size of the program ROM's records");
 _Static_assert(sizeof(struct spawn_speed) == 0x4, "struct spawn_speed has the size of the program ROM's records");
 _Static_assert(sizeof(struct spawn_direction) == 0x2, "struct spawn_direction has the size of the program ROM's records");
+_Static_assert(sizeof(struct player_input) == 0x1, "struct player_input has the size of the game's blocks");
+_Static_assert(sizeof(struct marker_timer) == 0x1, "struct marker_timer has the size of the game's blocks");
+_Static_assert(sizeof(struct floor_map_cell) == 0x1, "struct floor_map_cell has the size of the game's blocks");
+_Static_assert(sizeof(struct queued_job) == 0x2, "struct queued_job has the size of the game's blocks");
+_Static_assert(sizeof(struct queued_sound) == 0x1, "struct queued_sound has the size of the game's blocks");
+_Static_assert(sizeof(struct hug_colour) == 0x1, "struct hug_colour has the size of the game's blocks");
+_Static_assert(sizeof(struct fade_colour) == 0x2, "struct fade_colour has the size of the game's blocks");
+_Static_assert(sizeof(struct mask_rom_total) == 0x2, "struct mask_rom_total has the size of the game's blocks");
+_Static_assert(sizeof(struct draw_entry) == 0x2, "struct draw_entry has the size of the game's blocks");
+_Static_assert(sizeof(struct throw_timer) == 0x2, "struct throw_timer has the size of the game's blocks");
+_Static_assert(sizeof(struct elevator_stop) == 0x4, "struct elevator_stop has the size of the program ROM's records");
+_Static_assert(sizeof(struct window_drop) == 0x4, "struct window_drop has the size of the program ROM's records");
+_Static_assert(sizeof(struct window_dive) == 0x2, "struct window_dive has the size of the program ROM's records");
+_Static_assert(sizeof(struct colour_channel) == 0x4, "struct colour_channel has the size of the program ROM's records");
+_Static_assert(sizeof(struct bcd_pair) == 0x1, "struct bcd_pair has the size of the game's blocks");
+_Static_assert(sizeof(struct ranking_score) == 0x2, "struct ranking_score has the size of the game's blocks");
+_Static_assert(sizeof(struct ranking_name) == 0x4, "struct ranking_name has the size of the game's blocks");
 
 #define OBJECT(address) ((struct object *)ram((address), sizeof(struct object)))
 #define ANIMATION_FRAME(address) ((const struct animation_frame *)data_record((address), sizeof(struct animation_frame)))
@@ -5286,6 +5435,41 @@ _Static_assert(sizeof(struct spawn_direction) == 0x2, "struct spawn_direction ha
 #define MOVE_CHOICE(address) (*(const uint8_t *)data_record((address), 1))
 #define MOVE_CHOICE_16(address) (*(const uint16_t *)data_record((address), 2))
 #define MOVE_CHOICE_32(address) (*(const uint32_t *)data_record((address), 4))
+#define PLAYER_INPUT(address) ((struct player_input *)ram((address), sizeof(struct player_input)))
+#define MARKER_TIMER(address) ((struct marker_timer *)ram((address), sizeof(struct marker_timer)))
+#define FLOOR_MAP_CELL(address) ((struct floor_map_cell *)ram((address), sizeof(struct floor_map_cell)))
+#define QUEUED_JOB(address) ((struct queued_job *)ram((address), sizeof(struct queued_job)))
+#define QUEUED_SOUND(address) ((struct queued_sound *)ram((address), sizeof(struct queued_sound)))
+#define HUG_COLOUR(address) ((struct hug_colour *)ram((address), sizeof(struct hug_colour)))
+#define FADE_COLOUR(address) ((struct fade_colour *)ram((address), sizeof(struct fade_colour)))
+#define MASK_ROM_TOTAL(address) ((struct mask_rom_total *)ram((address), sizeof(struct mask_rom_total)))
+#define DRAW_ENTRY(address) ((struct draw_entry *)ram((address), sizeof(struct draw_entry)))
+#define THROW_TIMER(address) ((struct throw_timer *)ram((address), sizeof(struct throw_timer)))
+#define ELEVATOR_STOP(address) ((const struct elevator_stop *)data_record((address), sizeof(struct elevator_stop)))
+#define WINDOW_DROP(address) ((const struct window_drop *)data_record((address), sizeof(struct window_drop)))
+#define WINDOW_DIVE(address) ((const struct window_dive *)data_record((address), sizeof(struct window_dive)))
+#define COLOUR_CHANNEL(address) ((const struct colour_channel *)data_record((address), sizeof(struct colour_channel)))
+#define PALETTE_EFFECT_COUNT(address) (*(const uint16_t *)data_record((address), 2))
+#define PALETTE_EFFECT_COUNT_8(address) (*(const uint8_t *)data_record((address), 1))
+#define PALETTE_EFFECT_COUNT_32(address) (*(const uint32_t *)data_record((address), 4))
+#define PALETTE_EFFECT_CODE(address) (*(const uint16_t *)data_record((address), 2))
+#define PALETTE_EFFECT_CODE_8(address) (*(const uint8_t *)data_record((address), 1))
+#define PALETTE_EFFECT_CODE_32(address) (*(const uint32_t *)data_record((address), 4))
+#define LOGO_PLACE(address) (*(const uint16_t *)data_record((address), 2))
+#define LOGO_PLACE_8(address) (*(const uint8_t *)data_record((address), 1))
+#define LOGO_PLACE_32(address) (*(const uint32_t *)data_record((address), 4))
+#define FONT_TILE(address) (*(const uint8_t *)data_record((address), 1))
+#define FONT_TILE_16(address) (*(const uint16_t *)data_record((address), 2))
+#define FONT_TILE_32(address) (*(const uint32_t *)data_record((address), 4))
+#define BOX_PART_PLACE(address) (*(const uint32_t *)data_record((address), 4))
+#define BOX_PART_PLACE_8(address) (*(const uint8_t *)data_record((address), 1))
+#define BOX_PART_PLACE_16(address) (*(const uint16_t *)data_record((address), 2))
+#define BCD_PAIR(address) ((struct bcd_pair *)ram((address), sizeof(struct bcd_pair)))
+#define RANKING_SCORE(address) ((struct ranking_score *)ram((address), sizeof(struct ranking_score)))
+#define RANKING_NAME(address) ((struct ranking_name *)ram((address), sizeof(struct ranking_name)))
+#define REACTION(address) (*(const uint8_t *)data_record((address), 1))
+#define REACTION_16(address) (*(const uint16_t *)data_record((address), 2))
+#define REACTION_32(address) (*(const uint32_t *)data_record((address), 4))
 
 /* the program ROM's tables of records, by name: name[i].field */
 #define ending_palette_fades_ADDRESS 0x0071DCu

@@ -3,7 +3,7 @@
  *    Description: the PCM effects (commands 80-93) and their samples
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    01-11-2026
+ *    Modified:    04-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the Z80 sound program decompiled into C by
@@ -78,7 +78,7 @@ uint32_t pcm_effect_81(uint16_t channel)
 	uint16_t handler = 0;
 
 	z80_block(27);
-	handler = 0x1114u;
+	handler = pcm_effect_81_echo_ADDRESS;
 	queue_pcm_effect_a(handler);
 	return pcm_effect_81_twice(channel);
 }
@@ -109,7 +109,7 @@ uint32_t pcm_effect_81_play(uint16_t ticks, uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10F8u;
+	handler = pcm_effect_81_next_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -152,7 +152,7 @@ void pcm_effect_81_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->pcm_effect.wait = 0x20u;
-	handler = 0x111Eu;
+	handler = pcm_effect_81_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -189,13 +189,11 @@ uint32_t pcm_effect_82(uint16_t channel)
 uint32_t pcm_effect_play_ducking(uint16_t pitch, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t bank = 0, pitch_low = 0;
+	uint8_t bank = 0;
 	uint16_t handler = 0, start = 0, ticks = 0;
 
-	pitch_low = (uint8_t)pitch;
 	z80_block(134);
-	AS8(CHANNEL(channel)->pcm_effect.pitch) = pitch_low;
-	AT8(CHANNEL(channel)->pcm_effect.pitch, 1) = ((pitch & ~0xFFu) | pitch_low) >> 8;
+	CHANNEL(channel)->pcm_effect.pitch = pitch;
 	music_attenuation = 1u;
 	music_attenuation_changed = 1u;
 	ticks = 0x48u;
@@ -204,7 +202,7 @@ uint32_t pcm_effect_play_ducking(uint16_t pitch, uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x114Bu;
+	handler = pcm_effect_ducking_fade_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -257,18 +255,16 @@ uint32_t pcm_effect_83(uint16_t channel)
 uint32_t pcm_effect_83_play(uint16_t pitch, uint16_t ticks, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t bank = 0, pitch_low = 0;
+	uint8_t bank = 0;
 	uint16_t handler = 0, start = 0;
 
-	pitch_low = (uint8_t)pitch;
 	z80_block(72);
-	AS8(CHANNEL(channel)->pcm_effect.pitch) = pitch_low;
-	AT8(CHANNEL(channel)->pcm_effect.pitch, 1) = ((pitch & ~0xFFu) | pitch_low) >> 8;
+	CHANNEL(channel)->pcm_effect.pitch = pitch;
 	start = 0x6320u;
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -297,18 +293,16 @@ uint32_t pcm_effect_84_sound(uint16_t channel)
 uint32_t pcm_effect_84_play(uint16_t pitch, uint16_t ticks, uint16_t channel)
 {
 	uint32_t carry = 0;
-	uint8_t bank = 0, pitch_low = 0;
+	uint8_t bank = 0;
 	uint16_t handler = 0, start = 0;
 
-	pitch_low = (uint8_t)pitch;
 	z80_block(72);
-	AS8(CHANNEL(channel)->pcm_effect.pitch) = pitch_low;
-	AT8(CHANNEL(channel)->pcm_effect.pitch, 1) = ((pitch & ~0xFFu) | pitch_low) >> 8;
+	CHANNEL(channel)->pcm_effect.pitch = pitch;
 	start = 0x5620u;
 	bank = 0u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -344,7 +338,7 @@ uint32_t pcm_effect_86(uint16_t channel)
 	pitch = 0xFD3u;
 	carry = pcm_effect_86_play(pitch, channel);
 	z80_block(20);
-	handler = 0x11C8u;
+	handler = pcm_effect_86_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -377,13 +371,11 @@ uint32_t pcm_effect_86_countdown(uint16_t channel)
    too). */
 uint32_t pcm_effect_86_play(uint16_t pitch, uint16_t channel)
 {
-	uint8_t bank = 0, pitch_low = 0;
+	uint8_t bank = 0;
 	uint16_t start = 0, ticks = 0;
 
-	pitch_low = (uint8_t)pitch;
 	z80_block(94);
-	AS8(CHANNEL(channel)->pcm_effect.pitch) = pitch_low;
-	AT8(CHANNEL(channel)->pcm_effect.pitch, 1) = ((pitch & ~0xFFu) | pitch_low) >> 8;
+	CHANNEL(channel)->pcm_effect.pitch = pitch;
 	ticks = speech_priorities_ADDRESS;
 	CHANNEL(channel)->pcm_effect.volume = 0xFu;
 	start = 0x9BE0u;
@@ -398,7 +390,7 @@ void pcm_effect_8d(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->pcm_effect.wait = 8u;
-	handler = 0x11FEu;
+	handler = pcm_effect_8d_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -420,7 +412,7 @@ uint32_t pcm_effect_8d_wait(uint16_t channel, uint32_t carry)
 	pitch = 0xFD5u;
 	carry = pcm_effect_86_play(pitch, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -441,7 +433,7 @@ uint32_t pcm_effect_87(uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -453,7 +445,7 @@ uint32_t pcm_effect_88(uint16_t channel)
 	uint16_t handler = 0;
 
 	z80_block(27);
-	handler = 0x1250u;
+	handler = pcm_effect_88_echo_ADDRESS;
 	queue_pcm_effect_a(handler);
 	return pcm_effect_88_play(channel);
 }
@@ -474,7 +466,7 @@ uint32_t pcm_effect_88_play(uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -486,7 +478,7 @@ void pcm_effect_88_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->pcm_effect.short_ticks = 2u;
-	handler = 0x125Au;
+	handler = pcm_effect_88_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -540,7 +532,7 @@ uint32_t pcm_effect_89_play(uint16_t ticks, uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x128Cu;
+	handler = pcm_effect_89_next_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -596,7 +588,7 @@ uint32_t pcm_effect_8a_play(uint16_t channel, uint8_t volume)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x12BFu;
+	handler = pcm_effect_8a_next_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -632,7 +624,7 @@ uint32_t pcm_effect_8b(uint16_t channel)
 	uint16_t handler = 0, pitch = 0;
 
 	z80_block(27);
-	handler = 0x1338u;
+	handler = pcm_effect_8b_echo_ADDRESS;
 	queue_pcm_effect_a(handler);
 	z80_block(10);
 	pitch = 0xFA8u;
@@ -665,7 +657,7 @@ uint32_t pcm_effect_8b_play(uint16_t ticks, uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x12FCu;
+	handler = pcm_effect_8b_next_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -726,7 +718,7 @@ void pcm_effect_8b_echo(uint16_t channel)
 
 	z80_block(39);
 	CHANNEL(channel)->pcm_effect_8b.repeats = 8u;
-	handler = 0x1342u;
+	handler = pcm_effect_8b_echo_wait_ADDRESS;
 	set_channel_handler(handler, channel);
 }
 
@@ -770,7 +762,7 @@ uint32_t pcm_effect_8e(uint16_t channel)
 	uint16_t handler = 0, start = 0, ticks = 0;
 
 	z80_block(27);
-	handler = 0x1232u;
+	handler = pcm_effect_88_play_ADDRESS;
 	queue_pcm_effect_a(handler);
 	z80_block(111);
 	ticks = 0x280u;
@@ -781,7 +773,7 @@ uint32_t pcm_effect_8e(uint16_t channel)
 	bank = 0u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -804,7 +796,7 @@ uint32_t pcm_effect_8f(uint16_t channel)
 	bank = 0u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
@@ -825,7 +817,7 @@ uint32_t pcm_effect_90(uint16_t channel)
 	bank = 1u;
 	carry = play_pcm_sample(bank, start, ticks, channel);
 	z80_block(20);
-	handler = 0x10AFu;
+	handler = pcm_effect_countdown_ADDRESS;
 	set_channel_handler(handler, channel);
 	return carry;
 }
