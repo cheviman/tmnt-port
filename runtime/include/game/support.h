@@ -49,6 +49,15 @@ extern "C" {
    definition as BOARD_ORIGINAL(name), which keeps the original as original_name */
 #define BOARD_ORIGINAL(name) original_##name
 
+/* A game function a port's console build (console/, TMNT_CONSOLE) puts its own in place of (console/replaced.txt):
+   tools/decompile.py writes its definition as CONSOLE_ORIGINAL(name), which is original_name there, for the
+   console's to call, and the game's own name in every other build */
+#ifdef TMNT_CONSOLE
+#define CONSOLE_ORIGINAL(name) original_##name
+#else
+#define CONSOLE_ORIGINAL(name) name
+#endif
+
 /* ---- the work RAM ---- */
 
 #define WORK_RAM 0x060000u

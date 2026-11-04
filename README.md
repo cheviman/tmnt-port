@@ -156,6 +156,10 @@ python tools/decompile.py
 python tools/decompile_sound.py --checks
 ```
 
+`decompile_sound.py` also writes the Z80's timing table, `build/sound/timing.txt`, which the reference needs to
+keep the sound program's time as the game's own sound board does: run it once in a new clone before the checks
+below.
+
 `build/bin/kref` runs the original programs on MAME's cores against the same board model. Both it and the game
 take the control scripts of `tests/controls/` (written by `tools/make_scenarios.py`), and both write hashes of
 every frame. This runs every script on both, compares them frame by frame in state, picture and sound, and
