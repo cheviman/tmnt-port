@@ -3,377 +3,412 @@
 A reconstruction of Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* (a 68000 main board with a Z80
 sound board) into platform-agnostic C, not an emulator, following the method of
 [segasonic-decomp](https://github.com/cheviman/segasonic-decomp) and
-[outrunners-decomp](https://github.com/cheviman/outrunners-decomp): the game's program decompiled one
-function at a time, checked frame by frame against MAME in picture and sound.
+[outrunners-decomp](https://github.com/cheviman/outrunners-decomp): both of the game's programs decompiled one
+function at a time into readable C, and checked frame by frame against MAME in state, picture and sound.
 
-**Work in progress.** This repository will contain no game data. As with
-[n64decomp/sm64](https://github.com/n64decomp/sm64), you bring your own ROM set (MAME's `tmnt`), and the
-tools verify it, extract the assets and build your own executable.
+**This repository contains no game data.** The game's programs are here as C, decompiled from the original
+machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64), you bring your own ROM set
+(MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you build your own executable,
+which runs from the assets and opens no ROM.
 
 ## Status
 
+As of 04-11-2026:
+
 - [x] ROM set verification (MAME set `tmnt`, World 4 Players, version X), by CRC32 and SHA-1 of every file
-- [x] The board model in C (`runtime/`): the 68000's memory map, the inputs and DIP switches, IRQ5 on VBLANK,
-      the K052109's and K051960's memories and registers, and their ROMs read through them
-- [x] Reference run of the original program on MAME's 68000 core against that model (`kref`): it boots,
-      passes its RAM and ROM check, runs the attract mode, and in the test mode passes its mask ROM check
-      (the tile and sprite ROMs read through the video chips); the same frame by frame from one run to the
-      next
-- [x] The reference's picture: MAME's own tilemap, drawgfx and palette code with its K052109 and K051960
-      drawing every frame (`kref --video-hashes`, `--video-dump`), as MAME's `tmnt.cpp` draws them
-- [x] The reference's sound: the sound board on the board model (`runtime/src/sound.c`), with MAME's Z80,
-      K007232 and uPD7759, ymfm's YM2151 and the title music (`kref --sound-hashes`, `--sound-wav`,
-      `--sound-trace`): each source's samples at its own rate, the same from one run to the next
-- [x] Scenarios (`tests/controls/`, written by `tools/make_scenarios.py`, the format in
-      `runtime/include/tmnt/script.h`): the attract mode; the test mode through every screen, every input
-      pressed in its I/O test; its sound test through all 135 codes; games of one player (to GAME OVER, and
-      one that continues) and of four; one with the DIP switches changed (the screen flipped among them);
-      and a four-player game in each of the program's ten areas, started there by a poke and with the lives
-      kept up, played until the boss falls and the next area starts (in the street the players walk down and
-      up too, or a soldier below them holds the scroll); in the last area they beat Krang, and as Shredder
-      and his copies outlast them the area is cleared by a poke during his fight: the ending, the staff
-      roll, GAME OVER and the attract mode run. All 17 run to their end (507,382 frames), and between them
-      they execute 25,328 addresses of the 68000 program and 4,486 of the Z80's (`python
-      tools/check_scenarios.py --reference-only --video --sound`)
-- [x] Every boss and the ending in scenarios (04-11-2026): playing them found a picture whose last 14 bytes
-      had been taken for a routine (Splinter's, drawn after the building site), which the game read as zeroes;
-      a record of the program's data the C reads where its assets have nothing now stops the game, as a byte
-      does
-- [x] 68000 frontend in the shared core (`tools/core/m68000/`): decoder and disassembler ported from MAME's,
-      the same text as MAME's at every even offset of the program and of an image of every opcode
-      (`python tools/core/konami/reference/compare_m68k_with_mame.py`), with each instruction's operands
-      and control flow
-- [x] Recursive disassembly without traces (`python tools/disassemble.py`, the core's 68000 analysis, from
-      the vectors and `symbols.txt`): it follows what the address registers can hold into the tables of
-      object handlers the program jumps through, and finds 28,515 instructions, all 25,328 addresses the
-      scenarios execute among them and none of them inside another instruction
-- [x] Every byte of the program classified (`python tools/coverage.py --reads build/scenarios`, the core's,
-      with the bytes the scenarios read as data: `kref --rom-reads`): 32.5% code, 65.9% data,
-      1.6% fill, and no byte left unexplained
-- [x] The data the engines read, walked from where the code hands it over (`python tools/data_walk.py
-      --reads build/scenarios`, no traces): the sprite engine's animations, sprite lists and boxes, the
-      areas' layer maps and blocks, the palettes and their effects, the enemies' spawn lists and
-      definitions, the texts, the scroll's segments, the attract mode's demos, and the tables the code reads
-      by an index or through a register
-- [x] Every table of data described with its layout, its types and a name by subject, before any C is
-      generated: the C reads the game's data by name from its first build, never by an address of the ROM.
-      Every byte the scenarios read as data is in a table described, and what no code reads has a name by what
-      it is: the four pizzas' records (SPEEDY, WHIRLY, ENERGY and ZAPPY; only ENERGY is ever placed), two lists of
-      jobs (the Asia warning, the Konami logo), a palette list, an animation of April, an old table of the attract
-      mode's steps. Code no path reaches is decompiled with a comment that says so: a recorder of the demos'
-      inputs, an animation viewer worked with the players' buttons, a box that shrinks to the screen's middle
-- [x] The sound program classified the same way (`python tools/sound_coverage.py --trace build/scenarios
-      --reads build/scenarios`): its analysis finds the 4,481 addresses the scenarios run without traces, and
-      every byte is code (35.6%), described data (64.3%: the driver's tables and the music) or fill
-- [x] Assets extracted (`python tools/extract_assets.py`, into `assets/`, outside the repository) and checked
-      byte for byte against the ROM set (`--check`): tilesets by area and sprite sheets by the animations
-      that show them (indexed PNGs that keep each pen), the title music, the K007232's samples and the
-      uPD7759's speech (WAV), the data of both programs as text by subject, every piece by name, and the
-      music as Standard MIDI Files
-- [x] Every tile and sprite in a sheet by subject, none by bank: after the areas' maps and the animations, what
-      each scene shows (`kref --graphics-uses` on every control script, `python tools/graphics_subjects.py` writes
-      `graphics_subjects.txt`): the fixed layer's fonts, logos and HUD, the speech balloons, the opening, each
-      area's story, play and exit pictures, the ending; a tile or sprite nothing uses or shows goes with its
-      neighbours in the ROM, and `tilesets.txt` and `sprites.txt` list those. The four turtles' animations have a
-      sheet each (`leonardo_animation_set`...). Every sheet shows with its own colours: each tile and sprite with
-      the palette it shows with, and the palette set its scene requests (`kidnap_picture_palettes`...)
-- [x] Every piece of data named by what it is, none by its address: by the table symbols.txt names, the routine
-      that reads it (`title_setup_routines`), the named piece that points at it (`game_texts_5`,
-      `enemy_rodney_animation_sprites`), or the routines a table of states holds (`krang_laser_routines`); in the
-      sound program, the effect a voice is for (`fm_effect_02_voice`), the music's instruments (`fm_instrument_3`)
-      and the parts of each track by number (`songs_10_tracks_0_part_2`)
-- [x] The music as Standard MIDI Files, a song a file (`assets/sound/music/`: an area's, `area_0.mid` to
-      `area_9.mid` with `area_4_and_7.mid`, `boss.mid`, `continue.mid`, `staff_roll.mid`... named by what the
-      game plays them for; `music.txt` lists them and the songs table's entries each plays), which the game
-      loads (`runtime/src/music.c`) and from which `--check` gets back every byte of the music and of the
-      songs table (`tools/sound_music.py`, whose docstring has the format). A track is a channel of the song,
-      the YM2151's seven and the K007232's two, with its loops and parts played as the driver plays them: one
-      tick of the file is one of the driver's (24 a quarter note), and tempo events give them the game's speed
-      (the tempo, the accelerando, and the main loop's passes: timer B's 14 x 1024 clocks, longer where a
-      pass's work runs past it, as the game's own sound board measures them: within 1% of its speed in every
-      song). A note is a Note On and a Note Off, at the key its pitch has (the drums on General MIDI's
-      percussion), and its byte comes back from its key and its length, given the octave and transpositions
-      before it; what MIDI has no event for (the octave, instruments, volumes, gate, detune, portamento, LFO,
-      loops, calls and returns, jumps, held notes, rests, the end, the bytes no track reaches) is in
-      sequencer-specific meta events with the driver's bytes. An edit the driver's bytes cannot take says what
-      failed
-- [x] The 68000's instructions lifted to the decompiler's IR (`tools/core/m68000/lift.py`), checked
-      against MAME's 68000 core one instruction at a time from random states (`python
-      tools/core/konami/reference/compare_lift_with_mame.py --c`): every opcode of the program and every
-      valid opcode of the 68000 leave the same registers, flags and bus cycles, in the IR and in the C
-- [x] Translation scaffold (`python tools/recompile.py`): the program as C an instruction at a time, run by
-      the board in C; the game's own video (`runtime/src/video.c`) and sound chips (`runtime/src/ym2151.c`,
-      `sound_chips.c`) match MAME's frame for frame and sample for sample (`kref --video-check`,
-      `--sound-check`)
-- [x] The game runs from its assets (`runtime/src/assets.c`, `kref --assets-check`: every byte comes back),
-      opening no ROM: all 17 scenarios match the reference frame by frame in state and picture
-      (`python tools/check_scenarios.py --native-only --translated --video`), the window port (`tmnt`,
-      SDL2) gives the same frames from a script, and no executable of the game holds a stretch of the ROM
-      set (`python tools/rom_in_executables.py`)
-- [x] The sound program decompiled (`python tools/decompile_sound.py`, into `src/sound/`: 381 functions, no
-      goto, its tables read by name from the assets) and run by the game's own sound board
-      (`runtime/src/sound_cpu.c`, `sound_board.c`) on the Z80's timing model, which the reference follows
-      too: its samples and RAM match MAME's sound board in every frame of the 17 scenarios (`python
-      tools/check_sound_board.py`, 241,282 frames), and the game matches the reference in state, picture
-      and sound in all 17 (`python tools/check_scenarios.py --translated --video --sound`), in the window
-      port too
-- [x] The 68000 program decompiled (`python tools/decompile.py`, the core's 68000 driver, into `src/`): one C
-      function for each of the program's 2,059, no goto, the stack, the return addresses and the status
-      register's flags gone into the C's own calls and variables; the tables it reads by name (393) loaded
-      from the assets, the data it reaches through the addresses it keeps resolved through the assets, never
-      the ROM. The game runs it on its own runtime (`runtime/src/game_program.c`: the frame, the interrupts,
-      the tables), and matches the reference in state, picture and sound in all 17 scenarios (`python
-      tools/check_scenarios.py --native-only --video --sound`), in the window port too; the structure of
-      every function, the code no scenario runs included, checks against its jumps (`python
-      tools/check_structure.py build/structure_check`: 0 problems), and no executable holds a stretch of the
-      ROM set. The work RAM the comparisons leave out is what the 68000 itself keeps there and the C has in
-      its variables: the two stacks (060700-060AFF) and the registers the VBLANK handler saves (060440-06047B)
-- [x] The C's types (30-10-2026): the 50 objects (0x50 bytes from 062000) are a structure the C reads by its
-      fields (`OBJECT(object)->frame`), the program's data the sprite engine walks are records with fields
-      (`ANIMATION_FRAME(frame)->sprites`, `SPRITE(sprite)->x`, the attack frames, sprite sizes and body boxes),
-      read from the assets, never the ROM; the longs the 68000 writes a half at a time go to the work RAM as
-      one value. Memory reached through an address the code works out went from 12,127 to 2,228 (the rest:
-      buffers, the video chips' memories and tables the code walks byte by byte)
-- [x] The objects named (30-10-2026): the fields every object has (its attack and the hit it took, health,
-      damage, speeds, floor, depth), and families of objects by the code that runs them, each with the fields
-      as its code uses them (`OBJECT(turtle)->turtle.jump_speed`, `OBJECT(enemy)->enemy.target`): the
-      turtles, the enemies (the Foot soldiers by weapon, Rocksteady, Bebop, the Mousers, Roadkill Rodney,
-      Shredder) with a family for each kind of move that keeps something else in its fields, their
-      projectiles, the doors, lifts and manholes they come out of, the scenery that hits. A family whose name
-      starts with another's reads that one's fields too (`enemy_grab` is an `enemy`). The uses of the
-      objects' fields named after their offset went from 5,618 to 1,782, the functions named after their
-      address from 2,212 to 1,197
-- [x] The other objects named (30-10-2026): Krang's android body with his fist, his lasers and the curtain he
-      appears behind, Baxter Stockman and the Mousers he drops, the two rock soldier bosses of the building
-      site and the Technodrome with their shots, bars and rubble, the helicopters of the skateboard ride, the
-      flying drones, the parked car of the street, the areas' scenery and traps (hydrants, signs, rats, an
-      alligator, pizza, oil drums, turrets, freezing nozzles, electric beams, spiked poles, the sewer's
-      missiles) and the explosions, each kind with its family and fields, every function with a comment, in
-      files by subject (`src/objects/krang.c`, `stockman.c`, `rock_soldiers.c`, `air_attacks.c`, `scenery.c`,
-      `explosions.c`, `helpers.c`); an unused colour editor for the palette found among them
-      (`src/system/palette_editor.c`). The uses of the objects' fields named after their offset went from 1,782
-      to 1,124, the functions named after their address from 1,197 to 795
-- [x] Every function of the 68000 program named (30-10-2026), each with a comment, and every file by subject
-      (`src/unsorted/` is gone): the boot and its RAM and ROM check, the frame's interrupt, the coins and the
-      players' lives, boxes and messages, the jobs the frames queue for the main loop, the texts, the test mode's
-      pages (an unused coin counter test among them), the attract mode (the opening, the title, the coin's
-      screen, the profiles, BEST 10 PLAYERS, the demos), the game's scenes (an area's story and title, the play,
-      the area's exits with their cutscenes, the continue, the ranking with its name entry, the ending with its
-      staff roll), the layers' maps and the scroll held while too many enemies are on screen, the speech
-      balloons, the palettes' requests, fades and effects, and the object engine (`src/scenes/`, `src/stage/`,
-      `src/video/`, `src/system/`, `src/objects/turtles.c`). The functions named after their address went from
-      795 to 230: the sound program's 225 and five that are a lone return nothing tells apart from its
-      neighbours
-- [x] The work RAM named (30-10-2026): 251 variables, and the records the program keeps one after another as
-      structures (`PLAYER(i)->lives`, the coin slots, the palette effects and requests, the three layers with
-      the working one and layers A and B by name, the typed texts); the objects' stats are records of the
-      program's data read by their fields. The uses of variables named after their address went from 3,510 to
-      549, the memory reached through an address the code works out from 2,185 to 1,735
-- [x] The 68000 program's data read by name (31-10-2026): every table it reads has a name and a type
-      (`krang_animations[3]`, `turtle_throw_moves[i]`, the tables of records `ending_palette_fades[2].banks`),
-      every record it reaches through a pointer a structure (the enemies' definitions and attacks, the arcs of
-      their jumps, the shots and the objects one object starts, the scroll segments, the spawn records), the
-      bytes a pointer walks one at a time read by what they are (`TEXT(p)`, `BLOCK_BYTE(p)`, `MAP_ENTRY(p)`),
-      and every address of the program the C holds as a value by its name (217 animations, the shadows, the
-      tile blocks, the layers' pictures); a constant stored into a position or compared with one is a number,
-      not an address. No read of the 68000 program's C goes through an address it works out (248 before), no
-      table is named after its address (276 uses before), no address of the program is written as a number
-      (378 before)
-- [x] The sound program's data read by name too (31-10-2026): the tables it reads through HL by their names
-      (`fm_effect_handlers`, `fm_voice_pointers[i]`, `pcm_note_pitches`, those it indexes from before their
-      start, `TABLE16(fm_note_pitches, i - 2u)`), the instruments' and drums' records by their fields
-      (`PCM_DRUM(pcm_sound)->pitch`), the track commands' handlers by what they are: no read of the whole C
-      goes through an address any more (27 in the sound program before)
-- [x] The 68000 program's C named (01-11-2026): every function with a name and a comment (the jobs 7, 8 and 0xA
-      and the enemies' attacks 6 and 7 are lone returns named for what they are and where they sit), every variable
-      of the work RAM (the 12 nothing reads are `unused_...`), every field of the objects, and the parameters and
-      locals by what they hold: the object a handler runs on is `object`, a player's slot `slot`, a value stored into
-      a field or compared with one takes its name, a loop's counter is `count`, and what a function only hands on
-      takes the name the functions it calls give it (the decompiler works these out, `tools/game_profile.py`; about
-      2,400 more are named in `symbols.txt`, each with the instruction that shows it). The pointers into the
-      program's data are typed (the texts, the tile blocks, the palettes' colours, the fire's records, the demos'
-      recorded inputs, the turtles' walking speeds...), and the tables the C still read through an address it
-      wrote as a number (`mem_read32(0x53D2Au + move)`) are read by name (`TABLE32(enemy_attacks, move)`). In the
-      68000's C: parameters and locals named after a register 7,297 → 2,299, variables after their address 16 → 0,
-      fields after their offset 106 → 0, functions after their address 5 → 0, functions without a comment 713 → 0,
-      memory reached through an address the code works out 1,437 → 1,123; still 17 of 17 scenarios identical in
-      state, picture and sound
-- [x] The sound program's C named (01-11-2026): every function with a name and a comment (each effect's handlers
-      `fm_effect_XX_...` and `pcm_effect_XX_...`, the routines the FM effects share: `fm_effect_fall`,
-      `fm_effect_trill_slide`, `fm_effect_set_pitch`...), the channel records by what plays on each
-      (`CHANNEL(SPEECH)->sound`, `CHANNEL(MUSIC_FM_6)`), their fields as the music uses them (`track`, `ticks_left`,
-      `gate`, `note_hook`, `loop_start`...) and as the FM and PCM effects use the same bytes (`->fm_effect.timer`,
-      `->pcm_effect.ticks`, and an effect's own where it differs), every variable of the RAM, and the parameters and
-      locals by what they hold (the record a handler runs on is `channel`; the rest by the rules the 68000's C uses,
-      two more of the sound program's own, and `sound_symbols.txt`, each name with the instruction that shows it). In the
-      sound program's C: functions named after their address 225 → 0, variables after their address 533 → 0, fields
-      after their offset 912 → 0, parameters and locals after a register 1,039 → 0, functions without a comment
-      381 → 0; still 17 of 17 scenarios identical in state, picture and sound
-- [x] What the 68000's routines leave in registers for the next one, part by part (01-11-2026): the decompiler
-      now knows what a function reads to hand back each part of a register (byte, byte, high word), not the whole
-      register, and that "bset #7, D7" or an or/and with a constant writes only the parts it changes; what a function
-      hands back is what its callers read once everything is known (it had kept what they seemed to read while the
-      summaries grew: `queue_sound` took A6 for no caller); four enemies' tables of states were read past their end
-      into the arcs after them, two phantom states each that made every state handler read D7. A function hands back
-      only the parts some routine reads before writing them again, and the values a function works out itself have
-      names (the facing bits, the walks' animation tables, the speeds, the damages, the records an enemy throws, the
-      stick's directions, the fill routines' zeroes). In the 68000's C: parameters and locals named after a register
-      2,299 → 1,599, functions with a parameter named after one 910 → 639, faithful functions 57.0 % → 67.9 %, partial
-      writes that put a part of one value into another 321 → 185; still 17 of 17 scenarios identical in state, picture
-      and sound
-- [x] What the frame carries in registers, as global variables (01-11-2026): what one routine leaves in a part of a
-      register and a later one reads before setting it, all through the frame from the VBLANK handler down, is the
-      game's state, and the C keeps it in six global variables named for what their readers take them as
-      (`offset_high_word`, D7's high word, which `hydrant_spray`, `billboard_wait` and `rock_soldier_site_fire` add to
-      a position after `enemy_landed` left FFFF there; `distance_low_byte`, D5's low byte, which `helicopter_fly`
-      reads as its in-line flag when the first turtle it finds is past x 0x1FF; `palette_place`, the A5 of the scenes
-      and the palette requests; `screen_x_high`, `distance_high_word`, `fade_banks`). What a function works out and
-      uses itself stays a local, copied into the global where it goes on. The runtime puts them back when an
-      interrupt's handler returns, as the VBLANK handler puts back the registers it saves. A function that hands back
-      a value from a switch whose every case returns says its end is never reached (`unreachable()`): the C builds
-      without a warning. In the 68000's C: parameters and locals named after a register 1,599 → 478, functions with a
-      parameter named after one 639 → 350, faithful functions 67.9 % → 77.9 % (lines 98.2 %), results written back
-      before an early return 66 → 3, partial writes that put a part of one value into another 185 → 83; still 17 of
-      17 scenarios identical in state, picture and sound
-- [x] Nothing named after an address or a register, and 99 % of the C faithful (04-11-2026): what the object loop
-      hands each object's routine in A5 and A1 is kept as the game's state (`object_loop_leftover`,
-      `object_loop_slot`); the tables of states the objects run (`enemy_hop_states`), the switches' tables of handlers,
-      the routines nothing reaches (`say_speedy`, `word_to_decimal_digits`) and every piece of data the C named after
-      its address have names, and the switches on a handler name their cases after it (`case enemy_hop_crouch_ADDRESS:`).
-      The pointers the C reached memory through by address are typed: a players' record by the player's number
-      (`PLAYER(PLAYER_ADDRESS(0) + (int16_t)offset)->lives`), an array of the work RAM by a signed word, a place in the
-      tile RAM plus one, the enemies' reactions by the side they were hit on (`REACTION(reactions + side)`), the object
-      that hit a turtle (`OBJECT(hit_by)->hit_sound`), the fields an object's family keeps pointers in. A byte written
-      into a register whose other bytes are read afterwards is that variable changed in place, a statement of its own
-      (`move_offset = (move_offset & ~0xFFu) | moves[move_offset];`). The routines that clear or copy memory a long at
-      a time (the boot, its RAM tests, the turtles' objects, the layers' copies, the ranking's defaults) are memory
-      routines, each with its reason (`tools/game_profile.py`). In the sound program, the borrow of `sbc hl,de` is the
-      comparison it is (`offset + carry > 0xA00u`) and its handlers are named. In the whole C: functions with nothing
-      but the faithful leftovers 80.7 % → 99.3 % (lines 99.9 %), parameters and locals named after a register 478 → 0,
-      names made of an address 421 → 0, memory reached through an address the code works out 1,114 → 468 (the video
-      chips' memories, read by the bus as the board has them, and the memory routines), partial writes that put a part
-      of one value into another 83 → 3, flags worked out as the CPU sets them 8 → 0; still 17 of 17 scenarios identical
-      in state, picture and sound
-- [ ] What is left of the structure: 16 functions of 2,439, each for a reason: 8 keep a control flag their structure
-      needs, the enemies' retargeting reads a second slot that may be none through the bus (as the original, in 4), the
-      demo's input channels read past a player's record (its playback, and its recorder no code runs), the name entry
-      adds one to an initial through an address the instruction works out, Rocksteady's moves index a table with a
-      word whose low byte comes from the data, and code nothing runs (the palette editor keeps its stick at address
-      000006, in the program; a list of palette requests whose place is not known; a routine with a stack frame the C
-      has not; one that writes its results before each of its two returns). In the sound program, the 16-bit fields it writes a byte at a time show their two bytes
+- [x] A reference: the original programs on MAME's 68000 and Z80 cores, with MAME's K052109, K051960, K007232
+      and uPD7759 and ymfm's YM2151, against a model of the board in C (`kref`, in the shared core)
+- [x] 17 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
+      one and four players, the continue and GAME OVER, the DIP switches, and a game in each of the ten areas
+      played until its boss falls, the last one through the ending and the staff roll: 507,382 frames, which
+      run 25,328 addresses of the 68000 program and 4,486 of the Z80's
+- [x] A 68000 disassembler identical to MAME's at every offset of the program and of an image of every opcode,
+      and a static analysis that finds, without traces, every address the scenarios run: 28,515 instructions
+      in the 68000 program, and the Z80's the same way
+- [x] Every byte of both programs explained: the 68000's 32.5 % code, 65.9 % data described with its layout,
+      types and a name, 1.6 % fill; the Z80's 35.6 % code, 64.3 % data, 0.1 % fill. Nothing unexplained
+- [x] Both programs decompiled: 2,058 functions of the 68000 program and 381 of the sound program, no goto,
+      every function, variable, field, parameter and local with a name and every function with a comment, the
+      data read by name from the assets, never through an address of the ROM. 2,423 of the 2,439 functions
+      (99.3 %, and 99.9 % of the lines) have nothing in them but the faithful leftovers "Reading the C" lists;
+      each of the other 16 has its reason there too
+- [x] The game matches the reference in state, picture and sound in all 17 scenarios, frame by frame, and its
+      own sound board matches MAME's in every frame (samples and RAM); the structure of every function, the
+      code no scenario runs too, checks against its jumps; no executable holds a stretch of the ROM set
+- [x] The board in C (`runtime/`): the memory map, the inputs, the interrupts, the video chips drawing what MAME
+      draws pixel for pixel, the YM2151, the K007232, the uPD7759 and the title music sample making the samples
+      MAME makes
+- [x] The assets (see "The assets"): tiles and sprites in sheets by subject with their own colours, the
+      programs' data as text by subject with every piece named, the samples as WAV, the music as Standard MIDI
+      Files; the game loads them, and they build back into the ROM set byte for byte
+- [x] A window port (`ports/sdl2/`, SDL2): the game with its sound, the keyboard and four game controllers.
+      Built and played on Windows; SDL2's packages should build it on Linux and macOS (not tried yet)
+- [ ] Ports beyond the window one
 
 ## Getting started
 
-Requirements: Python 3.10 or newer, and git (and for the reference tools, CMake and a compiler: below).
+Requirements: Python 3.10 or newer, CMake 3.20 or newer, a C11 and C++20 compiler (Visual Studio 2026 Build
+Tools on Windows) and, for the game's window, the SDL2 development files: on Windows, unpack
+`SDL2-devel-2.x.x-VC.zip` from [SDL's releases](https://github.com/libsdl-org/SDL/releases) into
+`build/downloads/sdl2/`; elsewhere, the system's package (`libsdl2-dev`). Without SDL2 only the headless builds
+are made.
+
+1. Clone with the shared core, [arcade-decomp](https://github.com/cheviman/arcade-decomp), which this repository
+   keeps in `tools/core` as a git submodule (a clone made without `--recursive` takes it with
+   `git submodule update --init`):
+
+   ```bash
+   git clone --recursive https://github.com/cheviman/tmntarcade-decomp
+   ```
+
+2. Put your own copy of MAME's `tmnt` set in `rom/` (the .zip as is, or its files), and check it:
+
+   ```bash
+   python tools/verify_rom.py
+   ```
+
+   | File | Size | CRC32 | What it holds |
+   |---|---|---|---|
+   | `963-x23.j17`, `963-x24.k17` | 128 KB each | `a9549004`, `e5cc9067` | 68000 program, 0x00000-0x3FFFF (even, odd bytes) |
+   | `963-x21.j15`, `963-x22.k15` | 64 KB each | `5789cf92`, `0a74e277` | 68000 program, 0x40000-0x5FFFF (even, odd bytes) |
+   | `963e20.g13` | 32 KB | `1692a6d6` | Z80 sound program |
+   | `963a28.h27`, `963a29.k27` | 512 KB each | `db4769a8`, `8069cd2e` | tile graphics (K052109) |
+   | `963a17.h4`, `963a15.k4`, `963a18.h6`, `963a16.k6` | 512 KB each | `b5239a44`, `1f324eed`, `dd51adef`, `d4bd9984` | sprite graphics (K051960) |
+   | `963a30.g7`, `963a31.g19` | 256 bytes each | `abd82680`, `f8004a1c` | sprite address decoder, priority PROMs |
+   | `963a26.c13` | 128 KB | `e2ac3063` | K007232 samples |
+   | `963a27.d18` | 128 KB | `2dfd674b` | uPD7759 speech |
+   | `963a25.d5` | 512 KB | `fca078c7` | title music sample |
+
+3. Extract the assets into `assets/`, and check that they build back into your ROM set byte for byte:
+
+   ```bash
+   python tools/extract_assets.py
+   ```
+
+   ```bash
+   python tools/extract_assets.py --check
+   ```
+
+4. Build the game and the development tools into `build/bin/`:
+
+   ```bash
+   cmake -S . -B build/msvc
+   ```
+
+   ```bash
+   cmake --build build/msvc --config Release --parallel 6
+   ```
+
+5. Play:
+
+   ```bash
+   build/bin/tmnt
+   ```
+
+   The game reads its assets from `--assets FOLDER`, or from an `assets` folder beside the executable or in the
+   current folder; it opens no ROM. The executable can be copied anywhere with SDL2's library beside it
+   (`SDL2.dll` on Windows, which the build puts next to it) and the assets: they come from your ROM set, so
+   they are yours, not to share.
+
+   Or run the game without a window, here with the controls of the attract mode, writing a hash of every
+   frame:
+
+   ```bash
+   build/bin/tmnt_game_headless --script tests/controls/attract.txt --hashes build/attract.txt
+   ```
+
+## Playing
+
+It is the arcade game for four: each player has a coin slot and no start button; a coin and the attack button
+bring a turtle in (player 1 is Leonardo, 2 Michelangelo, 3 Donatello, 4 Raphael).
+
+| Control | Keys |
+|---|---|
+| Move (player 1) | the arrow keys |
+| Attack, jump | Z or left Ctrl; X or left Alt |
+| Coins 1-4 | 5, 6, 7, 8 |
+| Service | 9 |
+| Full screen | F11 or Alt+Enter |
+| Smooth or sharp pixels | F3 |
+| Quit | Escape |
+
+Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves, A
+attacks, B jumps, Back puts a coin in.
+
+Options of `tmnt` and `tmnt_game_headless`: `--script FILE` plays a control script (format in
+`runtime/include/tmnt/script.h`) instead of the controls (`tmnt --fast` runs it without waiting for each
+frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a hash of every frame's state,
+picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
+says where the assets are. `tmnt_game_headless` also takes `--frames N` and `--dump FRAME --dump-dir DIR` (the
+board's memories at the end of a frame).
+
+## Changing the decompilation
+
+`src/` is written by the decompiler from your ROM set, `symbols.txt` and `tools/game_profile.py`; `src/sound/`
+from the sound program and `sound_symbols.txt`. Change those (names, types, comments, what the analysis cannot
+work out alone), not the C, and write it again:
 
 ```bash
-git clone --recursive https://github.com/cheviman/tmntarcade-decomp
-```
-
-The decompiler and the analysis are in [arcade-decomp](https://github.com/cheviman/arcade-decomp), which this
-repository keeps in `tools/core` as a git submodule (a clone made without `--recursive` takes it with
-`git submodule update --init`).
-
-Put your own copy of MAME's `tmnt` set in `rom/` (the .zip as is, or its files), and check it:
-
-```bash
-python tools/verify_rom.py
-```
-
-| File | Size | CRC32 | What it holds |
-|---|---|---|---|
-| `963-x23.j17`, `963-x24.k17` | 128 KB each | `a9549004`, `e5cc9067` | 68000 program, 0x00000-0x3FFFF (even, odd bytes) |
-| `963-x21.j15`, `963-x22.k15` | 64 KB each | `5789cf92`, `0a74e277` | 68000 program, 0x40000-0x5FFFF (even, odd bytes) |
-| `963e20.g13` | 32 KB | `1692a6d6` | Z80 sound program |
-| `963a28.h27`, `963a29.k27` | 512 KB each | `db4769a8`, `8069cd2e` | tile graphics (K052109) |
-| `963a17.h4`, `963a15.k4`, `963a18.h6`, `963a16.k6` | 512 KB each | `b5239a44`, `1f324eed`, `dd51adef`, `d4bd9984` | sprite graphics (K051960) |
-| `963a30.g7`, `963a31.g19` | 256 bytes each | `abd82680`, `f8004a1c` | sprite address decoder, priority PROMs |
-| `963a26.c13` | 128 KB | `e2ac3063` | K007232 samples |
-| `963a27.d18` | 128 KB | `2dfd674b` | uPD7759 speech |
-| `963a25.d5` | 512 KB | `fca078c7` | title music sample |
-
-The game and the reference tools (for working on the decompilation: they run the original program on MAME's
-cores) need CMake 3.20 or newer and a C11 and C++20 compiler (Visual Studio 2026 on Windows). The game's data
-is its assets, which the extractor writes from your ROM set:
-
-```bash
-python tools/extract_assets.py
-```
-
-
-```bash
-cmake -S . -B build/msvc
+python tools/decompile.py
 ```
 
 ```bash
-cmake --build build/msvc --config Release --parallel 6
+python tools/decompile_sound.py --checks
 ```
 
-The game, with no screen (`tmnt_game_headless`, hashes of every frame) or in a window (`tmnt`, with SDL2):
-
-```bash
-build/bin/tmnt_game_headless --script tests/controls/attract.txt --hashes build/attract.txt
-```
-
-```bash
-build/bin/tmnt
-```
+`build/bin/kref` runs the original programs on MAME's cores against the same board model. Both it and the game
+take the control scripts of `tests/controls/` (written by `tools/make_scenarios.py`), and both write hashes of
+every frame. This runs every script on both, compares them frame by frame in state, picture and sound, and
+checks that the static analysis alone finds all the code the reference ran (`--native-only` reuses the
+reference's results of an earlier run, in `build/scenarios_frames/`):
 
 ```bash
-build/bin/kref --frames 3600 --hashes build/kref/hashes.txt --text 3000
+python tools/check_scenarios.py --video --sound --jobs 6 --out build/scenarios_frames
 ```
 
-```bash
-build/bin/kref --frames 3600 --video-hashes build/kref/video_hashes.txt --video-dump 1200 2400 --video-dir build/kref
-```
+The game's own sound board against MAME's, sample for sample:
 
 ```bash
-build/bin/kref --frames 3600 --sound-hashes build/kref/sound_hashes.txt --sound-wav build/kref/attract.wav
+python tools/check_sound_board.py --jobs 6 --bin build/bin
 ```
+
+Every function's ifs, loops and switches against the program's jumps, the code no scenario runs too:
+
+```bash
+python tools/check_structure.py build/structure
+```
+
+What the C still has of the CPU, of the decompiler and of the ROM's places, against `tools/noise_baseline.txt`
+(`--save` makes the current numbers the baseline):
+
+```bash
+python tools/noise_report.py
+```
+
+No executable holds a stretch of the ROM set:
+
+```bash
+python tools/rom_in_executables.py
+```
+
+Other tools:
+
+- `tools/disassemble.py` writes the listing, `build/listing/tmnt.s`, with a report beside it.
+- `tools/coverage.py --reads build/scenarios` classifies every byte of the 68000 program (code, data the code or
+  `symbols.txt` describes, fill) with the bytes the reference read as data (`kref --rom-reads FILE` for each
+  script); `tools/sound_coverage.py` does the same for the sound program (`kref --sound-rom-reads`).
+- `tools/data_walk.py` walks the data the engines read from where the code hands it over (animations, maps,
+  palettes, texts, spawn lists...): `build/listing/data_walk.txt`.
+- `tools/graphics_subjects.py --run` runs `kref --graphics-uses` on every script (the tiles and sprites each
+  scene shows first, with their palettes) and writes `graphics_subjects.txt`, which the extractor reads.
+- `tools/recompile.py` writes the translation scaffold the decompiler grew from (a C statement per
+  instruction); CMake builds it with `-DTMNT_SCAFFOLD=ON`, and `check_scenarios.py --translated` checks it.
+- `python tools/decompile.py --trace --out DIR` writes a copy of the C in which every function reports itself;
+  `--variables FILE` lists every local with the instructions that write it, which `symbols.txt`'s `local` lines
+  name them by.
+- `kref --dump FRAME ... --dump-dir DIR` saves the board's memories at the end of frames, `--video-dump FRAME
+  ... --video-dir DIR` the frames as BMP, `--sound-wav FILE` the sound mixed, `--text FRAME` the fixed layer as
+  text, `--jumps FILE` where each jump through a register went, `--video-check FILE` and `--sound-check` the
+  game's own video and sound chips against MAME's, `--assets-check assets` the assets against the ROM set.
+- `tools/core/konami/reference/compare_m68k_with_mame.py` checks the 68000 disassembler against MAME's, and
+  `compare_lift_with_mame.py --c` the lift of every opcode against MAME's 68000 core, from random states.
 
 ## Layout
 
 ```
-rom/                your ROM set (not in the repository)
-runtime/            the board as the program sees it (tmnt/machine.h), and the reader of the ROM set
-tools/core/         arcade-decomp, the shared core (git submodule); its konami/reference/ holds kref
-tools/game_profile.py   what the core needs to know of this game
-tools/tmnt_rom.py   the ROM set: its files by hash, and the regions as the board lays them out
-tools/verify_rom.py the ROM set's check (the core's script)
-tools/check_scenarios.py   every control script on the reference, and the static analysis against them
-tools/disassemble.py       the static analysis: build/listing/tmnt.s and report.txt (the core's)
-tools/coverage.py          every byte of the program as code, data or fill: build/listing/coverage.txt
-tools/data_walk.py         the data the engines read, walked from the code: build/listing/data_walk.txt
-tools/sound_coverage.py    every byte of the sound program as code, data or fill (the core's)
-tools/extract_assets.py    the assets from the ROM set, and --check back (tmnt_graphics, sound_assets,
-                           data_assets, sound_data_assets, sound_music)
-tools/sound_music.py       the songs as Standard MIDI Files (assets/sound/music), and back to the driver's bytes
-assets/             what the extractor writes (not in the repository): tiles/ and sprites/ (PNG sheets), sounds/
-                    (WAV), data/ and sound_data.txt (the programs' data as text), sound/music/ (MIDI, a song a file)
-tools/graphics_subjects.py what each scene of the scenarios shows, by subject: graphics_subjects.txt
-graphics_subjects.txt      the subject of each tile and sprite the scenarios show, for the assets' sheets
-tools/decompile.py         the 68000 program as C into src/ (the core's m68000/decompile.py)
-tools/decompile_sound.py   the Z80 sound program as C into src/sound/
-tools/check_structure.py   every function's ifs, loops and switches run against its jumps
-tools/noise_report.py      what the C still has of the CPU and of the ROM's places, against tools/noise_baseline.txt
-src/                the decompiled C (generated: change the tools or symbols.txt, not the C)
-runtime/src/game_program.c the runtime of the decompiled program: the frame, the interrupts, the tables by name
-runtime/src/assets.c       the assets into the board's memories and the programs' data by name (music.c: the MIDI files)
-runtime/replaced.txt       the program's functions the board puts its own in place of (the boot's ROM test)
-ports/              the game with no screen (headless, for the checks) and in a window (sdl2)
-sound_symbols.txt          the sound program's names, and what its analysis cannot work out alone
-symbols.txt         the program's names, and what the static analysis cannot work out alone
-tools/make_scenarios.py    writes the control scripts
-tests/controls/     the control scripts
+rom/                      your ROM set (not in the repository)
+assets/, build/           made on your machine (not in the repository)
+src/                      the 68000 program's C, decompiled (tools/decompile.py writes it), in files by subject
+src/sound/                the Z80 sound program's C (tools/decompile_sound.py writes it)
+symbols.txt               the 68000 program's names, types, structures and fields, parameters and locals, what
+                          pointers point at, the files, and the layout of the tables the analysis cannot measure
+                          alone; its comments keep the evidence for each name, and its "comment" lines are what
+                          the C says above each function
+sound_symbols.txt         the same for the sound program
+graphics_subjects.txt     the subject of each tile and sprite the scenarios show, and the palettes, for the sheets
+runtime/                  the board in C: its memory map, inputs and interrupts (machine.c), the video
+                          (video.c), the sound board and its chips (sound_board.c, sound_cpu.c, ym2151.c,
+                          sound_chips.c), the assets into the board's memories and the programs' data by name
+                          (assets.c, music.c), and the decompiled programs' runtime (game_program.c, the frame,
+                          the interrupts, the tables); part of the game
+runtime/replaced.txt      the functions the board puts its own in place of (the boot's ROM test)
+ports/headless/           the game with no screen or sound, for the checks
+ports/sdl2/               the game in a window, on SDL2: picture, sound, keyboard and game controllers
+tests/controls/           the control scripts: coins, buttons, moves and pokes by frame
+tools/core/               arcade-decomp, the shared core (git submodule): the decompiler, the 68000 and Z80
+                          frontends, the analyses, the checks; its konami/reference/ holds kref and the copies
+                          of MAME's and ymfm's code it builds from
+tools/game_profile.py     what the core needs to know of this game
+tools/tmnt_rom.py         the ROM set: its files by hash, and the regions as the board lays them out
+tools/verify_rom.py       the ROM set's check
+tools/extract_assets.py   the assets from the ROM set, and --check back (tmnt_graphics, sound_assets,
+                          data_assets, sound_data_assets, sound_music)
+tools/sound_music.py      the songs as Standard MIDI Files, and back to the driver's bytes
+tools/data_walk.py        the data the engines read, walked from the code
+tools/sound_data_walk.py  the music's tracks, walked from the song table
+tools/graphics_subjects.py  what each scene of the scenarios shows: graphics_subjects.txt
+tools/make_scenarios.py   writes the control scripts
+tools/disassemble.py      the static analysis: build/listing/tmnt.s and report.txt (the core's)
+tools/coverage.py, sound_coverage.py   every byte of each program as code, data or fill
+tools/decompile.py, decompile_sound.py   the programs as C
+tools/check_scenarios.py, check_sound_board.py, check_structure.py, rom_in_executables.py   the checks
+tools/noise_report.py     what the C still has of the CPU, against tools/noise_baseline.txt
 ```
+
+## The assets
+
+`python tools/extract_assets.py` writes them from your ROM set into `assets/`, by subject, and `--check` builds
+every byte of the ROM set but the code back from them:
+
+```
+tiles/     the K052109's tiles in 19 tilesets: one an area (its layers' maps, and what its play shows besides),
+           the fixed layer's fonts, logos and HUD, the speech balloons, the opening, the story before area 0, the
+           pictures of the areas' exits, the ending
+sprites/   the K051960's sprites in 306 sheets, by the animations that show them (the function that starts the
+           animation, or the table it is in: leonardo_animation_set, krang_animations, enemy_rodney...)
+sounds/    title.wav (the title music's sample), pcm/ (the K007232's 12 samples), speech/ (the uPD7759's 36
+           voices), WAV files
+sound/music/  a Standard MIDI File a song (area_0.mid ... area_9.mid, boss, continue, staff_roll, ending...),
+           and music.txt: the songs table's entries each plays
+data/      the 68000 program's data as text, a file a subject (animations, sprite lists, layers, palettes,
+           palette effects, texts, screens, enemies, scroll, demos, tables), a section a piece, every piece named
+sound_data.txt   the sound program's data the same way: the driver's tables, voices, instruments, drums
+```
+
+- **Sheets.** 8-bit indexed PNGs, 16 tiles or sprites a row: a pixel is the pen plus 16 times the palette it
+  shows with, so the pens come back as they are, and the sheet's colours are the palettes its tiles and
+  sprites show with in the game. A tile or sprite goes to the first sheet that uses it: the areas' maps and the
+  animations first, then what each scene of the scenarios shows (`graphics_subjects.txt`), and one nothing uses
+  or shows goes with its neighbours in the ROM; `tilesets.txt` and `sprites.txt` list each sheet's codes, and
+  those neighbours on a line of their own.
+- **Data.** A piece is a section, `[name]`, of typed lines that give its bytes back in order: numbers (`u8`,
+  `u16`, `s16`, `u32`), `ref NAME` for the address of a piece or a function, `frame`, `end` and `jump` for an
+  animation, `sprite` for a sprite list's entry, `colours` for a palette, `text` for the game's texts. A piece is
+  named by `symbols.txt`, by the routine that reads it, by the named piece that points at it, or by the routines
+  a table of states holds; none by its address.
+- **Music.** One tick of a file is one of the driver's (24 a quarter note) and its tempo events give the
+  game's speed (within 1 %); a track is one of the song's channels (the YM2151's seven, the K007232's two) with
+  its loops and parts played as the driver plays them; a note is a Note On and Off at its key (the drums on
+  General MIDI's percussion), and what MIDI has no event for (the octave, the instrument, the gate, detune,
+  portamento, LFO, loops, calls, jumps, held notes, rests) is in sequencer-specific events with the driver's
+  bytes. `tools/sound_music.py`'s docstring has the format.
+
+Edit them and run the game: it loads them. A piece keeps its size (the code reaches the data at fixed places),
+and so does a song's channel; a note's pitch and length, a palette's colours, a sprite's pixels can change.
+
+## Reading the C
+
+The 68000 program's C lives in `src/`, in files by subject:
+
+```
+game.h  ram.h  table.c   the prototypes; the work RAM's variables and structures, the data's tables and records
+system/   boot.c         the reset, the RAM and ROM tests, the main loop that runs the jobs the frames queue
+          frame.c        the VBLANK interrupt: the inputs, the frame's work, the game's states, the job queue
+          test_mode.c    the exceptions' handler and the test mode's pages
+          sound_commands.c   the commands to the sound board, queued and sent one a frame
+          palette_editor.c, animation_viewer.c   two tools of the developers' no code runs
+scenes/   attract.c  opening.c  intro.c  game.c  demo.c  area_exits.c  continue.c  ending.c  ranking.c
+stage/    layers.c  scroll.c  area_clear.c  floor_map.c  fire.c  drill_arrival.c
+engine/   sprites.c      the sprite engine: animations, the sprites into the K051960, the boxes
+          directions.c   the direction from one object to another
+objects/  turtles.c      the turtles: joining, the area's entry, the controls, the moves and the scroll
+          states.c       the objects' state dispatcher and the enemies' and their shots' states
+          spawns.c  krang.c  stockman.c  rock_soldiers.c  air_attacks.c  scenery.c  explosions.c  helpers.c
+video/    palettes.c  texts.c  tile_blocks.c  speech_balloons.c
+sound/    sound.h  main.c  commands.c  music.c  fm_effects.c  pcm_effects.c  chips.c  tables.c   the Z80's
+```
+
+Each file's header says what it holds; `symbols.txt`'s `file` lines give each stretch of the program to its file,
+and a file's functions are in the order of their addresses. What the C uses besides memory is in
+`runtime/include/game/support.h`.
+
+- **Memory.** The game's variables are lvalues over the work RAM by name (`area`, `frame_count`); the work RAM is
+  kept the other way round in the host's memory, so that a value of any width at any address is a value of the
+  host's. Its structures are reached with `OBJECT(address)` (the 50 objects from 062000, `OBJECT_ADDRESS(n)`),
+  `PLAYER(address)`, the coin slots, the layers (`LAYER_A`), the palette effects and requests: the game keeps
+  24-bit addresses in its variables, as the original does. What each kind of object keeps in its bytes is a view
+  of the object for its family of functions (`OBJECT(object)->enemy.target_direction`), and a family whose name
+  starts with another's reads that one's fields too. The program's data are read by name from the assets: tables
+  (`krang_animations[3]`, `TABLE16(name, i)` where the code reads one at another width or past its start), records
+  (`ANIMATION_FRAME(frame)->last_sprite`), the bytes a pointer walks (`TEXT(p)`, `MAP_ENTRY(p)`). The video chips'
+  memories are reached through the board's bus (`io_write8(sprite_place, priority)`), as the board has them.
+- **Links.** The game keeps the low word of an object's address in a field: `LINKED(base, link)` is the object it
+  names, in the page of `base`.
+- **Registers.** Everything a function keeps in registers is a parameter, a result or a local, named by
+  `symbols.txt` or by what it holds (the object a handler runs on is `object`). What one routine leaves in a part
+  of a register and another reads before setting it, all through the frame, is the game's state, and the C keeps
+  it in eight global variables named for what their readers take them as (`game.h`: `offset_high_word`,
+  `object_loop_slot`, `palette_place`...); the runtime puts them back when an interrupt's handler returns, as the
+  VBLANK handler puts back the registers it saves.
+- **Results.** A function hands back one value as its return value and more through pointers
+  (`uint32_t *p_object`); a caller's variable goes in and comes out.
+- **Comments.** Every function has a comment above it in the game's terms (the `comment` lines of `symbols.txt`
+  and `sound_symbols.txt`); code nothing runs starts with "Unused:". The rest of `symbols.txt`'s comments keep the
+  evidence: the instructions of the listing that show each name.
+- **Control flow.** Loops, `if`, `switch` and `return` come from the original's branches; there is no `goto`. A
+  jump through a table of handlers is a `switch` on the handler the table holds, its cases named after them
+  (`case krang_appear_ADDRESS:`). Where the original's jumps cross in a way blocks cannot, a `bool` named after
+  the place the jump goes to carries it: 8 functions (`draw_sprites`, `turtle_move`, `update_layers_street`,
+  `enemy_think` and the three bosses', and the sound program's `read_track`). A function whose every path returns
+  from a switch ends with `unreachable()`.
+- **Interrupts and the frame.** `frame_wait()` is where the main loop finds no job and the board moves on to the
+  next frame, `take_interrupts()` where the interrupts raised are handled; the interrupt handlers are ordinary
+  functions. The boot's ROM test is the board's own (`BOARD_ORIGINAL`, `runtime/replaced.txt`): the game has no
+  ROM to sum.
+- **The sound program.** `src/sound/` is the Z80 program the same way: its channels' records by what plays on
+  each (`CHANNEL(SPEECH)->sound`, `CHANNEL(MUSIC_FM_6)`), their fields as the music and the effects use them,
+  the chips through the board; `z80_block(cycles)` opens each stretch of code with the time it takes, so the
+  chips' timers, the interrupt and the samples happen when they did on the board.
+
+What the C keeps of the original's machine code, and why (`python tools/noise_report.py`):
+
+- 8 global variables for what the frame carries in registers (above).
+- 301 places that read or write several fields at once or a table at another width (`AS16`, `AT8`, `TABLE16`):
+  the original does.
+- 140 partial writes of a variable, `x = (x & ~0xFFu) | y`: a byte written into a value whose other bytes are
+  read afterwards; 3 of them put a part of one value into another.
+- 474 places that reach memory through an address the code works out (`mem_read8`, `mem_write32`): the memory
+  routines that clear, copy or test memory wherever they are told (`tools/game_profile.py` lists each with its
+  reason) and the functions below; and 813 reads and writes of the board's devices through the bus.
+- 878 values the decompiler works out once, named by a number (`t1`), 357 locals that keep a flag of the CPU
+  for a later branch, and 2,820 casts.
+- 3 results written back before an early return, and one routine nothing runs that keeps a stack frame the C has
+  not (`lost_stack`).
+
+16 functions have more than that, each for a reason: the 8 with a control flag; the enemies' retargeting
+(`enemy_think` and the three bosses') reads a second slot that may be none through the bus, as the original
+does; the demo's input channels read past a player's record (`update_game_inputs`, and `record_demo_inputs`, a
+recorder no code runs); the name entry adds one to an initial through an address the instruction works out
+(`enter_initials`); Rocksteady's moves index a table with a word whose low byte comes from the data
+(`enemy_rocksteady_think`); and code nothing runs: the palette editor keeps its stick at address 000006, in the
+program (`palette_editor_frame`), a list of palette requests whose place is not known
+(`post_palette_request_list`), a routine with a stack frame (`word_to_decimal_digits`) and one that writes its
+results before each of its two returns (`print_tall_text`).
+
+## How the port works
+
+- **Game code.** The 68000 and Z80 machine code is decompiled to C (`src/`, `src/sound/`), so the game runs
+  natively with no CPU emulation. `runtime/src/game_program.c` runs it by frames: the main loop, the VBLANK
+  interrupt as a function, the sound board's frames on its own timing.
+- **Data.** The game loads its assets (`runtime/src/assets.c`, `music.c`): the sheets into the video chips'
+  memories, the samples into the sound chips', and the programs' data, piece by piece, by name; the numbers the
+  original keeps in its state (addresses, tile and sprite codes) are resolved through the assets' index. It
+  opens no ROM.
+- **Video and sound.** The K052109, K051960 and the palette are a library (`runtime/src/video.c`) that draws each
+  frame from the board's memories into a 320 x 224 picture; the YM2151, K007232, uPD7759 and the title music's
+  sample are libraries that make the samples a platform plays.
+- **Platforms.** A port provides a window, input, audio output and the frame's pace, through the board's hooks
+  (`runtime/include/tmnt/machine.h`); `ports/sdl2/` is the first.
 
 ## Legal
 
-The code in this repository is under the BSD 3-Clause License (see `LICENSE`). It contains no ROM data, no
-assets extracted from the ROM, and no code of the original game other than the decompiled C. MAME's
-`tmnt.cpp`, `k052109.cpp` and `k051960.cpp` (BSD-3-Clause) are the source of the ROM set's layout and of the
-board model's behavior. MAME's and ymfm's own code is in arcade-decomp's reference tools only, under their
-licenses.
-
-*Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project
-is not affiliated with or endorsed by either.
+- This project is licensed under the BSD 3-Clause License; see `LICENSE`.
+- The C in `src/` is the game's programs decompiled into a new form: logic only, with names and comments written
+  for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
+  project; they come from your own ROM set.
+- `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
+  `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause); the ROM set's layout comes
+  from MAME's `tmnt.cpp`. Copies of MAME's and ymfm's code are in arcade-decomp's reference tools only, under
+  their licenses.
+- *Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project is not
+  affiliated with or endorsed by either.
