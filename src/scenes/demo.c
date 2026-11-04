@@ -89,6 +89,66 @@ void update_game_inputs(void)
 	turtle_presses(3) = player_presses(3);
 }
 
+/* Unused: the four players' inputs recorded as a demo's streams, an input and its frames at a time */
+void record_demo_inputs(void)
+{
+	uint8_t frames = 0, inputs = 0;
+	uint16_t channel_offset = 0, count = 0;
+	uint32_t channels = 0, join_routine = 0, record = 0, record_place = 0;
+	uint8_t t1 = 0;
+	uint16_t t2 = 0;
+
+	count = 3u;
+	channels = demo_recorder_channels_ADDRESS;
+	do
+	{
+		channel_offset = (uint16_t)((uint32_t)count << 4);
+		record_place = mem_read32(channels + (int16_t)channel_offset);
+		record = mem_read32(record_place);
+		join_routine = mem_read32(channels + 8u + (int16_t)channel_offset);
+		inputs = mem_read8(mem_read32(channels + 4u + (int16_t)channel_offset));
+		if (inputs != mem_read8(record))
+		{
+			record += 2u;
+			mem_write8(record, inputs);
+			scratch_byte = inputs;
+			mem_write8(record + 1u, 1u);
+			mem_write32(record_place, record);
+			switch (join_routine)
+			{
+			case demo_join_player_1_ADDRESS:
+				channels = demo_join_player_1(channels);
+				break;
+			case demo_join_player_2_ADDRESS:
+				channels = demo_join_player_2(channels);
+				break;
+			case demo_join_player_3_ADDRESS:
+				channels = demo_join_player_3(channels);
+				break;
+			case demo_join_player_4_ADDRESS:
+				channels = demo_join_player_4(channels);
+				break;
+			}
+		}
+		else
+		{
+			t1 = mem_read8(record + 1u) + 1u;
+			frames = t1;
+			if (t1 == 0u)
+			{
+				record += 2u;
+				mem_write8(record, inputs);
+				mem_write8(record + 1u, 1u);
+				mem_write32(record_place, record);
+			}
+			else
+				mem_write8(record + 1u, frames);
+		}
+		t2 = count - 1u;
+		count = t2;
+	} while (t2 != 0xFFFFu);
+}
+
 /* in a demo, the first player joins */
 uint32_t demo_join_player_1(uint32_t channels)
 {

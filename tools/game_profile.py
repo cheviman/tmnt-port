@@ -35,6 +35,9 @@ OBJECT_REGISTER = "A0"                          # the object a handler runs on: 
 # a table of states stops at a place the code names as data even where that place holds a zero (the arcs right after
 # four enemies' tables of states, 049BD8...: the analysis took their words for two more states; core/m68000/analysis.py)
 TABLE_ENDS_BEFORE_UNUSED = True
+# a table of states holds FFFFFFFF, as it holds zero, for a state with no handler, and goes on after it: Rocksteady's
+# bullet (04BFBE: start, fly, vanish, FFFFFFFF, and its state 4, struck, rocksteady_bullet_burst; core/m68000/analysis.py)
+TABLE_UNUSED_ENTRIES = (0, 0xFFFFFFFF)
 # a family of objects whose name starts with another's (enemy_walk, enemy) reads the fields that one names too,
 # besides its own (symbols.txt scoped lines; decompiler/pointers.py)
 NESTED_FAMILIES = True

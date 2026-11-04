@@ -1750,6 +1750,9 @@ void run_objects(void)
 			case rocksteady_bullet_vanish_ADDRESS:
 				rocksteady_bullet_vanish(object);
 				break;
+			case rocksteady_bullet_burst_ADDRESS:
+				rocksteady_bullet_burst(object);
+				break;
 			case bebop_shot_start_ADDRESS:
 				bebop_shot_start(object);
 				break;

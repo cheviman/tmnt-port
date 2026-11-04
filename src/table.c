@@ -98,6 +98,9 @@ const void *ranking_place_places_data;
 const void *ranking_initials_places_data;
 const void *ranking_place_tiles_1_data;
 const void *ranking_place_tiles_2_data;
+const void *animation_viewer_animations_data;
+const void *animation_viewer_palettes_data;
+const void *animation_viewer_counts_data;
 const void *turtle_picture_sprites_data;
 const void *ranking_turtle_picture_sprites_data;
 const void *best_players_places_data;
@@ -197,6 +200,7 @@ const void *stockman_fly_moves_data;
 const void *stockman_defeated_states_data;
 const void *stockman_shake_heights_data;
 const void *stockman_height_steps_data;
+const void *stockman_step_heights_data;
 const void *stockman_bob_heights_data;
 const void *stockman_drop_times_data;
 const void *stockman_x_speeds_data;
@@ -471,6 +475,9 @@ const game_table game_tables[] =
 	{ "ranking_initials_places", 0x00840Au, &ranking_initials_places_data, 4 },
 	{ "ranking_place_tiles_1", 0x008436u, &ranking_place_tiles_1_data, 1 },
 	{ "ranking_place_tiles_2", 0x008437u, &ranking_place_tiles_2_data, 1 },
+	{ "animation_viewer_animations", 0x0085BCu, &animation_viewer_animations_data, 4 },
+	{ "animation_viewer_palettes", 0x0085C0u, &animation_viewer_palettes_data, 4 },
+	{ "animation_viewer_counts", 0x008850u, &animation_viewer_counts_data, 1 },
 	{ "turtle_picture_sprites", 0x008BEAu, &turtle_picture_sprites_data, 1 },
 	{ "ranking_turtle_picture_sprites", 0x008C2Au, &ranking_turtle_picture_sprites_data, 1 },
 	{ "best_players_places", 0x00917Eu, &best_players_places_data, 4 },
@@ -570,6 +577,7 @@ const game_table game_tables[] =
 	{ "stockman_defeated_states", 0x013F08u, &stockman_defeated_states_data, 4 },
 	{ "stockman_shake_heights", 0x01416Eu, &stockman_shake_heights_data, 2 },
 	{ "stockman_height_steps", 0x014176u, &stockman_height_steps_data, 2 },
+	{ "stockman_step_heights", 0x014194u, &stockman_step_heights_data, 2 },
 	{ "stockman_bob_heights", 0x0141B4u, &stockman_bob_heights_data, 2 },
 	{ "stockman_drop_times", 0x01424Au, &stockman_drop_times_data, 1 },
 	{ "stockman_x_speeds", 0x01426Au, &stockman_x_speeds_data, 2 },
@@ -779,4 +787,4 @@ const game_table game_tables[] =
 	{ "enemy_ways_in", 0x053ED6u, &enemy_ways_in_data, 4 },
 };
 
-const size_t game_table_count = 368;
+const size_t game_table_count = 372;

@@ -321,6 +321,27 @@ void start_wide_box_opening(void)
 	box_place = unreached_box_opening_place;
 }
 
+/* Unused: the box drawn smaller every frame, from the screen's edges to its middle */
+void shrink_tile_box(void)
+{
+	uint8_t tile_code = 0;
+	uint16_t count = 0, count_2 = 0;
+	uint32_t corner_place = 0;
+
+	if (box_frames_left != 0u)
+	{
+		corner_place = box_place;
+		tile_code = box_tile;
+		count = box_width;
+		count_2 = box_height;
+		draw_tile_box(count, count_2, tile_code, corner_place);
+		box_frames_left--;
+		box_width -= 2u;
+		box_height -= 2u;
+		box_place += 0x82u;
+	}
+}
+
 /* the outline of a box of tiles */
 void draw_tile_box(uint16_t count, uint16_t count_2, uint8_t tile_code, uint32_t corner_place)
 {

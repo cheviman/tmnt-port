@@ -7596,7 +7596,8 @@ void rocksteady_bullet_vanish(uint32_t object)
 	}
 }
 
-/* Unused: Rocksteady's bullet bursts with a sound, no longer hitting or hittable */
+/* Rocksteady's bullet struck: it bursts with a sound, no longer hitting or hittable; never in the game,
+   as nothing can strike the bullet */
 void rocksteady_bullet_burst(uint32_t object)
 {
 	uint8_t sound = 0;

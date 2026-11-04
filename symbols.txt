@@ -42,6 +42,7 @@
 006BE4  file  scenes/ending       # the ending after the last boss: the Technodrome explodes, the epilogue, the staff roll, GAME OVER
 00781E  file  scenes/continue     # the continue's countdown and the GAME OVER after it
 007B0C  file  scenes/ranking      # the ranking after a game: the players' places, their columns, the name entry, and the ranking's defaults
+00843E  file  system/animation_viewer    # an unused viewer of the objects' animations with their palettes, worked with the players' buttons
 0088C0  file  scenes/attract      # (the coin's screen, the opening's steps, BEST 10 PLAYERS; the turtles' pictures and the scroll reset the scenes share)
 0091A4  file  system/sound_commands    # the commands to the sound board, queued and sent one a frame
 009242  file  video/palettes      # the palettes: requests queued and done a frame later, the palette effects
@@ -272,6 +273,11 @@ comment copy_palette_sets the palettes faded toward a list of palette sets, over
 04B716  data  enemy_flinch_hunched_hammer_states  record=4 count=2 code=0
 04B71E  func  enemy_flinch_hunched_hammer_start
 04BF5A  func  shuriken_struck_without_sound
+# the analysis reaches it now: the bullet's table of states (04BFBE, kind 5F) is start, fly, vanish, FFFFFFFF (no state
+# 3) and this, state 4, struck, which the attack checks give what they strike (0472CE, 0473D6, 0474E6 "move.w #$400,
+# ($4,A1)"); the profile's TABLE_UNUSED_ENTRIES. No scenario runs it: the checks strike only an object with bit 1 of its
+# flags (04723E, 047458 "btst #$1, ($0,A1)"), which the bullet never has (04BFF2 "ori.b #$85, ($0,A0)"; the
+# shuriken's start, 04BF0A "ori.b #$86, ($0,A0)", has it)
 04C086  func  rocksteady_bullet_burst
 
 # ======== tables of records symbols.txt describes for the walk ========
@@ -1452,6 +1458,12 @@ local enemy_collide_with_objects 0476C0 a5 other_box body_box
 # the frames it still grows, 20 (01864E "move.b #$14, $63497.l", 0186AE "subq.b #1, $63497.l"); the ending waits for it
 # (006C9C "tst.b $63497.l")
 063497  var  box_frames_left  u8
+# the unused animation viewer's entry in animation_viewer_animations and animation_viewer_counts, a button forward or
+# back (0084F2 "addq.b #1, $63498.l", 008530 "subq.b #1, $63498.l", 008590 "move.b $63498.l, D6")
+063498  var  viewer_entry  u8
+# and its animation in that entry's table, another button on to the next (0084BA "addq.b #1, $63499.l", 008596
+# "move.b $63499.l, D7", 0085A2 "lsl.w #2, D7")
+063499  var  viewer_animation  u8
 
 # ---- the ranking ----
 # a name was entered (007F78 "move.b #$1, $634a0.l"): then BEST 10 PLAYERS follows (007FDE "tst.b $634a0.l"); cleared
@@ -4746,8 +4758,8 @@ field object_stats 04 damage u16
 field object_stats 06 depth u16
 field object_stats 08 hit_sound u16
 param set_object_stats a6 stats object_stats
-# the records, by the kind whose start loads each (the six no code loads, 018136-018154, 0181B8 and 0181F4, keep no
-# name: their attacks 11-14 and hit sounds C4-D0 match no kind)
+# the records, by the kind whose start loads each; the four pizzas' through pizza_stats_by_kind; two that no code reads
+# (tools/data_walk.py walks the 50 as one table, FIXED)
 # 00FBBA "lea $180fa.l, A6" (hydrant_start)
 0180FA  data  hydrant_stats
 # 00FC88 "lea $18104.l, A6" (hydrant_struck: the hydrant knocked over, no attack)
@@ -4760,6 +4772,15 @@ param set_object_stats a6 stats object_stats
 018122  data  alligator_stats
 # 0102A2 "lea $1812c.l, A6" (billboard_wait: the billboard that topples onto the turtles, attack 07)
 01812C  data  billboard_stats
+# the pizzas' records by their parameter, pizza_stats_by_kind's four entries (01010E "lea $10148.l, A6", 01011C
+# "movea.l (A6,D7.w), A6", 010120 "jsr $180e0.l"): attacks 11-14, which turtle_hit's table at 01C272 all sends to
+# turtle_refill_health, and hit sounds C4-D0. What each opened box says, from pizza_animations' entries 4-7
+# (rendered): SPEEDY, WHIRLY, ENERGY and ZAPPY. Every pizza the spawn lists place is parameter 2 (ENERGY: areas 2-5,
+# 7 and 8, the read in those scenarios); no spawn record places the other three
+018136  data  speedy_pizza_stats
+018140  data  whirly_pizza_stats
+01814A  data  energy_pizza_stats
+018154  data  zappy_pizza_stats
 # 010432 "lea $1815e.l, A6" (oil_drum_start; 01049E oil_drum_become_wreck again)
 01815E  data  oil_drum_stats
 # 0110EA "lea $18168.l, A6" (the five explosions' start: explosion_small_start to explosion_medium_start, attack 07)
@@ -4779,6 +4800,9 @@ param set_object_stats a6 stats object_stats
 0181A4  data  inert_stats
 # 010B28 "lea $181ae.l, A6" (freeze_nozzle_start)
 0181AE  data  freeze_nozzle_stats
+# a record no code loads (no lea or table names 0181B8): freeze_nozzle_stats' attack 09 (frozen in a block of ice),
+# depth and hit sound D8, without its health bar and damage: something that freezes the turtles and nothing can strike
+0181B8  data  unused_freezing_stats
 # 010C5C "lea $181c2.l, A6" (electric_beam_start)
 0181C2  data  electric_beam_stats
 # 01157C "lea $181cc.l, A6" (rock_soldier_site_start: 0x28 bars)
@@ -4789,6 +4813,9 @@ param set_object_stats a6 stats object_stats
 0181E0  data  car_hit_box_stats
 # 010DAE "lea $181ea.l, A6" (electric_column_start)
 0181EA  data  electric_column_stats
+# a record no code loads (no lea or table names 0181F4): attack 07 (knocked flying), damage 0x410, depth 0, no health
+# and no hit sound, like falling_missile_at_turtle_stats: something that knocks the turtles flying and nothing can strike
+0181F4  data  unused_knock_flying_stats
 # 012D54 "lea $181fe.l, A6" (helicopter_start)
 0181FE  data  helicopter_stats
 # 0131C2 "lea $18208.l, A6" (copter_bullet_start)
@@ -7538,6 +7565,39 @@ local clear_objects 004604 a0 objects_end none
 # a byte and its frames at a time (004742 "move.b (A5)+, D0", 004744 "move.b (A5)+, ($0,A4)"), its handler (00475E "jsr
 # (A2)"), and the presses worked out (00477E "move.b D0, $6004c.l")
 00467C  func  update_game_inputs
+# code no path reaches (no call, jump or table names 004808), which the data walk took for the end of a table: a demo's
+# recorder, update_game_inputs' playback the other way round. For each of four channels, from the last (004808 "moveq
+# #$3, D7", 00480A "lea $4872.l, A6"), the work RAM long that holds where its stream is written (004814 "movea.l
+# (A6,D6.w), A5", 004818 "movea.l ($0,A5), A4") and the player's inputs (00481C "movea.l ($4,A6,D6.w), A3", 004824
+# "move.b ($0,A3), D0"): the same inputs as the pair being written count one frame more (00482E "move.b ($1,A4), D1",
+# 004832 "addq.b #1, D1", 004838 "move.b D1, ($1,A4)"), up to 255; other inputs start a pair, an input and 1
+# (004854 "lea ($2,A4), A4", 004858 "move.b D0, (A4)", 004860 "move.b #$1, ($1,A4)"), and call the channel's join
+# routine with them in 060066 (00485A "move.b D0, $60066.l", 00486A "jsr (A2)"): the demos' streams' format
+# (demo_input_stream), recorded
+004808  func  record_demo_inputs
+# the recorder's four channels, 16 bytes each (00480A "lea $4872.l, A6", 004812 "lsl.w #4, D6"): the work RAM long
+# that holds where the channel's stream is written (063800, 063A00, 063C00, 063E00: 0x200 bytes apart), the player's
+# inputs (060034-060037), the join routine (demo_join_player_1-4, 004820 "movea.l ($8,A6,D6.w), A2"), and a long of 0
+004872  data  demo_recorder_channels  record=16 code=8 count=4
+# the recorder's names, as update_game_inputs': 00480A "lea $4872.l, A6" the channels' records (a join routine leaves A6 at
+# the joining player's record, 0048D8 "bsr $4284": what the channels after it read is then the work RAM past it, so the C
+# reads them through the bus, as update_game_inputs does)
+local record_demo_inputs 00480A a6 channels
+# 004810 "move.w D7, D6" 004812 "lsl.w #4, D6" the channel times 16, its record in demo_recorder_channels
+local record_demo_inputs 004810,004812 d6 channel_offset
+# 004814 "movea.l (A6,D6.w), A5" the work RAM long that holds where the channel's stream is written
+local record_demo_inputs 004814 a5 record_place
+# 004818 "movea.l ($0,A5), A4" 004840 "lea ($2,A4), A4" 004854 "lea ($2,A4), A4" the pair being written in the stream, an
+# input and its frames
+local record_demo_inputs 004818,004840,004854 a4 record
+# 00481C "movea.l ($4,A6,D6.w), A3" where the player's inputs are
+local record_demo_inputs 00481C a3 inputs_place
+# 004820 "movea.l ($8,A6,D6.w), A2" the channel's join routine
+local record_demo_inputs 004820 a2 join_routine
+# 004824 "move.b ($0,A3), D0" the player's inputs this frame
+local record_demo_inputs 004824 d0 inputs
+# 00482E "move.b ($1,A4), D1" 004832 "addq.b #1, D1" the pair's frames, one more
+local record_demo_inputs 00482E,004832 d1 frames
 # in a demo, a recorded byte with bit 7 (0048B2 "tst.b $60066.l") brings the first player in, with a life (0048CC "or.b
 # D0, $600a1.l", 0048DC "move.b #$1, $60100.l")
 0048B2  func  demo_join_player_1
@@ -7872,6 +7932,7 @@ comment clear_spare_ram a stretch of work RAM nothing uses cleared
 comment clear_objects every object cleared
 comment clear_sprite_ram the sprite chip's sprites cleared
 comment update_game_inputs the players' inputs for the turtles, or a demo's recorded ones
+comment record_demo_inputs Unused: the four players' inputs recorded as a demo's streams, an input and its frames at a time
 comment demo_join_player_1 in a demo, the first player joins
 comment demo_join_player_2 in a demo, the second player joins
 comment demo_join_player_3 in a demo, the third player joins
@@ -8463,6 +8524,38 @@ comment game_over_skip a button ends GAME OVER early
 # (0082BE "lea $82e6.l, A5", 0082CC "move.l #$31, D7", 0082D8 "move.l #$a, D7") into 063500, the top score 0x1000 (0082C4
 # "move.w #$1000, $60076.l")
 0082B8  func  reset_ranking
+# ---- an animation viewer no code runs (no call, jump or table names 00843E or 008480), which the data walk took for
+# the end of ranking_place_tiles_2: its code, its entries and its counts, and an old table of the attract mode's steps ----
+# the start: the object at 0623C0 (object 12) shown in the middle of the screen (00843E "lea $623c0.l, A6", 00845E "move.w
+# #$100, ($c,A6)", 008464 "move.w #$60, ($e,A6)"), the first entry's first animation (00846A "clr.b $63498.l", 008470
+# "clr.b $63499.l"), the sprites hidden (008476 "jsr $46eea.l"), then shown (00847C "bra $8580")
+00843E  func  animation_viewer_start
+# a frame: the presses of all four players (00848A "move.b $60050.l, D0" to 00849C): attack (bit 5) shows the animation
+# again, jump (bit 4) the entry's next animation up to its count (0084C6 "lea $8850.l, A6", 0084D4 "cmp.b (A6,D6.w), D7"),
+# bit 2 the next entry (back to the first at a negative count, 008510 "bpl $851a"), bit 3 the one before; the entry and
+# the animation's numbers in hexadecimal (008548 "movea.l #$100354, A6", 008558 "jsr $1848c.l"), and the sprites drawn
+# (008574 "jsr $46f08.l", 00857A "jmp $46f92.l")
+008480  func  animation_viewer_frame
+# 00848A "move.b $60050.l, D0" to 00849C "or.b $60053.l, D0" the four players' presses together
+local animation_viewer_frame 00848A,008490,008496,00849C d0 presses
+# the entry's animation started on the object (008580 "lea $85bc.l, A5", 00859E "movea.l (A5,D6.w), A6", 0085A4 "movea.l
+# (A6,D7.w), A6", 0085A8 "jsr $47bf2.l") and its palette set requested for the sprites' bank (0085AE "movea.l
+# ($4,A5,D6.w), A6", 0085B2 "move.w #$208, D7", 0085B6 "jmp $9242.l")
+008580  func  animation_viewer_show
+# 00858E "move.l D7, D6" 008590 "move.b $63498.l, D6" 00859C "lsl.w #3, D6" the entry times 8, its place in
+# animation_viewer_animations and animation_viewer_palettes
+local animation_viewer_show 00858E,008590,00859C d6 entry_offset
+# the viewer's 82 entries, 8 bytes each (00859C "lsl.w #3, D6"): a table of animations (profile_animations, krang_animations,
+# unused_animation_list...) and its palette set; then FFFFFFFF
+0085BC  table  animation_viewer_animations  u32  animation_entry
+0085C0  table  animation_viewer_palettes  u32  rom
+# how many animations each entry's table has, 82, then FF: the end (0084D4 "cmp.b (A6,D6.w), D7", 00850C "move.b
+# (A6,D6.w), D6", 008510 "bpl $851a")
+008850  table  animation_viewer_counts  s8
+# after the viewer's counts, no code reads (no lea or table names 0088A4): the attract mode's steps as attract_steps
+# has them, without the last two (attract_spare_step, attract_end): attract_begin, attract_coin_screen, attract_opening,
+# attract_title, attract_demo, attract_profile, attract_best_players
+0088A4  data  unused_attract_steps
 
 comment scene_ranking the ranking after a game, by its steps
 comment ranking_setup the ranking's first step, by its steps
@@ -8486,6 +8579,9 @@ comment draw_ranking_label a player's label at the top of his column
 comment draw_ranking_place a player's place, its digits and ending
 comment ranking_frame_colour the colour of a player's column
 comment reset_ranking the ranking's default scores and initials, and the top score
+comment animation_viewer_start Unused: the animation viewer's start, its object in the middle of the screen with the first animation
+comment animation_viewer_frame Unused: the viewer's frame, the players' buttons paging through the entries and their animations
+comment animation_viewer_show Unused: the entry's animation on the viewer's object, with its palettes
 
 # ======== the attract mode's steps (0088C0-0091A3) ========
 # Game state 1 runs its step (060003) by the table at 004100 (0040BE "lea $4100.l, A0"): 0 its start, 1 the coin's
@@ -9070,6 +9166,12 @@ comment enemy_crash_into_scenery_low_start Unused: the scenery breaks lower down
 # to the left (0186B4 "addq.b #2, $63494.l", 0186BA "subi.l #$2, $63490.l") and, up to 0x1D, 2 taller one row up
 # (0186C4 "cmpi.b #$1d, $63495.l", 0186D6 "subi.l #$80, $63490.l")
 018682  func  grow_tile_box
+# code no path reaches (no call, jump or table names 018714), after start_wide_box_opening's place (018710), which the
+# coverage took for data read on from that place: the wide box's step, grow_tile_box the other way round. Every frame
+# while it counts (018714 "tst.b $63497.l"): the box's outline (01873C "bsr $18776"), then 2 tiles narrower and 2
+# shorter (018746 "subq.b #2, $63494.l", 01874C "subq.b #2, $63495.l") and its corner one row down and one tile
+# right (018752 "addi.l #$82, $63490.l"): from the screen's edges to its middle
+018714  func  shrink_tile_box
 # the outline of a box of tile D7 in the fixed layer at A6, D5 and D6 its size: its top (01877A "move.b #$0, (A5)+",
 # 01877E "move.b D7, (A5)+"), its sides (018794 "move.b #$0, ($0,A6)", 01879E "move.b #$0, (A6,D4.w)") and its bottom
 # (0187B0 "move.b #$0, (A6)+")
@@ -9083,6 +9185,7 @@ comment type_text_in_colours every pass of the coloured text typed on
 comment type_colour_pass one pass's next character in its colour
 comment start_box_opening the screen covered, and a box to open it from the middle
 comment grow_tile_box the box drawn bigger every frame
+comment shrink_tile_box Unused: the box drawn smaller every frame, from the screen's edges to its middle
 comment draw_tile_box the outline of a box of tiles
 
 # ======== the turtles' reactions and their unused routine (src/unsorted/code_01A876.c) ========
@@ -9851,10 +9954,16 @@ local opening_portraits_start 02FD7C a5 portrait portrait
 # "movea.l (A6,D6.w), A6")
 local start_title_logo 004AD8,004AE8,004B06 a6 animations animation_entry
 0151D8  data  title_logo_animations
-# Rocksteady's shot: the animation and the bullet's burst, by whether he aims low (04FDDC "lea $4fda8.l, A5", 04FDF2
+# Rocksteady's shot: the animation and the address of the shot's record (shot_record, which enemy_rocksteady_shoot_fire
+# hands start_shot: 04FDF8 "move.l (A5), ($24,A0)", 04FE14 "movea.l ($24,A0), A5", 04FE18 "jsr $47c5a.l"), by whether he aims low (04FDDC "lea $4fda8.l, A5", 04FDF2
 # "adda.w #$8, A5", 04FDF6 "movea.l (A5)+, A6")
 local enemy_rocksteady_shoot_start 04FDDC a5 animations animation_entry
 04FDA8  data  rocksteady_shoot_animations
+# the two shots' records rocksteady_shoot_animations holds, after enemy_rocksteady_shoot's table of routines
+# (04FD94-04FD9B): from x -0x36 at height 0x23, level (04FDA8's), and from x -0x23 at height 0x54, up at a turtle
+# 0x40 or more above the floor (04FDB0's: 04FDE2 "cmpi.b #$40, ($10,A1)", 04FDF2 "adda.w #$8, A5"); kind 5F, the bullet
+04FD9C  data  rocksteady_level_shot
+04FDA2  data  rocksteady_high_shot
 # Rocksteady knocked down and defeated: the animation by how he falls (04FF62 "lea $4ff52.l, A6", 04FF6E "lea $4ff3a.l,
 # A6", 04FF84 "movea.l (A6), A6"; 0500BA "lea $500a2.l, A6", 0500C6 "lea $50092.l, A6", 0500DC "movea.l (A6), A6")
 local enemy_rocksteady_knocked_down_start 04FF62,04FF6E a6 animations animation_entry
@@ -10372,6 +10481,9 @@ constant drill_arrival_open 5B6FF DRILL_POD_OPEN_X_AREA_7
 04D6B8  data  double_door_piece_record
 # 04D714 "lea $4d6c0.l, A5" (double_door_wait): the other piece
 04D6C0  data  double_door_piece_record_2
+# before them, after double_door's table of routines (04D6A4-04D6AF): a third piece's record, x 0 between the two
+# (+0x10 and -0x10), the same y, height and kind 0003, which double_door_wait does not start (no lea names 04D6B0)
+04D6B0  data  unused_double_door_piece_record
 # 04D790 "lea $4d75c.l, A5" (technodrome_door_wait); 04D7F6 "lea $4d75c.l, A5" (technodrome_door_let_out): the soldier
 # the Technodrome's door lets out
 04D75C  data  technodrome_door_soldier_record
@@ -10548,6 +10660,10 @@ constant drill_arrival_open 5B6FF DRILL_POD_OPEN_X_AREA_7
 02E134  data  turtle_cheer_animation
 # 02BE50 "lea $2e162.l, A6" (exit_sewer_villains_picture): April tied up, the villains' picture
 02E162  data  april_tied_up_picture_animation
+# right after that still's end (02E16C, 00 00): three frames that loop (02E18C, 00 80 and a jump to 02E16E), the still's
+# picture moving (its sprites 02F558, 02F578, then the still's own 02F530: rendered): an animation no code starts (no
+# lea or table names 02E16E), walked from here (tools/data_walk.py, UNUSED_ANIMATIONS)
+02E16E  data  unused_april_tied_up_animation
 # 019E52 "lea $2e1c0.l, A6" (turtle_jump_in_start): the lines a turtle jumps in with
 02E1C0  data  turtle_jump_in_animation
 
@@ -11256,6 +11372,10 @@ field palette_fade 02 palettes u32 rom
 01255E  table  rock_soldier_technodrome_moves  u8
 # 012616 "lea $12628.l, A6" (rock_soldier_technodrome_random_move_time): how long he keeps a move
 012628  table  rock_soldier_technodrome_move_times  u8
+# between rock_soldier_technodrome_random_move_time's rts and that table, no code reads (no lea names 012624): the four
+# waits of rock_soldier_site_waits (20 30 40 50), which the building site's soldier reads (011C86 "lea $11dee.l, A6"),
+# copied with his code for the Technodrome's soldier, whose code reads no copy of them
+012624  data  unused_rock_soldier_technodrome_waits
 # 012CD2 "lea $12cfe.l, A6" (car_soldier_start): where the car's soldiers stop, by their parameter
 012CFE  table  car_soldier_stop_y  u16
 # 012F5C "lea $13092.l, A6" (helicopter_fly): the helicopter's drift up or down, by its direction
@@ -11298,9 +11418,14 @@ field palette_fade 02 palettes u32 rom
 013E30  table  stockman_fly_moves  u8
 # 013F82 "lea $1416e.l, A6" (stockman_shake): Stockman's height as he shakes
 01416E  table  stockman_shake_heights  u16
-# 013F98 "lea $14176.l, A6" (stockman_shake); 014134 "lea $14176.l, A6" (stockman_bob): the heights Stockman keeps
-# over the floor: the first is the y that stops the climb (the loop compares it alone), the rest from +1E
-014176  table  stockman_height_steps[31]  u16
+# 013F98 "lea $14176.l, A6" (stockman_shake); 014134 "lea $14176.l, A6" (stockman_bob): the depths (his y, 24.8)
+# that pick Stockman's height, 0x3000 to 0x6800, 4 pixels apart: 15 of them, of which the loop compares only the first
+# (013FA4 "cmp.w ($0,A6), D6" with A6 never moved, 013FAC "addi.w #$2, D5", 013FB0 "cmpi.b #$1e, D5"): in front of
+# 0x30 his entry in stockman_step_heights is the first, behind it the last
+014176  table  stockman_height_steps[15]  u16
+# 013FB6 "lea $14194.l, A6" (stockman_shake); 014152 "lea $14194.l, A6" (stockman_bob): the heights Stockman keeps
+# over the floor by his depth, 16 of them (013FBC "move.w (A6,D5.w), D6", 014158 "move.w (A6,D5.w), D6")
+014194  table  stockman_step_heights[16]  u16
 # 014120 "lea $141b4.l, A6" (stockman_bob): Stockman's height as he bobs
 0141B4  table  stockman_bob_heights  u16
 # 014222 "lea $1424a.l, A6" (stockman_random_drop_time): the frames before Stockman drops a Mouser, picked at random
@@ -11634,7 +11759,7 @@ field palette_fade 02 palettes u32 rom
 0184C2  table  hex_digits  u8
 # 01866E "movea.l $1867e.l, A6" (start_box_opening): where the box opens in the fixed layer
 01867E  table  box_opening_place  u32 io
-# 018702 "movea.l $18710.l, A6" (start_wide_box_opening): ... the place the unreached routine opens it
+# 018702 "movea.l $18710.l, A6" (start_wide_box_opening): where the box the unreached routine shrinks starts
 018710  table  unreached_box_opening_place  u32 io
 # 030260 "lea $30350.l, A6" (show_balloon): the speech balloons: their tile, place and time, 5 bytes each
 030350  table  balloon_records[96]  u8
@@ -12047,7 +12172,7 @@ comment enemy_flinch_bent_hammer_start the hammer soldier's flinch bent over
 comment enemy_flinch_hunched_hammer hit hunched: the hammer soldier runs the same flinch as with its head thrown back
 comment enemy_flinch_hunched_hammer_start Unused: the hammer soldier's flinch hunched over starts as the bent one does: the next state and the same animation
 comment shuriken_struck_without_sound Unused: a shuriken struck: it no longer hits or can be hit, with its struck animation
-comment rocksteady_bullet_burst Unused: Rocksteady's bullet bursts with a sound, no longer hitting or hittable
+comment rocksteady_bullet_burst Rocksteady's bullet struck: it bursts with a sound, no longer hitting or hittable; never in the game, as nothing can strike the bullet
 comment enemy_step_out_start way in 2, out of a door or a lift: shown, hittable, its first pose for 24 frames
 comment enemy_step_out_wait waits in the doorway, then walks out for 32 frames
 comment enemy_step_out_walk a frame of walking out of the door; at its end, to thinking
@@ -15494,7 +15619,7 @@ local stockman_defeated_explode 010F0A,010F0E d7 sound_choice
 local stockman_defeated_explode 010F12 d7 sound
 # 013F2A "move.b #$8, D7" 013F30 "jsr $1830c.l" 013F36 "tst.b D7" the objects find_free_object looks at for the explosion, left over when it finds one
 local stockman_defeated_explode 013F2A,013F2E,013F30 d7 objects_left
-# 013F9E "moveq #$0, D5" 013FAC "addi.w #$2, D5" his entry in stockman_height_steps, by how far back he is
+# 013F9E "moveq #$0, D5" 013FAC "addi.w #$2, D5" his entry in stockman_step_heights, by how far back he is
 local stockman_shake 013F9E,013FAC d5 step_offset
 # 013F8A "move.b $600a5.l, D7" 013F90 "andi.b #$6, D7" frame_count's bits 1-2: his entry in stockman_shake_heights
 local stockman_shake 013F8A,013F90 d7 shake_offset
@@ -15502,7 +15627,7 @@ local stockman_shake 013F8A,013F90 d7 shake_offset
 local stockman_steer 0140A0,0140B2 d6 y_step
 # 013FD6 "jsr $11dfa.l" 013FDC "tst.b D7" what boss_pick_target gives: a turtle picked as his target, none when 0
 local stockman_steer 013FD6 d7 picked
-# 01413A "moveq #$0, D5" 014148 "addi.w #$2, D5" his entry in stockman_height_steps, by how far back he is
+# 01413A "moveq #$0, D5" 014148 "addi.w #$2, D5" his entry in stockman_step_heights, by how far back he is
 local stockman_bob 01413A,014148 d5 step_offset
 # 014128 "move.b ($2a,A0), D7" 01412C "andi.w #$3e, D7" his bob step (even), his entry in stockman_bob_heights
 local stockman_bob 014128,01412C d7 bob_offset
@@ -18993,6 +19118,9 @@ comment object_loop_slot what A1 holds through the object loop: what the turtles
 # 04C834 "lea $4c7b2.l, A6" (enemy_step_out_start); 04C852 "lea $4c7b2.l, A6" (enemy_step_out_wait): the animation
 # enemy_step_out_start and enemy_step_out_wait set
 04C7B2  data  enemy_step_out_animation
+# right before it, after enemy_step_out's table of routines (04C79C-04C7A7): a still (its first byte 0) of the same
+# picture as that animation's first frame (sprites 04C7F4), which no code starts (no lea names 04C7A8)
+04C7A8  data  unused_enemy_step_out_still
 # 04CC68 "lea $4cafe.l, A6" (window_soldier_drop_jump_out): the animation window_soldier_drop_jump_out sets
 04CAFE  data  window_soldier_drop_jump_out_animation
 # 04CDF8 "lea $4cd10.l, A6" (window_soldier_dive_wait): the animation window_soldier_dive_wait sets
@@ -19157,6 +19285,12 @@ comment object_loop_slot what A1 holds through the object loop: what the turtles
 # 004C6A "lea $4c7c.l, A5" (title_turtles_slide_in): the same with game text 0x13, TEENAGE MUTANT HERO TURTLES, for
 # the version that has it
 004C7C  data  hero_title_jobs
+# two lists of jobs no code queues (no lea names 00525A or 005260), between attract_end_restart's rts and
+# copy_sprites_and_fill_layer_b, in queue_jobs' format (a word a job, its number and parameter, to FFFF: 004184
+# "move.w (A5)+, D7", 004186 "cmpi.w #-$1, D7"): the text colour and game text 0x0F, the WARNING that the game is for
+# use only in Asia; and game texts 07 and 0x0A, the Konami logo and KONAMI 1989 (coin_screen_jobs' two texts)
+00525A  data  unused_asia_warning_jobs
+005260  data  unused_konami_logo_jobs
 # 0057AE "lea $5846.l, A5" (draw_color_test): the COLOR TEST page's jobs: the text colour, then test text 05
 005846  data  color_test_jobs
 # 005884 "lea $5896.l, A5" (draw_io_test): the IO READ TEST page's jobs: the text colour, then test texts 00-04
@@ -19334,6 +19468,9 @@ comment object_loop_slot what A1 holds through the object loop: what the turtles
 # 02BD30 "lea $a16e.l, A6" (turtle_exit_sewer): the palette set requested once the turtles are out of the sewer: the
 # villains' picture's
 00A16E  data  villains_picture_palettes
+# among the palette sets' bank lists (00A17E-00A23D, 8 palettes each), one no palette set names (no set or lea holds
+# 00A1DE): 8 times the palette at 00A39E, which no other list holds either
+00A1DE  data  unused_palette_list
 # 013CC8 "lea $c6c4.l, A6" (stockman_wait_for_last_enemy): a palette (request kind 4, sprites' palette 0x0C) once
 # Baxter Stockman is the last enemy
 00C6C4  data  stockman_palette

@@ -334,7 +334,7 @@ void stockman_shake(uint32_t object)
 			break;
 		step_offset += 2u;
 	} while ((uint8_t)step_offset < 0x1Eu);
-	OBJECT(object)->height = shake_height + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
+	OBJECT(object)->height = shake_height + TABLE16(stockman_step_heights, (uint32_t)(int16_t)step_offset);
 	distance_low_byte = step_offset;
 }
 
@@ -425,7 +425,7 @@ void stockman_bob(uint32_t object)
 			break;
 		step_offset += 2u;
 	} while ((uint8_t)step_offset < 0x1Eu);
-	OBJECT(object)->height = bob_height + TABLE16(stockman_height_steps, 0x1Eu + (uint32_t)(int16_t)step_offset);
+	OBJECT(object)->height = bob_height + TABLE16(stockman_step_heights, (uint32_t)(int16_t)step_offset);
 	OBJECT(object)->stockman.bob++;
 	OBJECT(object)->stockman.bob &= 0x3Fu;
 	distance_low_byte = step_offset;

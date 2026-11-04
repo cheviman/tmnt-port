@@ -507,7 +507,11 @@
 #define unk_062272_ADDRESS 0x062272u
 #define unk_062272 RAM16(unk_062272_ADDRESS)
 #define unk_0623C0_ADDRESS 0x0623C0u
-#define unk_0623C0 RAM8(unk_0623C0_ADDRESS)
+#define unk_0623C0 RAM16(unk_0623C0_ADDRESS)
+#define unk_0623C2_ADDRESS 0x0623C2u
+#define unk_0623C2 RAM16(unk_0623C2_ADDRESS)
+#define unk_0623C4_ADDRESS 0x0623C4u
+#define unk_0623C4 RAM16(unk_0623C4_ADDRESS)
 #define unk_0623CC_ADDRESS 0x0623CCu
 #define unk_0623CC RAM16(unk_0623CC_ADDRESS)
 #define unk_0623CE_ADDRESS 0x0623CEu
@@ -520,6 +524,8 @@
 #define unk_0623E0 RAM16(unk_0623E0_ADDRESS)
 #define unk_0623E2_ADDRESS 0x0623E2u
 #define unk_0623E2 RAM16(unk_0623E2_ADDRESS)
+#define unk_0623EF_ADDRESS 0x0623EFu
+#define unk_0623EF RAM8(unk_0623EF_ADDRESS)
 #define unk_062402_ADDRESS 0x062402u
 #define unk_062402 RAM8(unk_062402_ADDRESS)
 #define unk_062410_ADDRESS 0x062410u
@@ -944,6 +950,10 @@
 #define box_tile RAM8(box_tile_ADDRESS)
 #define box_frames_left_ADDRESS 0x063497u
 #define box_frames_left RAM8(box_frames_left_ADDRESS)
+#define viewer_entry_ADDRESS 0x063498u
+#define viewer_entry RAM8(viewer_entry_ADDRESS)
+#define viewer_animation_ADDRESS 0x063499u
+#define viewer_animation RAM8(viewer_animation_ADDRESS)
 #define name_entered_ADDRESS 0x0634A0u
 #define name_entered RAM8(name_entered_ADDRESS)
 #define ranking_scores_ADDRESS 0x063500u
@@ -1161,6 +1171,15 @@ extern const void *ranking_place_tiles_1_data;
 #define ranking_place_tiles_2_ADDRESS 0x008437u
 extern const void *ranking_place_tiles_2_data;
 #define ranking_place_tiles_2 ((const uint8_t *)ranking_place_tiles_2_data)
+#define animation_viewer_animations_ADDRESS 0x0085BCu
+extern const void *animation_viewer_animations_data;
+#define animation_viewer_animations ((const uint32_t *)animation_viewer_animations_data)
+#define animation_viewer_palettes_ADDRESS 0x0085C0u
+extern const void *animation_viewer_palettes_data;
+#define animation_viewer_palettes ((const uint32_t *)animation_viewer_palettes_data)
+#define animation_viewer_counts_ADDRESS 0x008850u
+extern const void *animation_viewer_counts_data;
+#define animation_viewer_counts ((const int8_t *)animation_viewer_counts_data)
 #define turtle_picture_sprites_ADDRESS 0x008BEAu
 extern const void *turtle_picture_sprites_data;
 #define turtle_picture_sprites (*(const uint8_t *)turtle_picture_sprites_data)
@@ -1458,6 +1477,9 @@ extern const void *stockman_shake_heights_data;
 #define stockman_height_steps_ADDRESS 0x014176u
 extern const void *stockman_height_steps_data;
 #define stockman_height_steps ((const uint16_t *)stockman_height_steps_data)
+#define stockman_step_heights_ADDRESS 0x014194u
+extern const void *stockman_step_heights_data;
+#define stockman_step_heights ((const uint16_t *)stockman_step_heights_data)
 #define stockman_bob_heights_ADDRESS 0x0141B4u
 extern const void *stockman_bob_heights_data;
 #define stockman_bob_heights ((const uint16_t *)stockman_bob_heights_data)
@@ -2174,8 +2196,19 @@ extern const void *enemy_ways_in_data;
 #define box_frame_tiles_ADDRESS 0x003302u
 #define health_bar_tiles_ADDRESS 0x00334Au
 #define unreached_box_frame_tiles_ADDRESS 0x0033DEu
+#define unexplained_003451_ADDRESS 0x003451u
+#define texts_003452_ADDRESS 0x003452u
+#define unexplained_0034C5_ADDRESS 0x0034C5u
+#define texts_0034C6_ADDRESS 0x0034C6u
+#define unexplained_003501_ADDRESS 0x003501u
+#define texts_003502_ADDRESS 0x003502u
+#define unexplained_003533_ADDRESS 0x003533u
+#define texts_003534_ADDRESS 0x003534u
+#define unexplained_003553_ADDRESS 0x003553u
+#define texts_003554_ADDRESS 0x003554u
 #define big_font_ADDRESS 0x00388Cu
 #define channel_records_ADDRESS 0x0047C8u
+#define demo_recorder_channels_ADDRESS 0x004872u
 #define indexed_table_of_32_bit_values_0049DA_ADDRESS 0x0049DAu
 #define indexed_table_of_32_bit_values_0049F8_ADDRESS 0x0049F8u
 #define indexed_table_of_32_bit_values_004AB4_ADDRESS 0x004AB4u
@@ -2190,7 +2223,8 @@ extern const void *enemy_ways_in_data;
 #define indexed_table_of_32_bit_values_005000_ADDRESS 0x005000u
 #define profile_motions_ADDRESS 0x005078u
 #define indexed_table_of_32_bit_values_0051CE_ADDRESS 0x0051CEu
-#define unexplained_00525A_ADDRESS 0x00525Au
+#define unused_asia_warning_jobs_ADDRESS 0x00525Au
+#define unused_konami_logo_jobs_ADDRESS 0x005260u
 #define unreached_sprite_bytes_ADDRESS 0x005294u
 #define demos_0052D4_ADDRESS 0x0052D4u
 #define indexed_table_of_32_bit_values_00569E_ADDRESS 0x00569Eu
@@ -2248,6 +2282,7 @@ extern const void *enemy_ways_in_data;
 #define ranking_defaults_ADDRESS 0x0082E6u
 #define ranking_frame_tiles_ADDRESS 0x00841Au
 #define ranking_frame_tiles_2_ADDRESS 0x00842Cu
+#define unused_attract_steps_ADDRESS 0x0088A4u
 #define indexed_table_of_32_bit_values_0088F0_ADDRESS 0x0088F0u
 #define indexed_table_of_32_bit_values_00890E_ADDRESS 0x00890Eu
 #define indexed_table_of_32_bit_values_008A0A_ADDRESS 0x008A0Au
@@ -2282,23 +2317,12 @@ extern const void *enemy_ways_in_data;
 #define skateboard_crash_picture_palettes_ADDRESS 0x00A14Eu
 #define technodrome_drop_palettes_ADDRESS 0x00A15Eu
 #define villains_picture_palettes_ADDRESS 0x00A16Eu
-#define unexplained_00A1DE_ADDRESS 0x00A1DEu
-#define palettes_00A1FE_ADDRESS 0x00A1FEu
-#define unexplained_00B606_ADDRESS 0x00B606u
-#define palettes_00B608_ADDRESS 0x00B608u
+#define unused_palette_list_ADDRESS 0x00A1DEu
 #define stockman_palette_ADDRESS 0x00C6C4u
 #define boss_shutter_palette_ADDRESS 0x00C704u
 #define skateboard_exit_van_palette_ADDRESS 0x00C824u
 #define skateboard_exit_van_palette_2_ADDRESS 0x00C844u
 #define tied_april_palette_ADDRESS 0x00CA04u
-#define unexplained_00CD44_ADDRESS 0x00CD44u
-#define palettes_00CD48_ADDRESS 0x00CD48u
-#define unexplained_00CD68_ADDRESS 0x00CD68u
-#define palettes_00CD6C_ADDRESS 0x00CD6Cu
-#define unexplained_00CD8C_ADDRESS 0x00CD8Cu
-#define palettes_00CD90_ADDRESS 0x00CD90u
-#define unexplained_00CDB0_ADDRESS 0x00CDB0u
-#define palettes_00CDB4_ADDRESS 0x00CDB4u
 #define bebop_palette_ADDRESS 0x00D094u
 #define rocksteady_palette_ADDRESS 0x00D0B4u
 #define palette_effects_00D134_ADDRESS 0x00D134u
@@ -2352,7 +2376,7 @@ extern const void *enemy_ways_in_data;
 #define rock_soldier_technodrome_reaches_ADDRESS 0x012338u
 #define rock_soldier_technodrome_reaches_2_ADDRESS 0x01234Cu
 #define rock_soldier_technodrome_move_chances_ADDRESS 0x012486u
-#define unexplained_012624_ADDRESS 0x012624u
+#define unused_rock_soldier_technodrome_waits_ADDRESS 0x012624u
 #define code_table_012660_ADDRESS 0x012660u
 #define code_table_0126FE_ADDRESS 0x0126FEu
 #define code_table_012884_ADDRESS 0x012884u
@@ -2389,6 +2413,10 @@ extern const void *enemy_ways_in_data;
 #define roadside_pole_stats_ADDRESS 0x018118u
 #define alligator_stats_ADDRESS 0x018122u
 #define billboard_stats_ADDRESS 0x01812Cu
+#define speedy_pizza_stats_ADDRESS 0x018136u
+#define whirly_pizza_stats_ADDRESS 0x018140u
+#define energy_pizza_stats_ADDRESS 0x01814Au
+#define zappy_pizza_stats_ADDRESS 0x018154u
 #define oil_drum_stats_ADDRESS 0x01815Eu
 #define explosion_stats_ADDRESS 0x018168u
 #define skateboarder_stats_ADDRESS 0x018172u
@@ -2398,11 +2426,13 @@ extern const void *enemy_ways_in_data;
 #define waiting_soldier_stats_ADDRESS 0x01819Au
 #define inert_stats_ADDRESS 0x0181A4u
 #define freeze_nozzle_stats_ADDRESS 0x0181AEu
+#define unused_freezing_stats_ADDRESS 0x0181B8u
 #define electric_beam_stats_ADDRESS 0x0181C2u
 #define rock_soldier_site_stats_ADDRESS 0x0181CCu
 #define gun_blast_stats_ADDRESS 0x0181D6u
 #define car_hit_box_stats_ADDRESS 0x0181E0u
 #define electric_column_stats_ADDRESS 0x0181EAu
+#define unused_knock_flying_stats_ADDRESS 0x0181F4u
 #define helicopter_stats_ADDRESS 0x0181FEu
 #define copter_bullet_stats_ADDRESS 0x018208u
 #define falling_missile_stats_ADDRESS 0x018212u
@@ -2516,13 +2546,11 @@ extern const void *enemy_ways_in_data;
 #define april_kidnapped_picture_animation_ADDRESS 0x02DC36u
 #define splinter_thanks_animation_ADDRESS 0x02DEE6u
 #define intro_turtle_lands_animation_ADDRESS 0x02DF32u
-#define unexplained_02DF52_ADDRESS 0x02DF52u
-#define animations_02DF54_ADDRESS 0x02DF54u
 #define turtles_fall_in_animation_ADDRESS 0x02E0ECu
 #define car_street_bystanders_animation_ADDRESS 0x02E11Au
 #define turtle_cheer_animation_ADDRESS 0x02E134u
 #define april_tied_up_picture_animation_ADDRESS 0x02E162u
-#define unexplained_02E16E_ADDRESS 0x02E16Eu
+#define unused_april_tied_up_animation_ADDRESS 0x02E16Eu
 #define exit_sewer_villains_taunt_animation_ADDRESS 0x02E192u
 #define turtle_jump_in_animation_ADDRESS 0x02E1C0u
 #define sprite_lists_02E1E0_ADDRESS 0x02E1E0u
@@ -2546,8 +2574,6 @@ extern const void *enemy_ways_in_data;
 #define fire_blocks_ADDRESS 0x032312u
 #define unexplained_032C9B_ADDRESS 0x032C9Bu
 #define layers_032C9C_ADDRESS 0x032C9Cu
-#define unexplained_03372C_ADDRESS 0x03372Cu
-#define layers_03373C_ADDRESS 0x03373Cu
 #define unexplained_034A29_ADDRESS 0x034A29u
 #define layers_034A2A_ADDRESS 0x034A2Au
 #define unexplained_035241_ADDRESS 0x035241u
@@ -2731,6 +2757,7 @@ extern const void *enemy_ways_in_data;
 #define elevator_stops_ADDRESS 0x04C6E0u
 #define elevator_stops_2_ADDRESS 0x04C6E4u
 #define code_table_04C79C_ADDRESS 0x04C79Cu
+#define unused_enemy_step_out_still_ADDRESS 0x04C7A8u
 #define enemy_step_out_animation_ADDRESS 0x04C7B2u
 #define sprite_lists_04C7F4_ADDRESS 0x04C7F4u
 #define code_table_04C87C_ADDRESS 0x04C87Cu
@@ -2775,6 +2802,7 @@ extern const void *enemy_ways_in_data;
 #define rocket_shot_record_ADDRESS 0x04D558u
 #define dropped_rocket_shot_record_ADDRESS 0x04D55Eu
 #define code_table_04D6A4_ADDRESS 0x04D6A4u
+#define unused_double_door_piece_record_ADDRESS 0x04D6B0u
 #define double_door_piece_record_ADDRESS 0x04D6B8u
 #define double_door_piece_record_2_ADDRESS 0x04D6C0u
 #define code_table_04D74C_ADDRESS 0x04D74Cu
@@ -2869,10 +2897,12 @@ extern const void *enemy_ways_in_data;
 #define enemy_rocksteady_punch_states_ADDRESS 0x04FCE0u
 #define enemy_rocksteady_gun_butt_states_ADDRESS 0x04FD58u
 #define enemy_rocksteady_shoot_states_ADDRESS 0x04FD94u
+#define rocksteady_level_shot_ADDRESS 0x04FD9Cu
+#define rocksteady_high_shot_ADDRESS 0x04FDA2u
 #define rocksteady_shoot_animations_ADDRESS 0x04FDA8u
-#define unexplained_04FDAC_ADDRESS 0x04FDACu
+#define addresses_of_shot_records_32_bit_each_04FDAC_ADDRESS 0x04FDACu
 #define animations_04FDB0_ADDRESS 0x04FDB0u
-#define unexplained_04FDB4_ADDRESS 0x04FDB4u
+#define addresses_of_shot_records_32_bit_each_04FDB4_ADDRESS 0x04FDB4u
 #define enemy_rocksteady_flinch_states_ADDRESS 0x04FE4Eu
 #define enemy_rocksteady_reel_states_ADDRESS 0x04FEB6u
 #define enemy_rocksteady_flinch_from_behind_states_ADDRESS 0x04FEEEu
@@ -2921,11 +2951,11 @@ extern const void *enemy_ways_in_data;
 #define enemy_mouser_knocked_flying_arc_ADDRESS 0x051A20u
 #define code_table_051AD2_ADDRESS 0x051AD2u
 #define animations_051B26_ADDRESS 0x051B26u
-#define unexplained_051B2E_ADDRESS 0x051B2Eu
+#define object_records_051B2E_ADDRESS 0x051B2Eu
 #define animations_051B36_ADDRESS 0x051B36u
-#define unexplained_051B3E_ADDRESS 0x051B3Eu
+#define object_records_051B3E_ADDRESS 0x051B3Eu
 #define animations_051B46_ADDRESS 0x051B46u
-#define unexplained_051B4E_ADDRESS 0x051B4Eu
+#define object_records_051B4E_ADDRESS 0x051B4Eu
 #define code_table_051C2C_ADDRESS 0x051C2Cu
 #define enemy_rodney_enter_states_ADDRESS 0x051CB8u
 #define rodney_attacks_ADDRESS 0x051F94u
@@ -2967,7 +2997,7 @@ extern const void *enemy_ways_in_data;
 #define shredder_ray_shot_record_ADDRESS 0x053622u
 #define body_boxes_ADDRESS 0x053756u
 #define spawn_offsets_ADDRESS 0x053A5Eu
-#define unexplained_053B6E_ADDRESS 0x053B6Eu
+#define indexed_table_of_32_bit_values_053C26_ADDRESS 0x053C26u
 #define enemy_definitions_ADDRESS 0x053EFEu
 #define sword_soldier_definition_ADDRESS 0x053F86u
 #define hammer_soldier_definition_ADDRESS 0x05400Eu

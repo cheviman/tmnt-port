@@ -4,7 +4,7 @@ Description: the program's data the code hands to its engines, walked from where
              animations the sprite engine plays, the sprite lists and boxes of their frames
 Version:     0.1.0
 Created:     29-10-2026
-Modified:    29-10-2026
+Modified:    04-11-2026
 Author:      Sebastian Toyos
 
 Usage: python tools/data_walk.py [rom folder or .zip] [--reads FOLDER]
@@ -65,11 +65,12 @@ NAMES = ("set_animation", "sprite_sizes", "body_boxes", "area_layers", "post_pal
 # a tile block (draw_tile_block: A6 the block, D7 where, by tile_block_places' addresses in the tile RAM): its
 # width and height less one (a byte each), then its tiles a row at a time, 2 bytes each (code, colour)
 MAX_TILE_BLOCK = (64, 32)
-# the texts (print_game_text, print_demo_text, print_test_text: D7 the text's number in their table): a text
+# the texts (print_game_text, print_demo_text, print_test_text: D7 the text's number in their table; and the stages'
+# titles, print_stage_title by the stage: 002604 "movea.l #$3402, A6", 00261E "movea.l (A6)+, A4"): a text
 # is the address in the K052109's fixed layer it starts at (32 bits), then its characters (the tile is the
 # character less 0x30: '@' is a space), '/' and the next line's address, '?' its end. A table ends where its
 # first text starts
-TEXT_TABLES = ("game_texts", "demo_texts", "test_mode_texts")
+TEXT_TABLES = ("game_texts", "demo_texts", "test_mode_texts", "stage_titles")
 TEXT_END, TEXT_LINE = 0x3F, 0x2F
 # tables whose size the code that reads them fixes: (name in symbols.txt, bytes, kind)
 FIXED = (("direction_rows", 64, "direction rows"), ("direction_table", 1024, "direction table"),
@@ -77,7 +78,104 @@ FIXED = (("direction_rows", 64, "direction rows"), ("direction_table", 1024, "di
          ("big_font_tiles", 6, "big font tiles"), ("big_font", 20 * 36, "big font"), ("text_colours", 16, "text colours"),
          ("enemy_definitions", 9 * 136, "enemy definitions"), ("unused_enemy_definitions", 0x380, "unused enemy definitions"),
          ("area_tile_banks", 2 * 10, "area tile banks"), ("area_layer_priorities", 10, "area layer priorities"),
-         ("area_entry_without_blink", 10, "area settings"))
+         ("area_entry_without_blink", 10, "area settings"),
+         # the point add_point_to_score adds, two BCD digits it reads backwards from draw_score_digits' address
+         # (001F92 "lea $2032.l, A5", 001F98 "move.w #$1, D7", 001FA0 "abcd -(A5), -(A4)")
+         ("one_point", 2, "bcd number"),
+         # the credit name the staff roll types when a pass has no name: 15 spaces and its '!' (007486 "move.l #$77d2,
+         # $63434.l"; type_credit_name_pass reads it a character at a time to the '!', 007512 "move.b (A6)+, D6")
+         ("blank_credit_name", 16, "credit name"),
+         # the pictures draw_tv_picture puts on the shop window's TV in the street: 8 rows of 4 tiles' codes for the
+         # left half and 4 for the right (01F08C "moveq #$7, D7", 01F08E "moveq #$3, D6", 01F098 "move.b (A6)+, (A0)+",
+         # 01F094 "move.b ($4,A6), (A1)+", 01F0A6 "addq.l #4, A6"): 64 bytes
+         ("april_tv_picture", 64, "tv picture"), ("tv_picture_tiles", 64, "tv picture"),
+         # Splinter's picture after area 7: 16 columns of 8 rows, a column at a time (02D0FC "moveq #$10, D0", 02D120
+         # "move.b ($0,A1), ($1,A0)" to 02D14A "move.b ($70,A1), ($381,A0)", 02D150 "addq.l #1, A1")
+         ("splinter_picture_tiles", 128, "picture tiles"),
+         # the ranking's frame: its top row and the row under it, 9 tiles each (008164 "moveq #$8, D5", 008184
+         # "move.b (A5)+, ($1,A6,D4.w)", 008176 "move.b ($9,A5), ($1,A6,D4.w)")
+         ("ranking_frame_tiles", 18, "picture tiles"),
+         # the Technodrome's wreck: two parts of 8 bytes (007230 "lea $7276.l, A6", 007240 "move.b ($6,A6), D6", 00726A
+         # "adda.l #$8, A6", 007270 "dbra D7, $7236" with D7 1)
+         ("technodrome_wreck_parts", 16, "wreck parts"),
+         # the contacts the floor cells FD, FE and FF clear, read back from 04881B by the cell (0487FE "lea $4881b.l, A5",
+         # 048804 "move.b (A5,D4.w), D4", after 04878C "cmpi.b #-$3, $633d3.l": only FD-FF), and the FF at index 0
+         ("floor_contact_masks", 4, "floor contact masks"),
+         # the kicked door's four pieces, an object record each (04C52A "moveq #$3, D6", 04C532 "jsr $47c30.l", 04C538
+         # "adda.w #$8, A5")
+         ("kicked_door_pieces", 32, "object records"),
+         # Rocksteady's six shots around, a byte each (04F9F6 "move.l #$4f9d4, ($1a,A0)", 04FA00 "move.b #$7, ($22,A0)",
+         # 04FA1A "subq.b #1, ($22,A0)", 04FA2E "move.b (A4)+, D7")
+         ("rocksteady_shoot_around_aims", 6, "aims"),
+         # Bebop's moves by how far the turtle is: four distances and moves (0505A8 "sub.w ($0,A6), D7", 0505B0 "adda.w
+         # #$4, A6", 0505B6 "cmpi.b #$4, D6", 0505C8 "move.w ($2,A6), ($28,A0)")
+         ("bebop_far_moves", 16, "distances and moves, 16-bit each"),
+         # Shredder's moves by how far the turtle is: four distances, then the four moves 8 bytes on (052AA6 "moveq #$3,
+         # D6", 052AA8 "cmp.w (A6), D1", 052AAE "adda.w #$2, A6", 052ABA "move.w ($8,A6), ($28,A0)")
+         ("shredder_distance_moves", 16, "distances and moves, 16-bit each"),
+         # a Mouser's arc as he breaks down (0519E4 "lea $519d8.l, A6", then enemy_start_arc), the 12 bytes of a struct
+         # arc: enemy_arc_step reads its last word too (0486BE "cmp.w ($a,A6), D0"), past what the record walk measures
+         ("enemy_mouser_break_down_arc", 12, "arc"),
+         # the y's that pick Stockman's height, 4 pixels apart: 15 of them, of which the loop compares only the first
+         # (013FA4 "cmp.w ($0,A6), D6" without moving A6, 013FAC "addi.w #$2, D5", 013FB0 "cmpi.b #$1e, D5"), and the 16
+         # heights it picks from (013FB6 "lea $14194.l, A6", 013FBC "move.w (A6,D5.w), D6")
+         ("stockman_height_steps", 30, "depths, 16-bit each"), ("stockman_step_heights", 32, "heights, 16-bit each"),
+         # a turtle's throws: four records of the move (a word) and the work RAM counter (a long) (01C072, 01C074; the
+         # table is read at 6 bytes a throw)
+         ("turtle_throw_moves", 24, "throw records"),
+         # what no code reads: two lists of jobs for queue_jobs (a job's number and parameter a word each, to FFFF),
+         # the building site soldier's four waits copied for the Technodrome's, a door piece's object record, the
+         # Technodrome soldier's
+         ("unused_asia_warning_jobs", 6, "job list"), ("unused_konami_logo_jobs", 6, "job list"),
+         ("unused_rock_soldier_technodrome_waits", 4, "waits"),
+         ("unused_double_door_piece_record", 8, "object records"),
+         # the unused animation viewer's counts: 82 entries' animations and the FF that ends them (0084D4 "cmp.b
+         # (A6,D6.w), D7", 00850C "move.b (A6,D6.w), D6", 008510 "bpl $851a"); and the old table of the attract mode's
+         # steps after them, 7 routines no code reads
+         ("animation_viewer_counts", 83, "animation counts"), ("unused_attract_steps", 7 * 4, "code table"),
+         # the addresses of the game over's two palette effect lists after game_step_palettes, which no code reads
+         ("unused_game_over_effect_lists", 8, "addresses of palette effect lists, 32-bit each"),
+         # the viewer's entries, 82 of 8 bytes (00859C "lsl.w #3, D6"), and the FFFFFFFF after them: from the second
+         # column on (the walk of the animations takes the first entry's table as a table of animation tables), as
+         # far as an object's y of 0x8800 (01354E "move.l #$8800, ($16,A0)") would stop the walk of tables read by an
+         # index
+         ("animation_viewer_palettes", 82 * 8, "indexed table of 32-bit values"))
+# tables of records whose count the code fixes, a span a record: (name in symbols.txt of the first, records, bytes
+# each, kind)
+RECORDS = (
+    # the 50 records of set_object_stats, 10 bytes each from the first (hydrant_stats) to 0182ED, the ones no code
+    # loads too (pizza_stats_by_kind holds four, 018136-01815D; unused_freezing_stats, unused_knock_flying_stats)
+    ("hydrant_stats", 50, 10, "object stats"),)
+# the tables of addresses whose entries the walk follows into data of one kind: {name in symbols.txt: (kind, the
+# Walk method that measures the data at an entry)}. A table ends where the first thing it points at starts
+POINTED = {
+    # the knocked-down turtles' steps: bytes up to a negative one, the step to go back to (01C74C "move.b (A6,D0.w),
+    # D0", 01C750 "bmi $1c75e", 01C75E "move.b D0, ($24,A0)")
+    "turtle_knocked_down_steps": ("knock steps", "negative_ended"),
+    "turtle_knocked_back_steps": ("knock steps", "negative_ended"),
+    "turtle_knocked_flying_steps": ("knock steps", "negative_ended"),
+    "turtle_knocked_flying_from_behind_steps": ("knock steps", "negative_ended"),
+    # a row of freeze nozzles: how many less one, then each one's place (010A32 "move.b (A6)+, D7", 010A36 "move.b
+    # (A6)+, D0", 010A88 "dbra D7, $10a34")
+    "nozzle_rows": ("nozzle row", "count_prefixed"),
+    # April talking on the TV: 3 rows of 3 tiles (01F0BA "moveq #$2, D7", 01F0BC "move.b (A6), (A0)" to 01F0C4
+    # "move.b ($2,A6), (A1)", 01F0D0 "addq.l #3, A6")
+    "street_tv_pictures": ("tv frame", "tv_frame"),
+    # the burning roof's fire before area 0: two squares of 8 x 8 tiles, two of 4 x 4 (an address in the tile RAM, a
+    # colour, a row's first tile each, a byte skipped: 0310F8, 031118), and one of 4 x 4 tiles one by one (031138)
+    "intro_fire_frames": ("fire picture frame", "fire_picture_frame"),
+}
+TV_FRAME = 9
+FIRE_PICTURE_FRAME = 2 * (4 + 1 + 8 + 1) + 2 * (4 + 1 + 4 + 1) + (4 + 1 + 16)
+# the animations no code starts (symbols.txt names them), walked as the ones it does
+UNUSED_ANIMATIONS = ("unused_april_tied_up_animation",)
+# a Mouser hole's record (mouser_hole_animation_tables' entries): its closed and broken animations, then the record of
+# the Mouser it lets out (051BC2 "adda.w #$8, A4", 051BFC "movea.l ($24,A0), A5", 051C00 "jsr $47c30.l")
+MOUSER_HOLES, HOLE_RECORD, OBJECT_RECORD = "mouser_hole_animation_tables", 8, 8
+# Rocksteady's shots: two records of an animation and the address of a shot's record, 6 bytes, for start_shot
+# (04FDDC "lea $4fda8.l, A5", 04FDF2 "adda.w #$8, A5", 04FDF6 "movea.l (A5)+, A6", 04FDF8 "move.l (A5), ($24,A0)";
+# 04FE14 "movea.l ($24,A0), A5", 04FE18 "jsr $47c5a.l")
+SHOT_PAIRS, SHOT_PAIR_COUNT, SHOT_RECORD = "rocksteady_shoot_animations", 2, 6
 # the texts print_text_at writes (positioned_texts, by D6): a 16-bit offset in the layer text_layer_places gives
 # for D7, then the characters, '/' and the next line's offset, '?' the end
 POSITIONED_TEXTS = "positioned_texts"
@@ -146,6 +244,17 @@ ENGINE_READERS = (range(0x046F92, 0x04716E), range(0x0471AE, 0x0471F0), range(0x
                   range(0x01E050, 0x01E1BA), range(0x01E740, 0x01EBCE))
 
 
+def table_places():
+    """{name: address} of symbols.txt's table lines ('ADDRESS table NAME[COUNT] TYPE'), which the analysis does not
+    read"""
+    places = {}
+    for line in (ROOT / "symbols.txt").read_text(encoding="utf-8").splitlines():
+        parts = line.split("#", 1)[0].split()
+        if len(parts) >= 3 and parts[1] == "table":
+            places[parts[2].partition("[")[0]] = int(parts[0], 16)
+    return places
+
+
 class Walk:
     """What the walk found: spans {first: (stop, kind)}, and the problems it ran into"""
 
@@ -165,9 +274,12 @@ class Walk:
         self._starts = None         # the analysis's block starts, sorted (state_at)
         self.loaded = {}            # {table: the instruction that loads it} of the tables loaded by lea
         self.leftover_tables = []   # the animation tables no path the analysis follows hands on
-        # the places symbols.txt names that the walk starts from or reads
-        names = {symbol.name: address for address, symbol in analysis.symbols.items()}
-        wanted = NAMES + tuple(name for name, _, _ in FIXED) + TEXT_TABLES + (POSITIONED_TEXTS,) + LONG_NAMES + TYPED_NAMES
+        # the places symbols.txt names that the walk starts from or reads (its data lines, and its table lines)
+        names = table_places()
+        names.update({symbol.name: address for address, symbol in analysis.symbols.items()})
+        wanted = NAMES + tuple(name for name, _, _ in FIXED) + TEXT_TABLES + (POSITIONED_TEXTS,) + LONG_NAMES + TYPED_NAMES \
+            + tuple(POINTED) + UNUSED_ANIMATIONS + (MOUSER_HOLES, SHOT_PAIRS, "object_routine_tables") \
+            + tuple(name for name, _, _, _ in RECORDS)
         missing = [name for name in wanted if name not in names]
         if missing:
             raise SystemExit("data_walk: symbols.txt names no " + ", ".join(missing))
@@ -373,8 +485,16 @@ class Walk:
             count = 0
             while count < len(rows) and all(value % size == 0 for value in rows[count]):
                 count += 1
-            self.claim(address, address + width * count, "layer map")
+            end = address + width * count
             values = [value for row in rows[:count] for value in row]
+            # entries past the last whole row, up to the next thing: the map's tail no scroll reaches (area 5's,
+            # 03372C: 8 entries after its 13 rows of 0xD0 bytes, before its blocks)
+            tail = [self.mem.r16(at) for at in range(end, limit - 1, 2)]
+            if count == len(rows) and 0 < limit - end < width and (limit - end) % 2 == 0 and self.free(end, limit) \
+                    and all(value % size == 0 for value in tail):
+                end = limit
+                values += tail
+            self.claim(address, end, "layer map")
             before = reach.get(blocks)
             if before is not None and before[0] != size:
                 self.problems.append(f"the blocks at {blocks:06X} are of {before[0]} and {size} bytes")
@@ -468,12 +588,24 @@ class Walk:
             self.palette(self.mem.r32(address + 4 * index))
 
     def unused_palettes(self):
-        """A gap of whole palettes between two palettes: palettes no list names"""
+        """A gap of whole palettes between two palettes: palettes no list names. A gap of less than a palette's
+        colours: the colours past the palette's 16th, which a palette request never copies (the turtles' palettes
+        are 18 colours apart, 00CD24-00CDB3; 00B606). A gap of whole lists between two palette lists, every entry
+        a palette: a palette list no set names (00A1DE)"""
         palettes = sorted(first for first, (stop, kind) in self.spans.items() if kind == "palette")
         for before, after in zip(palettes, palettes[1:]):
             stop = self.spans[before][0]
             if stop < after and (after - stop) % PALETTE == 0 and self.free(stop, after):
                 self.claim(stop, after, "palette no list names")
+            elif stop < after < stop + PALETTE and (after - stop) % 2 == 0 and self.free(stop, after):
+                self.claim(before, after, "palette")
+        palettes = set(first for first, (stop, kind) in self.spans.items() if kind in ("palette", "palette no list names"))
+        lists = sorted(first for first, (stop, kind) in self.spans.items() if kind == "palette list")
+        for before, after in zip(lists, lists[1:]):
+            stop = self.spans[before][0]
+            if stop < after and (after - stop) % 4 == 0 and self.free(stop, after) \
+                    and all(self.mem.r32(entry) in palettes for entry in range(stop, after, 4)):
+                self.claim(stop, after, "palette list")
 
     def colours(self, address):
         """slot, colour number and colour (4 bytes) each, closed by a negative byte"""
@@ -515,7 +647,14 @@ class Walk:
                 continue        # (no data in A6: the area's palettes, a fade, nothing)
             if data is None and kind == 2:
                 # a table of palette sets the code picks one from (009A6C "movea.l (A6,D7.w), A6")
-                tables = [value for held, value in self.held(call, "A6") if held == m68000_analysis.ENTRY]
+                held = self.held(call, "A6")
+                tables = [value for kind_held, value in held if kind_held == m68000_analysis.ENTRY]
+                if not tables and any(kind_held == m68000_analysis.FIELD for kind_held, _ in held):
+                    # a field of a table of records: the unused animation viewer's palette sets (0085AE "movea.l
+                    # ($4,A5,D6.w), A6"), which FIXED walks with the records; their sets are other requests' too
+                    self.rejected.append(f"the palette request at {call:06X}: palette sets in a table of records, "
+                                         "walked with it")
+                    continue
                 for table in tables:
                     count = 0
                     while self.is_palette_set(self.mem.r32(table + 4 * count)) and table + 4 * count not in self.spans:
@@ -550,8 +689,15 @@ class Walk:
             self.claim(start, spawn + 2, "spawn list")
         for name in ("area_spawn_scrolls", "area_spawn_starts"):
             self.claim(self.places[name], self.places[name] + 8 * AREAS, name.replace("_", " "))
+        # an offset for every kind of object, not only the ones the spawn lists start: update_object_screen_place
+        # reads it by any object's kind (0478DA "lea $53a5e.l, A4", 0478E0 "move.b ($2,A0), D4"); the kinds are
+        # object_routine_tables' entries, which run_objects reads by the kind (047812 "lea $53896.l, A6") and which
+        # end where spawn_offsets starts: 0x72 of them
         offsets = self.places["spawn_offsets"]
-        self.claim(offsets, offsets + SPAWN_OFFSET * (max(kinds) + 1), "spawn offsets")
+        count = (offsets - self.places["object_routine_tables"]) // 4
+        if max(kinds) >= count:
+            self.problems.append(f"a spawn list starts kind {max(kinds):02X}, past the {count:02X} kinds")
+        self.claim(offsets, offsets + SPAWN_OFFSET * count, "spawn offsets")
 
     # ---- the fire's tiles ----
 
@@ -818,6 +964,83 @@ class Walk:
                         lambda address: self.claim(address, address + self.typed_size(address), "typed text"),
                         "typed text", f"{name}'s A6")
 
+    # ---- the tables whose entries point at data of a kind (POINTED) ----
+
+    def negative_ended(self, address):
+        """Bytes up to the first negative one, which it ends with"""
+        stop = address
+        while self.mem.r8(stop) < 0x80:
+            stop += 1
+        return stop + 1 - address
+
+    def count_prefixed(self, address):
+        """A byte, how many values less one, then the values, a byte each"""
+        return 2 + self.mem.r8(address)
+
+    def tv_frame(self, address):
+        return TV_FRAME
+
+    def fire_picture_frame(self, address):
+        return FIRE_PICTURE_FRAME
+
+    def pointed_tables(self):
+        for name, (kind, measure) in sorted(POINTED.items()):
+            table = self.places[name]
+            entries = []
+            while not entries or table + 4 * len(entries) < min(entries):
+                value = self.mem.r32(table + 4 * len(entries))
+                if value >> 24 or not m68000_analysis.CODE_START <= value < m68000_analysis.CODE_END:
+                    break
+                entries.append(value)
+            if not entries:
+                self.problems.append(f"{name}: no entries")
+                continue
+            self.claim(table, table + 4 * len(entries), "indexed table of 32-bit values")
+            for value in sorted(set(entries)):
+                self.claim(value, value + getattr(self, measure)(value), kind)
+
+    # ---- records one record holds or hands on ----
+
+    def mouser_holes(self):
+        """The Mouser holes' records (MOUSER_HOLES' entries): the walk has their two animations; the object record of
+        the Mouser each lets out follows them"""
+        table = self.places[MOUSER_HOLES]
+        stop = self.spans.get(table, (table, None))[0]
+        for entry in range(table, stop, 4):
+            record = self.mem.r32(entry) + HOLE_RECORD
+            self.claim(record, record + OBJECT_RECORD, "object records")
+
+    def shot_pairs(self):
+        """Rocksteady's shots (SHOT_PAIRS): after each animation, the address of a shot's record, and that record"""
+        table = self.places[SHOT_PAIRS]
+        for index in range(SHOT_PAIR_COUNT):
+            field = table + 8 * index + 4
+            self.claim(field, field + 4, "addresses of shot records, 32-bit each")
+            record = self.mem.r32(field)
+            self.claim(record, record + SHOT_RECORD, "shot record")
+
+    # ---- the places the code reads at their own address ----
+
+    def absolute_reads(self):
+        """A place in the program the code reads at its address (abs.l, abs.w or (d,PC)), as wide as the read: the
+        tile RAM's addresses the test mode's pages start at (00584C, 0059C6), BEST 10 PLAYERS' (00917E), the box
+        opening's (01867E). A lea only takes the address"""
+        for address, instruction in sorted(self.analysis.instructions.items()):
+            if instruction.flow != m68000_analysis.dis.FLOW_NORMAL or instruction.size not in ELEMENT_SIZES \
+                    or instruction.mnemonic in ("lea", "pea"):
+                continue
+            operands = instruction.operands
+            for index, operand in enumerate(operands):
+                if operand.mode not in ("abs_long", "abs_short", "pc_disp"):
+                    continue
+                # (the place a move writes is no read)
+                if instruction.mnemonic in ("move", "movea") and index == len(operands) - 1:
+                    continue
+                place = operand.value & 0xFFFFFF
+                size = ELEMENT_SIZES[instruction.size]
+                if m68000_analysis.CODE_START <= place < m68000_analysis.CODE_END and self.free(place, place + size):
+                    self.claim(place, place + size, f"value read at its address, {8 * size}-bit")
+
     # ---- the tables the code reads by an index ----
 
     def indexed_tables(self):
@@ -971,17 +1194,28 @@ class Walk:
         for first, (stop, kind) in sorted(self.spans.items()):
             if kind == "animation frame" and self.free(stop, stop + 2) and self.mem.r16(stop) == 0:
                 self.claim(stop, stop + 2, "animation end")
+        # and a second end right after an end (02DF52: 00 00 after the 00 FF of intro_turtle_lands_animation, which
+        # no frame reaches either)
+        for first, (stop, kind) in sorted(self.spans.items()):
+            if kind == "animation end" and self.mem.r8(first + 1) and self.free(stop, stop + 2) and self.mem.r16(stop) == 0:
+                self.claim(stop, stop + 2, "animation end")
 
     def unreached_frames(self):
         """A run nothing has yet that is whole frames, one after another: frames no animation steps on (after
-        an animation's jump, 04D39E; a frame whose 00 the engine would take for a jump, 02DB14)"""
+        an animation's jump, 04D39E; a frame whose 00 the engine would take for a jump, 02DB14; a still with the
+        first picture of the animation after it, after a table of routines the analysis reads, 04C7A8)"""
+        tables = {address for first, stop in self.analysis.described for address in range(first, stop)}
+
+        def open_at(address):
+            return self.free(address, address + 1) and address not in tables
+
         address = m68000_analysis.CODE_START
         while address < m68000_analysis.CODE_END:
-            if not self.free(address, address + 1) or not self.in_program(address):
+            if not open_at(address) or not self.in_program(address):
                 address += 1
                 continue
             end = address
-            while end < m68000_analysis.CODE_END and self.free(end, end + 1):
+            while end < m68000_analysis.CODE_END and open_at(end):
                 end += 1
             frames, at = [], address
             while at < end and self.frame(at) and at + self.frame(at) <= end:
@@ -1064,6 +1298,9 @@ class Walk:
                                      if isinstance(value, int) else f"set_animation's A6 holds a {kind} of {value}: not walked")
         # a list of animations no code reads (unused_animation_list): every entry one
         self.animation_table(self.places["unused_animation_list"], "unused_animation_list")
+        # and the animations no code starts that symbols.txt names
+        for name in UNUSED_ANIMATIONS:
+            self.animations.add(self.places[name])
         # the data= fields of the tables symbols.txt describes that hold animations (030DFC: records of an
         # animation and a word the code walks with (A5)+)
         for field, value in self.analysis.data_fields.items():
@@ -1098,12 +1335,19 @@ class Walk:
         self.typed_texts()
         for name, size, kind in FIXED:
             self.claim(self.places[name], self.places[name] + size, kind)
+        for name, count, size, kind in RECORDS:
+            for record in range(self.places[name], self.places[name] + count * size, size):
+                self.claim(record, record + size, kind)
+        self.pointed_tables()
+        self.mouser_holes()
+        self.shot_pairs()
         # last: what the engines above leave
         if self.leftover_animation_tables():
             self.walk_animations()
         self.records()
         self.indexed_tables()
         self.loaded_tables()
+        self.absolute_reads()
         self.trailing_sprites()
         self.unused_effects()
         self.loose_ends()

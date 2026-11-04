@@ -45,19 +45,23 @@ tools verify it, extract the assets and build your own executable.
       and control flow
 - [x] Recursive disassembly without traces (`python tools/disassemble.py`, the core's 68000 analysis, from
       the vectors and `symbols.txt`): it follows what the address registers can hold into the tables of
-      object handlers the program jumps through, and finds 27,892 instructions, all 25,328 addresses the
+      object handlers the program jumps through, and finds 28,515 instructions, all 25,328 addresses the
       scenarios execute among them and none of them inside another instruction
 - [x] Every byte of the program classified (`python tools/coverage.py --reads build/scenarios`, the core's,
-      with the bytes the scenarios read as data: `kref --rom-reads`): 32.4% code, 65.8% data,
-      1.6% fill, and 236 bytes (0.06%) not explained yet
+      with the bytes the scenarios read as data: `kref --rom-reads`): 32.5% code, 65.9% data,
+      1.6% fill, and no byte left unexplained
 - [x] The data the engines read, walked from where the code hands it over (`python tools/data_walk.py
       --reads build/scenarios`, no traces): the sprite engine's animations, sprite lists and boxes, the
       areas' layer maps and blocks, the palettes and their effects, the enemies' spawn lists and
       definitions, the texts, the scroll's segments, the attract mode's demos, and the tables the code reads
       by an index or through a register
-- [ ] Every table of data described with its layout, its types and a name by subject, before any C is
-      generated: the C reads the game's data by name from its first build, never by an address of the ROM
-      (today 236 bytes are unexplained, and 426 bytes the scenarios read are in no table described yet)
+- [x] Every table of data described with its layout, its types and a name by subject, before any C is
+      generated: the C reads the game's data by name from its first build, never by an address of the ROM.
+      Every byte the scenarios read as data is in a table described, and what no code reads has a name by what
+      it is: the four pizzas' records (SPEEDY, WHIRLY, ENERGY and ZAPPY; only ENERGY is ever placed), two lists of
+      jobs (the Asia warning, the Konami logo), a palette list, an animation of April, an old table of the attract
+      mode's steps. Code no path reaches is decompiled with a comment that says so: a recorder of the demos'
+      inputs, an animation viewer worked with the players' buttons, a box that shrinks to the screen's middle
 - [x] The sound program classified the same way (`python tools/sound_coverage.py --trace build/scenarios
       --reads build/scenarios`): its analysis finds the 4,481 addresses the scenarios run without traces, and
       every byte is code (35.6%), described data (64.3%: the driver's tables and the music) or fill
@@ -224,13 +228,13 @@ tools verify it, extract the assets and build your own executable.
       chips' memories, read by the bus as the board has them, and the memory routines), partial writes that put a part
       of one value into another 83 → 3, flags worked out as the CPU sets them 8 → 0; still 17 of 17 scenarios identical
       in state, picture and sound
-- [ ] What is left of the structure: 16 functions of 2,435, each for a reason: 8 keep a control flag their structure
+- [ ] What is left of the structure: 16 functions of 2,439, each for a reason: 8 keep a control flag their structure
       needs, the enemies' retargeting reads a second slot that may be none through the bus (as the original, in 4), the
-      demo's input channels read past a player's record, the name entry adds one to an initial through an address the
-      instruction works out, Rocksteady's moves index a table with a word whose low byte comes from the data, and code
-      nothing runs (the palette editor keeps its stick at address 000006, in the program; a list of palette requests
-      whose place is not known; two routines with a stack frame the C has not; one that writes its results before
-      each of its two returns). In the sound program, the 16-bit fields it writes a byte at a time show their two bytes
+      demo's input channels read past a player's record (its playback, and its recorder no code runs), the name entry
+      adds one to an initial through an address the instruction works out, Rocksteady's moves index a table with a
+      word whose low byte comes from the data, and code nothing runs (the palette editor keeps its stick at address
+      000006, in the program; a list of palette requests whose place is not known; a routine with a stack frame the C
+      has not; one that writes its results before each of its two returns). In the sound program, the 16-bit fields it writes a byte at a time show their two bytes
 
 ## Getting started
 

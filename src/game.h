@@ -487,6 +487,7 @@ extern uint32_t object_loop_leftover;
 #define rocksteady_bullet_start_ADDRESS 0x04BFE6u
 #define rocksteady_bullet_fly_ADDRESS 0x04C054u
 #define rocksteady_bullet_vanish_ADDRESS 0x04C078u
+#define rocksteady_bullet_burst_ADDRESS 0x04C086u
 #define bebop_shot_start_ADDRESS 0x04C0AEu
 #define bebop_shot_fly_ADDRESS 0x04C0F0u
 #define rolling_tire_start_ADDRESS 0x04C11Au
@@ -2515,6 +2516,7 @@ void game_over_skip(void);
 
 /* scenes/demo.c: the players' inputs, the demos' recorded ones, and the demo game */
 void update_game_inputs(void);
+void record_demo_inputs(void);
 uint32_t demo_join_player_1(uint32_t channels);
 uint32_t demo_join_player_2(uint32_t channels);
 uint32_t demo_join_player_3(uint32_t channels);
@@ -2769,6 +2771,11 @@ uint32_t hold_scroll_skateboard(uint8_t enemy_limit);
 uint32_t hold_scroll_building_site(uint8_t held, uint8_t enemy_limit);
 uint32_t hold_scroll_technodrome(uint8_t held, uint8_t enemy_limit);
 uint32_t hold_scroll_final(uint8_t held, uint8_t enemy_limit);
+
+/* system/animation_viewer.c: an unused viewer of the objects' animations with their palettes, worked with the players' buttons */
+void animation_viewer_start(void);
+void animation_viewer_frame(void);
+void animation_viewer_show(void);
 
 /* system/boot.c: the reset, the RAM and ROM tests, and the main loop that runs the jobs the frames queue */
 void reset(void);
@@ -3057,6 +3064,7 @@ uint32_t start_typed_line(uint32_t typed_pass, uint32_t text);
 void start_box_opening(void);
 void grow_tile_box(void);
 void start_wide_box_opening(void);
+void shrink_tile_box(void);
 void draw_tile_box(uint16_t count, uint16_t count_2, uint8_t tile_code, uint32_t corner_place);
 
 #endif
