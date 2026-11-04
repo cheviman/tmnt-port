@@ -6,10 +6,21 @@ sound board) into platform-agnostic C, not an emulator, following the method of
 [outrunners-decomp](https://github.com/cheviman/outrunners-decomp): both of the game's programs decompiled one
 function at a time into readable C, and checked frame by frame against MAME in state, picture and sound.
 
-**This repository contains no game data.** The game's programs are here as C, decompiled from the original
-machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64), you bring your own ROM set
-(MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you build your own executable,
-which runs from the assets and opens no ROM.
+**Apart from the screenshots on this page, this repository contains no game data.** The game's programs are here
+as C, decompiled from the original machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64),
+you bring your own ROM set (MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you
+build your own executable, which runs from the assets and opens no ROM.
+
+<p align="center">
+  <img src="docs/screenshots/title.png" width="32%" alt="The title screen">
+  <img src="docs/screenshots/burning_apartment.png" width="32%" alt="Four turtles in April's burning apartment">
+  <img src="docs/screenshots/shredder_takes_april.png" width="32%" alt="Shredder carries April off">
+  <img src="docs/screenshots/four_turtles_street.png" width="32%" alt="The street, and April on the TV">
+  <img src="docs/screenshots/krang.png" width="32%" alt="Krang's android body">
+  <img src="docs/screenshots/shredder.png" width="32%" alt="Shredder and his copies">
+</p>
+<p align="center"><sub>Frames drawn by the game's own video library (<code>runtime/src/video.c</code>) while the
+decompiled game plays the scenarios of <code>tests/controls/</code>.</sub></p>
 
 ## Status
 
@@ -139,8 +150,9 @@ Options of `tmnt` and `tmnt_game_headless`: `--script FILE` plays a control scri
 `runtime/include/tmnt/script.h`) instead of the controls (`tmnt --fast` runs it without waiting for each
 frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a hash of every frame's state,
 picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
-says where the assets are. `tmnt_game_headless` also takes `--frames N` and `--dump FRAME --dump-dir DIR` (the
-board's memories at the end of a frame).
+says where the assets are. `tmnt_game_headless` also takes `--frames N`, `--dump FRAME --dump-dir DIR` (the
+board's memories at the end of a frame) and `--video-dump FRAME ... --video-dir DIR` (those frames' pictures as BMP,
+as the game's own video draws them: the screenshots above).
 
 ## Changing the decompilation
 
@@ -409,7 +421,8 @@ results before each of its two returns (`print_tall_text`).
 - This project is licensed under the BSD 3-Clause License; see `LICENSE`.
 - The C in `src/` is the game's programs decompiled into a new form: logic only, with names and comments written
   for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
-  project; they come from your own ROM set.
+  project; they come from your own ROM set. The screenshots in `docs/screenshots/` show the game running from this
+  code.
 - `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
   `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause); the ROM set's layout comes
   from MAME's `tmnt.cpp`. Copies of MAME's and ymfm's code are in arcade-decomp's reference tools only, under

@@ -15,6 +15,8 @@
  *
  *    --dump writes the board's memories at the end of frame FRAME into DIR as kref --dump does (FRAME_work_ram.bin,
  *    in the order of the addresses, and the palette, the tile RAM and the sprite RAM), to compare them.
+ *    --video-dump writes those frames' pictures, as the game's own video draws them, into --video-dir's folder
+ *    (frame_N.bmp, 320 x 224), as kref --video-dump writes MAME's.
  *
  *    The board runs with frame timing, as kref does by default (tmnt/frame.h), the script is applied when each
  *    VBLANK starts, and the hashes are kref's ("FRAME HASH": tmnt_state_hash, the frame's pixels with
@@ -34,7 +36,9 @@
 #include <string.h>
 
 #define USAGE "Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
-	" [--script FILE] [--service] [--assets FOLDER] [--dump FRAME --dump-dir DIR]\n"
+	" [--script FILE] [--service] [--assets FOLDER] [--dump FRAME --dump-dir DIR]" \
+	" [--video-dump FRAME ... --video-dir DIR]\n"
+#define VIDEO_DUMPS_MAX 64
 
 static uint64_t frames_wanted = 600;
 static FILE *hashes;
@@ -43,6 +47,44 @@ static FILE *sound_hashes;
 static tmnt_script *script;
 static uint64_t dump_frame = UINT64_MAX;
 static const char *dump_dir = ".";
+static uint64_t video_dumps[VIDEO_DUMPS_MAX];
+static int video_dump_count;
+static const char *video_dir = ".";
+
+/* A frame's picture as a 24-bit BMP, as kref --video-dump writes MAME's */
+static void write_frame_bmp(const tmnt_frame *frame)
+{
+	const uint32_t row = TMNT_VIDEO_WIDTH * 3u, size = row * TMNT_VIDEO_HEIGHT;
+	uint8_t header[54] = { 'B', 'M' };
+	char path[1024];
+	FILE *file;
+
+	snprintf(path, sizeof(path), "%s/frame_%" PRIu64 ".bmp", video_dir, tmnt_board.frame);
+	file = fopen(path, "wb");
+	if (!file)
+	{
+		fprintf(stderr, "%s: cannot be written\n", path);
+		exit(1);
+	}
+	const uint32_t values[] = { 54u + size, 0u, 54u, 40u, TMNT_VIDEO_WIDTH, TMNT_VIDEO_HEIGHT };
+	for (int index = 0; index < 6; index++)
+		for (int byte = 0; byte < 4; byte++)
+			header[2 + 4 * index + byte] = (uint8_t)(values[index] >> (8 * byte));
+	header[26] = 1;
+	header[28] = 24;
+	for (int byte = 0; byte < 4; byte++)
+		header[34 + byte] = (uint8_t)(size >> (8 * byte));
+	fwrite(header, 1, sizeof(header), file);
+	for (int y = TMNT_VIDEO_HEIGHT - 1; y >= 0; y--)
+		for (int x = 0; x < TMNT_VIDEO_WIDTH; x++)
+		{
+			const uint32_t pixel = frame->pixels[y * TMNT_VIDEO_WIDTH + x];
+			const uint8_t bgr[3] = { (uint8_t)pixel, (uint8_t)(pixel >> 8), (uint8_t)(pixel >> 16) };
+
+			fwrite(bgr, 1, 3, file);
+		}
+	fclose(file);
+}
 
 /* The board's memories into dump_dir, a file each, as kref --dump writes them */
 static void dump_memories(void)
@@ -88,6 +130,9 @@ static void on_frame_done(void)
 			tmnt_sound_samples_hash(), tmnt_sound_state_hash());
 	if (tmnt_board.frame == dump_frame)
 		dump_memories();
+	for (int index = 0; index < video_dump_count; index++)
+		if (video_dumps[index] == tmnt_board.frame)
+			write_frame_bmp(game_frame());
 	if (tmnt_board.frame >= frames_wanted)
 		program_stop();
 }
@@ -135,6 +180,11 @@ int main(int argc, char **argv)
 			dump_frame = strtoull(argv[++index], NULL, 10);
 		else if (strcmp(argv[index], "--dump-dir") == 0 && index + 1 < argc)
 			dump_dir = argv[++index];
+		else if (strcmp(argv[index], "--video-dump") == 0 && index + 1 < argc)
+			while (index + 1 < argc && argv[index + 1][0] != '-' && video_dump_count < VIDEO_DUMPS_MAX)
+				video_dumps[video_dump_count++] = strtoull(argv[++index], NULL, 10);
+		else if (strcmp(argv[index], "--video-dir") == 0 && index + 1 < argc)
+			video_dir = argv[++index];
 		else
 		{
 			fprintf(stderr, USAGE);
@@ -151,7 +201,7 @@ int main(int argc, char **argv)
 		}
 	}
 	{
-		const char *problem = game_reset(service, video_hashes_path != NULL);
+		const char *problem = game_reset(service, video_hashes_path != NULL || video_dump_count > 0);
 
 		if (problem)
 		{
