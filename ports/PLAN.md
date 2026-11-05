@@ -6,8 +6,12 @@ to the devices; this one takes the arcade game there too. What they built is the
 
 ## What the game has today
 
-- `tmnt` (ports/sdl2): the game in a window on SDL2, the keyboard and four game controllers, built and played on
-  Windows; `tmnt_game_headless` for the checks.
+- `TMNT Arcade` (ports/sdl2): the game in a window on SDL2, the keyboard and four game controllers, built and
+  played on Windows; `tmnt_game_headless` for the checks. Its Windows package (`tmnt_package`, the README's "The
+  Windows package"): the executable alone with SDL2 inside it, an icon of our own, its README.txt and licenses, and
+  the CI's windows job that makes it.
+- `TMNT` (ports/sdl2 with the console, console/PLAN.md): the console version beside it, in the same package;
+  `tmnt_console_headless` for its scripted checks.
 - The assets come from `tools/extract_assets.py` (Python) and the game loads the folder (`runtime/src/assets.c`,
   `music.c`). No executable holds a byte of the ROM set (`tools/rom_in_executables.py`).
 

@@ -1,0 +1,9 @@
+# tmnt_console_headless --script: player 1's jumps (on the slot of the turtle he plays) skip area 0's intro and
+# its title, then he walks right a while
+900 press jump1 2
+1000 press jump1 2
+1100 press jump1 2
+1200 press jump1 2
+1300 hold right1
+1500 release right1
+2400 end

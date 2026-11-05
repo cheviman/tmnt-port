@@ -1,0 +1,57 @@
+# Name:        build.yml
+# Description: builds the game on a clean machine with no ROM set (Windows with MSVC), SDL2 and the C runtime
+#              inside the executables, and packs what a player runs: TMNT Arcade and TMNT, the console version,
+#              which take their assets out of the player's ROM set on their first run, with their README and the
+#              licenses (as outrunners-port's).
+#              The other platforms' jobs come later (ports/PLAN.md). It runs on main and its pull requests
+#              alone, and by hand on any branch
+# Version:     0.1.0
+# Created:     04-11-2026
+# Modified:    04-11-2026
+# Author:      Sebastian Toyos
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-2022
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # (tools/core, the shared core, holds ymfm's license, which the package carries)
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      # SDL2 is built from its source (TMNT_STATIC_SDL2); the reference tools, built on MAME's code, are
+      # development tools: not in a player's package
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build/cmake -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_STATIC_SDL2=ON
+
+      - name: Build
+        run: cmake --build build/cmake --config Release --parallel
+
+      # what a player runs (no headless runs, no build leftovers), as the build packs it locally (tmnt_package,
+      # CMakeLists.txt): the folder tmnt with TMNT Arcade.exe, TMNT.exe and their font.bmp, the package's README.txt,
+      # the project's LICENSE.txt and licenses/ (MAME's and ymfm's: the board's video and sound follow their behavior
+      # and tables; SDL2's, zlib; Kenney's, CC0: the first run's and the menus' letters), in
+      # build/package/tmnt-windows-x64.zip
+      - name: Pack
+        run: cmake --build build/cmake --config Release --target tmnt_package
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-${{ matrix.name }}
+          path: build/package/tmnt-${{ matrix.name }}.zip

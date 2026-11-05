@@ -1,0 +1,7 @@
+# tmnt_console_headless --actions: ARCADE, Donatello chosen on the coin's screen, the game started with his coin
+# and attack on his slot (3UP); with --script tests/console/skip_intro.txt the player's jumps skip area 0's
+# intro, and the other boxes say PRESS START
+520 accept
+640 right
+660 right
+760 accept

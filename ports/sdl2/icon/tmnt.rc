@@ -1,0 +1,12 @@
+/**
+ *    Name:        tmnt.rc
+ *    Description: the executable's icon on Windows (tools/make_icon.py writes tmnt.ico): the first one, which
+ *                 Explorer shows and SDL gives a window that sets none of its own
+ *    Version:     0.1.0
+ *    Created:     04-11-2026
+ *    Modified:    04-11-2026
+ *    Author:      Sebastian Toyos
+ *
+ *    license:BSD-3-Clause
+ */
+1 ICON "tmnt.ico"

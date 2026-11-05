@@ -30,7 +30,8 @@
 
 #include <string.h>
 
-#define BITMAP_WIDTH    384
+#define BITMAP_LEFT     TMNT_VIDEO_MAX_LEFT    /* the screen's first column in the bitmap: room for WIDE's left side */
+#define BITMAP_WIDTH    (BITMAP_LEFT + TMNT_VIDEO_WIDTH + TMNT_VIDEO_MAX_MORE)
 #define BITMAP_HEIGHT   264
 #define CLIP_LEFT       0
 #define CLIP_RIGHT      319
@@ -70,6 +71,13 @@ static const int k_sprite_colour_base = 16;
 static layer g_layers[3];
 static uint8_t g_sprite_buffer[TMNT_SPRITE_RAM_SIZE];  /* the K051960's DMA copy */
 static uint16_t g_bitmap[BITMAP_HEIGHT * BITMAP_WIDTH];
+static int g_left, g_right, g_left_next, g_right_next;    /* WIDE: the columns drawn more at each side */
+static int g_first[3] = { -0x10000, -0x10000, -0x10000 }, g_last[3] = { 0x10000, 0x10000, 0x10000 };
+static int g_first_next[3] = { -0x10000, -0x10000, -0x10000 }, g_last_next[3] = { 0x10000, 0x10000, 0x10000 };
+                                        /* WIDE: the maps' ends on the screen (the fixed layer's never set) */
+#define BLACK_PEN       0xFFFFu         /* (WIDE: past a map's end on layer B) */
+static uint32_t g_wide[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
+static int g_wide_width = TMNT_VIDEO_WIDTH;
 
 uint8_t *tmnt_video_tiles_shown = NULL;
 uint8_t *tmnt_video_sprites_shown = NULL;
@@ -223,9 +231,9 @@ static void draw_layer(int map, bool opaque)
 
 	for (int y = CLIP_TOP; y <= CLIP_BOTTOM; y++)
 	{
-		uint16_t *line = &g_bitmap[y * BITMAP_WIDTH];
+		uint16_t *line = &g_bitmap[y * BITMAP_WIDTH + BITMAP_LEFT];
 
-		for (int x = CLIP_LEFT; x <= CLIP_RIGHT; x++)
+		for (int x = CLIP_LEFT - g_left; x <= CLIP_RIGHT + g_right; x++)
 		{
 			int px, py, colour, pen, tile;
 
@@ -258,6 +266,12 @@ static void draw_layer(int map, bool opaque)
 			{
 				px = MAP_WIDTH - 1 - px;
 				py = MAP_HEIGHT - 1 - py;
+			}
+			if (x < g_first[map] || x > g_last[map])
+			{
+				if (opaque)
+					line[x] = BLACK_PEN;
+				continue;
 			}
 			pen = tile_pixel(map, px, py, &colour, &tile);
 			if (opaque || pen)
@@ -297,7 +311,7 @@ static void draw_cell(int code, int colour, bool flip_x, bool flip_y, int left, 
 			int pen;
 			uint16_t *pixel;
 
-			if (screen_x < CLIP_LEFT || screen_x > CLIP_RIGHT)
+			if (screen_x < CLIP_LEFT - g_left || screen_x > CLIP_RIGHT + g_right)
 				continue;
 			pen = sprite_pixel(code, flip_x ? 15 - x : x, flip_y ? 15 - y : y);
 			if (!pen)
@@ -308,7 +322,7 @@ static void draw_cell(int code, int colour, bool flip_x, bool flip_y, int left, 
 				if (tmnt_video_sprite_palettes)
 					tmnt_video_sprite_palettes[code % SPRITES] = (uint8_t)colour;
 			}
-			pixel = &g_bitmap[screen_y * BITMAP_WIDTH + screen_x];
+			pixel = &g_bitmap[screen_y * BITMAP_WIDTH + BITMAP_LEFT + screen_x];
 			if (pen == 15 && shadow)
 			{
 				if (*pixel < PENS)
@@ -360,6 +374,13 @@ static void draw_sprites(void)
 		if (w >= 8) code &= ~0x10;
 		if (h >= 8) code &= ~0x20;
 		ox = (256 * sprite[6] + sprite[7]) & 0x1FF;
+		if (g_left || g_right)
+		{
+			/* (WIDE: the tenth bit, x from -256 to 767, no wrap at 512) */
+			ox |= (sprite[6] & 0x04) << 7;
+			if (ox >= 768)
+				ox -= 1024;
+		}
 		oy = 256 - ((256 * sprite[4] + sprite[5]) & 0x1FF);
 		flip_x = (sprite[6] & 0x02) != 0;
 		flip_y = (sprite[4] & 0x02) != 0;
@@ -376,7 +397,8 @@ static void draw_sprites(void)
 			{
 				const int cell = code + x_offset[flip_x ? w - 1 - x : x] + y_offset[flip_y ? h - 1 - y : y];
 
-				draw_cell(cell, colour, flip_x, flip_y, ((ox + 16 * x) & 0x1FF) - 96, oy + 16 * y, shadow);
+				draw_cell(cell, colour, flip_x, flip_y, (g_left || g_right ? ox + 16 * x : (ox + 16 * x) & 0x1FF) - 96,
+					oy + 16 * y, shadow);
 			}
 	}
 }
@@ -393,8 +415,37 @@ static uint8_t shade(uint8_t component)
 	return (uint8_t)(value < 0 ? 0 : value > 255 ? 255 : value);
 }
 
+void tmnt_video_set_layer_window(int map, int first, int last)
+{
+	if (map >= 1 && map <= 2)
+	{
+		g_first_next[map] = first;
+		g_last_next[map] = last;
+	}
+}
+
+void tmnt_video_set_wide(int left, int right)
+{
+	g_left_next = left < 0 ? 0 : (left > TMNT_VIDEO_MAX_LEFT ? TMNT_VIDEO_MAX_LEFT : left);
+	g_right_next = right < 0 ? 0 : (right > TMNT_VIDEO_MAX_MORE - g_left_next ? TMNT_VIDEO_MAX_MORE - g_left_next : right);
+}
+
+const uint32_t *tmnt_video_wide_frame(int *width)
+{
+	*width = g_wide_width;
+	return g_wide;
+}
+
 void tmnt_video_vblank_start(tmnt_frame *frame)
 {
+	g_left = g_left_next;
+	g_right = g_right_next;
+	for (int map = 0; map < 3; map++)
+	{
+		/* (the maps' ends only with a wider picture: the board's own shows them all) */
+		g_first[map] = g_left || g_right ? g_first_next[map] : -0x10000;
+		g_last[map] = g_left || g_right ? g_last_next[map] : 0x10000;
+	}
 	if (frame)
 	{
 		uint32_t pens[2 * PENS];
@@ -417,7 +468,20 @@ void tmnt_video_vblank_start(tmnt_frame *frame)
 		draw_layer(0, false);
 		for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
 			for (int x = 0; x < TMNT_VIDEO_WIDTH; x++)
-				frame->pixels[y * TMNT_VIDEO_WIDTH + x] = pens[g_bitmap[(CLIP_TOP + y) * BITMAP_WIDTH + x] % (2 * PENS)];
+			{
+				const uint16_t pen = g_bitmap[(CLIP_TOP + y) * BITMAP_WIDTH + BITMAP_LEFT + x];
+
+				frame->pixels[y * TMNT_VIDEO_WIDTH + x] = pen == BLACK_PEN ? 0u : pens[pen % (2 * PENS)];
+			}
+		/* WIDE's picture: the same with its sides */
+		g_wide_width = TMNT_VIDEO_WIDTH + g_left + g_right;
+		for (int y = 0; (g_left || g_right) && y < TMNT_VIDEO_HEIGHT; y++)
+			for (int x = 0; x < g_wide_width; x++)
+			{
+				const uint16_t pen = g_bitmap[(CLIP_TOP + y) * BITMAP_WIDTH + BITMAP_LEFT - g_left + x];
+
+				g_wide[y * TMNT_VIDEO_MAX_WIDTH + x] = pen == BLACK_PEN ? 0u : pens[pen % (2 * PENS)];
+			}
 	}
 	/* the K051960's DMA, unless the 051937 has the sprites off */
 	if (!(tmnt_board.sprite_control & 0x10))

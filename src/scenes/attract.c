@@ -275,7 +275,7 @@ void title_banner_wait(void)
 }
 
 /* TURTLES slides in, then the copyright */
-void title_turtles_slide_in(void)
+void CONSOLE_ORIGINAL(title_turtles_slide_in)(void)
 {
 	uint32_t jobs = 0, object = 0;
 
@@ -1233,7 +1233,7 @@ void best_players_scroll(void)
 }
 
 /* the title, the places, the initials and the scores of the best ten */
-void draw_best_players(void)
+void CONSOLE_ORIGINAL(draw_best_players)(void)
 {
 	uint32_t jobs = 0;
 

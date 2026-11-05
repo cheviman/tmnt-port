@@ -1,0 +1,10 @@
+# tmnt_console_headless --actions: OPTIONS from the menu (the presentation is over by 360, the menu's logo in by
+# 500), then down to REGION and its next value (HERO)
+520 down
+530 down
+540 accept
+700 down
+710 down
+720 down
+730 down
+750 right

@@ -1,0 +1,9 @@
+# The game's functions the console build (TMNT) puts its own in place of (console/*.c): tools/decompile.py writes
+# their definitions as CONSOLE_ORIGINAL(name), which is original_name there and the game's own elsewhere.
+run_attract              # the console's front end in the attract mode: its presentation, its menus, the turtle choice
+title_turtles_slide_in   # the menu's screen: of the title's copyright lines, "(C) KONAMI 1989" alone
+draw_best_players        # OPTIONS over BEST 10 PLAYERS' picture: without its table
+message_insert_coin      # no coins at home: PRESS START where a player's box shows INSERT COIN(S)
+draw_sprites             # WIDE: the pieces that show on the wider screen written too (console/wide.c)
+draw_new_row_and_column  # WIDE: the columns and the row's blocks the wider screen shows past the game's (console/wide.c)
+draw_new_row_and_column_and_floor    # (the same, their tiles only)

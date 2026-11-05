@@ -98,7 +98,7 @@ uint32_t build_draw_list(void)
 
 /* every frame: the draw list's objects into the sprite chip with their shadows, their animations stepped
    on, the rest turned off */
-uint32_t draw_sprites(uint32_t object)
+uint32_t CONSOLE_ORIGINAL(draw_sprites)(uint32_t object)
 {
 	bool L_047164 = false;
 	uint8_t flip = 0, flips = 0, frame_time = 0, object_colour = 0, objects_left = 0;

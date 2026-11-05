@@ -543,7 +543,7 @@ void save_layer_b(void)
 }
 
 /* the row and the column the scroll has brought into view, with their floor cells */
-void draw_new_row_and_column_and_floor(void)
+void CONSOLE_ORIGINAL(draw_new_row_and_column_and_floor)(void)
 {
 	uint8_t blocks_left = 0, rows_left = 0, y_in_block = 0;
 	uint16_t block_column_x = 0;
@@ -677,7 +677,7 @@ void draw_new_row_and_column_and_floor(void)
 }
 
 /* the row and the column of a layer the scroll has brought into view */
-void draw_new_row_and_column(void)
+void CONSOLE_ORIGINAL(draw_new_row_and_column)(void)
 {
 	uint8_t blocks_left = 0, rows_left = 0, y_in_block = 0;
 	uint16_t block_column_x = 0;

@@ -45,6 +45,10 @@ As of 04-11-2026:
       Built and played on Windows; SDL2's packages should build it on Linux and macOS (not tried yet)
 - [x] The port's first run in C: the game takes the assets out of your ROM set itself, the same files
       `extract_assets.py` writes, byte for byte; and the pack the devices load
+- [x] The Windows package (see "The Windows package"): TMNT Arcade and TMNT, SDL2 inside them, an icon of the
+      project's own, its README and licenses; built by the CI
+- [x] The console version's first part (see "The console version"): its presentation, its menus, no coins,
+      the turtle choice, Splinter Way's NORMAL, OPTIONS
 - [ ] Ports beyond the window one
 
 ## Getting started
@@ -104,7 +108,7 @@ are made.
 5. Play:
 
    ```bash
-   build/bin/tmnt
+   "build/bin/TMNT Arcade"
    ```
 
    The game reads its assets from `--assets FOLDER`, or from an `assets` folder beside the executable or in the
@@ -137,17 +141,17 @@ bring a turtle in (player 1 is Leonardo, 2 Michelangelo, 3 Donatello, 4 Raphael)
 Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves, A
 attacks, B jumps, Back puts a coin in.
 
-Options of `tmnt` and `tmnt_game_headless`: `--script FILE` plays a control script (format in
-`runtime/include/tmnt/script.h`) instead of the controls (`tmnt --fast` runs it without waiting for each
+Options of `TMNT Arcade` and `tmnt_game_headless`: `--script FILE` plays a control script (format in
+`runtime/include/tmnt/script.h`) instead of the controls (`--fast` in the window runs it without waiting for each
 frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a hash of every frame's state,
 picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
 says where the assets are (a folder, or a pack: a file whose name ends in `.assets`); `--write-pack FILE` writes
-the pack of the assets loaded and stops. `tmnt_game_headless` also takes `--frames N` and `--dump FRAME --dump-dir
-DIR` (the board's memories at the end of a frame).
+the pack of the assets loaded and stops. `tmnt_game_headless` also takes `--frames N`, `--dump FRAME --dump-dir
+DIR` (the board's memories at the end of a frame) and `--video-dump FRAME ... --video-dir DIR` (frames as BMP).
 
 ## The port's first run
 
-A player of the port has no Python: with no assets, `tmnt` takes them out of the ROM set itself, once.
+A player of the port has no Python: with no assets, `TMNT Arcade` takes them out of the ROM set itself, once.
 
 - **Where.** It loads the pack `tmnt.assets` or the folder `assets` beside the executable, in the folder where
   the game keeps its files (beside the executable on Windows; `~/.local/share/TMNT` on Linux,
@@ -169,10 +173,70 @@ A player of the port has no Python: with no assets, `tmnt` takes them out of the
   taken. `extract_assets.py`'s folders have no `version.txt` and are taken as they are.
 - **The pack.** `tmnt.assets` is one file with what the game loads (the video and sound chips' memories and the
   programs' data, as the assets give them), for the devices, which never take the assets out of a ROM set:
-  `tmnt --write-pack tmnt.assets` makes it from the assets. It holds the version of the tables the game's C reads
-  by name: a pack of another build says so instead of loading.
+  `"TMNT Arcade" --write-pack tmnt.assets` makes it from the assets. It holds the version of the tables the game's
+  C reads by name: a pack of another build says so instead of loading.
 - **The window** writes with Kenney Mini (CC0, `ports/sdl2/font/`, `font.bmp` beside the executable): none of the
   game's letters are there before its assets.
+
+## The Windows package
+
+What a player downloads: `tmnt-windows-x64.zip`, a folder `tmnt` with `TMNT Arcade.exe`, `TMNT.exe` (the console
+version) and the `font.bmp` their first run and TMNT's menus write with, the package's `README.txt` (`docs/package/`: what the player needs, their own ROM set, how
+the first run takes it, the controls), `LICENSE.txt`, and `licenses/` with MAME's and ymfm's terms (the board's
+video and sound follow them), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the
+player's.
+
+- **SDL2 inside.** `TMNT_STATIC_SDL2` builds SDL2 2.32.10 from its source (CMake's FetchContent, from GitHub) into
+  the executable, and the C runtime with it: it needs no library beside it, nor Visual C++'s redistributable.
+  Without it (the default) the build is the one above, SDL2's library beside the executable.
+- **The icon** is the project's own drawing, nothing of the game's art (`tools/make_icon.py` writes
+  `ports/sdl2/icon/`: a manhole's lid lit from below): a resource of the executable, which Explorer and the window
+  show. A picture of your own takes its place in your builds: `local/icon_pc.png` (`local/` is never committed) or
+  `-DTMNT_PC_ICON=PICTURE`.
+- **Made locally** in a build folder of its own, without the reference tools, its executables in
+  `build/release/bin` (the usual build's in `build/bin` stay as they are):
+
+  ```bash
+  cmake -S . -B build/release -DTMNT_STATIC_SDL2=ON -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_BIN_DIR=build/release/bin
+  ```
+
+  ```bash
+  cmake --build build/release --config Release --parallel 6 --target tmnt_package
+  ```
+
+  writes `build/package/tmnt-windows-x64.zip`, and the folder `build/package/tmnt` it packs.
+- **The CI** (`.github/workflows/build.yml`) builds and packs it the same way on a clean Windows with no ROM set,
+  on every push to main and its pull requests: the zip is the job's artifact, `tmnt-windows-x64`.
+
+## The console version (TMNT)
+
+`TMNT` (`build/bin/TMNT.exe`, beside `TMNT Arcade`) is the same game made for playing at home: the program with
+the functions `console/replaced.txt` lists in the console's own versions (`console/*.c`; the decompiled C writes
+their definitions as `CONSOLE_ORIGINAL(name)`, so TMNT Arcade runs the program as it is). It starts with a Konami
+presentation of its own (the fixed layer's Konami logo, large, lit by the four turtles running across it), then a
+menu under the title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack
+in, and the boxes say PRESS START), SPLINTER WAY (the port's own modes: NORMAL, 5 lives and 3 continues; more to
+come), OPTIONS (over BEST 10 PLAYERS' picture: the cabinet's DIP switches by the test mode's names, the region, the
+volume, the pixels; kept in `tmnt.ini` beside the executable) and EXIT. A game starts on the coin's screen, the
+player choosing the turtle he plays. Its menus write with Kenney Mini (`font.bmp`); what it draws of the game's
+comes from your assets. `console/PLAN.md` has the plan, and what was done.
+
+| Control | Keys |
+|---|---|
+| Move (player 1) | the arrow keys |
+| Attack (in the menus: pick), jump (back) | Z or left Ctrl; X or left Alt |
+| START | Enter, a controller's Start |
+| Back in the menus | Escape |
+| Full screen; the next kind of pixels | F11 or Alt+Enter; F3 |
+
+`tmnt_console_headless` runs it with no window for scripted checks: the script's controls are the players',
+`--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`), and
+`--video-dump FRAME ... --video-dir DIR` writes those frames with the console's picture over them
+(`tests/console/` has the menus' actions of a few runs):
+
+```bash
+build/bin/tmnt_console_headless --actions tests/console/arcade_donatello.txt --script tests/console/skip_intro.txt --video-dump 110 680 700 1200 --video-dir build
+```
 
 ## Changing the decompilation
 
@@ -221,10 +285,11 @@ What the C still has of the CPU, of the decompiler and of the ROM's places, agai
 python tools/noise_report.py
 ```
 
-No executable holds a stretch of the ROM set:
+No executable holds a stretch of the ROM set (with no paths, the headless in `build/bin`; the window's and the
+package's by theirs):
 
 ```bash
-python tools/rom_in_executables.py
+python tools/rom_in_executables.py "build/bin/TMNT Arcade.exe" build/bin/TMNT.exe build/bin/tmnt_game_headless.exe build/bin/tmnt_console_headless.exe "build/release/bin/TMNT Arcade.exe" build/release/bin/TMNT.exe
 ```
 
 Other tools:
@@ -269,10 +334,15 @@ runtime/                  the board in C: its memory map, inputs and interrupts 
                           (extract.c and the extract_*.c, deflate.c), and the decompiled programs' runtime
                           (game_program.c, the frame, the interrupts, the tables); part of the game
 runtime/replaced.txt      the functions the board puts its own in place of (the boot's ROM test)
+console/                  the console version, TMNT: the game's functions it puts its own in place of
+                          (replaced.txt), its presentation, menus and drawing; its plan (PLAN.md)
 ports/headless/           the game with no screen or sound, for the checks
 ports/sdl2/               the game in a window, on SDL2: picture, sound, keyboard and game controllers; its first
-                          run (first_run.c), whose window writes with Kenney Mini (font/)
+                          run (first_run.c), whose window writes with Kenney Mini (font/); its icon (icon/)
+docs/package/             the Windows package's README.txt and MAME's terms for it (licenses/)
+.github/workflows/        the CI: the Windows package built on a clean machine
 tests/controls/           the control scripts: coins, buttons, moves and pokes by frame
+tests/console/            the console version's menus' actions for tmnt_console_headless, and a script
 tools/core/               arcade-decomp, the shared core (git submodule): the decompiler, the 68000 and Z80
                           frontends, the analyses, the checks; its konami/reference/ holds kref and the copies
                           of MAME's and ymfm's code it builds from
@@ -292,6 +362,7 @@ tools/coverage.py, sound_coverage.py   every byte of each program as code, data 
 tools/decompile.py, decompile_sound.py   the programs as C
 tools/check_scenarios.py, check_sound_board.py, check_structure.py, rom_in_executables.py   the checks
 tools/noise_report.py     what the C still has of the CPU, against tools/noise_baseline.txt
+tools/make_icon.py        the port's icon (ports/sdl2/icon/), and an icon of a picture of your own
 ```
 
 ## The assets
@@ -445,12 +516,15 @@ results before each of its two returns (`print_tall_text`).
 - The C in `src/` is the game's programs decompiled into a new form: logic only, with names and comments written
   for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
   project; they come from your own ROM set.
-- The first run's window writes with Kenney Mini by Kenney (www.kenney.nl), CC0: `ports/sdl2/font/License.txt`.
+- The first run's window and TMNT's menus write with Kenney Mini by Kenney (www.kenney.nl), CC0:
+  `ports/sdl2/font/License.txt`.
   `runtime/src/deflate.c` makes the streams zlib's deflate makes at level 9, following its algorithm (zlib, by
   Jean-loup Gailly and Mark Adler, zlib License); none of its code is copied.
 - `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
   `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause); the ROM set's layout comes
   from MAME's `tmnt.cpp`. Copies of MAME's and ymfm's code are in arcade-decomp's reference tools only, under
   their licenses.
+- The Windows package carries SDL2 (zlib License) inside its executable, and the terms of all of the above in
+  `licenses/`. Its icon is the project's own drawing (`tools/make_icon.py`).
 - *Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project is not
   affiliated with or endorsed by either.

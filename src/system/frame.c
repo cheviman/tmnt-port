@@ -438,7 +438,7 @@ void set_screen_flip(void)
 }
 
 /* the attract mode's frame, and a game when a player starts */
-void run_attract(void)
+void CONSOLE_ORIGINAL(run_attract)(void)
 {
 	uint8_t sound = 0;
 

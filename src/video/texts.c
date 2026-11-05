@@ -819,7 +819,7 @@ void draw_player_message(uint8_t player_message, uint32_t *p_colour, uint32_t *p
 }
 
 /* INSERT COIN(S) in a player's box */
-void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number)
+void CONSOLE_ORIGINAL(message_insert_coin)(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number)
 {
 	uint32_t colour = 0;
 

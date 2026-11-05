@@ -1,0 +1,137 @@
+/**
+ *    Name:        console_internal.h
+ *    Description: what the console version's files share among themselves
+ *    Version:     0.1.0
+ *    Created:     04-11-2026
+ *    Modified:    04-11-2026
+ *    Author:      Sebastian Toyos
+ *
+ *    license:BSD-3-Clause
+ */
+#ifndef TMNT_CONSOLE_INTERNAL_H
+#define TMNT_CONSOLE_INTERNAL_H
+
+#include "console.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+/* The game's states (game_state) and the attract mode's steps (game_step) the console shows */
+#define GAME_STATE_ATTRACT      1u
+#define GAME_STATE_GAME         2u
+#define ATTRACT_COIN_SCREEN     1u    /* the turtle choice: the coin's screen, the four turtles' pictures */
+#define ATTRACT_TITLE          3u    /* the menu's screen: the title's logo */
+#define ATTRACT_BEST_PLAYERS    6u    /* OPTIONS: BEST 10 PLAYERS' picture */
+#define ATTRACT_CONSOLE_STEP    9u    /* none of the attract's: run_attract runs no step (the presentation) */
+
+/* The console's pages */
+enum
+{
+	PAGE_PRESENTATION,     /* the Konami presentation, at power-on */
+	PAGE_MENU,             /* the title's logo and the menu: ARCADE, SPLINTER WAY, OPTIONS, EXIT */
+	PAGE_SPLINTER_WAY,     /* Splinter Way's modes: NORMAL, BOSS RUSH, RONIN, BACK */
+	PAGE_OPTIONS,          /* over BEST 10 PLAYERS' picture: the DIP switches, the region, the volume, its pages */
+	PAGE_VIDEO,            /* OPTIONS > VIDEO: the window's size, full screen, the pixels, WIDE */
+	PAGE_SOUND_TEST,       /* OPTIONS > SOUND TEST: the songs by name, the effects, the voices */
+	PAGE_CONTROLS,         /* OPTIONS > CONTROLS: each player's keys and game controller buttons */
+	PAGE_CHOICE,           /* the coin's screen: the turtle chosen */
+	PAGE_STARTING,         /* the chosen turtle's coin and attack going in */
+	PAGE_GAME              /* the game's own, from its start to the attract mode */
+};
+
+/* OPTIONS and its pages, over the same picture */
+#define OPTIONS_PAGE(page) ((page) >= PAGE_OPTIONS && (page) <= PAGE_CONTROLS)
+
+/* The games the menus start */
+enum
+{
+	MODE_ARCADE,           /* the arcade game at home: the DIP switches' lives, continues while START is pressed */
+	MODE_SPLINTER_WAY      /* Splinter Way's NORMAL: 5 lives and 3 continues */
+};
+
+#define SPLINTER_WAY_LIVES      0x05u    /* BCD, as lives_per_credit */
+#define SPLINTER_WAY_CONTINUES  3
+
+typedef struct
+{
+	uint32_t pressed;          /* the actions pressed since the game's last frame */
+	int page;
+	int choice;                /* the line chosen on the page */
+	int mode;                  /* MODE_*: the game being started or played */
+	int turtle;                /* the turtle chosen: 0 Leonardo, 1 Michelangelo, 2 Donatello, 3 Raphael */
+	int chooser;               /* the player who chose it */
+	bool powered_on;           /* the presentation is over */
+	bool quit;
+	bool restarting;           /* the pause's RESTART: the same game again, its turtle picked at once */
+	int page_frames;           /* the game's frames on the page */
+	int last_presser;          /* the last player who pressed a button or START (the one who confirms) */
+} console_state;
+
+extern console_state console;
+
+/* Each player's slot (0-3, the cabinet's: its turtle), -1 for none; and the coins put in on each slot this game */
+extern int console_slot_of[CONSOLE_PLAYERS];
+extern int console_coins_put[CONSOLE_PLAYERS];
+
+/* A player starts on 'slot' (with a coin when he has no lives): the coin's and attack's frames on the board */
+void console_join(int slot);
+
+/* The DIP switches of the settings onto the board and into the copies the boot made of them (reset: their
+   reading in the boot's own place); and the lives a coin gives by the mode */
+void console_apply_dip_switches(void);
+void console_set_mode_lives(int mode);
+
+/* The presentation (presentation.c): its frame in the attract mode, with the actions pressed: true while it
+   lasts; its picture over the frame */
+bool presentation_frame(uint32_t pressed);
+void presentation_overlay(tmnt_frame *frame);
+
+/* The menus (menu.c): their frame in the attract mode (the page's own, then the attract's step); their picture */
+void menu_frame(uint32_t pressed);
+void menu_overlay(tmnt_frame *frame);
+
+/* ---- drawing over the frame (draw.c) ---- */
+
+/* Kenney Mini (font.bmp): loaded from 'folder'; its line's height */
+bool draw_load_font(const char *folder);
+#define FONT_HEIGHT 10         /* a capital's: the lit rows of the font's cells */
+
+/* A line of text at x, y (its top), 'scale' times, in 0x00RRGGBB with a shadow under it; its width */
+void draw_text(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text);
+void draw_text_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text);
+int draw_text_width(const char *text, int scale);
+
+/* The game's own letters (the fixed layer's 8 x 8 font, as the game's texts write them: capitals, digits, , - . ? !
+   and the apostrophe), 'scale' times, at x, y (the top left): in the game's colours for its texts (white over light
+   blue: GAME_LETTERS_OWN) or in one colour, their shadow darker; their width */
+#define LEFT_STRIPE             6      /* the columns the K052109's layers A and B show 6 pixels further */
+#define GAME_LETTER             8
+#define GAME_LETTERS_OWN        0xFFFFFFFFu
+#define GAME_LETTERS_BANK       0      /* the fixed layer's palette the texts show with (graphics_subjects.txt) */
+#define GAME_LETTERS_SHADOW_PEN 11     /* the letters' shadow under them */
+void draw_game_letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text);
+void draw_game_letters_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text);
+int draw_game_letters_width(const char *text, int scale);
+
+/* The signature's small letters (5 pixels high, the console's own: "@cheviman"), centred, in the game's colours */
+void draw_small_letters_centred(tmnt_frame *frame, int y, const char *text);
+int draw_small_letters_width(const char *text);
+
+/* A rectangle darkened ('keep': 0-256 of its light kept), or filled */
+void draw_shade(tmnt_frame *frame, int x, int y, int width, int height, int keep);
+void draw_fill(tmnt_frame *frame, int x, int y, int width, int height, uint32_t colour);
+
+/* A text of the game's (game_texts' 'number') from the fixed layer's character set, 'scale' times, its top
+   left cell at x, y, in the palette's 'bank' (its colours, palette RAM); left of 'lit_to' as it is, right of
+   it darkened to 'dark' (0-256). Its size in pixels, unscaled */
+void draw_game_text(tmnt_frame *frame, uint32_t text_number, int x, int y, int scale, int bank, int lit_to,
+	int dark);
+void game_text_size(uint32_t text_number, int *width, int *height);
+
+/* The sprites the frame shows (the K051960's list as the video drew it: console_keep_sprites at each frame)
+   drawn again over what the console drew */
+void draw_board_sprites(tmnt_frame *frame);
+void console_keep_sprites(void);
+
+#endif
