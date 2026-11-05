@@ -38,6 +38,10 @@ TABLE_ENDS_BEFORE_UNUSED = True
 # a table of states holds FFFFFFFF, as it holds zero, for a state with no handler, and goes on after it: Rocksteady's
 # bullet (04BFBE: start, fly, vanish, FFFFFFFF, and its state 4, struck, rocksteady_bullet_burst; core/m68000/analysis.py)
 TABLE_UNUSED_ENTRIES = (0, 0xFFFFFFFF)
+# the families of the assets' pieces whose address names no number in the C: the code bytes the program reads as
+# data (tools/data_assets.py's code_read: 001800, which the intro's last animation jumps to; 04C3F2), reached only
+# through the pointers that lead there (core/m68000/decompile.py piece_names)
+PIECE_GROUPS_UNNAMED = ("code_read",)
 # a family of objects whose name starts with another's (enemy_walk, enemy) reads the fields that one names too,
 # besides its own (symbols.txt scoped lines; decompiler/pointers.py)
 NESTED_FAMILIES = True

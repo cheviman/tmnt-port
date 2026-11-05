@@ -29,10 +29,11 @@ As of 04-11-2026:
 - [x] ROM set verification (MAME set `tmnt`, World 4 Players, version X), by CRC32 and SHA-1 of every file
 - [x] A reference: the original programs on MAME's 68000 and Z80 cores, with MAME's K052109, K051960, K007232
       and uPD7759 and ymfm's YM2151, against a model of the board in C (`kref`, in the shared core)
-- [x] 17 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
-      one and four players, the continue and GAME OVER, the DIP switches, and a game in each of the ten areas
-      played until its boss falls, the last one through the ending and the staff roll: 507,382 frames, which
-      run 25,328 addresses of the 68000 program and 4,486 of the Z80's
+- [x] 18 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
+      one and four players, the continue and GAME OVER, the story before area 0 with no button pressed to its end,
+      the DIP switches, and a game in each of the ten areas played until its boss falls, the last one through the
+      ending and the staff roll: 513,383 frames, which run 25,526 addresses of the 68000 program and 4,486 of the
+      Z80's
 - [x] A 68000 disassembler identical to MAME's at every offset of the program and of an image of every opcode,
       and a static analysis that finds, without traces, every address the scenarios run: 28,515 instructions
       in the 68000 program, and the Z80's the same way
@@ -43,7 +44,7 @@ As of 04-11-2026:
       data read by name from the assets, never through an address of the ROM. 2,423 of the 2,439 functions
       (99.3 %, and 99.9 % of the lines) have nothing in them but the faithful leftovers "Reading the C" lists;
       each of the other 16 has its reason there too
-- [x] The game matches the reference in state, picture and sound in all 17 scenarios, frame by frame, and its
+- [x] The game matches the reference in state, picture and sound in all 18 scenarios, frame by frame, and its
       own sound board matches MAME's in every frame (samples and RAM); the structure of every function, the
       code no scenario runs too, checks against its jumps; no executable holds a stretch of the ROM set
 - [x] The board in C (`runtime/`): the memory map, the inputs, the interrupts, the video chips drawing what MAME

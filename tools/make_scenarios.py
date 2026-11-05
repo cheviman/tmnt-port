@@ -39,6 +39,7 @@ COIN_AT = 700                   # the attract mode's title is on by then
 START_AT = 760
 AREA_POKE_AT = 800              # after the program sets the area to 0, before it loads it
 PLAY_FROM = 900
+INTRO_UNTOUCHED_PLAY = 2600    # (the story before area 0 ends around frame 1400 when no button is pressed)
 JUMP_EVERY = 12
 ATTACK_EVERY = 240
 LIVES_EVERY = 300
@@ -150,6 +151,15 @@ def main():
     lines.append("6000 end")
     write("one_player", ["A one-player game: a coin and the jump button, then Leonardo walks right jumping until",
                          "his lives run out, the continue countdown runs out, and the attract mode comes back"], lines)
+
+    lines = []
+    start(lines, [1])
+    play(lines, [1], INTRO_UNTOUCHED_PLAY, 5000)
+    lines.append("6000 end")
+    write("intro_untouched", ["A one-player game in which no button is pressed through the story before area 0, to its",
+                              "end (the last turtle's landing animation ends on 00 FF, which the sprite engine takes for a",
+                              "jump to the long after it: it reads a byte of the boot's code at 001800), then Leonardo",
+                              "plays a while"], lines)
 
     lines = []
     start(lines, [1])

@@ -2533,7 +2533,6 @@ extern const void *enemy_ways_in_data;
 #define direction_rows_ADDRESS 0x047DF6u
 #define direction_table_ADDRESS 0x047E36u
 #define enemy_routines_ADDRESS 0x0489C6u
-#define second_player_through_a_stale_pointer_ADDRESS 0x048A98u
 #define enemy_hop_routines_ADDRESS 0x04900Au
 #define enemy_hop_routines_2_ADDRESS 0x049068u
 #define enemy_hop_routines_3_ADDRESS 0x0490C6u
@@ -2659,7 +2658,6 @@ extern const void *enemy_ways_in_data;
 #define shredder_ray_routines_ADDRESS 0x04C1FCu
 #define rocket_routines_ADDRESS 0x04C258u
 #define dynamite_routines_ADDRESS 0x04C31Au
-#define flash_colour_past_its_table_ADDRESS 0x04C3F2u
 #define kicked_door_routines_ADDRESS 0x04C400u
 #define kicked_door_start_animation_ADDRESS 0x04C410u
 #define kicked_door_animation_ADDRESS 0x04C41Au

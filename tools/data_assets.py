@@ -69,6 +69,11 @@ CODE_READ_AS_DATA = {
     # finds one player: in the continue scenario (frame timing, frame 4212) A5 holds 048A94, the handler's
     # own address, and the byte read is its code's (move.l's 2F)
     0x048A98: (0x048A99, "second_player_through_a_stale_pointer"),
+    # intro_turtle_lands_animation ends on 00 FF (02DF50), which the sprite engine takes for a jump to the long after
+    # it, 00001800 (047134 "move.b ($1,A3), D1", 04713C "movea.l ($2,A3), A3"), and reads the frame's count there
+    # (047140 "move.b (A3), D0"): a byte of the boot's "move.w #$3ff, D3" (03). In the intro_untouched scenario, where
+    # no button cuts the story before area 0 short (frame 1406)
+    0x001800: (0x001801, "intro_turtle_lands_jump_target"),
 }
 
 
@@ -422,7 +427,9 @@ def extract(image, walk, analysis, folder):
     names = Names({kinds[0][0]: (kinds[-1][1], name) for name, _, kinds in pieces}, functions)
     files = defaultdict(list)
     layout = ["# each piece and where the program had it (for --check)"]
-    pieces += [[name, "tables", [(first, stop, "code read as data")]]
+    # (a family of their own, code_read: the C reaches them only through the pointers that lead there, so no number
+    # takes their names: the profile's PIECE_GROUPS_UNNAMED)
+    pieces += [[name, "code_read", [(first, stop, "code read as data")]]
                for first, (stop, name) in sorted(CODE_READ_AS_DATA.items())]
     for name, group, kinds in pieces:
         files[group].append(f"[{name}]")
