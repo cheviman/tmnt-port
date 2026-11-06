@@ -12,7 +12,7 @@
 #include "game.h"
 
 /* a whole layer drawn from its map, and its floor cells into the floor map */
-void draw_whole_layer_and_floor(uint32_t tile_place)
+void CONSOLE_ORIGINAL(draw_whole_layer_and_floor)(uint32_t tile_place)
 {
 	uint8_t block_byte = 0, block_rows_left = 0, blocks_left = 0, tile_rows_left = 0;
 	uint32_t block = 0, entry = 0, floor_place = 0, map = 0, page_offset = 0;
@@ -68,7 +68,7 @@ void draw_whole_layer_and_floor(uint32_t tile_place)
 }
 
 /* a whole layer drawn from its map */
-void draw_whole_layer(uint32_t tile_place)
+void CONSOLE_ORIGINAL(draw_whole_layer)(uint32_t tile_place)
 {
 	uint8_t block_rows_left = 0, blocks_left = 0, tile_rows_left = 0;
 	uint32_t block = 0, entry = 0, map = 0, page_offset = 0, row_offset = 0;
@@ -120,7 +120,7 @@ void draw_whole_layer(uint32_t tile_place)
 }
 
 /* the area's layers from its record: the floor map, the first scroll segment and the layers drawn */
-void start_area_layers(void)
+void CONSOLE_ORIGINAL(start_area_layers)(void)
 {
 	uint16_t area_offset = 0;
 

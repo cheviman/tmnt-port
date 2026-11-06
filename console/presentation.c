@@ -185,13 +185,14 @@ bool presentation_frame(uint32_t pressed)
 	return true;
 }
 
-void presentation_overlay(tmnt_frame *frame)
+void presentation_overlay(console_picture *frame)
 {
-	draw_fill(frame, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x000000u);
+	draw_fill(frame, PICTURE_FIRST(frame), 0, PICTURE_END(frame) - PICTURE_FIRST(frame), SCREEN_HEIGHT, 0x000000u);
 	if (show.part == 0)
 		return;
 	draw_game_text(frame, LOGO_TEXT, logo_left(), LOGO_TOP, LOGO_SCALE, LOGO_BANK, show.lit_to, LOGO_DARK);
 	draw_board_sprites(frame);
 	if (show.brightness < 256)
-		draw_shade(frame, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, show.brightness);
+		draw_shade(frame, PICTURE_FIRST(frame), 0, PICTURE_END(frame) - PICTURE_FIRST(frame), SCREEN_HEIGHT,
+			show.brightness);
 }

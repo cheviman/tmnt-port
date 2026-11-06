@@ -230,9 +230,10 @@ presentation of its own (the fixed layer's Konami logo, large, lit by the four t
 menu under the title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack
 in, and the boxes say PRESS START), SPLINTER WAY (the port's own modes: NORMAL, 5 lives and 3 continues; more to
 come), OPTIONS (over BEST 10 PLAYERS' picture: the cabinet's DIP switches by the test mode's names, the region, the
-volume, the pixels; kept in `tmnt.ini` beside the executable) and EXIT. A game starts on the coin's screen, the
-player choosing the turtle he plays. Its menus write with Kenney Mini (`font.bmp`); what it draws of the game's
-comes from your assets. `console/PLAN.md` has the plan, and what was done.
+volume, the pixels, WIDE 16:9 and 20:9 for the play and the menus; kept in `tmnt.ini` beside the executable) and
+EXIT. A game starts on the coin's screen, each player choosing the turtle he plays (the others come in with START).
+Its menus write with the game's own letters; what it draws of the game's comes from your assets. Escape pauses a
+game. `console/PLAN.md` has the plan, and what was done.
 
 | Control | Keys |
 |---|---|
@@ -243,7 +244,9 @@ comes from your assets. `console/PLAN.md` has the plan, and what was done.
 | Full screen; the next kind of pixels | F11 or Alt+Enter; F3 |
 
 `tmnt_console_headless` runs it with no window for scripted checks: the script's controls are the players',
-`--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`), and
+`--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`: with a
+PLAYER, that player's own stick, buttons or START; `pause`, `quit`, `restart` in a game), `--wide 1|2` WIDE
+(`--wide-check`: each frame, the columns of its sides that are not their map's), and
 `--video-dump FRAME ... --video-dir DIR` writes those frames with the console's picture over them
 (`tests/console/` has the menus' actions of a few runs):
 

@@ -66,6 +66,11 @@ typedef struct
 	bool restarting;           /* the pause's RESTART: the same game again, its turtle picked at once */
 	int page_frames;           /* the game's frames on the page */
 	int last_presser;          /* the last player who pressed a button or START (the one who confirms) */
+	uint32_t player_pressed[CONSOLE_PLAYERS];    /* each player's actions since the game's last frame, out of a
+	                                                game: his stick, buttons and START (the port's fixed keys go
+	                                                with player 1's) */
+	int choice_turtle[CONSOLE_PLAYERS];    /* the turtle choice: each player's turtle there (-1: not in it), */
+	bool choice_picked[CONSOLE_PLAYERS];   /* and whether he picked it (kept for the pause's RESTART) */
 } console_state;
 
 extern console_state console;
@@ -85,21 +90,32 @@ void console_set_mode_lives(int mode);
 /* The presentation (presentation.c): its frame in the attract mode, with the actions pressed: true while it
    lasts; its picture over the frame */
 bool presentation_frame(uint32_t pressed);
-void presentation_overlay(tmnt_frame *frame);
+void presentation_overlay(console_picture *frame);
 
-/* The menus (menu.c): their frame in the attract mode (the page's own, then the attract's step); their picture */
-void menu_frame(uint32_t pressed);
-void menu_overlay(tmnt_frame *frame);
+/* The menus (menu.c): their frame in the attract mode (the page's own, then the attract's step), with the actions
+   pressed (any player's) and each player's own; their picture */
+void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]);
+void menu_overlay(console_picture *frame);
+
+/* WIDE on the menus' screens (wide.c), at each of their frames: OPTIONS' background past the board's 320 */
+void console_wide_menus(void);
 
 /* ---- drawing over the frame (draw.c) ---- */
+
+/* The picture's first column and the one past its last, in the board's x (WIDE's sides past 0 and 319); the
+   window's middle, where the centred lines go: the picture's (WIDE), or the board's without its first LEFT_STRIPE
+   columns, which the window leaves out */
+#define PICTURE_FIRST(picture)  (-(picture)->left)
+#define PICTURE_END(picture)    (TMNT_VIDEO_WIDTH + (picture)->right)
+int draw_centred_x(const console_picture *frame, int width);
 
 /* Kenney Mini (font.bmp): loaded from 'folder'; its line's height */
 bool draw_load_font(const char *folder);
 #define FONT_HEIGHT 10         /* a capital's: the lit rows of the font's cells */
 
 /* A line of text at x, y (its top), 'scale' times, in 0x00RRGGBB with a shadow under it; its width */
-void draw_text(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text);
-void draw_text_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text);
+void draw_text(console_picture *frame, int x, int y, int scale, uint32_t colour, const char *text);
+void draw_text_centred(console_picture *frame, int y, int scale, uint32_t colour, const char *text);
 int draw_text_width(const char *text, int scale);
 
 /* The game's own letters (the fixed layer's 8 x 8 font, as the game's texts write them: capitals, digits, , - . ? !
@@ -110,28 +126,28 @@ int draw_text_width(const char *text, int scale);
 #define GAME_LETTERS_OWN        0xFFFFFFFFu
 #define GAME_LETTERS_BANK       0      /* the fixed layer's palette the texts show with (graphics_subjects.txt) */
 #define GAME_LETTERS_SHADOW_PEN 11     /* the letters' shadow under them */
-void draw_game_letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text);
-void draw_game_letters_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text);
+void draw_game_letters(console_picture *frame, int x, int y, int scale, uint32_t colour, const char *text);
+void draw_game_letters_centred(console_picture *frame, int y, int scale, uint32_t colour, const char *text);
 int draw_game_letters_width(const char *text, int scale);
 
 /* The signature's small letters (5 pixels high, the console's own: "@cheviman"), centred, in the game's colours */
-void draw_small_letters_centred(tmnt_frame *frame, int y, const char *text);
+void draw_small_letters_centred(console_picture *frame, int y, const char *text);
 int draw_small_letters_width(const char *text);
 
 /* A rectangle darkened ('keep': 0-256 of its light kept), or filled */
-void draw_shade(tmnt_frame *frame, int x, int y, int width, int height, int keep);
-void draw_fill(tmnt_frame *frame, int x, int y, int width, int height, uint32_t colour);
+void draw_shade(console_picture *frame, int x, int y, int width, int height, int keep);
+void draw_fill(console_picture *frame, int x, int y, int width, int height, uint32_t colour);
 
 /* A text of the game's (game_texts' 'number') from the fixed layer's character set, 'scale' times, its top
    left cell at x, y, in the palette's 'bank' (its colours, palette RAM); left of 'lit_to' as it is, right of
    it darkened to 'dark' (0-256). Its size in pixels, unscaled */
-void draw_game_text(tmnt_frame *frame, uint32_t text_number, int x, int y, int scale, int bank, int lit_to,
+void draw_game_text(console_picture *frame, uint32_t text_number, int x, int y, int scale, int bank, int lit_to,
 	int dark);
 void game_text_size(uint32_t text_number, int *width, int *height);
 
 /* The sprites the frame shows (the K051960's list as the video drew it: console_keep_sprites at each frame)
    drawn again over what the console drew */
-void draw_board_sprites(tmnt_frame *frame);
+void draw_board_sprites(console_picture *frame);
 void console_keep_sprites(void);
 
 #endif

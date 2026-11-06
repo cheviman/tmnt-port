@@ -57,9 +57,19 @@ void console_actions(uint32_t pressed);
    is also a menu action (the stick's directions, attack ACCEPT, jump BACK) */
 void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts);
 
+/* The picture the console draws over: the frame the video drew, with WIDE's columns more at its sides ('left' and
+   'right': tmnt_video_wide_frame's, 0 without WIDE), its rows 'stride' pixels apart, the board's column 0 of each at
+   'pixels' + 'left'. The console's x are the board's, from -left to 319 + right */
+typedef struct
+{
+	uint32_t *pixels;
+	int stride;
+	int left, right;
+} console_picture;
+
 /* The console's own picture over the frame the video drew (the presentation, the menus' letters): the port
    calls it on each frame it shows or writes */
-void console_overlay(tmnt_frame *frame);
+void console_overlay(console_picture *picture);
 
 /* True once the menu's EXIT was picked: the port closes the game */
 bool console_quit_requested(void);
@@ -77,7 +87,7 @@ enum
 };
 
 bool console_can_pause(void);
-void console_pause_overlay(tmnt_frame *frame, int choice);
+void console_pause_overlay(console_picture *picture, int choice);
 void console_quit_game(void);
 void console_restart_game(void);
 
@@ -170,6 +180,10 @@ extern const char *const console_wide_names[WIDE_KINDS];
    and players' buttons straight onto the board, player N's on slot N), so the arcade's scenarios run as they are
    in the console's build, its WIDE in their games */
 void console_arcade_test(void);
+
+/* For checks (tmnt_console_headless --wide-check): WIDE's sides' columns whose tiles are not their map's, described
+   in 'text'; their count, 0 when none */
+int console_wide_check(char *text, size_t size);
 
 /* For scripted checks: where the console stands, a line of text (the page, the mode, the slots) */
 void console_describe(char *text, size_t size);

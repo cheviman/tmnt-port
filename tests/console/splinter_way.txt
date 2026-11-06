@@ -1,6 +1,6 @@
 # tmnt_console_headless --actions: SPLINTER WAY > NORMAL with Raphael (4UP), 5 lives a coin; START every 200
 # frames from 2000 to 31800 brings him back while his continues last (3); then the countdown runs out, GAME OVER,
-# the ranking and the menu (about 32000). With --script tests/console/skip_intro.txt --frames 33000: idle after the intro
+# the ranking and the menu (by 34000). With --script tests/console/skip_intro.txt --frames 34000: idle after the intro
 520 down
 530 accept
 560 accept

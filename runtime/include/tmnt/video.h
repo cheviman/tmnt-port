@@ -61,6 +61,7 @@ void tmnt_video_set_wide(int left, int right);
    pixels holds other columns there); from the next frame drawn on, and only with a wider picture */
 void tmnt_video_set_layer_window(int map, int first, int last);
 const uint32_t *tmnt_video_wide_frame(int *width);    /* (its rows TMNT_VIDEO_MAX_WIDTH apart) */
+int tmnt_video_wide_left(void);    /* (the columns of that frame left of the board's column 0) */
 
 /* What the frames drew, for the reference's --graphics-uses (NULL in the game, which draws the same either way):
    when set, a tile code's byte gets bit 0, 1 or 2 when one of its pixels other than pen 0 is drawn on the fixed

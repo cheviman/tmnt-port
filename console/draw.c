@@ -156,20 +156,30 @@ int draw_text_width(const char *text, int scale)
 	return width > 0 ? width - FONT_SPACING * scale : 0;
 }
 
-static void put(tmnt_frame *frame, int x, int y, uint32_t colour)
+/* The picture's pixel at the board's x, y (WIDE's sides at x less than 0 and past 319) */
+#define PIXEL(frame, x, y)  ((frame)->pixels[(y) * (frame)->stride + (frame)->left + (x)])
+
+static void put(console_picture *frame, int x, int y, uint32_t colour)
 {
-	if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
-		frame->pixels[y * WIDTH + x] = colour;
+	if (x >= PICTURE_FIRST(frame) && x < PICTURE_END(frame) && y >= 0 && y < HEIGHT)
+		PIXEL(frame, x, y) = colour;
 }
 
-static void put_block(tmnt_frame *frame, int x, int y, int scale, uint32_t colour)
+int draw_centred_x(const console_picture *frame, int width)
+{
+	if (frame->left || frame->right)
+		return PICTURE_FIRST(frame) + (PICTURE_END(frame) - PICTURE_FIRST(frame) - width) / 2;
+	return LEFT_STRIPE + (WIDTH - LEFT_STRIPE - width) / 2;
+}
+
+static void put_block(console_picture *frame, int x, int y, int scale, uint32_t colour)
 {
 	for (int dy = 0; dy < scale; dy++)
 		for (int dx = 0; dx < scale; dx++)
 			put(frame, x + dx, y + dy, colour);
 }
 
-static void letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text)
+static void letters(console_picture *frame, int x, int y, int scale, uint32_t colour, const char *text)
 {
 	for (; *text; text++)
 	{
@@ -188,7 +198,7 @@ static void letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colour,
 	}
 }
 
-void draw_text(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text)
+void draw_text(console_picture *frame, int x, int y, int scale, uint32_t colour, const char *text)
 {
 	if (!font.loaded)
 		return;
@@ -196,9 +206,9 @@ void draw_text(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, cons
 	letters(frame, x, y, scale, colour, text);
 }
 
-void draw_text_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text)
+void draw_text_centred(console_picture *frame, int y, int scale, uint32_t colour, const char *text)
 {
-	draw_text(frame, LEFT_STRIPE + (WIDTH - LEFT_STRIPE - draw_text_width(text, scale)) / 2, y, scale, colour, text);
+	draw_text(frame, draw_centred_x(frame, draw_text_width(text, scale)), y, scale, colour, text);
 }
 
 /* ---- rectangles ---- */
@@ -212,18 +222,22 @@ static uint32_t darkened(uint32_t colour, int keep)
 	return red << 16 | green << 8 | blue;
 }
 
-void draw_shade(tmnt_frame *frame, int x, int y, int width, int height, int keep)
+void draw_shade(console_picture *frame, int x, int y, int width, int height, int keep)
 {
+	const int first = x < PICTURE_FIRST(frame) ? PICTURE_FIRST(frame) : x;
+
 	for (int row = y < 0 ? 0 : y; row < y + height && row < HEIGHT; row++)
-		for (int column = x < 0 ? 0 : x; column < x + width && column < WIDTH; column++)
-			frame->pixels[row * WIDTH + column] = darkened(frame->pixels[row * WIDTH + column], keep);
+		for (int column = first; column < x + width && column < PICTURE_END(frame); column++)
+			PIXEL(frame, column, row) = darkened(PIXEL(frame, column, row), keep);
 }
 
-void draw_fill(tmnt_frame *frame, int x, int y, int width, int height, uint32_t colour)
+void draw_fill(console_picture *frame, int x, int y, int width, int height, uint32_t colour)
 {
+	const int first = x < PICTURE_FIRST(frame) ? PICTURE_FIRST(frame) : x;
+
 	for (int row = y < 0 ? 0 : y; row < y + height && row < HEIGHT; row++)
-		for (int column = x < 0 ? 0 : x; column < x + width && column < WIDTH; column++)
-			frame->pixels[row * WIDTH + column] = colour;
+		for (int column = first; column < x + width && column < PICTURE_END(frame); column++)
+			PIXEL(frame, column, row) = colour;
 }
 
 /* ---- the board's colours and graphics ---- */
@@ -252,7 +266,7 @@ static int tile_pen(int code, int x, int y)
 		| ((data[1] >> (7 - column)) & 1) << 1 | ((data[0] >> (7 - column)) & 1);
 }
 
-static void draw_tile(tmnt_frame *frame, int code, int bank, int x, int y, int scale, int lit_to, int dark)
+static void draw_tile(console_picture *frame, int code, int bank, int x, int y, int scale, int lit_to, int dark)
 {
 	for (int row = 0; row < 8; row++)
 		for (int column = 0; column < 8; column++)
@@ -333,7 +347,7 @@ void game_text_size(uint32_t text_number, int *width, int *height)
 
 typedef struct
 {
-	tmnt_frame *frame;
+	console_picture *frame;
 	cell_box box;
 	int x, y, scale, bank, lit_to, dark;
 } text_drawing;
@@ -346,7 +360,7 @@ static void draw_cell(int column, int row, int code, void *context)
 		drawing->y + (row - drawing->box.top) * 8 * drawing->scale, drawing->scale, drawing->lit_to, drawing->dark);
 }
 
-void draw_game_text(tmnt_frame *frame, uint32_t text_number, int x, int y, int scale, int bank, int lit_to,
+void draw_game_text(console_picture *frame, uint32_t text_number, int x, int y, int scale, int bank, int lit_to,
 	int dark)
 {
 	text_drawing drawing = { frame, text_box(text_number), x, y, scale, bank, lit_to, dark };
@@ -479,9 +493,9 @@ int draw_small_letters_width(const char *text)
 	return width > 0 ? width - 1 : 0;
 }
 
-void draw_small_letters_centred(tmnt_frame *frame, int y, const char *text)
+void draw_small_letters_centred(console_picture *frame, int y, const char *text)
 {
-	int x = LEFT_STRIPE + (WIDTH - LEFT_STRIPE - draw_small_letters_width(text)) / 2;
+	int x = draw_centred_x(frame, draw_small_letters_width(text));
 	const uint32_t letter = palette_colour(GAME_LETTERS_BANK * 16 + 1);
 	const uint32_t shadow = palette_colour(GAME_LETTERS_BANK * 16 + GAME_LETTERS_SHADOW_PEN);
 
@@ -510,7 +524,7 @@ int draw_game_letters_width(const char *text, int scale)
 	return (int)strlen(text) * GAME_LETTER * scale;
 }
 
-void draw_game_letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colour, const char *text)
+void draw_game_letters(console_picture *frame, int x, int y, int scale, uint32_t colour, const char *text)
 {
 	for (; *text; text++, x += GAME_LETTER * scale)
 	{
@@ -520,7 +534,7 @@ void draw_game_letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colo
 			continue;
 		if (colour == GAME_LETTERS_OWN && code < OWN_AT)
 		{
-			draw_tile(frame, code, GAME_LETTERS_BANK, x, y, scale, WIDTH, 256);
+			draw_tile(frame, code, GAME_LETTERS_BANK, x, y, scale, PICTURE_END(frame), 256);
 			continue;
 		}
 		/* one colour: the letter's pens in it, its shadow's darker (the own '@' in the game's colours: its pens
@@ -542,11 +556,10 @@ void draw_game_letters(tmnt_frame *frame, int x, int y, int scale, uint32_t colo
 	}
 }
 
-/* (centred in what the window shows: the picture without its first LEFT_STRIPE columns) */
-void draw_game_letters_centred(tmnt_frame *frame, int y, int scale, uint32_t colour, const char *text)
+/* (centred in what the window shows: draw_centred_x) */
+void draw_game_letters_centred(console_picture *frame, int y, int scale, uint32_t colour, const char *text)
 {
-	draw_game_letters(frame, LEFT_STRIPE + (WIDTH - LEFT_STRIPE - draw_game_letters_width(text, scale)) / 2, y, scale,
-		colour, text);
+	draw_game_letters(frame, draw_centred_x(frame, draw_game_letters_width(text, scale)), y, scale, colour, text);
 }
 
 /* ---- the frame's sprites again ---- */
@@ -572,7 +585,7 @@ static int sprite_pen(int code, int x, int y)
 }
 
 /* As runtime/src/video.c draws the K051960's list (tmnt.cpp's callback, no zoom); a shadow's pen darkens */
-void draw_board_sprites(tmnt_frame *frame)
+void draw_board_sprites(console_picture *frame)
 {
 	static const int x_offset[8] = { 0, 1, 4, 5, 16, 17, 20, 21 };
 	static const int y_offset[8] = { 0, 2, 8, 10, 32, 34, 40, 42 };
@@ -632,11 +645,11 @@ void draw_board_sprites(tmnt_frame *frame)
 						const int px = left + column, py = top + row;
 
 						if (!pen || px < 0 || px >= WIDTH || py < 0 || py >= HEIGHT)
-							continue;
+							continue;    /* (the board's 320: its x of 9 bits goes round past them) */
 						if (pen == 15 && shadow)
-							frame->pixels[py * WIDTH + px] = darkened(frame->pixels[py * WIDTH + px], 192);
+							PIXEL(frame, px, py) = darkened(PIXEL(frame, px, py), 192);
 						else
-							frame->pixels[py * WIDTH + px] = palette_colour(colour * 16 + pen);
+							PIXEL(frame, px, py) = palette_colour(colour * 16 + pen);
 					}
 			}
 	}

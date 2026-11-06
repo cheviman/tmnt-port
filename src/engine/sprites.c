@@ -2145,7 +2145,7 @@ void update_player_slots(void)
 }
 
 /* the object's place on the screen from its place in the area, and whether it is off the screen */
-void update_object_screen_place(uint32_t object)
+void CONSOLE_ORIGINAL(update_object_screen_place)(uint32_t object)
 {
 	uint16_t edge_x = 0, screen_x = 0, screen_y = 0;
 	uint32_t margin = 0;

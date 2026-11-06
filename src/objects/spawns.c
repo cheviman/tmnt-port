@@ -31,7 +31,7 @@ void start_area_spawns(void)
 
 /* every frame: the spawn scroll moved on and, when it reaches the next record, its enemy put into a free
    object */
-void spawn_enemies(void)
+void CONSOLE_ORIGINAL(spawn_enemies)(void)
 {
 	uint32_t zero = 0, carry = 0;
 	uint16_t x_step = 0, y_step = 0;

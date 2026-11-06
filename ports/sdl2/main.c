@@ -326,8 +326,8 @@ static const prompt *find_prompt(const prompt *list, size_t count, int what)
 	return NULL;
 }
 
-/* One prompt into the picture, its top left at (x, y) */
-static void draw_prompt(tmnt_frame *picture, const prompt *icon, int x, int y)
+/* One prompt into the picture, its top left at (x, y) (the board's x: WIDE's sides past it) */
+static void draw_prompt(console_picture *picture, const prompt *icon, int x, int y)
 {
 	const uint32_t *sheet = (const uint32_t *)prompt_sheet->pixels;
 	const int pitch = prompt_sheet->pitch / 4;
@@ -338,14 +338,14 @@ static void draw_prompt(tmnt_frame *picture, const prompt *icon, int x, int y)
 			const uint32_t colour = sheet[(icon->row * PROMPT_SIZE + row) * pitch + icon->column * PROMPT_SIZE + column];
 
 			if ((colour | 0xFF000000u) == PROMPT_CLEAR || y + row < 0 || y + row >= TMNT_VIDEO_HEIGHT
-				|| x + column < 0 || x + column >= TMNT_VIDEO_WIDTH)
+				|| x + column < -picture->left || x + column >= TMNT_VIDEO_WIDTH + picture->right)
 				continue;
-			picture->pixels[(y + row) * TMNT_VIDEO_WIDTH + x + column] = colour & 0xFFFFFFu;
+			picture->pixels[(y + row) * picture->stride + picture->left + x + column] = colour & 0xFFFFFFu;
 		}
 }
 
 /* On CONTROLS, each of the shown player's controls' keys and first button under its name */
-static void draw_controls(tmnt_frame *picture)
+static void draw_controls(console_picture *picture)
 {
 	const control_binding *bindings = control_bindings[console_controls_player()];
 
@@ -458,25 +458,45 @@ static void present(void)
 /* ---- the picture ---- */
 
 #ifdef TMNT_CONSOLE
-static tmnt_frame picture;    /* the frame shown, with the console's picture over it (the pause stops on it) */
-#endif
+/* the frame shown, with the console's picture over it (the pause stops on it): the board's 320 columns, or WIDE's
+   wider frame */
+static uint32_t picture_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
+static console_picture picture = { picture_pixels, TMNT_VIDEO_MAX_WIDTH, 0, 0 };
 
-static void show_frame(void)
+/* The frame the video drew into 'into' (its rows TMNT_VIDEO_MAX_WIDTH apart): WIDE's, with its sides, or the board's */
+static void take_frame(console_picture *into)
 {
-#ifdef TMNT_CONSOLE
 	int width;
 	const uint32_t *wide = tmnt_video_wide_frame(&width);
 
-	picture = *game_frame();
-	console_overlay(&picture);
-	draw_controls(&picture);    /* (OPTIONS > CONTROLS: the keys' and buttons' pictures) */
 	if (width > TMNT_VIDEO_WIDTH)
 	{
-		/* WIDE in a game: the wider frame, its middle as wide as the window's picture */
-		const SDL_Rect place = { 0, 0, width, TMNT_VIDEO_HEIGHT };
+		into->left = tmnt_video_wide_left();
+		into->right = width - TMNT_VIDEO_WIDTH - into->left;
+		for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+			memcpy(&into->pixels[y * into->stride], &wide[y * TMNT_VIDEO_MAX_WIDTH], (size_t)width * sizeof(uint32_t));
+	}
+	else
+	{
+		into->left = into->right = 0;
+		for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+			memcpy(&into->pixels[y * into->stride], &game_frame()->pixels[y * TMNT_VIDEO_WIDTH],
+				TMNT_VIDEO_WIDTH * sizeof(uint32_t));
+	}
+}
+
+/* The picture into the texture, and the part of it the window shows: WIDE's middle as wide as the window's picture,
+   or the board's without its first columns */
+static void upload_picture(const console_picture *shown_picture)
+{
+	const int width = TMNT_VIDEO_WIDTH + shown_picture->left + shown_picture->right;
+	const SDL_Rect place = { 0, 0, width, TMNT_VIDEO_HEIGHT };
+
+	SDL_UpdateTexture(texture, &place, shown_picture->pixels, shown_picture->stride * (int)sizeof(uint32_t));
+	if (width > TMNT_VIDEO_WIDTH)
+	{
 		const int view = view_width();
 
-		SDL_UpdateTexture(texture, &place, wide, TMNT_VIDEO_MAX_WIDTH * (int)sizeof(uint32_t));
 		content = place;
 		if (width > view)
 		{
@@ -485,12 +505,17 @@ static void show_frame(void)
 		}
 	}
 	else
-	{
-		const SDL_Rect place = { 0, 0, TMNT_VIDEO_WIDTH, TMNT_VIDEO_HEIGHT };
-
-		SDL_UpdateTexture(texture, &place, picture.pixels, TMNT_VIDEO_WIDTH * (int)sizeof(uint32_t));
 		content = (SDL_Rect){ SHOWN_LEFT, 0, SHOWN_WIDTH, TMNT_VIDEO_HEIGHT };
-	}
+}
+#endif
+
+static void show_frame(void)
+{
+#ifdef TMNT_CONSOLE
+	take_frame(&picture);
+	console_overlay(&picture);
+	draw_controls(&picture);    /* (OPTIONS > CONTROLS: the keys' and buttons' pictures) */
+	upload_picture(&picture);
 #else
 	SDL_UpdateTexture(texture, NULL, game_frame()->pixels, TMNT_VIDEO_WIDTH * (int)sizeof(uint32_t));
 #endif
@@ -789,14 +814,18 @@ static uint32_t pause_events(void)
    press after it */
 static void run_pause(void)
 {
-	static tmnt_frame frozen, shown;
+	static uint32_t frozen_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
+	static uint32_t shown_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
+	console_picture shown = { shown_pixels, TMNT_VIDEO_MAX_WIDTH, 0, 0 };
 	int choice = CONSOLE_PAUSE_CONTINUE;
 	uint8_t players[PLAYERS], starts;
 
 	pause_requested = false;
 	if (audio)
 		SDL_PauseAudioDevice(audio, 1);
-	frozen = picture;
+	memcpy(frozen_pixels, picture.pixels, sizeof(frozen_pixels));    /* (WIDE's whole frame: Sebas) */
+	shown.left = picture.left;
+	shown.right = picture.right;
 	for (;;)
 	{
 		const uint32_t pressed = pause_events();
@@ -817,14 +846,9 @@ static void run_pause(void)
 		}
 		if (pressed & PAUSE_BACK)
 			break;
-		shown = frozen;
+		memcpy(shown_pixels, frozen_pixels, sizeof(shown_pixels));
 		console_pause_overlay(&shown, choice);
-		{
-			const SDL_Rect place = { 0, 0, TMNT_VIDEO_WIDTH, TMNT_VIDEO_HEIGHT };
-
-			SDL_UpdateTexture(texture, &place, shown.pixels, TMNT_VIDEO_WIDTH * (int)sizeof(uint32_t));
-			content = (SDL_Rect){ SHOWN_LEFT, 0, SHOWN_WIDTH, TMNT_VIDEO_HEIGHT };
-		}
+		upload_picture(&shown);
 		present();    /* (the line chosen, a window resized or put full screen meanwhile) */
 		SDL_Delay(16);
 	}

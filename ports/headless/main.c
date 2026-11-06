@@ -74,6 +74,7 @@ static struct
 	uint64_t frame;
 	uint32_t action;
 	int player;
+	bool own;    /* (a PLAYER given: up ... back are that player's stick and buttons, not the menus' keys) */
 } actions[MAX_ACTIONS];
 static size_t action_count;
 
@@ -83,6 +84,7 @@ static size_t action_count;
 #define ACTION_QUIT     (1u << 30)
 #define ACTION_RESTART  (1u << 31)
 static bool pause_shown;
+static bool wide_check;    /* --wide-check: each frame, WIDE's sides' columns that are not their map's */
 
 static const char *load_actions(const char *path)
 {
@@ -113,6 +115,7 @@ static const char *load_actions(const char *path)
 		else
 			actions[action_count].action = ACTION_BIT(action);
 		actions[action_count].player = read == 3 && player >= 1 && player <= CONSOLE_PLAYERS ? player - 1 : 0;
+		actions[action_count].own = read == 3;
 		action_count++;
 	}
 	fclose(input);
@@ -148,9 +151,23 @@ static void console_inputs(void)
 				pause_shown = false;
 				continue;
 			}
-			menu_actions |= actions[index].action;
 			if (actions[index].action == ACTION_BIT(ACTION_START))
+			{
 				starts |= (uint8_t)(1u << actions[index].player);
+				if (actions[index].own)
+					continue;    /* (that player's START: the console takes it as his) */
+			}
+			else if (actions[index].own)
+			{
+				/* (the player's own stick and buttons, pressed for this frame) */
+				static const uint8_t controls[ACTIONS] = { TMNT_UP, TMNT_DOWN, TMNT_LEFT, TMNT_RIGHT, TMNT_ATTACK, TMNT_JUMP, 0 };
+
+				for (int action = 0; action < ACTIONS; action++)
+					if (actions[index].action == ACTION_BIT(action))
+						pressed[actions[index].player] |= controls[action];
+				continue;
+			}
+			menu_actions |= actions[index].action;
 		}
 	console_actions(menu_actions);
 	console_controls(pressed, starts);
@@ -195,34 +212,43 @@ static void write_bmp(const char *path, const uint32_t *pixels, int width, int s
 
 static void dump_video(void)
 {
-	static tmnt_frame picture;
+	static uint32_t pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
 	char path[1100];
 
 	for (int index = 0; index < video_dump_count; index++)
 		if (video_dumps[index] == tmnt_board.frame)
 		{
-			picture = *game_frame();
-#ifdef TMNT_CONSOLE
-			console_overlay(&picture);
-			if (pause_shown)
-				console_pause_overlay(&picture, CONSOLE_PAUSE_CONTINUE);
+			/* the frame the video drew: WIDE's, with its sides (--wide, --wide-side), or the board's */
+			int width, left = 0;
+			const uint32_t *wide = tmnt_video_wide_frame(&width);
+
+			if (width > TMNT_VIDEO_WIDTH)
 			{
+				left = tmnt_video_wide_left();
+				for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+					memcpy(&pixels[y * TMNT_VIDEO_MAX_WIDTH], &wide[y * TMNT_VIDEO_MAX_WIDTH],
+						(size_t)width * sizeof(uint32_t));
+			}
+			else
+				for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+					memcpy(&pixels[y * TMNT_VIDEO_MAX_WIDTH], &game_frame()->pixels[y * TMNT_VIDEO_WIDTH],
+						TMNT_VIDEO_WIDTH * sizeof(uint32_t));
+#ifdef TMNT_CONSOLE
+			{
+				console_picture picture = { pixels, TMNT_VIDEO_MAX_WIDTH, left, width - TMNT_VIDEO_WIDTH - left };
 				char text[256];
 
+				console_overlay(&picture);
+				if (pause_shown)
+					console_pause_overlay(&picture, CONSOLE_PAUSE_CONTINUE);
 				console_describe(text, sizeof(text));
 				printf("frame %" PRIu64 ": %s\n", tmnt_board.frame, text);
 			}
+#else
+			(void)left;
 #endif
 			snprintf(path, sizeof(path), "%s/frame_%" PRIu64 ".bmp", video_dir, tmnt_board.frame);
-			{
-				int width;
-				const uint32_t *wide = tmnt_video_wide_frame(&width);
-
-				if (width > TMNT_VIDEO_WIDTH)
-					write_bmp(path, wide, width, TMNT_VIDEO_MAX_WIDTH);    /* (--wide in a game: the wider picture) */
-				else
-					write_bmp(path, picture.pixels, TMNT_VIDEO_WIDTH, TMNT_VIDEO_WIDTH);
-			}
+			write_bmp(path, pixels, width, TMNT_VIDEO_MAX_WIDTH);
 		}
 }
 
@@ -263,6 +289,13 @@ static void on_frame_done(void)
 #ifdef TMNT_CONSOLE
 	console_inputs();
 	console_wide_frame();    /* (--wide: from the next frame drawn) */
+	if (wide_check)
+	{
+		char text[512];
+
+		if (console_wide_check(text, sizeof(text)))
+			printf("frame %" PRIu64 ": WIDE's sides not their map's: %s\n", tmnt_board.frame, text);
+	}
 #endif
 	game_end_frame();
 	if (hashes)
@@ -342,6 +375,8 @@ int main(int argc, char **argv)
 #ifdef TMNT_CONSOLE
 		else if (strcmp(argv[index], "--arcade-start") == 0)
 			console_arcade_test();
+		else if (strcmp(argv[index], "--wide-check") == 0)
+			wide_check = true;
 		else if (strcmp(argv[index], "--wide") == 0 && index + 1 < argc)
 		{
 			console_settings.wide = atoi(argv[++index]);    /* (OPTIONS > VIDEO > WIDE: 1 16:9, 2 20:9) */

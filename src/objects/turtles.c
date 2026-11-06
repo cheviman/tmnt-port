@@ -666,7 +666,7 @@ void update_players(void)
 }
 
 /* every turtle in play a frame: controls, move, the screen's limits, the scroll, floor and walls */
-void turtle_run_all(void)
+void CONSOLE_ORIGINAL(turtle_run_all)(void)
 {
 	uint8_t routine_past_walk = 0, segment_end_axis = 0;
 	uint16_t scroll_stage = 0;
@@ -984,7 +984,7 @@ void turtle_check_walls(uint32_t object, uint32_t inputs, uint32_t floor_cell_pl
 }
 
 /* the stick moves the turtle across and up or down, or pushes the scroll at the screen's edges */
-void turtle_move(uint32_t object, uint32_t inputs)
+void CONSOLE_ORIGINAL(turtle_move)(uint32_t object, uint32_t inputs)
 {
 	bool L_01AE2C = false, L_01AEA8 = false, L_01AFD4 = false, L_01B012 = false, L_01B086 = false;
 	uint32_t carry = 0;
@@ -1898,7 +1898,7 @@ void turtle_walk_speed(uint32_t object, uint32_t inputs, uint32_t *p_speed_offse
 }
 
 /* whether another turtle stands at the opposite edge, so the scroll cannot move away from it */
-uint32_t turtle_other_at_edge(uint8_t edge, uint32_t turtle)
+uint32_t CONSOLE_ORIGINAL(turtle_other_at_edge)(uint8_t edge, uint32_t turtle)
 {
 	uint32_t carry = 0;
 	uint8_t turtles_left = 0;
@@ -3461,7 +3461,7 @@ void turtle_hit_by_shredder_ray(uint32_t object)
 }
 
 /* the turtle walks off the screen */
-void turtle_walk_off_screen(uint32_t object)
+void CONSOLE_ORIGINAL(turtle_walk_off_screen)(uint32_t object)
 {
 	uint32_t x_step = 0;
 
@@ -3511,7 +3511,7 @@ void turtle_knocked_down_fly(uint32_t object)
 
 /* slides along the ground within the walls and the screen, farther for the hard knocks, until the pose
    ends */
-void turtle_knocked_down_slide(uint32_t object)
+void CONSOLE_ORIGINAL(turtle_knocked_down_slide)(uint32_t object)
 {
 	uint8_t wall_bit = 0;
 	uint16_t x_step = 0;
@@ -3646,7 +3646,7 @@ void turtle_knocked_back_start(uint32_t object)
 }
 
 /* slides along the ground for the hard knocks, within the walls and the screen, until the pose ends */
-void turtle_knocked_back_slide(uint32_t object)
+void CONSOLE_ORIGINAL(turtle_knocked_back_slide)(uint32_t object)
 {
 	uint8_t wall_bit = 0;
 	uint16_t x_step = 0;
@@ -3773,7 +3773,7 @@ void turtle_knocked_flying_fly(uint32_t object)
 }
 
 /* after hitting a wall it drops down to the floor, else it slides a little; then a wait */
-void turtle_knocked_flying_slide(uint32_t object)
+void CONSOLE_ORIGINAL(turtle_knocked_flying_slide)(uint32_t object)
 {
 	uint32_t x_step = 0;
 	uint16_t height = 0;
@@ -3948,7 +3948,7 @@ void turtle_knocked_flying_from_behind_fly(uint32_t object)
 }
 
 /* the turtle slides along the ground, or drops down a wall */
-void turtle_knocked_flying_from_behind_slide(uint32_t object)
+void CONSOLE_ORIGINAL(turtle_knocked_flying_from_behind_slide)(uint32_t object)
 {
 	uint32_t x_step = 0;
 	uint16_t height = 0;
@@ -4876,7 +4876,7 @@ void turtle_save_health(uint32_t job, uint32_t object)
 }
 
 /* the turtle on a knock's arc across and through the air, until it lands */
-void turtle_knockback_arc(uint16_t jump_speed, uint32_t object)
+void CONSOLE_ORIGINAL(turtle_knockback_arc)(uint16_t jump_speed, uint32_t object)
 {
 	uint16_t jump_speed_2 = 0;
 	uint16_t height = 0, jump_speed_3 = 0;

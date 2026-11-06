@@ -78,6 +78,7 @@ static int g_first_next[3] = { -0x10000, -0x10000, -0x10000 }, g_last_next[3] = 
 #define BLACK_PEN       0xFFFFu         /* (WIDE: past a map's end on layer B) */
 static uint32_t g_wide[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
 static int g_wide_width = TMNT_VIDEO_WIDTH;
+static int g_wide_left;    /* (g_left when g_wide was drawn) */
 
 uint8_t *tmnt_video_tiles_shown = NULL;
 uint8_t *tmnt_video_sprites_shown = NULL;
@@ -436,6 +437,11 @@ const uint32_t *tmnt_video_wide_frame(int *width)
 	return g_wide;
 }
 
+int tmnt_video_wide_left(void)
+{
+	return g_wide_width > TMNT_VIDEO_WIDTH ? g_wide_left : 0;
+}
+
 void tmnt_video_vblank_start(tmnt_frame *frame)
 {
 	g_left = g_left_next;
@@ -475,6 +481,7 @@ void tmnt_video_vblank_start(tmnt_frame *frame)
 			}
 		/* WIDE's picture: the same with its sides */
 		g_wide_width = TMNT_VIDEO_WIDTH + g_left + g_right;
+		g_wide_left = g_left;
 		for (int y = 0; (g_left || g_right) && y < TMNT_VIDEO_HEIGHT; y++)
 			for (int x = 0; x < g_wide_width; x++)
 			{

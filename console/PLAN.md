@@ -97,6 +97,24 @@ here; this repository adds console/, the ports and their documents.
     sprites from the player's assets) on its own, without the title's texts (the copyright lines), on its light
     blue background (Sebas, after seeing it on black: "ponelo en el celeste"); the menu under it, and under the logo
     "© KONAMI 1989" (the title's own text) with "@cheviman" under it (Sebas).
+20. **Multiplayer over the local network, for the four** (Sebas: "un modo multi por lan local, para los 4"): up to
+    four devices on a LAN playing one game, each player his turtle. A client / server that carries the inputs (Sebas:
+    "un codigo para cliente / servidor que lea los input"): the server (the device that hosts) takes each client's
+    controls every frame and sends every device the frame's inputs of the four players; each runs the same game with
+    them, which the decompilation keeps deterministic (the same inputs give the same frames: the state's hash per
+    frame, already in the ports, tells a device that has gone apart). The game held while a device is not heard.
+    Generic, for the other projects too (Sebas: "para hacerlo generico para poder usarlo en otros proyectos"): a C
+    library in a project of its own (Sebas: "yo diria en otro proyecto"; its own repository, which each port takes as
+    a submodule, as the decompilations take arcade-decomp), with no game in it: it carries each player's controls as
+    a few bytes a frame, finds the rooms on the LAN, joins them, holds the frames while a device is not heard, and
+    compares the state's hash each game gives it; a port gives it its controls, runs its frames with the inputs it
+    hands back, and draws its own menus (HOST, JOIN, a player's NAME). outrunners-port already has a LAN game (Sebas:
+    "el outrunners ya tenia lan"; console/network.c, net_udp.c, net.h): the arcade's link of cabinets over UDP, each
+    device a cabinet running its own cars and sending its race records to the others, nothing waiting frame by
+    frame. Its rooms (a host's beacon every half second, JOIN, the list of devices, a device unheard for a third of a
+    second or gone after 3), its UDP and its datagrams written byte by byte (devices need not be alike) are what the
+    library takes; what TMNT adds is the four players' inputs a frame, every device waiting for them (one cabinet, as
+    the arcade's TMNT is). OutRunners could carry its records through the same rooms and UDP later.
 
 ## What was done (04-11-2026)
 
@@ -192,15 +210,66 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   same map, never past the map's ends nor over what the ring shows), and has the video leave black what lies past a
   map's ends. Where a side has no map past the board's screen (an area's start at its left, its end at its right) the
   picture shows what there is of it and the rest at the other side, back to the middle as the scroll brings the map
-  (Sebas: "recorta de la izquierda y corre"; the game is the same). To come: the menus WIDE too (Sebas: "el menu tmb
-  tiene que tener wide"); the enemies come in some 16 pixels past the board's edge and go out 32 past it, so in the
-  bands they show up and vanish there (Sebas takes changes to the play where WIDE needs them).
+  (Sebas: "recorta de la izquierda y corre"; the game is the same).
 - **tmnt_console_headless --arcade-start** runs the arcade's scenarios in the console's build (the arcade's attract
   and controls; `--wide 1|2` for their games), and `pause`, `quit`, `restart` in --actions.
 
-Left for later: BOSS RUSH and RONIN (6, 7), the Konami code (8), save states (15), "Original turtles" (18); with more
-players, each choosing a turtle of those left (5: today each START after the first takes the first slot free); Kenney
-Mini still loaded and nothing drawing with it. Found on the way, in the decompilation (TMNT Arcade too): with no button
-pressed through area 0's intro, at its end object 45's animation (02DF46) runs on into 02DF50, whose "00 FF" jumps to
-001800, a frame in the boot's code; the reference reads it, the game stops there (the assets have no piece at 001800):
-fixed in tmntarcade-decomp (not committed yet), to be merged here.
+## What was done (05-11-2026)
+
+- **tmntarcade-decomp merged** (area 0's story untouched: 001800 a piece of its own, in the assets' `code_read`
+  group; the README's screenshots): the first run's layout written again (`tools/extract_layout.py`: the code read
+  as data in `code_read` too), 420 of 420 files the same as extract_assets.py's; 18 scenarios identical, picture and
+  sound.
+- **9, WIDE in the pause** (Sebas: "en la pausa se rompe el wide tmb"): the console draws over the whole frame the
+  video drew (`console_picture`: the board's 320 or WIDE's wider frame, its sides; x from -left to 319 + right), so
+  the pause stops on the wider frame, all of it in grey, PAUSE and its lines in the window's middle.
+- **9, WIDE in the menus** (Sebas: "el menu tmb tiene que tener wide"): the title's light blue, Splinter Way's page,
+  the turtle choice and OPTIONS as wide as the play; OPTIONS' background (BEST 10 PLAYERS': a row of one tile each
+  on layer B) put in the ring's other columns, which the sides show; the line chosen centred in the window's middle,
+  the release at the wider picture's right. The presentation (on black) keeps the board's 320.
+- **9, the enemies past WIDE's sides** (Sebas takes changes to the play where WIDE needs them): an enemy of the spawn
+  lists comes in its kind's margin past the *wider* screen's side (the game's 16 pixels past the board's), and an
+  object is off the screen past the wider screen's sides (`spawn_enemies`, `update_object_screen_place` in the
+  console's versions), so they walk the sides' columns more to come in and no longer show up or vanish in them.
+- **9, the layers rebuilt past the board** (Sebas: "en la parte izquierda, hay que reconstruir en algunas
+  secciones"): when the game draws a whole layer (an area's start, an exit's picture) it draws the ring from a page
+  of 256 pixels, and the wider screen's left side may lie before it, showing what the ring holds of the map 512
+  pixels on; the console draws both sides' columns again from the layer's map at that frame's end, and when WIDE's
+  sides come (the play after the story screens). And only the layers the area draws as maps count (those
+  `start_area_layers` draws whole, or the scroll draws column by column): the other one's record keeps what an earlier
+  area left in it, and in the areas of one map (the street, the car street, the highway, the Technodrome...) it held
+  the picture's left side to some 26 pixels and cut it black there. `tmnt_console_headless --wide-check` says, each
+  frame, which of the sides' columns are not their map's (with every area's scenario at 20:9 only some the game
+  draws itself remain: area 1's exit, its kidnapping room; area 8's lift, which do not show).
+- **5, a turtle for each player**: on the turtle choice the player who opened it is in, and any other comes in with
+  START or attack (PRESS START TO JOIN under the pictures), each on a turtle none has picked: LEFT and RIGHT move
+  among those, attack or START picks, jump takes the pick back (or leaves: the one who opened it, back to the menu).
+  Each player in a frame of his box's colour with his 1P to 4P under it (one player alone: yellow and the turtle's
+  name, as before). The game starts when every player in has picked, each on his turtle's slot; RESTART picks again
+  what each played (those who came in during the game too). In a game, a START still takes the first slot free.
+  `tmnt_console_headless --actions`: an action with a PLAYER (`720 right 2`) is that player's own stick or button;
+  `tests/console/two_players.txt`.
+
+- **Sebas's tries of the batch** (05-11, the same day): the area's start with WIDE's columns all at the right (Sebas:
+  "correr todo para la derecha para que no aparezca"; the left side shows nothing before the board's column 0 where
+  the area's scroll starts, area 0's 32 blank columns before the building); the title's TURTLES waiting past the
+  wider screen's edge while the banner comes down (its T showed in 16:9's side); only the Foot soldiers that walk in
+  (kinds 00-0D with no way in) come in past the wider screen's sides, the doors, the scenery and the soldiers coming
+  out of a door or a window where the game puts them (Sebas: "se fue de offset los ninjas que salen de las
+  puertas"); the menu takes no action while the title's logo comes in, and attack, START or jump puts it in place
+  at once (Sebas: Enter picked ARCADE; "no tendria que moverse nada mientras se esta animando"); OPTIONS without
+  SCREEN (the screen always the right way up) and FPS in VIDEO (Sebas).
+
+- **9, the turtles into WIDE's sides** (Sebas: "no puedo ir mas de esta parte para la izquierda"): a turtle's x is the
+  screen's (the K051960's: the board 0x60 to 0x1A0) and the game keeps it between 0x90 and 0x160 (turtle_run_all),
+  scrolls when one passes 0x160 or, where the area lets it, 0x91 (turtle_move), holds the scroll while another is at
+  the other edge (turtle_other_at_edge) and keeps a knocked one in (the four slides, turtle_knockback_arc,
+  turtle_walk_off_screen). The console's versions (console/wide_turtles.c: the same C with those limits moved) add
+  the left side's columns and the right side's, at most 48 (the game draws the floor map only 8 pixels past the
+  board's right edge, while at the left its ring keeps the columns the scroll passed: a turtle there reads its walls
+  and holes as on the board). Measured walking left in area 0: 0x90 in 4:3, 0x60 in 16:9, 0x38 in 20:9, the same
+  distance from the picture's edge; at the right 0x190. Without WIDE the game's own run.
+
+Left for later: BOSS RUSH and RONIN (6, 7), the Konami code (8), save states (15), "Original turtles" (18), the
+multiplayer over the local network (20); a turtle chosen by a player who comes in during a game (today the first
+slot free); Kenney Mini still loaded and nothing drawing with it.

@@ -175,12 +175,17 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 		/* out of a game, a player's controls newly pressed are the menus' actions too (whatever the port reads into
 		   them: its keys and pads as each player's), besides the ones the port sends (console_actions) */
 		if (console.page != PAGE_GAME)
-			console.pressed |= ((fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u)
+		{
+			const uint32_t actions = ((fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u)
 				| ((fresh & TMNT_DOWN) ? ACTION_BIT(ACTION_DOWN) : 0u)
 				| ((fresh & TMNT_LEFT) ? ACTION_BIT(ACTION_LEFT) : 0u)
 				| ((fresh & TMNT_RIGHT) ? ACTION_BIT(ACTION_RIGHT) : 0u)
 				| ((fresh & TMNT_ATTACK) ? ACTION_BIT(ACTION_ACCEPT) : 0u)
 				| ((fresh & TMNT_JUMP) ? ACTION_BIT(ACTION_BACK) : 0u);
+
+			console.pressed |= actions;
+			console.player_pressed[player] |= actions | ((starts & (1u << player)) ? ACTION_BIT(ACTION_START) : 0u);
+		}
 	}
 	if (console.page != PAGE_GAME && starts)
 		console.pressed |= ACTION_BIT(ACTION_START);    /* (any player's START, in the menus) */
@@ -217,6 +222,7 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 void console_actions(uint32_t pressed)
 {
 	console.pressed |= pressed;
+	console.player_pressed[0] |= pressed;    /* (the port's fixed keys: player 1's, as his keys are by default) */
 }
 
 /* A game over and the attract mode again: the players off their slots, the coins and the lives back to the
@@ -240,7 +246,10 @@ static void game_over(void)
 void run_attract(void)
 {
 	uint32_t pressed = console.pressed;
+	uint32_t player_pressed[CONSOLE_PLAYERS];
 
+	memcpy(player_pressed, console.player_pressed, sizeof(player_pressed));
+	memset(console.player_pressed, 0, sizeof(console.player_pressed));
 	if (arcade_test)
 	{
 		original_run_attract();
@@ -256,6 +265,7 @@ void run_attract(void)
 		console.choice = 0;
 		console.page_frames = 0;
 		pressed = 0;
+		memset(player_pressed, 0, sizeof(player_pressed));
 	}
 	if (!console.powered_on)
 	{
@@ -269,8 +279,9 @@ void run_attract(void)
 		console.page = PAGE_MENU;
 		console.choice = 0;
 		pressed = 0;
+		memset(player_pressed, 0, sizeof(player_pressed));
 	}
-	menu_frame(pressed);
+	menu_frame(pressed, player_pressed);
 	original_run_attract();
 	if (game_state != GAME_STATE_ATTRACT)
 	{
@@ -356,12 +367,13 @@ bool console_attach(const char *folder)
 	console_settings.dsw[0] = TMNT_DSW1_DEFAULT;    /* (the coins: 1 coin 1 credit, a START's coin a credit) */
 	tmnt_board.dsw[0] = console_settings.dsw[0];
 	tmnt_board.dsw[1] = console_settings.dsw[1];
+	console_settings.dsw[2] |= 0x01u;    /* (the screen the right way up: OPTIONS has no SCREEN, Sebas) */
 	tmnt_board.dsw[2] = console_settings.dsw[2] | TMNT_DSW3_SERVICE;    /* (the test mode's switch off) */
 	console_settings.dsw[2] = tmnt_board.dsw[2];
 	return draw_load_font(folder);
 }
 
-void console_overlay(tmnt_frame *frame)
+void console_overlay(console_picture *frame)
 {
 	if (!console.powered_on && game_state <= GAME_STATE_ATTRACT)
 		presentation_overlay(frame);
@@ -369,8 +381,10 @@ void console_overlay(tmnt_frame *frame)
 		menu_overlay(frame);
 	/* the picture's first 6 columns black: the K052109 shows layers A and B 6 pixels further than the fixed layer
 	   (tmnt.cpp: -90 and -96), and there they show the end of their maps, which the game never draws for that
-	   place; the cabinet's monitor hid them under its bezel (the arcade build keeps them, as MAME draws them) */
-	draw_fill(frame, 0, 0, LEFT_STRIPE, TMNT_VIDEO_HEIGHT, 0x000000u);
+	   place; the cabinet's monitor hid them under its bezel (the arcade build keeps them, as MAME draws them). The
+	   window leaves them out; WIDE's picture shows them, with what lies past them (wide.c) */
+	if (!frame->left && !frame->right)
+		draw_fill(frame, 0, 0, LEFT_STRIPE, TMNT_VIDEO_HEIGHT, 0x000000u);
 }
 
 bool console_quit_requested(void)
@@ -400,8 +414,14 @@ void console_quit_game(void)
 	back_to_attract();
 }
 
+/* RESTART: the same game again, every player on the turtle he plays (those who came in during the game too) */
 void console_restart_game(void)
 {
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		console.choice_turtle[player] = console_slot_of[player];
+		console.choice_picked[player] = console_slot_of[player] >= 0;
+	}
 	console_quit_game();
 	console.restarting = true;
 }

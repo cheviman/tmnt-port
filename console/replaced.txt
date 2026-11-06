@@ -7,3 +7,17 @@ message_insert_coin      # no coins at home: PRESS START where a player's box sh
 draw_sprites             # WIDE: the pieces that show on the wider screen written too (console/wide.c)
 draw_new_row_and_column  # WIDE: the columns and the row's blocks the wider screen shows past the game's (console/wide.c)
 draw_new_row_and_column_and_floor    # (the same, their tiles only)
+spawn_enemies            # WIDE: the enemies of the spawn lists come in past the wider screen's sides (console/wide.c)
+update_object_screen_place   # WIDE: an object is off the screen past the wider screen's sides
+draw_whole_layer         # WIDE: the columns past the board's drawn again after the game draws a whole layer (console/wide.c)
+draw_whole_layer_and_floor   # (the same)
+start_area_layers        # WIDE: which layers are the area's maps (console/wide.c)
+turtle_run_all           # WIDE: the turtles walk into the wider screen's sides (console/wide_turtles.c)
+turtle_move              # (its limits and the scroll's pushes)
+turtle_other_at_edge     # (a turtle at the other edge holds the scroll)
+turtle_walk_off_screen   # (a reaction ends at the edges)
+turtle_knocked_down_slide    # (the knocked turtles kept in)
+turtle_knocked_back_slide
+turtle_knocked_flying_slide
+turtle_knocked_flying_from_behind_slide
+turtle_knockback_arc

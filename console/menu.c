@@ -73,15 +73,16 @@
 #define PICTURE_HEIGHT      128
 #define CHOICE_HEADING_Y    44
 #define CHOICE_NAME_Y       188
+#define CHOICE_JOIN_Y       206          /* PRESS START TO JOIN, under the pictures */
 #define PAUSE_Y             76           /* the pause's PAUSE, and its lines under it */
 #define PAUSE_LINES_Y       108
 #define PAUSE_LINE_STEP     14
 
 enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_OPTIONS, MENU_EXIT, MENU_ITEMS };
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
-enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_SCREEN, OPTION_REGION,
-	OPTION_VIDEO, OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_FPS, OPTION_BACK, OPTION_ITEMS };
-enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_BACK, VIDEO_ITEMS };
+enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
+	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
+enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
 static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "OPTIONS", "EXIT" };
@@ -89,9 +90,9 @@ static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN"
 /* OPTIONS as outrunners-port's (CONTROLS, VIDEO, VOLUME, SOUND TEST, FPS: Sebas), with the DIP switches by the test
    mode's DIP SW SELECT names (test_mode_texts), but its PLAYERS, the lives a credit gives (1, 2, 3 or 5), as LIVES;
    no coins at home, so no COIN1 (Sebas) */
-static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "SCREEN",
-	"REGION", "VIDEO", "VOLUME", "SOUND TEST", "FPS", "BACK" };
-static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "BACK" };
+static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
+	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
+static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "FPS", "BACK" };
 static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9" };
 static const char *const sound_items[SOUND_ITEMS] = { "MUSIC", "EFFECT", "VOICE", "STOP", "BACK" };
 /* SOUND TEST's songs in the game's order, by the names tools/sound_music.py gives them (music.txt): the songs'
@@ -206,10 +207,17 @@ static bool picked(uint32_t pressed)
 	return (pressed & (ACTION_BIT(ACTION_ACCEPT) | ACTION_BIT(ACTION_START))) != 0;
 }
 
+/* The turtle choice opened by the player who picked the mode: Leonardo his first; the others come in with START */
 static void choose_turtle(int mode)
 {
 	console.mode = mode;
 	console.turtle = 0;
+	console.chooser = console.last_presser;
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		console.choice_turtle[player] = player == console.chooser ? 0 : -1;
+		console.choice_picked[player] = false;
+	}
 	open_page(PAGE_CHOICE, 0);
 }
 
@@ -265,11 +273,6 @@ static bool demo_sound_on(void)
 	return (console_settings.dsw[1] & 0x80) == 0;
 }
 
-static bool upside_down(void)
-{
-	return (console_settings.dsw[2] & 0x01) == 0;
-}
-
 static void set_bits(uint8_t *bank, uint8_t mask, int shift, int value)
 {
 	*bank = (uint8_t)((*bank & ~mask) | ((~value << shift) & mask));
@@ -320,19 +323,11 @@ static void options_page(uint32_t pressed)
 			settings->dsw[1] ^= 0x80;
 			settings_touched = true;
 			break;
-		case OPTION_SCREEN:
-			settings->dsw[2] ^= 0x01;
-			settings_touched = true;
-			break;
 		case OPTION_REGION:
 			settings->region = step(settings->region, by, 0, CONSOLE_REGIONS - 1);
 			break;
 		case OPTION_VOLUME:
 			settings->volume = step(settings->volume, by, 0, 10);
-			settings->changed = true;
-			break;
-		case OPTION_FPS:
-			settings->fps = !settings->fps;
 			settings->changed = true;
 			break;
 		default:
@@ -366,6 +361,9 @@ static void video_page(uint32_t pressed)
 			break;
 		case VIDEO_WIDE:
 			settings->wide = step(settings->wide, by, 0, WIDE_KINDS - 1);
+			break;
+		case VIDEO_FPS:
+			settings->fps = !settings->fps;
 			break;
 		default:
 			return;
@@ -538,43 +536,123 @@ bool console_controls_defaults(void)
 	return chosen;
 }
 
-/* The coin's screen's pictures: the four turtles' while one is chosen (the others darkened over them,
-   choice_overlay), then the chosen one's */
+/* The coin's screen's pictures: the four turtles' while they are chosen (those no player is on darkened over them,
+   choice_overlay), then the picked ones' */
 static void draw_pictures(void)
 {
+	uint32_t shown = 0;
+
 	if (game_step != ATTRACT_COIN_SCREEN || scene != 1u || scene_step < 4u)
 		return;
-	draw_turtle_pictures(PICTURES_SLOTS, console.page == PAGE_CHOICE ? 0xFu : 1u << console.turtle);
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		if (console.choice_turtle[player] >= 0 && console.choice_picked[player])
+			shown |= 1u << console.choice_turtle[player];
+	draw_turtle_pictures(PICTURES_SLOTS, console.page == PAGE_CHOICE ? 0xFu : shown);
 }
 
-static void choice_page(uint32_t pressed)
+/* A turtle no other player has picked: 'turtle', or the next one in the direction 'by' (+1, -1); -1 for none */
+static int free_turtle(int player, int turtle, int by)
 {
-	if (pressed & ACTION_BIT(ACTION_BACK))
+	for (int tries = 0; tries < 4; tries++, turtle = (turtle + by + 4) % 4)
 	{
-		free_play = 0u;
-		if (console.mode == MODE_SPLINTER_WAY)
-			open_page(PAGE_SPLINTER_WAY, WAY_NORMAL);
-		else
-			open_page(PAGE_MENU, MENU_ARCADE);
+		bool taken = false;
+
+		for (int other = 0; other < CONSOLE_PLAYERS; other++)
+			taken = taken || (other != player && console.choice_picked[other] && console.choice_turtle[other] == turtle);
+		if (!taken)
+			return turtle;
+	}
+	return -1;
+}
+
+/* Every player who picked a turtle on its slot, with its coin and attack: the game starts */
+static void start_chosen_game(void)
+{
+	console.restarting = false;
+	console_set_mode_lives(console.mode);
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		console_slot_of[player] = -1;
+		console_coins_put[player] = 0;
+	}
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		if (console.choice_turtle[player] >= 0 && console.choice_picked[player])
+		{
+			console_slot_of[player] = console.choice_turtle[player];
+			console_join(console.choice_turtle[player]);
+		}
+	open_page(PAGE_STARTING, 0);
+}
+
+/* The turtle choice for each player (guideline 5): the one who opened it is in, and any other comes in with START or
+   attack, on a turtle none has picked; LEFT and RIGHT move among those, attack or START picks (a turtle one picks
+   is none other's), jump takes back the pick, or leaves (the one who opened it: back to the menu). The game starts
+   when every player in has picked; the pause's RESTART picks again at once what each picked */
+static void choice_page(const uint32_t player_pressed[CONSOLE_PLAYERS])
+{
+	const bool shown = scene == 1u && scene_step >= 4u;
+	int in = 0, picked_count = 0;
+
+	if (console.restarting)
+	{
+		if (shown)
+			start_chosen_game();
 		return;
 	}
-	console.turtle = step(console.turtle, change(pressed), 0, 3);
-	if ((picked(pressed) || console.restarting) && scene == 1u && scene_step >= 4u)
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
 	{
-		/* the chosen turtle's slot for its player, and its coin and attack: the game starts */
-		if (!console.restarting)
-			console.chooser = console.last_presser;    /* (RESTART: the same player) */
-		console.restarting = false;
-		console_set_mode_lives(console.mode);
-		for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		const uint32_t pressed = player_pressed[player];
+		int *turtle = &console.choice_turtle[player];
+		bool *chosen = &console.choice_picked[player];
+
+		if (*turtle < 0)
 		{
-			console_slot_of[player] = -1;
-			console_coins_put[player] = 0;
+			if (shown && picked(pressed) && (*turtle = free_turtle(player, 0, 1)) >= 0)
+				queue_sound_command(MOVE_SOUND);
+			continue;
 		}
-		console_slot_of[console.chooser] = console.turtle;
-		console_join(console.turtle);
-		open_page(PAGE_STARTING, 0);
+		if (pressed & ACTION_BIT(ACTION_BACK))
+		{
+			if (*chosen)
+				*chosen = false;
+			else if (player != console.chooser)
+				*turtle = -1;
+			else
+			{
+				free_play = 0u;
+				if (console.mode == MODE_SPLINTER_WAY)
+					open_page(PAGE_SPLINTER_WAY, WAY_NORMAL);
+				else
+					open_page(PAGE_MENU, MENU_ARCADE);
+				return;
+			}
+			continue;
+		}
+		if (*chosen)
+			continue;
+		if (change(pressed))
+		{
+			const int other = free_turtle(player, (*turtle + change(pressed) + 4) % 4, change(pressed));
+
+			*turtle = other >= 0 ? other : *turtle;
+		}
+		if (shown && picked(pressed) && free_turtle(player, *turtle, 1) == *turtle)
+		{
+			*chosen = true;
+			for (int other = 0; other < CONSOLE_PLAYERS; other++)
+				if (other != player && console.choice_turtle[other] == *turtle && !console.choice_picked[other])
+					console.choice_turtle[other] = free_turtle(other, *turtle, 1);    /* (off the picked one) */
+		}
 	}
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		in += console.choice_turtle[player] >= 0;
+		picked_count += console.choice_turtle[player] >= 0 && console.choice_picked[player];
+	}
+	if (console.choice_turtle[console.chooser] >= 0)
+		console.turtle = console.choice_turtle[console.chooser];
+	if (in > 0 && picked_count == in)
+		start_chosen_game();
 }
 
 /* Whether a song plays: one of the music's channel records has a sound (a song that ends frees them all) */
@@ -586,12 +664,41 @@ static bool music_playing(void)
 	return false;
 }
 
-void menu_frame(uint32_t pressed)
+/* The title's logo coming in (the banner dropping, TURTLES sliding in): while it does, the menu takes no action
+   (Sebas: "no tendria que moverse nada mientras se esta animando"), and a press of attack, START or jump puts the logo
+   in its place at once (the title's own steps run on to their end), as the arcade's START skips nothing: the menu's
+   first Enter skips it, the next picks */
+static bool skip_title;
+
+static bool title_coming_in(void)
+{
+	return (console.page == PAGE_MENU || console.page == PAGE_SPLINTER_WAY) && !logo_in();
+}
+
+static void title_skipped(void)
+{
+	if (!skip_title || game_step != ATTRACT_TITLE || scene != 1u || scene_step < 1u)
+		return;
+	for (int steps = 0; steps < 1000 && scene_step < 3u; steps++)
+		if (scene_step == 1u)
+			title_banner_move();
+		else
+			title_turtles_slide_in();
+	skip_title = false;
+}
+
+void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS])
 {
 	const int page = console.page;
 	int lines = 0;
 
 	console.page_frames++;
+	if (title_coming_in())
+	{
+		if (pressed & (ACTION_BIT(ACTION_ACCEPT) | ACTION_BIT(ACTION_START) | ACTION_BIT(ACTION_BACK)))
+			skip_title = true;
+		pressed = 0;
+	}
 	switch (page)
 	{
 		case PAGE_MENU: lines = MENU_ITEMS; break;
@@ -635,7 +742,7 @@ void menu_frame(uint32_t pressed)
 			controls_page(pressed);
 			break;
 		case PAGE_CHOICE:
-			choice_page(pressed);
+			choice_page(player_pressed);
 			break;
 		default:
 			break;
@@ -661,7 +768,9 @@ void menu_frame(uint32_t pressed)
 		default:
 			break;
 	}
+	title_skipped();
 	hold_steps();
+	console_wide_menus();
 	if (console.page == PAGE_CHOICE || console.page == PAGE_STARTING)
 		draw_pictures();
 	/* the menus' song, but on the coin's screen (its own) and from the game's start (the game's own: the menus'
@@ -682,7 +791,7 @@ void menu_frame(uint32_t pressed)
 
 /* ---- the picture ---- */
 
-static tmnt_frame *target;    /* the frame being drawn over */
+static console_picture *target;    /* the frame being drawn over */
 
 /* The menus write with the game's own letters (Sebas: the white and light blue ones; draw.c): an item in the game's
    colours, the one chosen in yellow */
@@ -721,16 +830,14 @@ static void options_overlay(void)
 	snprintf(value, sizeof(value), "%d", lives_settings[lives_setting()]);
 	option_line(option_items, OPTION_LIVES, value);
 	option_line(option_items, OPTION_DEMO_SOUND, demo_sound_on() ? "ON" : "OFF");
-	option_line(option_items, OPTION_SCREEN, upside_down() ? "UPSIDE DOWN" : "NORMAL");
 	option_line(option_items, OPTION_REGION, regions[console_settings.region]);
 	option_line(option_items, OPTION_VIDEO, NULL);
 	snprintf(value, sizeof(value), "%d", console_settings.volume);
 	option_line(option_items, OPTION_VOLUME, value);
 	option_line(option_items, OPTION_SOUND_TEST, NULL);
-	option_line(option_items, OPTION_FPS, console_settings.fps ? "ON" : "OFF");
 	option_line(option_items, OPTION_BACK, NULL);
-	draw_game_letters(target, SCREEN_WIDTH - VERSION_MARGIN - draw_game_letters_width(VERSION_TEXT, 1), VERSION_Y, 1,
-		GAME_LETTERS_OWN, VERSION_TEXT);
+	draw_game_letters(target, PICTURE_END(target) - VERSION_MARGIN - draw_game_letters_width(VERSION_TEXT, 1), VERSION_Y,
+		1, GAME_LETTERS_OWN, VERSION_TEXT);    /* (of WIDE's wider picture too) */
 }
 
 static void video_overlay(void)
@@ -743,6 +850,7 @@ static void video_overlay(void)
 	option_line(video_items, VIDEO_FULL_SCREEN, console_settings.full_screen ? "ON" : "OFF");
 	option_line(video_items, VIDEO_PIXELS, filters[console_settings.pixels]);
 	option_line(video_items, VIDEO_WIDE, wide_kinds[console_settings.wide]);
+	option_line(video_items, VIDEO_FPS, console_settings.fps ? "ON" : "OFF");
 	option_line(video_items, VIDEO_BACK, NULL);
 }
 
@@ -790,49 +898,94 @@ static void controls_overlay(void)
 		console.choice == CONTROLS_BACK ? CHOSEN_COLOUR : GAME_LETTERS_OWN, "BACK");
 }
 
+/* A frame around a turtle's picture, 'out' pixels further out than the first one */
+static void picture_frame(int x, int out, uint32_t colour)
+{
+	const int left = x - 2 - out, top = PICTURE_TOP - 2 - out;
+	const int width = PICTURE_WIDTH + 4 + 2 * out, height = PICTURE_HEIGHT + 4 + 2 * out;
+
+	draw_fill(target, left, top, width, 1, colour);
+	draw_fill(target, left, top + height - 1, width, 1, colour);
+	draw_fill(target, left, top, 1, height, colour);
+	draw_fill(target, left + width - 1, top, 1, height, colour);
+}
+
+/* The choice: each player in a frame around his turtle's picture (the one who opened it alone: in yellow, the
+   turtle's name under it; more of them: each in his box's colour, his 1P to 4P under it, blinking until he picks),
+   the turtles no one is on darkened, and while there is room, PRESS START TO JOIN */
 static void choice_overlay(void)
 {
-	const int x = PICTURE_LEFT + console.turtle * PICTURE_STEP;
+	static const uint32_t player_colours[CONSOLE_PLAYERS] = { 0x58A8FFu, 0xFFD840u, 0xC878FFu, 0xFF5868u };
+	static const char *const tags[CONSOLE_PLAYERS] = { "1P", "2P", "3P", "4P" };
 	const char *heading = console.mode == MODE_SPLINTER_WAY ? "SPLINTER WAY - CHOOSE YOUR TURTLE" : "CHOOSE YOUR TURTLE";
+	int in = 0, on[4] = { 0, 0, 0, 0 }, drawn[4] = { 0, 0, 0, 0 };
 
 	if (game_step != ATTRACT_COIN_SCREEN || scene != 1u || scene_step < 4u)
 		return;
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		if (console.choice_turtle[player] >= 0)
+		{
+			in++;
+			on[console.choice_turtle[player]]++;
+		}
 	/* the coin's screen's Konami logo and (C) KONAMI 1989 off (Sebas: "es ingame ya") */
-	draw_fill(target, 0, KONAMI_LINES_TOP, TMNT_VIDEO_WIDTH, TMNT_VIDEO_HEIGHT - KONAMI_LINES_TOP, 0x000000u);
+	draw_fill(target, PICTURE_FIRST(target), KONAMI_LINES_TOP, PICTURE_END(target) - PICTURE_FIRST(target),
+		TMNT_VIDEO_HEIGHT - KONAMI_LINES_TOP, 0x000000u);
 	for (int turtle = 0; turtle < 4 && console.page == PAGE_CHOICE; turtle++)
-		if (turtle != console.turtle)
+		if (!on[turtle])
 			draw_shade(target, PICTURE_LEFT + turtle * PICTURE_STEP, PICTURE_TOP, PICTURE_WIDTH, PICTURE_HEIGHT,
 				PICTURE_DIMMED);
 	draw_game_letters_centred(target, CHOICE_HEADING_Y, 1, GAME_LETTERS_OWN, heading);
-	draw_fill(target, x - 2, PICTURE_TOP - 2, PICTURE_WIDTH + 4, 1, CHOSEN_COLOUR);
-	draw_fill(target, x - 2, PICTURE_TOP + PICTURE_HEIGHT + 1, PICTURE_WIDTH + 4, 1, CHOSEN_COLOUR);
-	draw_fill(target, x - 2, PICTURE_TOP - 2, 1, PICTURE_HEIGHT + 4, CHOSEN_COLOUR);
-	draw_fill(target, x + PICTURE_WIDTH + 1, PICTURE_TOP - 2, 1, PICTURE_HEIGHT + 4, CHOSEN_COLOUR);
-	draw_game_letters(target, x + (PICTURE_WIDTH - draw_game_letters_width(turtle_names[console.turtle], 1)) / 2,
-		CHOICE_NAME_Y, 1, CHOSEN_COLOUR, turtle_names[console.turtle]);
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		const int turtle = console.choice_turtle[player];
+		const int x = PICTURE_LEFT + turtle * PICTURE_STEP;
+		uint32_t colour;
+
+		if (turtle < 0)
+			continue;
+		if (in == 1)
+		{
+			picture_frame(x, 0, CHOSEN_COLOUR);
+			draw_game_letters(target, x + (PICTURE_WIDTH - draw_game_letters_width(turtle_names[turtle], 1)) / 2,
+				CHOICE_NAME_Y, 1, CHOSEN_COLOUR, turtle_names[turtle]);
+			continue;
+		}
+		colour = player_colours[player];
+		picture_frame(x, 2 * drawn[turtle], colour);
+		if (console.choice_picked[player] || (console.page_frames & 16) == 0)
+			draw_game_letters(target, x + (PICTURE_WIDTH - on[turtle] * 24) / 2 + drawn[turtle] * 24 + 4, CHOICE_NAME_Y, 1,
+				colour, tags[player]);
+		drawn[turtle]++;
+	}
+	if (console.page == PAGE_CHOICE && in < CONSOLE_PLAYERS && (console.page_frames & 32) == 0)
+		draw_game_letters_centred(target, CHOICE_JOIN_Y, 1, GAME_LETTERS_OWN, "PRESS START TO JOIN");
 }
 
 /* The pause's picture: the frame it stopped at in grey, PAUSE and its lines over it in the game's letters (as
    outrunners-port's) */
-void console_pause_overlay(tmnt_frame *frame, int choice)
+void console_pause_overlay(console_picture *frame, int choice)
 {
 	static const char *const items[CONSOLE_PAUSE_ITEMS] = { "CONTINUE", "RESTART", "QUIT GAME" };
+	const int width = TMNT_VIDEO_WIDTH + frame->left + frame->right;    /* (WIDE's sides too: Sebas) */
 
-	for (size_t index = 0; index < (size_t)TMNT_VIDEO_WIDTH * TMNT_VIDEO_HEIGHT; index++)
-	{
-		const uint32_t colour = frame->pixels[index];
-		const uint32_t level = ((((colour >> 16) & 0xFFu) * 77u + ((colour >> 8) & 0xFFu) * 150u + (colour & 0xFFu) * 29u)
-			>> 8) * 3u / 5u;
+	for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+		for (int x = 0; x < width; x++)
+		{
+			uint32_t *pixel = &frame->pixels[y * frame->stride + x];
+			const uint32_t colour = *pixel;
+			const uint32_t level = ((((colour >> 16) & 0xFFu) * 77u + ((colour >> 8) & 0xFFu) * 150u
+				+ (colour & 0xFFu) * 29u) >> 8) * 3u / 5u;
 
-		frame->pixels[index] = level << 16 | level << 8 | level;
-	}
+			*pixel = level << 16 | level << 8 | level;
+		}
 	draw_game_letters_centred(frame, PAUSE_Y, 2, GAME_LETTERS_OWN, "PAUSE");
 	for (int item = 0; item < CONSOLE_PAUSE_ITEMS; item++)
 		draw_game_letters_centred(frame, PAUSE_LINES_Y + item * PAUSE_LINE_STEP, 1,
 			item == choice ? CHOSEN_COLOUR : GAME_LETTERS_OWN, items[item]);
 }
 
-void menu_overlay(tmnt_frame *frame)
+void menu_overlay(console_picture *frame)
 {
 	target = frame;
 	if (game_state != GAME_STATE_ATTRACT)

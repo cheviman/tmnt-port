@@ -1,0 +1,9 @@
+# tmnt_console_headless --actions: ARCADE by player 1, on Leonardo; player 2 comes in with START (on Leonardo too, as
+# no one has picked him), moves right twice to Donatello and picks him; player 1 picks Leonardo, and the game starts
+# with both of them (1UP and 3UP)
+520 accept
+700 start 2
+720 right 2
+740 right 2
+760 accept 2
+780 accept 1
