@@ -1,4 +1,4 @@
-# Teenage Mutant Ninja Turtles — decompilation
+# Teenage Mutant Ninja Turtles — decompilation and port
 
 A reconstruction of Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* (a 68000 main board with a Z80
 sound board) into platform-agnostic C, not an emulator, following the method of
@@ -22,9 +22,36 @@ build your own executable, which runs from the assets and opens no ROM.
 <p align="center"><sub>Frames drawn by the game's own video library (<code>runtime/src/video.c</code>) while the
 decompiled game plays the scenarios of <code>tests/controls/</code>.</sub></p>
 
+## Playing it
+
+Download the package for Windows, Linux or macOS from the
+[releases](https://github.com/cheviman/tmnt-port/releases). Keep `tmnt.zip` beside the game, or drop it on its
+window when it asks: the first time, it takes the assets out of it. Two games come in it, the same program:
+
+- **TMNT Arcade**: the arcade game as it is: coins, the test mode, four players.
+- **TMNT**: the console version (see "The console version (TMNT)"): no coins, START brings a player in, Splinter
+  Way's modes (NORMAL, BOSS RUSH, RONIN), LAN for up to four computers
+  ([arcade-lan](https://github.com/cheviman/arcade-lan)), WIDE 16:9 and 20:9, the pixels' filters, the pause.
+
+The package also has the tools that make the game for your devices, with your ROM set:
+
+- **Nintendo Switch**: TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp`, for a console with Atmosphere.
+- **Android**: TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk`, signed with a key of yours.
+- **Anbernic's H700 handhelds** (RG40XX H...): TMNT Anbernic makes the folder for PORTS.
+
+What a tool makes has the game's data in it: it is yours alone, never share it. The package's `README.txt`
+(`docs/package/README.txt`) has the controls and what each tool needs.
+
+<p align="center">
+  <img src="docs/screenshots/console_title_menu.png" width="32%" alt="TMNT's menu under the title, in 16:9: ARCADE, SPLINTER WAY, LAN, OPTIONS, EXIT">
+  <img src="docs/screenshots/console_four_turtles_wide.png" width="32%" alt="Four players on the street in 16:9, the Foot coming in from the right">
+  <img src="docs/screenshots/console_options.png" width="32%" alt="OPTIONS: controls, difficulty, lives, demo sound, region, video, volume, sound test">
+</p>
+<p align="center"><sub>TMNT, the console version, in WIDE 16:9: its menu, four turtles on the street, OPTIONS.</sub></p>
+
 ## Status
 
-As of 04-11-2026:
+As of 06-11-2026:
 
 - [x] ROM set verification (MAME set `tmnt`, World 4 Players, version X), by CRC32 and SHA-1 of every file
 - [x] A reference: the original programs on MAME's 68000 and Z80 cores, with MAME's K052109, K051960, K007232
@@ -53,15 +80,20 @@ As of 04-11-2026:
 - [x] The assets (see "The assets"): tiles and sprites in sheets by subject with their own colours, the
       programs' data as text by subject with every piece named, the samples as WAV, the music as Standard MIDI
       Files; the game loads them, and they build back into the ROM set byte for byte
-- [x] A window port (`ports/sdl2/`, SDL2): the game with its sound, the keyboard and four game controllers.
-      Built and played on Windows; SDL2's packages should build it on Linux and macOS (not tried yet)
+- [x] A window port (`ports/sdl2/`, SDL2): the game with its sound, the keyboard and four game controllers, on
+      Windows, Linux and macOS (the 18 scenarios identical on Linux too)
 - [x] The port's first run in C: the game takes the assets out of your ROM set itself, the same files
       `extract_assets.py` writes, byte for byte; and the pack the devices load
-- [x] The Windows package (see "The Windows package"): TMNT Arcade and TMNT, SDL2 inside them, an icon of the
-      project's own, its README and licenses; built by the CI
-- [x] The console version's first part (see "The console version"): its presentation, its menus, no coins,
-      the turtle choice, Splinter Way's NORMAL, OPTIONS
-- [ ] Ports beyond the window one
+- [x] The packages for Windows, Linux and macOS (see "The Windows package"): TMNT Arcade and TMNT, SDL2 inside
+      them, an icon of the project's own, its README and licenses, the devices' tools; built by the CI, and
+      released on a tag
+- [x] The console version (see "The console version (TMNT)"): its presentation, its menus, no coins, the turtle
+      choice, Splinter Way's NORMAL, BOSS RUSH and RONIN, OPTIONS, WIDE 16:9 and 20:9, the pause
+- [x] LAN: up to four computers in one game, in lockstep through the host
+      ([arcade-lan](https://github.com/cheviman/arcade-lan))
+- [x] The devices: the Nintendo Switch, Android (touch controls) and Anbernic's H700 handhelds, each made on the
+      player's computer from the ROM set (`ports/PLAN.md`); not yet tried on a real Switch or Anbernic
+- [ ] Save states, the original turtles as a mode of their own (`console/PLAN.md`)
 
 ## Getting started
 
