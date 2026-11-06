@@ -1,17 +1,18 @@
 # TMNT APK
 
-`TMNT APK` (`TMNT APK.exe` on Windows) makes the Android game's APK on the player's computer, as
-`TMNT NSP` makes the Switch's `.nsp`: the game's Android build with the assets of the player's ROM set,
-signed with a key of the player's own. Nothing it reads or writes leaves the computer, and the APK is its
-player's alone: **never share it**.
+`TMNT APK` (`TMNT APK.exe` on Windows) makes the Android games' APKs on the player's computer, as
+`TMNT NSP` makes the Switch's `.nsp`s: each game's Android build with the assets of the player's ROM set,
+signed with a key of the player's own. It makes both at once, `TMNT.apk` and `TMNT Arcade.apk` beside it.
+Nothing it reads or writes leaves the computer, and the APKs are their player's alone: **never share them**.
 
 ## Making the APK (for players)
 
 You need:
 
 - `tmnt.zip`, MAME's ROM set of *TMNT* (World), or a folder of its files;
-- the tool, with the `android` folder beside it, which holds `tmnt-base.apk`: the game's Android build,
-  without the assets and without a signature; and `font.bmp`, its window's letters.
+- the tool, with the `android` folder beside it, which holds `tmnt-base.apk` and `tmnt-arcade-base.apk`:
+  the games' Android builds, without the assets and without a signature; and `font.bmp`, its window's
+  letters.
 
 Start the tool (a double click). Its window shows what the APK will be made of, each with its state (found,
 not found, or what is wrong with it):
@@ -19,10 +20,11 @@ not found, or what is wrong with it):
 - **ROM set**: `tmnt.zip` beside the tool;
 - **Launcher icon**: a square PNG or JPEG of yours, at most 2048 x 2048, which the launcher shows whole, its
   shape cutting the corners: `icon.jpg` beside the tool (taken by itself, by TMNT NSP too) or one dropped
-  on the window; else the game's own (the project.s wheel, tools/make_icon.py);
-- **The game's Android build**: `tmnt-base.apk` in the folder `android` beside the tool;
+  on the window; else the game's own (the project's, ports/sdl2/icon/tmnt.png);
+- **The game's Android build**: `tmnt-base.apk` in the folder `android` beside the tool (TMNT Arcade's,
+  `tmnt-arcade-base.apk`, beside it);
 - **Signing key**: yours, kept from before, or made with the first APK (below);
-- **Output folder**: where `TMNT.apk` goes, beside the tool unless you choose another.
+- **Output folder**: where `TMNT.apk` and `TMNT Arcade.apk` go, beside the tool unless you choose another.
 
 Drop your files on the window and it takes each by what it is: an `.apk` is the game's Android build, a
 `.png` or `.jpg` the icon, anything else the ROM set (`tmnt.zip`, or a folder of its files). **Choose the
