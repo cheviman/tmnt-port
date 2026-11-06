@@ -485,7 +485,7 @@ void job_none_after_draw_tile_picture(void)
 }
 
 /* the chosen players' boxes, and their scores */
-void draw_player_boxes(uint16_t box_flags, uint32_t *p_players, uint32_t *p_box_offset, uint32_t *p_player)
+void CONSOLE_ORIGINAL(draw_player_boxes)(uint16_t box_flags, uint32_t *p_players, uint32_t *p_box_offset, uint32_t *p_player)
 {
 	uint32_t players = *p_players;
 	uint32_t box_offset = *p_box_offset;

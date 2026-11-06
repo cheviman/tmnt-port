@@ -178,7 +178,7 @@ static void console_inputs(void)
 static void write_bmp(const char *path, const uint32_t *pixels, int width, int stride)
 {
 	const int height = TMNT_VIDEO_HEIGHT;
-	const uint32_t row_bytes = (uint32_t)width * 3u, size = 54u + row_bytes * (uint32_t)height;
+	const uint32_t row_bytes = ((uint32_t)width * 3u + 3u) & ~3u, size = 54u + row_bytes * (uint32_t)height;    /* (a BMP's rows: 4 bytes apart) */
 	uint8_t header[54] = { 'B', 'M' };
 	FILE *output = fopen(path, "wb");
 
@@ -206,6 +206,12 @@ static void write_bmp(const char *path, const uint32_t *pixels, int width, int s
 			const uint8_t bgr[3] = { (uint8_t)pixel, (uint8_t)(pixel >> 8), (uint8_t)(pixel >> 16) };
 
 			fwrite(bgr, 1, 3, output);
+			if (x == width - 1)
+			{
+				static const uint8_t pad[3] = { 0, 0, 0 };
+
+				fwrite(pad, 1, row_bytes - (uint32_t)width * 3u, output);
+			}
 		}
 	fclose(output);
 }

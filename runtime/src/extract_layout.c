@@ -4,7 +4,7 @@
  *                 byte of the ROM
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    05-11-2026
+ *    Modified:    06-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -15288,6 +15288,10 @@ static const extract_span data_spans[] = {
 	{0x001800u,0x001801u,EXTRACT_BYTES},
 	{0x048A98u,0x048A99u,EXTRACT_BYTES},
 	{0x04C3F2u,0x04C3F3u,EXTRACT_BYTES},
+	{0x04EFF0u,0x04EFF1u,EXTRACT_BYTES},
+	{0x0510F8u,0x0510F9u,EXTRACT_BYTES},
+	{0x051D84u,0x051D85u,EXTRACT_BYTES},
+	{0x052844u,0x052845u,EXTRACT_BYTES},
 };
 const extract_data_piece extract_data_pieces[] = {
 	{ "vectors", 0, 1, &data_spans[0], 2u },
@@ -16713,8 +16717,12 @@ const extract_data_piece extract_data_pieces[] = {
 	{ "intro_turtle_lands_jump_target", 11, 0, &data_spans[8645], 1u },
 	{ "second_player_through_a_stale_pointer", 11, 0, &data_spans[8646], 1u },
 	{ "flash_colour_past_its_table", 11, 0, &data_spans[8647], 1u },
+	{ "second_player_through_the_skateboard_soldier", 11, 0, &data_spans[8648], 1u },
+	{ "second_player_through_the_mouser", 11, 0, &data_spans[8649], 1u },
+	{ "second_player_through_rodney", 11, 0, &data_spans[8650], 1u },
+	{ "second_player_through_shredder", 11, 0, &data_spans[8651], 1u },
 };
-const size_t extract_data_piece_count = 1423;
+const size_t extract_data_piece_count = 1427;
 const extract_function extract_functions[] = {
 	{ 0x001000u, "reset" },
 	{ 0x001064u, "func_001064" },
@@ -22748,4 +22756,4 @@ const uint8_t extract_fm_velocities[128] = {
 };
 
 /* the tables' version: the first run's assets say which tables made them */
-const uint32_t extract_layout_version = 0xC2F3B009u;
+const uint32_t extract_layout_version = 0xB4622121u;

@@ -76,6 +76,9 @@ typedef struct
 	bool infinite_lives;       /* its lives kept up, */
 	bool original_turtles;     /* every turtle in a red bandana (guideline 18), */
 	bool same_turtle;          /* every player the turtle the first one picks (guideline 8), */
+	bool ronin;                /* Splinter Way's RONIN (guideline 7): one player, the enemies of four (modes.c) */
+	bool boss_rush;            /* Splinter Way's BOSS RUSH (guideline 6): the bosses one after another (modes.c), */
+	bool rush_crossing;        /* and an area being crossed to its boss */
 	bool level_pending;        /* and its area not yet set in the game started */
 	int choice_turtle[CONSOLE_PLAYERS];    /* the turtle choice: each player's turtle there (-1: not in it), */
 	bool choice_picked[CONSOLE_PLAYERS];   /* and whether he picked it (kept for the pause's RESTART) */
@@ -111,8 +114,23 @@ void presentation_overlay(console_picture *frame);
 void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]);
 void menu_overlay(console_picture *frame);
 
+/* Splinter Way's modes (modes.c), at each frame before the game's: RONIN's other boxes kept clear; BOSS RUSH's
+   crossing (its turtles' controls), its spawn lists' Foot soldiers passed (spawn_enemies), its picture */
+void ronin_frame(void);
+void boss_rush_start(void);
+void boss_rush_frame(void);
+bool boss_rush_crossing(void);
+void boss_rush_spawns(void);
+void boss_rush_overlay(console_picture *frame);
+
+/* WIDE's room for the turtles (wide.c): its sides, as far as the scroll's segment lets the picture go */
+void console_wide_turtle_room(int *left, int *right);
+
 /* WIDE on the menus' screens (wide.c), at each of their frames: OPTIONS' background past the board's 320 */
 void console_wide_menus(void);
+
+/* WIDE in an area's exit's picture (wide.c): its sides painted with its background's colour */
+void wide_picture_sides(console_picture *frame);
 
 /* ---- drawing over the frame (draw.c) ---- */
 

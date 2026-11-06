@@ -28,6 +28,7 @@
 #include "tmnt/video.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #define SPRITE_ENTRIES_END  (SPRITE_RAM + 0x400u)    /* the sprite RAM's 128 entries of 8 bytes */
 #define SCREEN_RIGHT        0x1A0                    /* the K051960's x of the screen's right edge */
@@ -38,18 +39,38 @@
 #define BLOCK_PIXELS        16                       /* a map's row: map_width bytes, 2 a block of 32 pixels */
 #define RING_PIXELS         512                      /* a map no wider than the K052109's ring repeats itself */
 #define LEAST(a, b)         ((a) < (b) ? (a) : (b))
+#define MOST(a, b)          ((a) > (b) ? (a) : (b))
 
 /* The layers the game draws as maps of blocks in the area being played, A 1 and B 2: those it draws whole
    (start_area_layers' start_layers_..., an exit's picture) or column by column as the scroll goes. The other layer's
    record keeps what an earlier area or screen left in it, no map of this one (an area of one map, as the street's):
    WIDE takes no room, ends nor columns from it */
 static unsigned layer_maps;
+static int drawn_first[2], drawn_last[2], drawn_y[2];
+static bool drawn_known[2];    /* (the ring's drawn columns: draw_shown_columns; at the height drawn_y) */
+static bool area_started;    /* (start_area_layers done for the area being played: its layers drawn) */
+
+/* A map the game loops (the skateboards' road: every 90 pixels its x goes back to show the same again) has no ends
+   for WIDE either: once its x has gone back by more than a scroll's step it takes no room (Sebas: "se mueve raro",
+   the picture moved at each loop). The Technodrome's lift goes round its shaft once through the ride, a jump of its
+   x back and its y on (technodrome_ride_lift), no map that loops: its columns past the board's drawn from the map at
+   each frame (draw_shown_columns: the right side's last ones came late as the picture panned), and off the lift its
+   map has its ends (the boss's room, its wall at the right) */
+#define LOOP_STEP           32
+static unsigned looping_maps;
+static int looping_last_x[2];
 
 /* And each one's first column the area shows: the board's column 0 where the scroll starts it (the map's columns
    before it, which the arcade never shows, may be blank: area 0's 32 of nothing before the building). The picture's
    left side shows no column before it: at an area's start the wider screen's columns are all at the right (Sebas:
    "correr todo para la derecha para que no aparezca"), back to the middle as the scroll brings the map */
 static int layer_first[2];
+
+/* At an area's start the picture's first columns may be the board's first 6, which the arcade never shows (the
+   K052109 shows layers A and B 6 pixels further than the fixed layer, and there the end of their maps; the cabinet's
+   bezel hid them, the window in 4:3 leaves them out): with WIDE all at the right they are at the picture's left
+   edge, black (in 16:9 the window's own crop leaves them out; 20:9 shows its whole picture) */
+static int wide_hidden;
 
 static void layer_is_map(int layer)
 {
@@ -65,10 +86,29 @@ static bool layer_has_map(int layer)
 void start_area_layers(void)
 {
 	layer_maps = 0;
+	looping_maps = 0;
+	drawn_known[0] = drawn_known[1] = false;
 	original_start_area_layers();
+	area_started = true;
+	looping_last_x[0] = (int)((LAYER(LAYER_A)->x >> 8) & 0xFFFFu);
+	looping_last_x[1] = (int)((LAYER(LAYER_B)->x >> 8) & 0xFFFFu);
 	layer_first[0] = (int)((LAYER(LAYER_A)->x >> 8) & 0xFFFFu) - LAYERS_DX;
 	layer_first[1] = (int)((LAYER(LAYER_B)->x >> 8) & 0xFFFFu) - LAYERS_DX;
 }
+
+/* An area's exit's picture (exit_cutscene set: April carried off, the villains with April, April's hug, the
+   skateboards' crash, Splinter's thanks and the turtles' drop before the Technodrome): the game clears the layers and
+   draws its picture into them from maps of its own, the layers' records left with the area's map and a place of 0.
+   WIDE takes nothing from them (no room, no ends, no columns: the area's map's columns drawn over the picture's,
+   Sebas: "se rompio la animacion"), the picture in the middle, its sides painted with its background's colour
+   (wide_picture_sides) */
+static bool exit_picture(void)
+{
+	return console.page == PAGE_GAME && game_state == GAME_STATE_GAME && scene == SCENE_EXIT && exit_cutscene != 0u;
+}
+
+enum { PICTURE_MIDDLE, PICTURE_AT_LEFT, PICTURE_AT_RIGHT };
+static int picture_place = PICTURE_MIDDLE;    /* (where it goes: read_picture_place) */
 
 /* The menus' pages (Sebas: "el menu tmb tiene que tener wide"): their screens with the columns more at both sides */
 static bool menu_page_wide(void)
@@ -82,7 +122,110 @@ static bool menu_page_wide(void)
    its right), the picture shows as much of it as there is and the rest at the other side (Sebas: "recorta de la
    izquierda y corre"): the game is the same, only what the picture shows of it moves, back to the middle as the
    scroll brings the map */
-void console_wide_sides(int *left, int *right)
+/* The picture's sides in a game's play, as they come to be (wide_sides_now: console_wide_frame moves them there) */
+/* The Technodrome's lift (update_layers_technodrome's ride): layer B, the shaft, scrolls on the diagonal (its x on as
+   its y back) and goes round it once, and its map past the shaft's band, which the arcade's screen never shows, is
+   black blocks: below the band they went by in the left side's bottom corner over and over, up to 75 pixels in;
+   above it, at the shaft's end as the lift slows, in the right side's top (Sebas: "corrélo", "arregla lo del pozo").
+   Through the ride the picture keeps off them: its sides no wider than where the black is, at the scroll's place
+   now and where it will be in the next LIFT_AHEAD_FRAMES (the shaft's map read along its way, the loop to come
+   counted), the rest at the other side, and what no side can take black at both (lift_bar: in 20:9 the band is
+   narrower than its picture). The sides and their bars move there by WIDE_PAN a frame, as the picture pans */
+#define TECHNODROME_STAGE   8u
+#define LIFT_RIDE_STEP      1u
+#define LIFT_AHEAD_FRAMES   80
+#define LIFT_LOOP_X         0xA28    /* (technodrome_ride_lift: there, with its loop to come, x goes back 0x400, y on) */
+#define LIFT_LOOP           0x400
+#define SCREEN_TOP          16       /* the K052109's first row shown (the board's 224 from it): layer B's y less it */
+#define TILE_PIXELS         8
+static int lift_bar_left, lift_bar_right;            /* (where they come to be) */
+static int lift_bar_left_now, lift_bar_right_now;    /* (and now) */
+
+/* The black tiles of a block of the shaft's map (bit 4 * row + column): its blocks past the band, all of one tile, and
+   those of its edges, part of it */
+#define LIFT_CACHE          256
+static struct { uint16_t entry, black; bool known; } lift_cache[LIFT_CACHE];
+static uint32_t lift_cache_blocks;
+
+static unsigned lift_black_tiles(uint32_t blocks, uint32_t entry)
+{
+	const unsigned slot = (entry ^ (entry >> 8)) & (LIFT_CACHE - 1u);
+	uint8_t attribute;
+	unsigned black = 0;
+
+	if (blocks != lift_cache_blocks)
+	{
+		memset(lift_cache, 0, sizeof(lift_cache));
+		lift_cache_blocks = blocks;
+	}
+	if (lift_cache[slot].known && lift_cache[slot].entry == entry)
+		return lift_cache[slot].black;
+	attribute = BLOCK_BYTE(blocks + (int16_t)entry);
+	for (unsigned tile = 0; tile < 16u; tile++)
+	{
+		const uint8_t code = BLOCK_BYTE(blocks + entry + 1u + tile);
+
+		if ((attribute == 0x14u && code == 0x2Du) || (attribute == 0x04u && code == 0xF8u))
+			black |= 1u << tile;
+	}
+	lift_cache[slot].entry = (uint16_t)entry;
+	lift_cache[slot].black = (uint16_t)black;
+	lift_cache[slot].known = true;
+	return black;
+}
+
+/* The room the sides have through the ride: no further than the shaft's first black tile past the board's columns,
+   in the screen of the scroll's place now and of those to come (8 pixels apart on its way). A map's row of blocks is
+   32 pixels of the shaft's height, its first row's tiles the highest: row r holds the heights 32 r + 1 to 32 r + 32,
+   and the screen's first row shows the height y - SCREEN_TOP */
+static void lift_room(int *room_left, int *room_right)
+{
+	const uint32_t record = LAYER_B, blocks = LAYER(record)->blocks;
+	const int map_pixels = LAYER(record)->map_width * BLOCK_PIXELS;
+	const int ahead = (int)LAYER(record)->x_speed * LIFT_AHEAD_FRAMES >> 8;
+	const int x = (int)((LAYER(record)->x >> 8) & 0xFFFFu), y = (int)((LAYER(record)->y >> 8) & 0xFFFFu);
+
+	for (int on = 0; on <= ahead; on += TILE_PIXELS)
+	{
+		int place_x = x + on, place_y = y - on;
+		int first, top, bottom;
+
+		if (layer_loops >= 0 && place_x >= LIFT_LOOP_X)
+		{
+			place_x -= LIFT_LOOP;
+			place_y += LIFT_LOOP;
+		}
+		first = place_x - LAYERS_DX;           /* (the map's pixel at the board's column 0) */
+		top = place_y - SCREEN_TOP;            /* (the heights the screen shows, its first row's and its last's) */
+		bottom = top - (TMNT_VIDEO_HEIGHT - 1);
+		for (int row = (top - 1) / 32; row >= 0 && 32 * row + 32 >= bottom; row--)
+		{
+			const int column_from = (first - *room_left) / 32;
+			const int column_to = (first + TMNT_VIDEO_WIDTH - 1 + *room_right) / 32;
+
+			for (int column = column_from < 0 ? 0 : column_from; column <= column_to && column * 32 < map_pixels; column++)
+			{
+				const uint32_t map = (uint32_t)row * LAYER(record)->map_width + (uint32_t)column * 2u + LAYER(record)->map;
+				const unsigned black = lift_black_tiles(blocks, MAP_ENTRY(map));
+
+				for (unsigned tile = 0; black && tile < 16u; tile++)
+				{
+					const int tile_top = 32 * row + 32 - TILE_PIXELS * (int)(tile >> 2);    /* (its highest row) */
+					const int board_x = 32 * column + TILE_PIXELS * (int)(tile & 3u) - first;
+
+					if (!(black & (1u << tile)) || tile_top - (TILE_PIXELS - 1) > top || tile_top < bottom)
+						continue;    /* (not black, or not in the screen's rows) */
+					if (board_x + TILE_PIXELS - 1 >= TMNT_VIDEO_WIDTH)
+						*room_right = LEAST(*room_right, board_x - TMNT_VIDEO_WIDTH < 0 ? 0 : board_x - TMNT_VIDEO_WIDTH);
+					if (board_x < 0)
+						*room_left = LEAST(*room_left, -(board_x + TILE_PIXELS) < 0 ? 0 : -(board_x + TILE_PIXELS));
+				}
+			}
+		}
+	}
+}
+
+static void wide_sides_target(int *left, int *right)
 {
 	static const uint32_t records[2] = { LAYER_A, LAYER_B };
 	static const int sides[WIDE_KINDS] = { 0, 48, 88 };
@@ -97,17 +240,50 @@ void console_wide_sides(int *left, int *right)
 		*left = *right = side;
 		return;
 	}
-	if (console.page != PAGE_GAME || game_state != GAME_STATE_GAME || (scene != SCENE_PLAY && scene != SCENE_EXIT))
+	wide_hidden = 0;
+	if (game_state != GAME_STATE_GAME || scene < SCENE_PLAY)
+		area_started = false;    /* (an area's set-up, its title, a story: its layers to come, at its play's entry) */
+	if (console.page != PAGE_GAME || game_state != GAME_STATE_GAME || (scene != SCENE_PLAY && scene != SCENE_EXIT)
+		|| !area_started)
+		return;    /* (the board's 320 until the area has drawn its layers: Sebas, "no arranca bien del borde") */
+	lift_bar_left = lift_bar_right = 0;
+	if (exit_picture())
+	{
+		*left = picture_place == PICTURE_AT_LEFT ? 0 : picture_place == PICTURE_AT_RIGHT ? 2 * side : side;
+		*right = 2 * side - *left;
 		return;
+	}
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const int width = LAYER(records[layer])->map_width * BLOCK_PIXELS;
 		const int first = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu) - LAYERS_DX;    /* (the board's column 0) */
+		const int from_start = first - (layer_first[layer] + LEFT_STRIPE);    /* (the arcade's first column shown) */
 
-		if (width <= RING_PIXELS || !layer_has_map(layer))
-			continue;    /* (a map that repeats itself has no ends; a record of no map, none) */
-		room_left = LEAST(room_left, first - layer_first[layer] < 0 ? 0 : first - layer_first[layer]);
+		if (width <= RING_PIXELS || !layer_has_map(layer) || (looping_maps & (1u << layer)))
+			continue;    /* (a map no wider than the ring repeats itself: no ends, nor one the game loops; a record of no
+			                map, none. Area 7's girders, 512 pixels, go round and round as its scroll goes: taken for a
+			                room, the picture went all to the left, Sebas: "en el 8 se movio mucho la barra") */
+		room_left = LEAST(room_left, from_start < 0 ? 0 : from_start);
+		if (-from_start > wide_hidden)
+			wide_hidden = -from_start;
 		room_right = LEAST(room_right, width - (first + TMNT_VIDEO_WIDTH) < 0 ? 0 : width - (first + TMNT_VIDEO_WIDTH));
+		if (last_segment != 0u)
+		{
+			/* the area's last section (its boss's): no further than the scroll goes there (x_min, x_max), which the
+			   arcade's screen never passes; the map past it may be anything (the first boss's apartment and
+			   Krang's room go on in another copy of the room: Sebas, "hay una fina linea", "se sigue yendo de
+			   margen") */
+			const int x = first + LAYERS_DX;
+			const int x_min = (int)((LAYER(records[layer])->x_min >> 8) & 0xFFFFu);
+			const int x_max = (int)((LAYER(records[layer])->x_max >> 8) & 0xFFFFu);
+
+			if (x >= x_min && x <= x_max)    /* (the scroll's: its layer inside them. Layer A off the Technodrome's
+			                                    lift, 2560 pixels before layer B, carries B's) */
+			{
+				room_left = LEAST(room_left, x - x_min);
+				room_right = LEAST(room_right, x_max - x);
+			}
+		}
 	}
 	*left = LEAST(side, room_left);
 	*right = LEAST(side, room_right);
@@ -115,17 +291,225 @@ void console_wide_sides(int *left, int *right)
 	*right += LEAST(more, room_right - *right);
 	more = 2 * side - *left - *right;
 	*left += LEAST(more, LEAST(room_left, TMNT_VIDEO_MAX_LEFT) - *left);
+	if (*left)
+		wide_hidden = 0;
+	if (stage == TECHNODROME_STAGE && layers_step == LIFT_RIDE_STEP && scene == SCENE_PLAY && (*left || *right))
+	{
+		const int shown = *left + *right;
+		int lift_left = LEAST(room_left, TMNT_VIDEO_MAX_LEFT), lift_right = LEAST(room_right, shown), bars;
+
+		lift_room(&lift_left, &lift_right);
+		*left = LEAST(*left, lift_left);
+		*right = LEAST(*right, lift_right);
+		*right += LEAST(shown - *left - *right, lift_right - *right);    /* (what a side cannot take, the other) */
+		*left += LEAST(shown - *left - *right, lift_left - *left);
+		bars = shown - *left - *right;
+		lift_bar_left = bars / 2;
+		lift_bar_right = bars - bars / 2;
+		*left += lift_bar_left;
+		*right += lift_bar_right;
+	}
+}
+
+/* The sides now: the menus' at once, a game's play's moving to where they come to be by WIDE_PAN a frame (the area's
+   last section takes them to the other side: the picture pans there, as a camera, rather than jumping), at once when
+   WIDE's sides come */
+#define WIDE_PAN            4
+static int wide_left_now, wide_right_now;
+
+void console_wide_sides(int *left, int *right)
+{
+	if (menu_page_wide() || console.page != PAGE_GAME)
+	{
+		wide_sides_target(left, right);
+		return;
+	}
+	*left = wide_left_now;
+	*right = wide_right_now;
+}
+
+static int pan_to(int now, int target)
+{
+	return now + (target > now ? LEAST(WIDE_PAN, target - now) : -LEAST(WIDE_PAN, now - target));
+}
+
+static void wide_sides_frame(void)
+{
+	int left, right;
+
+	wide_sides_target(&left, &right);
+	if (!left && !right)
+		wide_left_now = wide_right_now = lift_bar_left_now = lift_bar_right_now = 0;
+	else if ((!wide_left_now && !wide_right_now) || exit_picture())
+	{
+		wide_left_now = left;    /* (the sides come: at once; an exit's picture in the middle at once, as the game
+		                            clears the screen for it) */
+		wide_right_now = right;
+		lift_bar_left_now = lift_bar_left;
+		lift_bar_right_now = lift_bar_right;
+	}
+	else
+	{
+		wide_left_now = pan_to(wide_left_now, left);
+		wide_right_now = pan_to(wide_right_now, right);
+		lift_bar_left_now = pan_to(lift_bar_left_now, lift_bar_left);
+		lift_bar_right_now = pan_to(lift_bar_right_now, lift_bar_right);
+	}
+}
+
+int console_wide_hidden_left(void)
+{
+	return console.page == PAGE_GAME && lift_bar_left_now > wide_hidden ? lift_bar_left_now : wide_hidden;
+}
+
+int console_wide_hidden_right(void)
+{
+	return console.page == PAGE_GAME ? lift_bar_right_now : 0;
+}
+
+/* An exit's picture's edges (the first column the K052109 shows its layers at, LEFT_STRIPE, and the last), in a
+   frame the video drew ('pixels' its board's column 0): the colour most of their pixels have, and whether each edge
+   is all of it (its background) or half of it (what the picture shows there goes on past the screen: the turtle's
+   arm in April's hug, at the left) */
+#define EDGE_COLOURS        8
+#define EDGE_ALL(count)     ((count) * 20 >= TMNT_VIDEO_HEIGHT * 19)
+#define EDGE_HALF(count)    ((count) * 2 >= TMNT_VIDEO_HEIGHT)
+
+typedef struct
+{
+	uint32_t colour;
+	bool left_all, right_all, left_half, right_half;
+} picture_edges;
+
+static picture_edges read_edges(const uint32_t *pixels, int stride)
+{
+	uint32_t colours[EDGE_COLOURS];
+	int counts[EDGE_COLOURS][2], kinds = 0, best = 0;
+	picture_edges edges = { 0 };
+
+	for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+		for (int edge = 0; edge < 2; edge++)
+		{
+			const uint32_t colour = pixels[y * stride + (edge ? TMNT_VIDEO_WIDTH - 1 : LEFT_STRIPE)];
+			int kind = 0;
+
+			while (kind < kinds && colours[kind] != colour)
+				kind++;
+			if (kind == kinds)
+			{
+				if (kinds == EDGE_COLOURS)
+					continue;
+				colours[kinds] = colour;
+				counts[kinds][0] = counts[kinds][1] = 0;
+				kinds++;
+			}
+			counts[kind][edge]++;
+		}
+	for (int kind = 1; kind < kinds; kind++)
+		if (counts[kind][0] + counts[kind][1] > counts[best][0] + counts[best][1])
+			best = kind;
+	if (!kinds)
+		return edges;
+	edges.colour = colours[best];
+	edges.left_all = EDGE_ALL(counts[best][0]);
+	edges.right_all = EDGE_ALL(counts[best][1]);
+	edges.left_half = EDGE_HALF(counts[best][0]);
+	edges.right_half = EDGE_HALF(counts[best][1]);
+	return edges;
+}
+
+/* Where the picture goes: in the middle, its sides its background (Splinter's yellow, the black about April carried
+   off), or black where its edges are not (the villains' picture, the Technodrome the turtles drop before); at the
+   window's left edge when what it shows goes on past its left (April's hug: Sebas, its turtle's arm cut there and
+   the pink beyond), its background all at the right; at its right edge the other way. Read from the last frame drawn,
+   at each frame (console_wide_frame) */
+static int place_of(picture_edges edges)
+{
+	if (edges.right_all && !edges.left_all && edges.left_half)
+		return PICTURE_AT_LEFT;
+	if (edges.left_all && !edges.right_all && edges.right_half)
+		return PICTURE_AT_RIGHT;
+	return PICTURE_MIDDLE;
+}
+
+static void read_picture_place(void)
+{
+	int width;
+	const uint32_t *pixels = tmnt_video_wide_frame(&width);
+
+	picture_place = exit_picture() ? place_of(read_edges(pixels + tmnt_video_wide_left(), TMNT_VIDEO_MAX_WIDTH))
+		: PICTURE_MIDDLE;
+}
+
+/* Its sides, over the frame the video drew: its background's colour at an edge all of it, else black */
+void wide_picture_sides(console_picture *frame)
+{
+	picture_edges edges;
+
+	if (!exit_picture() || (!frame->left && !frame->right))
+		return;
+	edges = read_edges(frame->pixels + frame->left, frame->stride);
+	draw_fill(frame, PICTURE_FIRST(frame), 0, LEFT_STRIPE - PICTURE_FIRST(frame), TMNT_VIDEO_HEIGHT,
+		edges.left_all ? edges.colour : 0x000000u);
+	draw_fill(frame, TMNT_VIDEO_WIDTH, 0, frame->right, TMNT_VIDEO_HEIGHT, edges.right_all ? edges.colour : 0x000000u);
+}
+
+/* WIDE's room for the turtles (wide_turtles.c): the sides, no further than where the scroll's segment lets the
+   picture go (the layers' x_min and x_max, which the game's scroll keeps to): in a room the scroll holds (Krang's)
+   the turtles keep the arcade's limits (Sebas: "necesita un tope, porque se pasa"), where it goes on they walk the
+   sides */
+void console_wide_turtle_room(int *left, int *right)
+{
+	static const uint32_t records[2] = { LAYER_A, LAYER_B };
+
+	console_wide_sides(left, right);
+	if (boss_rush_crossing())
+	{
+		*left = *right = 0;    /* (BOSS RUSH's crossing, out of sight: the arcade's limits, the scroll pushed where the
+		                          arcade's turtles push it; in the sides the street's turn's wall held them short of
+		                          it: Sebas, "lo de bebop no lo arreglaste, empieza muy atras") */
+		return;
+	}
+	if (console.page == PAGE_GAME)
+	{
+		*left -= LEAST(*left, lift_bar_left_now);    /* (the lift's bars: not to be walked) */
+		*right -= LEAST(*right, lift_bar_right_now);
+	}
+	for (int layer = 0; layer < 2 && (*left || *right); layer++)
+	{
+		const int x = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu);
+		const int x_min = (int)((LAYER(records[layer])->x_min >> 8) & 0xFFFFu);
+		const int x_max = (int)((LAYER(records[layer])->x_max >> 8) & 0xFFFFu);
+
+		if (!layer_has_map(layer) || (looping_maps & (1u << layer)) || x < x_min || x > x_max)
+			continue;    /* (limits not the layer's: wide_sides_target) */
+		*left = LEAST(*left, x - x_min);
+		*right = LEAST(*right, x_max - x);
+	}
 }
 
 /* The video's WIDE for the next frame: its sides, and where layers A and B have a map (an area's start shows past the
    map's left end, its end past its right: their ring holds other columns there) */
 static void rebuild_layers(int left, int right);
+static void read_picture_place(void);
 
 void console_wide_frame(void)
 {
 	static const uint32_t records[2] = { LAYER_A, LAYER_B };
 	int left, right;
 
+	for (int layer = 0; layer < 2 && area_started; layer++)
+	{
+		const int x = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu);
+
+		if (x < looping_last_x[layer] - LOOP_STEP)
+			looping_maps |= 1u << layer;
+		looping_last_x[layer] = x;
+	}
+	if (stage == TECHNODROME_STAGE && layers_step >= LIFT_RIDE_STEP)
+		looping_maps = 0;
+	read_picture_place();
+	wide_sides_frame();
 	console_wide_sides(&left, &right);
 	rebuild_layers(left, right);
 	tmnt_video_set_wide(left, right);
@@ -134,8 +518,8 @@ void console_wide_frame(void)
 		const int width = LAYER(records[layer])->map_width * BLOCK_PIXELS;
 		const int x = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu);
 
-		if (width > RING_PIXELS && layer_has_map(layer) && !menu_page_wide())    /* (the menus' screens: the
-		                                                                              attract's, no area's map) */
+		if (width > RING_PIXELS && layer_has_map(layer) && !(looping_maps & (1u << layer))
+			&& !menu_page_wide() && !exit_picture())    /* (the menus' screens: the attract's, no area's map) */
 			tmnt_video_set_layer_window(1 + layer, LAYERS_DX - x, width + LAYERS_DX - x - 1);
 		else
 			tmnt_video_set_layer_window(1 + layer, -0x10000, 0x10000);
@@ -170,6 +554,11 @@ static bool write_sprite(uint32_t *sprite_place, uint8_t size_code, uint8_t code
 	return true;
 }
 
+/* The HURRY arrow (update_area_layers: object 49, its x the screen's 0x158 when it comes, past the board's last
+   enemies) at the wider screen's right as at the board's */
+#define HURRY_OBJECT        49
+#define HURRY_X             0x158u
+
 /* The title's TURTLES (object 12) waits past the board's right edge while the banner comes down (start_title_logo's
    place), then slides in (title_turtles_slide_in): with WIDE it waits past the wider screen's (Sebas: its T showed
    there), its slide the longer */
@@ -203,6 +592,8 @@ uint32_t draw_sprites(uint32_t object)
 		return original_draw_sprites(object);
 	if (menu_page_wide())
 		title_turtles_out_of_sight(side_right);
+	if (console.page == PAGE_GAME && OBJECT(OBJECT_ADDRESS(HURRY_OBJECT))->flags != 0u)
+		OBJECT(OBJECT_ADDRESS(HURRY_OBJECT))->screen_x = (uint16_t)(HURRY_X + side_right);    /* (Sebas) */
 	draw_list_place = draw_list_ADDRESS + (int16_t)draw_first;
 	sprite_place = SPRITE_RAM;
 	next_object = OBJECT_ADDRESS(0);
@@ -327,7 +718,8 @@ uint32_t draw_sprites(uint32_t object)
    When the scroll brings a column into view the game draws the map's column 8 pixels past its screen's right edge
    (or left), and when it brings a row, the row's 13 blocks of 32 pixels around its screen: with WIDE, the console
    draws after it the columns up to the wider screen's edge, and the row's blocks to its sides, from the same map and
-   blocks, the tiles only (not the floor map, which the game's play reads; nor the registers it carries). Never a
+   blocks: their tiles, and the floor map's cells where the game writes them (its floor variant: the play's walls and
+   holes, so the turtles walk the sides as the board), not the registers it carries. Never a
    column of the K052109's ring of 512 pixels that the wider screen shows of another place (what it shows spans 496),
    nor past the map's ends; a map no wider than the ring is in it whole already */
 
@@ -355,6 +747,16 @@ static void put_tile(uint32_t place, uint8_t value)
 	}
 }
 
+/* A cell of the floor map (the play's walls and holes, the game's ring of 512 pixels as the tiles'), as the floor
+   variant writes the column's: so a turtle or an enemy in WIDE's sides reads its floor as on the board */
+static void put_floor(uint32_t place, uint8_t value)
+{
+	if (checking < 0)
+		FLOOR_MAP_CELL(place)->cell = value;
+}
+
+#define FLOOR_MAP_END_BITS  0xFF1FFFu    /* the floor map's 0x800 bytes from floor_map_ADDRESS: its place wraps */
+
 static void draw_column(uint32_t record, uint32_t tiles, int column, uint32_t codes)
 {
 	const uint32_t column_x = (uint32_t)column << 8;
@@ -366,6 +768,8 @@ static void draw_column(uint32_t record, uint32_t tiles, int column, uint32_t co
 	uint32_t map = column_map_y * LAYER(record)->map_width + (((column_x & 0xFFE000u) << 4) >> 16)
 		+ LAYER(record)->map;
 	const uint32_t blocks = LAYER(record)->blocks;
+	const bool floor = codes == CODES_FLOOR;    /* (the floor's cells first in the blocks, as the floor variant) */
+	uint32_t floor_place = ((uint16_t)(ring_column + y_offset) >> 1) + floor_map_ADDRESS;
 	uint32_t map_entry, last_block;
 	uint8_t y_in_block;
 
@@ -381,6 +785,14 @@ static void draw_column(uint32_t record, uint32_t tiles, int column, uint32_t co
 		put_tile(tile_place + 0x81u, BLOCK_BYTE(last_block + block_column + codes + 0x4u));
 		put_tile(tile_place + 0x101u, BLOCK_BYTE(last_block + block_column + codes + 0x8u));
 		put_tile(tile_place + 0x181u, BLOCK_BYTE(last_block + block_column + codes + 0xCu));
+		if (floor)
+		{
+			put_floor(floor_place, BLOCK_BYTE(last_block + block_column + 1u));
+			put_floor(floor_place + 0x40u, BLOCK_BYTE(last_block + block_column + 5u));
+			put_floor(floor_place + 0x80u, BLOCK_BYTE(last_block + block_column + 9u));
+			put_floor(floor_place + 0xC0u, BLOCK_BYTE(last_block + block_column + 0xDu));
+			floor_place = ((floor_place + 0x100u) & FLOOR_MAP_END_BITS) | floor_map_ADDRESS;
+		}
 		map -= LAYER(record)->map_width;
 		tile_place = LINKED(tile_place, (uint16_t)(tile_place + 0x200u)) & ~0x9000u;
 	}
@@ -391,14 +803,20 @@ static void draw_column(uint32_t record, uint32_t tiles, int column, uint32_t co
 	last_block = blocks + map_entry;
 	put_tile(tile_place, BLOCK_BYTE(blocks + (int16_t)map_entry));
 	put_tile(tile_place + 1u, BLOCK_BYTE(last_block + block_column + codes));
+	if (floor)
+		put_floor(floor_place, BLOCK_BYTE(last_block + block_column + 1u));
 	if (4u - (y_in_block >> 3) == 1u)
 		return;
 	put_tile(tile_place + 0x80u, BLOCK_BYTE(blocks + (int16_t)map_entry));
 	put_tile(tile_place + 0x81u, BLOCK_BYTE(last_block + block_column + codes + 0x4u));
+	if (floor)
+		put_floor(floor_place + 0x40u, BLOCK_BYTE(last_block + block_column + 5u));
 	if (4u - (y_in_block >> 3) == 2u)
 		return;
 	put_tile(tile_place + 0x100u, BLOCK_BYTE(blocks + (int16_t)map_entry));
 	put_tile(tile_place + 0x101u, BLOCK_BYTE(last_block + block_column + codes + 0x8u));
+	if (floor)
+		put_floor(floor_place + 0x80u, BLOCK_BYTE(last_block + block_column + 9u));
 }
 
 /* Block 'block' (of 32 pixels, from the map's left) of the working layer's new row, as draw_new_row_and_column draws
@@ -423,6 +841,16 @@ static void draw_row_block(int block, uint32_t codes)
 	io_write8(tile_place + 3u, BLOCK_BYTE(last_block + block_row + codes + 1u));
 	io_write8(tile_place + 5u, BLOCK_BYTE(last_block + block_row + codes + 2u));
 	io_write8(tile_place + 7u, BLOCK_BYTE(last_block + block_row + codes + 3u));
+	if (codes == CODES_FLOOR)
+	{
+		const uint32_t floor_place = ((uint16_t)(tile_row + (uint32_t)(block & (RING_BLOCKS - 1)) * 8u) >> 1)
+			+ floor_map_ADDRESS;
+
+		put_floor(floor_place, BLOCK_BYTE(last_block + block_row + 1u));
+		put_floor(floor_place + 1u, BLOCK_BYTE(last_block + block_row + 2u));
+		put_floor(floor_place + 2u, BLOCK_BYTE(last_block + block_row + 3u));
+		put_floor(floor_place + 3u, BLOCK_BYTE(last_block + block_row + 4u));
+	}
 }
 
 /* Layers A and B (0, 1) by their tiles in the tile RAM (the program's addresses) */
@@ -437,6 +865,13 @@ static void draw_row_block(int block, uint32_t codes)
    WIDE's sides come (the play after the menus, the story screens) */
 static uint32_t layer_codes[2] = { CODES_PLAIN, CODES_PLAIN };
 static bool layer_rebuild[2];
+
+/* And the map's columns each layer's ring holds now (map pixels, a multiple of 8 to the last of a column): the 512 a
+   whole layer drawn holds from its page, what the game's scroll draws, what the console has drawn. A room the game
+   never scrolls past keeps only its whole draw's 512 though its map is wider (the first boss's apartment, Krang's:
+   768), and the wider screen showed the ring's other end past them (Sebas: "hay una fina linea", "se sigue yendo de
+   margen"): the columns it shows outside them are drawn from the map at each frame's end */
+/* (drawn_first, drawn_last, drawn_known: declared with the layers' maps, above) */
 
 /* After the game's new column or row of the working layer: the wider screen's */
 static void draw_wide_layer(uint32_t codes)
@@ -499,6 +934,9 @@ void draw_whole_layer(uint32_t tile_place)
 	layer_codes[LAYER_OF(tile_place)] = CODES_PLAIN;
 	layer_rebuild[LAYER_OF(tile_place)] = true;
 	layer_is_map(LAYER_OF(tile_place));
+	drawn_first[LAYER_OF(tile_place)] = (int)LAYER(WORKING_LAYER)->x_page * 256;    /* (its 16 blocks from its page) */
+	drawn_last[LAYER_OF(tile_place)] = drawn_first[LAYER_OF(tile_place)] + RING_PIXELS - 1;
+	drawn_known[LAYER_OF(tile_place)] = true;
 	layer_first[LAYER_OF(tile_place)] = (int)((LAYER(WORKING_LAYER)->x >> 8) & 0xFFFFu) - LAYERS_DX;
 }
 
@@ -508,6 +946,9 @@ void draw_whole_layer_and_floor(uint32_t tile_place)
 	layer_codes[LAYER_OF(tile_place)] = CODES_FLOOR;
 	layer_rebuild[LAYER_OF(tile_place)] = true;
 	layer_is_map(LAYER_OF(tile_place));
+	drawn_first[LAYER_OF(tile_place)] = (int)LAYER(WORKING_LAYER)->x_page * 256;
+	drawn_last[LAYER_OF(tile_place)] = drawn_first[LAYER_OF(tile_place)] + RING_PIXELS - 1;
+	drawn_known[LAYER_OF(tile_place)] = true;
 	layer_first[LAYER_OF(tile_place)] = (int)((LAYER(WORKING_LAYER)->x >> 8) & 0xFFFFu) - LAYERS_DX;
 }
 
@@ -535,12 +976,73 @@ static void rebuild_layer(int layer, int left, int right)
 		draw_column(record, tiles[layer], column, layer_codes[layer]);
 }
 
+/* Layer 'layer''s columns the wider screen shows that its ring does not hold (drawn_first, drawn_last), drawn from
+   its map; the span the game itself keeps (its screen's columns and its next ones, as its scroll goes) counted as
+   drawn, the span the ring holds at most 512 */
+static void draw_shown_columns(int layer, int left, int right)
+{
+	static const uint32_t records[2] = { LAYER_A, LAYER_B };
+	static const uint32_t tiles[2] = { LAYER_A_TILES, LAYER_B_TILES };
+	const uint32_t record = records[layer];
+	const int map_pixels = LAYER(record)->map_width * BLOCK_PIXELS;
+	const int x = (int)((LAYER(record)->x >> 8) & 0xFFFFu);
+	const int board_first = x - LAYERS_DX;
+	const int game_first = (board_first & ~7) - 8, game_last = board_first + TMNT_VIDEO_WIDTH + 8;
+	const int shown_first = (board_first - left) & ~7;
+	const int shown_last = board_first + TMNT_VIDEO_WIDTH - 1 + right;
+	const int y = (int)((LAYER(record)->y >> 8) & 0xFFFFu);
+
+	if (map_pixels <= RING_PIXELS || !layer_has_map(layer) || (looping_maps & (1u << layer)))
+		return;
+	if (drawn_known[layer] && y != drawn_y[layer])
+	{
+		/* the layer scrolled up or down: the rows the game drew since, and the console's beside them
+		   (draw_wide_layer), span the screen shown then, at most WIDE_PAN pixels less at a side; past it the ring holds
+		   its columns' older rows (the Technodrome's lift's left side, open again at the ride's end) */
+		drawn_first[layer] = MOST(drawn_first[layer], LEAST(game_first, shown_first + 8));
+		drawn_last[layer] = LEAST(drawn_last[layer], MOST(game_last, shown_last - 8));
+	}
+	drawn_y[layer] = y;
+	if (!drawn_known[layer] || game_first > drawn_last[layer] + 8 || game_last < drawn_first[layer] - 8)
+	{
+		drawn_first[layer] = game_first;    /* (a jump: what the game keeps) */
+		drawn_last[layer] = game_last;
+		drawn_known[layer] = true;
+	}
+	if (game_first < drawn_first[layer])
+		drawn_first[layer] = game_first;
+	if (game_last > drawn_last[layer])
+		drawn_last[layer] = game_last;
+	if (drawn_last[layer] - drawn_first[layer] >= RING_PIXELS)
+	{
+		if (game_last >= drawn_last[layer])
+			drawn_first[layer] = drawn_last[layer] - (RING_PIXELS - 1);
+		else
+			drawn_last[layer] = drawn_first[layer] + RING_PIXELS - 1;
+	}
+	for (int column = (drawn_last[layer] + 1 + 7) & ~7; column <= shown_last && column + 8 <= map_pixels; column += 8)
+	{
+		draw_column(record, tiles[layer], column, layer_codes[layer]);
+		drawn_last[layer] = column + 7;
+		if (drawn_last[layer] - drawn_first[layer] >= RING_PIXELS)
+			drawn_first[layer] = drawn_last[layer] - (RING_PIXELS - 1);
+	}
+	for (int column = ((drawn_first[layer]) & ~7) - 8; column + 7 >= shown_first && column >= 0; column -= 8)
+	{
+		draw_column(record, tiles[layer], column, layer_codes[layer]);
+		drawn_first[layer] = column;
+		if (drawn_last[layer] - drawn_first[layer] >= RING_PIXELS)
+			drawn_last[layer] = drawn_first[layer] + RING_PIXELS - 1;
+	}
+}
+
 /* At each frame's end: the layers drawn whole, or all of them when WIDE's sides come, rebuilt past the board's */
 static void rebuild_layers(int left, int right)
 {
 	static bool had_sides;
 	const bool sides = left || right;
-	const bool in_play = sides && console.page == PAGE_GAME;    /* (the menus' screens: the attract's, no area's map) */
+	const bool in_play = sides && console.page == PAGE_GAME && !exit_picture();    /* (the menus' screens: the
+	                                                                                   attract's, no area's map) */
 
 	if (sides && !had_sides)
 		layer_rebuild[0] = layer_rebuild[1] = true;
@@ -551,6 +1053,8 @@ static void rebuild_layers(int left, int right)
 			rebuild_layer(layer, left, right);
 			layer_rebuild[layer] = false;
 		}
+	for (int layer = 0; layer < 2 && in_play; layer++)
+		draw_shown_columns(layer, left, right);
 }
 
 /* ---- the menus' screens ----
@@ -607,10 +1111,11 @@ void console_wide_menus(void)
 /* The game's spawn_enemies (objects/spawns.c): the enemy it put in, moved past the wider screen's side */
 void spawn_enemies(void)
 {
-	const uint32_t record = spawn_next;
-	uint32_t object = 0, is_free = 0;
+	uint32_t record = 0, object = 0, is_free = 0;
 	int side_left, side_right;
 
+	boss_rush_spawns();    /* (BOSS RUSH's crossing: the Foot soldiers passed, modes.c) */
+	record = spawn_next;
 	console_wide_sides(&side_left, &side_right);
 	if ((!side_left && !side_right) || SPAWN_RECORD(record)->x == 0xFFFFu)
 	{
@@ -667,8 +1172,8 @@ int console_wide_check(char *text, size_t size)
 
 	text[0] = 0;
 	console_wide_sides(&left, &right);
-	if ((!left && !right) || console.page != PAGE_GAME)
-		return 0;
+	if ((!left && !right) || console.page != PAGE_GAME || exit_picture())
+		return 0;    /* (an exit's picture: no map's, its sides painted) */
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const uint32_t record = records[layer];

@@ -13,17 +13,16 @@
  *    0x91 (turtle_move, its pushes), holds the scroll while another turtle is at the other edge
  *    (turtle_other_at_edge) and keeps a knocked one in (the slides, turtle_knockback_arc, turtle_walk_off_screen):
  *    with WIDE the turtles walk into the wider screen's sides too (Sebas: "no puedo ir mas de esta parte para la
- *    izquierda"). These are the game's own (src/objects/turtles.c, the same C), those limits moved by the left side's
- *    columns and by the right side's, at most 48: the game draws the floor map only 8 pixels past the board's right
- *    edge (its new column), while at the left the floor map's ring keeps the columns the scroll has passed, so a turtle
- *    there reads its walls and holes as on the board. Without WIDE (or out of a game's play) the game's own run; but
+ *    izquierda", "le falta un poco para la derecha"). These are the game's own (src/objects/turtles.c, the same C),
+ *    those limits moved by the sides' columns, as far as the scroll's segment goes (console_wide_turtle_room: in a
+ *    room the scroll holds, Krang's, the arcade's limits): at the left the floor map's ring keeps the columns the scroll has
+ *    passed, and at the right the console writes the floor of the columns it draws past the game's (wide.c), so a
+ *    turtle there reads its walls and holes as on the board. Without WIDE (or out of a game's play) the game's own run; but
  *    turtle_run_all, whose Raphael's states are the turtle's (TURTLE_KIND: everyone the same turtle, same_turtle.c).
  */
 #include "console_internal.h"
 
 #include "game.h"
-
-#define RIGHT_MOST  48    /* the right side's columns the turtles may walk into: the board's 320 less 16 */
 
 /* WIDE's room for the turtles now, in their x's units (a pixel 0x100): false when there is none */
 static uint32_t turtle_left, turtle_right;
@@ -32,11 +31,11 @@ static bool turtle_limits(void)
 {
 	int left, right;
 
-	console_wide_sides(&left, &right);
+	console_wide_turtle_room(&left, &right);
 	if (console.page != PAGE_GAME)
 		left = right = 0;
 	turtle_left = (uint32_t)left << 8;
-	turtle_right = (uint32_t)(right < RIGHT_MOST ? right : RIGHT_MOST) << 8;
+	turtle_right = (uint32_t)right << 8;
 	return turtle_left || turtle_right;
 }
 

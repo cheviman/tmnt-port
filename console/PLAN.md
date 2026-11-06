@@ -268,7 +268,8 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   the left side's columns and the right side's, at most 48 (the game draws the floor map only 8 pixels past the
   board's right edge, while at the left its ring keeps the columns the scroll passed: a turtle there reads its walls
   and holes as on the board). Measured walking left in area 0: 0x90 in 4:3, 0x60 in 16:9, 0x38 in 20:9, the same
-  distance from the picture's edge; at the right 0x190. Without WIDE the game's own run.
+  distance from the picture's edge; at the right 0x190 (then: the whole side, see below). Without WIDE the game's
+  own run.
 
 - **8, the Konami code's level select, in the open** (Sebas: "habilita el menu sin poner el codigo, y despues lo
   escondemos", "pone konami code en el raiz"): the menu's KONAMI CODE, after OPTIONS: < AREA 1-10 > by the areas'
@@ -292,6 +293,123 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   of the ten functions that take the turtle's tables by it (console/same_turtle.c, with turtle_run_all in
   wide_turtles.c: TURTLE_KIND) take them by the chosen one. The boxes keep each slot's own turtle's face.
 
-Left for later: BOSS RUSH and RONIN (6, 7), the Konami code itself (8: the code opening KONAMI CODE, the line gone), save states (15), "Original turtles" as a mode of its own (18: in KONAMI CODE meanwhile), the
+- **Sebas's second tries** (05-11, night): the play's start keeps the board's 320 until the area has drawn its layers
+  (start_area_layers: the first wide frame was black, its boxes moved), and the arcade's first column shown at an
+  area's start is the board's 7th (the first 6 the K052109's, which the bezel hid): with WIDE all at the right they
+  are the picture's left edge, black (16:9's window leaves them out, 20:9's shows them); the HURRY arrow at the
+  wider screen's right as at the board's (its x 0x158, object 49); a map the game loops (the skateboards' road: its x
+  back by 90 pixels every 85 frames) takes no room, so the picture no longer moves at each loop (Sebas: "se mueve
+  raro, como que pierde foco"); the turtles walk the right side too ("le falta un poco para la derecha"): the console
+  writes the floor map's cells of the columns it draws past the game's (its floor variant's, the same cells), and
+  the sides' room for them stops where the scroll's segment does (the layers' x_min and x_max: in Krang's room,
+  which the scroll holds, the arcade's limit at the right; Sebas: "necesita un tope, porque se pasa"); "Original
+  turtles" on the turtle choice too (the four pictures' bandana pens 1-3) and in the boxes' faces (their cells in
+  Raphael's box's bank, the labels in their own colours).
+
+- **7, RONIN** (console/modes.c): one player alone against what four turtles would have. The game's enemies come
+  by its difficulty (update_difficulty: the DIP switch's, one more for each player in play, the play's time without
+  a knock-out, 7 at most), which picks the spawn lists' records that come (a record's flags' low nibble) and how many
+  enemies hold the scroll (enemy_limits by stage and difficulty): RONIN's counts the four players (NORMAL's 2, RONIN's
+  5 in area 0, measured); how the enemies share the turtles stays the one turtle's. No other player comes in (the
+  choice, a START in the game), and only his box is drawn (draw_player_boxes with his bit; the other boxes' cells
+  kept clear: Sebas, "en ronin, saquemos los cuadros"). `tests/console/ronin.txt`.
+- **6, BOSS RUSH, a first version** (console/modes.c): from area 1, each area crossed to its boss by the game's own
+  play, out of sight and as fast as the window goes (console_fast_forward: no pacing, a frame in eight shown, no
+  sound; BOSS RUSH and the area on black): the spawn lists' Foot soldiers passed, those the doors and the rest let
+  out off the screen for the game (which takes them off its own way; one riding stays), the turtles walking right
+  and attacking now and then, their health kept full. A boss's coming (the music changing to a boss's: 0xFE, 0x64,
+  0x6A) gives the players the play; the area over, the next is crossed. Measured from each area's start: Rocksteady
+  (area 1) in ~1000 frames, Baxter (3) ~5700, Rocksteady and Bebop (4) at once, Shredder (9) ~7000 (Krang fought on
+  the way); the street (2), the highway (5) and the building site (7), the Technodrome (8) stop in a section the
+  crossing does not get through (the scroll unmoved for 15 seconds of the play: the players play from there), the
+  skateboards (6, no boss) after 10000 frames (then: to their end, see below). Learned on the way: taking the
+  soldiers off outright left a skateboard on nothing (the game stopped reading its code as data); invulnerable turtles with the soldiers off the screen
+  stopped it in area 7; area 6 set up as 7 left the skateboards' state to area 7's Mousers. Still to see, playing it:
+  a stop in enemy_mouser_think (0510F8) in area 7 after the tests' area 6 ended by a poke (0600BD) mid-crossing;
+  and why the street's, the highway's, the building site's and the Technodrome's sections hold. `tests/console/boss_rush.txt`.
+
+- **Sebas's tries of BOSS RUSH and WIDE** (06-11): the crossing ends at the boss's fight's music (0x64, 0x6A), not at
+  the 0xFE that stops the music as he comes (Stockman waits there for the last enemies: "me aparecieron ninjas
+  antes"), the soldiers kept off through his entrance; the highway (area 5), which has no boss, over as its play
+  starts (area_cleared, as the scenarios end area 9), the skateboards (6), with none either, crossed to their own
+  end; on the crossing's black the area and its boss's name (ROCKSTEADY, BEBOP, BAXTER STOCKMAN, BEBOP AND
+  ROCKSTEADY, ROCK SOLDIER for the building site's and the Technodrome's, which the decompilation names by what
+  they are, KRANG AND SHREDDER: Sebas, "el nombre del enemigo"). WIDE in the area's last section (last_segment: its
+  boss's) goes no further than the scroll there (x_min, x_max), which the arcade's screen never passes: the first
+  boss's apartment and Krang's room are maps of 768 whose ring holds the 512 the game drew, and past the room's
+  wall the picture showed the ring's other end, the room again ("hay una fina linea", "se sigue yendo de margen");
+  the sides pan there by 4 pixels a frame rather than jump. And the columns a layer's ring does not hold that the
+  wider screen shows are drawn from its map at each frame's end (drawn_first, drawn_last). The headless's BMPs'
+  rows padded to 4 bytes (a picture of 442 columns).
+
+- **WIDE's checks gone over** (06-11, Sebas: "revisalo"): the skateboards' end (scene 5) is the van's fall drawn
+  into layer A by the game, black around it as in the arcade (its columns 30 to 285 in both widths); the
+  Technodrome's lift's layer A columns that --wide-check counts are never drawn by the game and show nothing. But its
+  shaft (layer B on the diagonal, round and round through the ride) has black past its band, which the arcade's
+  screen never shows: its blocks past the band are black (attribute 14 tile 2D below it, 04 F8 above), below it
+  in the left side's bottom corner over and over, up to 75 pixels in, and above it at the shaft's end, in the right
+  side's top as the lift slows ("corrélo", "arregla lo del pozo, no me lo dejes si lo viste"). Through the ride the
+  sides go no further than the first black tile the shaft's map has past the board, where the scroll is and where it
+  will be in the next 80 frames (lift_room: the map read along its way, its loop counted), the rest at the other
+  side, and what no side can take black at both (in 20:9 the band is narrower than the picture: some 36 at each
+  side); sides and bars move by WIDE_PAN. Checked every 4 frames of the ride in both widths: nothing black past the
+  bars but the game's own (its rolling balls, the machines' slots). The shaft is no map that loops (its one loop
+  through the ride is a jump), so its columns past the board are drawn from the map at each frame; and the columns
+  the console has drawn are known only at the layer's height they were drawn at (drawn_y: past the screen's, a layer
+  scrolled up or down keeps its older rows there; the left side, open again at the ride's end, showed one). And the
+  boss's room after the lift showed past its wall in 16:9: layer A, 2560 pixels before B there, carries B's scroll
+  limits, which the last section's rule (and the turtles' room) now take only from a layer inside them.
+- **Sebas's tries** (06-11): area 7's girders (layer A, a map of 512 that repeats as the scroll goes) were taken
+  for a room, and the picture went all to the left from x 198 on ("en el 8 se movio mucho la barra"): a map no wider
+  than the ring repeats itself again, no room nor window (the first boss's apartment, where it started, is a map of
+  1536, held by the last section's rule). OPTIONS' version, at the picture's right edge, was cut by 16:9's window,
+  which shows the middle 398 of its 416 ("en options esta mal la version"): it is 9 columns in there.
+- **BOSS RUSH to each boss** (Sebas: "el boss rush de bebop arranca muy atras", "yo solo quiero jefe", "como la
+  zona de krang y como hiciste con rocksteady"): what held the crossing, area by area. The street (2): its scroll
+  segment at 1304 ends at a height (768 to 384), and the turtles walked right only: they walk down or up there, by
+  the segment's end (crossing_way). The building site (7): the drill's Mousers (off the screen, which their think
+  takes as the soldiers' does) and drones (destroyed as by a last hit, flying_drone_struck). The Technodrome (8):
+  its turrets on their rails (turret_struck), Rodney (off the screen), the freeze nozzles (freeze_nozzle_struck);
+  a wall at a turtle's right, which it walks along, down, then up (its contacts' 08); on the lift the turtles stand
+  still, and the ride starts on the players' diagonal (x and y summing 0xC8100: the crossing's walk along the top
+  had left it two pixels short, and at the ride's end y went under the map's first row, the game stopping there).
+  The final area (9) is Krang's fight from its start (his music, 0x62): no crossing. Each area from 1 to 9 tried
+  from its start: the crossing ends at the boss's music in 1, 2, 3, 4, 7 and 8, the highway (5) is over at once.
+  The skateboards' road (6), with no boss, is over as its play starts, as the highway. Crossing it the game had
+  stopped at frame 5430 reading its code at 04EFF0 as data: enemy_think's second player through a stale pointer
+  (with one player the compare's +4 goes through the address the dispatcher called the handler at,
+  enemy_skateboard_think's, 04EFEC), the decompilation's 048A98 again with another handler; and the Mousers' at
+  0510F8 had stopped area 7 when the road was skipped before. The arcade's too (TMNT Arcade with one player could
+  stop there): fixed in the decompilation (Sebas: "sí, arreglalo"), its data_assets.py's CODE_READ_AS_DATA with the
+  fifth byte of each handler the dispatcher sends there (the skateboard soldier's 8A, the Mousers', Rodney's and
+  Shredder's 2F): its 18 scenarios identical, its assets the ROM's byte for byte; with them the road crossed, then
+  skipped, area 7 crossed to its boss, no stop.
+- **Sebas's tries of BOSS RUSH** (06-11): with WIDE the street's crossing ended at x 1272, the rest of the street and
+  its 18 enemies left to play ("lo de bebop no lo arreglaste, empieza muy atras"): in WIDE's right side the turtle
+  came to the turn's wall before the scroll came to the turn, and against a wall the game pushes no scroll. Through
+  the crossing, out of sight, the turtles keep the arcade's limits (console_wide_turtle_room). Every area tried from
+  its start in the three widths: the crossing ends at its boss's music. And crossing_way read the area's scroll
+  segment through its set-up too, when scroll_segment is still the last area's, past this one's list's end (from
+  Bebop's area to the next the game stopped reading a record there): only in its play now. F10, the next boss at
+  once, for trying the mode (Sebas: "con un F se pase de jefe", "es para probar"): the area over as the scenarios
+  end it, Krang's room too (its exit, the Technodrome blown up, the epilogue, the staff and the menu). Taken out
+  once tried ("podes sacar el f10"): an area ended with its enemies alive, and the exit, which runs no objects but
+  draws them, showed them standing, in its picture's colours (the villains' picture: Sebas, "se piso la capa").
+- **Sebas's tries of BOSS RUSH and WIDE** (06-11): BEBOP AND ROCKSTEADY, wider than the screen in the big letters,
+  was written in the small ones ("el tamaño del texto del jefe 5 ... es distinto"): in two lines of the big ones now,
+  broken at its space nearest its middle. Krang's room has nothing to cross, and its set-up and title (which BOSS
+  RUSH's game skips) took 12 frames: his name went by unseen ("krang no lo anuncia"). The console's area_setup_done
+  waits on the set-up's last step 150 frames there, his name on the black. An area's exit's picture (exit_cutscene
+  set: April carried off, the villains with April, April's hug, the skateboards' crash, Splinter's thanks, the turtles'
+  drop before the Technodrome) is drawn into the layers from maps of its own, the layers' records left with the
+  area's map: WIDE drew the area's columns past the board's over the picture's, and took its room from them (April's
+  hug all at the left, the car street's TCRI building at its right: "se rompio la animacion"). Through the picture
+  WIDE takes nothing from the layers; its sides are its background's colour where its edges are all of one
+  ("pintemoslo del fondo de color": April's pink, Splinter's yellow, the black about April carried off), black where
+  they are not (the villains' octagon, the Technodrome), and the picture at the window's edge where what it shows
+  goes on past it (April's turtle's arm, at the left: the pink all at the right). The place is read from the last
+  frame drawn: at the picture's first frame it shows in the middle, on the black before it.
+
+Left for later: the Konami code itself (8: the code opening KONAMI CODE, the line gone), save states (15), "Original turtles" as a mode of its own (18: in KONAMI CODE meanwhile), the
 multiplayer over the local network (20); a turtle chosen by a player who comes in during a game (today the first
 slot free); Kenney Mini still loaded and nothing drawing with it.

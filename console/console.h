@@ -71,6 +71,10 @@ typedef struct
    calls it on each frame it shows or writes */
 void console_overlay(console_picture *picture);
 
+/* True while the game runs out of sight (BOSS RUSH crossing an area to its boss): the port runs its frames as fast as
+   it can, showing one in eight, without their sound */
+bool console_fast_forward(void);
+
 /* True once the menu's EXIT was picked: the port closes the game */
 bool console_quit_requested(void);
 
@@ -168,6 +172,11 @@ extern console_settings_t console_settings;
 /* WIDE's columns more at the left and the right of the board's 320 now (0: none; in a game only), for the port to
    set on the video before each frame (tmnt_video_set_wide) and show */
 void console_wide_sides(int *left, int *right);
+
+/* The picture's first columns WIDE leaves black (an area's start: the board's first 6, which the arcade never shows),
+   and its last (the Technodrome's lift in 20:9: its shaft's map past its band) */
+int console_wide_hidden_left(void);
+int console_wide_hidden_right(void);
 
 /* The port calls it before each frame: WIDE's sides and the layers' maps' ends onto the video */
 void console_wide_frame(void);

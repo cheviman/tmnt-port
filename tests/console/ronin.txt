@@ -1,0 +1,11 @@
+# tmnt_console_headless --actions: SPLINTER WAY > RONIN, Leonardo: one player alone (another's START brings no one
+# in), the difficulty four players give (the DIP switch's NORMAL, 1, and 4: 5, with the play's time). With --script
+# tests/console/skip_intro.txt
+520 down
+530 accept
+560 down
+570 down
+580 accept
+700 start 2
+760 accept
+1600 start 3

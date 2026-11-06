@@ -1,0 +1,6 @@
+# tmnt_console_headless --actions: SPLINTER WAY > BOSS RUSH, Leonardo: from area 1, each area crossed to its boss
+520 down
+530 accept
+560 down
+570 accept
+760 accept

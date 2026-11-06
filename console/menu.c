@@ -41,7 +41,9 @@
 #define VERSION_TEXT        "V" TMNT_VERSION    /* OPTIONS: the port's release, at the bottom right (Sebas: as
                                             outrunners-port's) */
 #define VERSION_Y           212
-#define VERSION_MARGIN      3            /* its right edge, to the screen's */
+#define VERSION_MARGIN      3            /* its right edge, to the window's */
+#define WIDE_16_9_CROP      9            /* 16:9's picture: 416 columns, the window's the middle 398 (ports/sdl2's
+                                            view_width; Sebas: "en options esta mal la version", cut at the right) */
 #define PAGE_Y              28           /* OPTIONS' heading, and its pages' */
 #define LINE_Y              52           /* and its first line */
 #define LINE_STEP           13
@@ -71,7 +73,7 @@
 #define PICTURE_TOP         56
 #define PICTURE_WIDTH       64
 #define PICTURE_HEIGHT      128
-#define CHOICE_HEADING_Y    42
+#define CHOICE_HEADING_Y    44
 #define CHOICE_NAME_Y       188
 #define CHOICE_JOIN_Y       206          /* PRESS START TO JOIN, under the pictures */
 #define PAUSE_Y             76           /* the pause's PAUSE, and its lines under it */
@@ -89,7 +91,7 @@ enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITE
 /* (KONAMI CODE in the open while its level select is tried, after OPTIONS, so that the others keep their places:
    Sebas, "pone konami code en el raiz"; the code itself will open it, and the line go) */
 static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "OPTIONS", "KONAMI CODE", "EXIT" };
-static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN", "BACK" };
+static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN", "BACK" };    /* (RONIN: modes.c) */
 /* LEVEL SELECT: the areas by number (the game's 0-9 shown 1-10) and by what they are (the scenarios' names) */
 #define AREAS               10
 static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET", "SEWER", "PARKED CARS", "HIGHWAY",
@@ -236,6 +238,8 @@ static void menu_page(uint32_t pressed)
 	{
 		case MENU_ARCADE:
 			console.level_select = false;
+			console.ronin = false;
+			console.boss_rush = false;
 			choose_turtle(MODE_ARCADE);
 			break;
 		case MENU_SPLINTER_WAY:
@@ -262,9 +266,13 @@ static void way_page(uint32_t pressed)
 	}
 	if (!picked(pressed))
 		return;
-	if (console.choice == WAY_NORMAL)
+	if (console.choice == WAY_NORMAL || console.choice == WAY_RONIN || console.choice == WAY_BOSS_RUSH)
 	{
 		console.level_select = false;
+		console.ronin = console.choice == WAY_RONIN;    /* (RONIN: one player alone, the enemies of four) */
+		console.boss_rush = false;
+		if (console.choice == WAY_BOSS_RUSH)
+			boss_rush_start();    /* (modes.c: from area 1, each area crossed to its boss) */
 		choose_turtle(MODE_SPLINTER_WAY);
 	}
 	else if (console.choice == WAY_BACK)
@@ -288,6 +296,8 @@ static void level_select_page(uint32_t pressed)
 	if (picked(pressed) && console.choice == LEVEL_START)
 	{
 		console.level_select = true;
+		console.ronin = false;
+		console.boss_rush = false;
 		choose_turtle(MODE_SPLINTER_WAY);
 		return;
 	}
@@ -627,7 +637,7 @@ static void start_chosen_game(void)
 			console_slot_of[player] = console.choice_turtle[player];
 			console_join(console.choice_turtle[player]);
 		}
-	console.level_pending = console.level_select;    /* (its area, once the game has started) */
+	console.level_pending = console.level_select || console.boss_rush;    /* (its area, once the game has started) */
 	console_same_turtle = console.level_select && console.same_turtle && console.choice_turtle[console.chooser] >= 0
 		? console.choice_turtle[console.chooser] : -1;    /* (everyone the turtle the first player picked) */
 	open_page(PAGE_STARTING, 0);
@@ -656,6 +666,8 @@ static void choice_page(const uint32_t player_pressed[CONSOLE_PLAYERS])
 
 		if (*turtle < 0)
 		{
+			if (console.ronin)
+				continue;    /* (RONIN: its one player alone) */
 			if (shown && picked(pressed) && (*turtle = free_turtle(player, 0, 1)) >= 0)
 				queue_sound_command(MOVE_SOUND);
 			continue;
@@ -878,6 +890,12 @@ static void option_line(const char *const *items, int index, const char *value)
 		draw_game_letters(target, LINE_RIGHT - draw_game_letters_width(value, 1), y, 1, colour, value);
 }
 
+/* The picture's end as the window shows it: 16:9's less WIDE_16_9_CROP */
+static int shown_end(const console_picture *picture)
+{
+	return PICTURE_END(picture) - (picture->right && console_settings.wide == WIDE_16_9 ? WIDE_16_9_CROP : 0);
+}
+
 static void options_overlay(void)
 {
 	char value[40];
@@ -894,8 +912,8 @@ static void options_overlay(void)
 	option_line(option_items, OPTION_VOLUME, value);
 	option_line(option_items, OPTION_SOUND_TEST, NULL);
 	option_line(option_items, OPTION_BACK, NULL);
-	draw_game_letters(target, PICTURE_END(target) - VERSION_MARGIN - draw_game_letters_width(VERSION_TEXT, 1), VERSION_Y,
-		1, GAME_LETTERS_OWN, VERSION_TEXT);    /* (of WIDE's wider picture too) */
+	draw_game_letters(target, shown_end(target) - VERSION_MARGIN - draw_game_letters_width(VERSION_TEXT, 1), VERSION_Y, 1,
+		GAME_LETTERS_OWN, VERSION_TEXT);    /* (of WIDE's wider picture too, as the window shows it) */
 }
 
 static void video_overlay(void)
@@ -956,7 +974,7 @@ static void controls_overlay(void)
 		console.choice == CONTROLS_BACK ? CHOSEN_COLOUR : GAME_LETTERS_OWN, "BACK");
 }
 
-/* A frame around a turtle's picture, 'out' pixels further out than the first one */
+/* A frame around a turtle's picture, 'out' pixels further out than the first one (inwards when less than 0) */
 static void picture_frame(int x, int out, uint32_t colour)
 {
 	const int left = x - 2 - out, top = PICTURE_TOP - 2 - out;
@@ -998,6 +1016,10 @@ static void choice_overlay(void)
 	int in = 0, on[4] = { 0, 0, 0, 0 }, drawn[4] = { 0, 0, 0, 0 };
 	char level_heading[48];
 
+	if (console.ronin)
+		heading = "RONIN - CHOOSE YOUR TURTLE";
+	if (console.boss_rush)
+		heading = "BOSS RUSH - CHOOSE YOUR TURTLE";
 	if (console.level_select)
 	{
 		snprintf(level_heading, sizeof(level_heading), console.same_turtle ? "AREA %d - EVERYONE THE SAME TURTLE"
@@ -1037,13 +1059,13 @@ static void choice_overlay(void)
 			continue;
 		}
 		colour = player_colours[player];
-		picture_frame(x, drawn[turtle], colour);    /* (nested, a pixel apart: clear of the heading) */
+		picture_frame(x, -drawn[turtle], colour);    /* (nested inwards, a pixel apart: clear of the heading) */
 		if (console.choice_picked[player] || (console.page_frames & 16) == 0)
 			draw_game_letters(target, x + (PICTURE_WIDTH - on[turtle] * 24) / 2 + drawn[turtle] * 24 + 4, CHOICE_NAME_Y, 1,
 				colour, tags[player]);
 		drawn[turtle]++;
 	}
-	if (console.page == PAGE_CHOICE && in < CONSOLE_PLAYERS && (console.page_frames & 32) == 0)
+	if (console.page == PAGE_CHOICE && in < CONSOLE_PLAYERS && !console.ronin && (console.page_frames & 32) == 0)
 		draw_game_letters_centred(target, CHOICE_JOIN_Y, 1, GAME_LETTERS_OWN, "PRESS START TO JOIN");
 }
 

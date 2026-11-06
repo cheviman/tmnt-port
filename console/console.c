@@ -108,6 +108,8 @@ void console_set_mode_lives(int mode)
    used (the first coin and 3 more) */
 static bool start_open(int slot)
 {
+	if (console.ronin && console.page == PAGE_GAME && console_slot_of[console.chooser] != slot)
+		return false;    /* (RONIN: its one player alone, the other boxes' lines cleared) */
 	if (PLAYER(PLAYER_ADDRESS(slot))->lives != 0u)
 		return true;
 	return console.mode != MODE_SPLINTER_WAY || console_coins_put[slot] <= SPLINTER_WAY_CONTINUES;
@@ -130,8 +132,8 @@ static void start_pressed(int player)
 {
 	int slot = console_slot_of[player];
 
-	if (game_state != GAME_STATE_GAME)
-		return;
+	if (game_state != GAME_STATE_GAME || (console.ronin && slot < 0))
+		return;    /* (RONIN: its one player alone) */
 	if (slot < 0)
 	{
 		for (int free_slot = 0; free_slot < CONSOLE_PLAYERS && slot < 0; free_slot++)
@@ -159,6 +161,7 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 
 	console_keep_sprites();
 	level_select_frame();
+	ronin_frame();
 	if (arcade_test)
 	{
 		/* (the board's inputs as the script left them: its coins, and each player's buttons on his own slot) */
@@ -220,6 +223,7 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
 		tmnt_board.players[slot] = (uint8_t)~slots[slot];
 	tmnt_board.coins = (uint8_t)~coins;
+	boss_rush_frame();    /* (BOSS RUSH's crossing: its turtles' controls over the players') */
 }
 
 void console_actions(uint32_t pressed)
@@ -244,6 +248,8 @@ static void game_over(void)
 	{
 		console.level_select = false;    /* (RESTART: LEVEL SELECT's game again, in its area, its turtle) */
 		console_same_turtle = -1;
+		console.ronin = false;
+		console.boss_rush = false;
 	}
 	console.level_pending = false;
 }
@@ -252,22 +258,53 @@ static void game_over(void)
    (area_setup_variables, the area's set-up's first step: its stage and the rest by it), as the scenarios poke it;
    its lives kept up, each box drawn again when they are (players_credited, redraw_new_lives) */
 /* "Original turtles" (guideline 18: as the comics first drew them): each turtle keeps its moves and weapon, and its
-   bandana is Raphael's red. The turtles' sprites show with the palette RAM's sprite banks 0-3 (its colours 16-19 x 16:
-   Leonardo's, Michelangelo's, Donatello's, Raphael's, by their animations' pieces), whose pens 10 and 11 are the
-   bandana's (the other pens nearly the same in the four): each frame Raphael's two go into the other three as the
-   palette RAM has them (faded with them) */
+   bandana is Raphael's red, wherever the game shows it (Sebas: the turtle choice's pictures and the boxes' faces too).
+   The colours the palette RAM has (faded with the rest) of Raphael's go into the other three's each frame:
+   - in a game, the turtles' sprites: the sprite banks 0-3 (colours 16-19 x 16, by their animations' pieces),
+     Leonardo's to Raphael's, whose pens 10 and 11 are the bandana's;
+   - on the turtle choice (the coin's screen), the four pictures: their own sprite palettes in the same banks, the
+     bandana pens 1 to 3 (14 and 15 the picture's background);
+   - in both, the boxes' faces: the fixed layer's cells of each box's face (rows 4 and 5, its columns 5 to 8; the
+     face's tiles 92-9F and A2-AF) in Raphael's box's colours (the fixed layer's bank 4, the players' 1-4 alike but
+     the bandana's and the label's pens, which the label shares: the cells' bank, not the pens) */
 #define TURTLE_BANKS        16      /* the sprites' first palette, Leonardo's */
 #define RAPHAEL_BANK        19
-#define BANDANA_PENS        10      /* 10 and 11 */
+#define FIXED_LAYER_CELLS   0x100000u    /* the fixed layer as the program writes it: an attribute and a code a cell */
+#define FIXED_ROW_BYTES     0x80u
+#define BOX_COLUMNS         9       /* the boxes' cells: 9 columns from column 14, each */
+#define FIRST_BOX_COLUMN    14
+#define FACE_COLUMN         5       /* the face's 4 columns in its box, from the 5th */
+#define FACE_ROW            4       /* its 2 rows */
+#define RAPHAEL_BOX_BANK    4       /* the attribute's colour bits (5-7): the players' boxes 1-4 */
 
-static void red_bandanas(void)
+static void copy_pens(int from_bank, int to_bank, int pen, int count)
 {
-	for (int bank = TURTLE_BANKS; bank < RAPHAEL_BANK; bank++)
-		for (int pen = BANDANA_PENS; pen < BANDANA_PENS + 2; pen++)
-		{
-			tmnt_board.palette[(bank * 16 + pen) * 2] = tmnt_board.palette[(RAPHAEL_BANK * 16 + pen) * 2];
-			tmnt_board.palette[(bank * 16 + pen) * 2 + 1] = tmnt_board.palette[(RAPHAEL_BANK * 16 + pen) * 2 + 1];
-		}
+	for (int index = pen; index < pen + count; index++)
+	{
+		tmnt_board.palette[(to_bank * 16 + index) * 2] = tmnt_board.palette[(from_bank * 16 + index) * 2];
+		tmnt_board.palette[(to_bank * 16 + index) * 2 + 1] = tmnt_board.palette[(from_bank * 16 + index) * 2 + 1];
+	}
+}
+
+static void red_bandanas(bool choice)
+{
+	for (int turtle = 0; turtle < 3; turtle++)
+	{
+		if (choice)
+			copy_pens(RAPHAEL_BANK, TURTLE_BANKS + turtle, 1, 3);
+		else
+			copy_pens(RAPHAEL_BANK, TURTLE_BANKS + turtle, 10, 2);
+		for (int row = 0; row < 2; row++)
+			for (int column = 0; column < 4; column++)
+			{
+				const uint32_t place = FIXED_LAYER_CELLS + (uint32_t)(FACE_ROW + row) * FIXED_ROW_BYTES
+					+ (uint32_t)(FIRST_BOX_COLUMN + turtle * BOX_COLUMNS + FACE_COLUMN + column) * 2u;
+				const uint8_t attribute = io_read8(place), code = io_read8(place + 1u);
+
+				if ((code & 0xF0u) == (row ? 0xA0u : 0x90u) && (code & 0x0Fu) >= 2u && (attribute >> 5) == turtle + 1)
+					io_write8(place, (uint8_t)((attribute & 0x1Fu) | (RAPHAEL_BOX_BANK << 5)));
+			}
+	}
 }
 
 #define SCENE_CHOOSE_TURTLES    1u
@@ -275,16 +312,17 @@ static void red_bandanas(void)
 
 static void level_select_frame(void)
 {
-	if (!console.level_select || game_state != GAME_STATE_GAME)
+	if (console.level_select && console.original_turtles
+		&& (console.page == PAGE_CHOICE || console.page == PAGE_STARTING || game_state == GAME_STATE_GAME))
+		red_bandanas(game_state != GAME_STATE_GAME);
+	if ((!console.level_select && !console.boss_rush) || game_state != GAME_STATE_GAME)
 		return;
 	if (console.level_pending && (scene == SCENE_CHOOSE_TURTLES || (scene == SCENE_AREA_SETUP && scene_step == 0u)))
 	{
 		area = (uint8_t)console.level_area;
 		console.level_pending = false;
 	}
-	if (console.original_turtles)
-		red_bandanas();
-	for (int slot = 0; slot < CONSOLE_PLAYERS && console.infinite_lives; slot++)
+	for (int slot = 0; slot < CONSOLE_PLAYERS && console.infinite_lives && console.level_select; slot++)
 		if ((players_in_play & (1u << slot)) != 0u && PLAYER(PLAYER_ADDRESS(slot))->lives < SPLINTER_WAY_LIVES)
 		{
 			PLAYER(PLAYER_ADDRESS(slot))->lives = SPLINTER_WAY_LIVES;
@@ -434,12 +472,22 @@ void console_overlay(console_picture *frame)
 		presentation_overlay(frame);
 	else
 		menu_overlay(frame);
+	boss_rush_overlay(frame);
 	/* the picture's first 6 columns black: the K052109 shows layers A and B 6 pixels further than the fixed layer
 	   (tmnt.cpp: -90 and -96), and there they show the end of their maps, which the game never draws for that
 	   place; the cabinet's monitor hid them under its bezel (the arcade build keeps them, as MAME draws them). The
 	   window leaves them out; WIDE's picture shows them, with what lies past them (wide.c) */
 	if (!frame->left && !frame->right)
 		draw_fill(frame, 0, 0, LEFT_STRIPE, TMNT_VIDEO_HEIGHT, 0x000000u);
+	else
+	{
+		wide_picture_sides(frame);
+		if (console_wide_hidden_left())
+			draw_fill(frame, PICTURE_FIRST(frame), 0, console_wide_hidden_left(), TMNT_VIDEO_HEIGHT, 0x000000u);
+		if (console_wide_hidden_right())    /* (the Technodrome's lift in 20:9, wide.c) */
+			draw_fill(frame, PICTURE_END(frame) - console_wide_hidden_right(), 0, console_wide_hidden_right(),
+				TMNT_VIDEO_HEIGHT, 0x000000u);
+	}
 }
 
 bool console_quit_requested(void)
@@ -492,11 +540,11 @@ void console_describe(char *text, size_t size)
 	static const char *const pages[] = { "presentation", "menu", "splinter way", "level select", "options", "video",
 		"sound test", "controls", "choice", "starting", "game" };
 
-	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u%s%s%s",
+	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u, difficulty %u%s%s%s%s",
 		pages[console.page],
 		console.mode == MODE_SPLINTER_WAY ? "splinter way" : "arcade", console.turtle, console_slot_of[0],
 		console_slot_of[1], console_slot_of[2], console_slot_of[3], console_coins_put[0], console_coins_put[1],
-		console_coins_put[2], console_coins_put[3], (unsigned)lives_per_credit, (unsigned)area,
+		console_coins_put[2], console_coins_put[3], (unsigned)lives_per_credit, (unsigned)area, (unsigned)difficulty,
 		console.level_select ? (console.infinite_lives ? ", level select, infinite lives" : ", level select") : "",
-		console.level_select && console.original_turtles ? ", original turtles" : "", console_same_turtle >= 0 ? ", same turtle" : "");
+		console.level_select && console.original_turtles ? ", original turtles" : "", console_same_turtle >= 0 ? ", same turtle" : "", console.ronin ? ", ronin" : console.boss_rush ? (console.rush_crossing ? ", boss rush, crossing" : ", boss rush") : "");
 }

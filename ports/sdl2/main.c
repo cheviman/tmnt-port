@@ -1007,6 +1007,8 @@ static void wait_for_frame(void)
 	}
 }
 
+#define FAST_FORWARD_SHOWN  8u
+
 static void on_frame_done(void)
 {
 	read_events();
@@ -1030,6 +1032,21 @@ static void on_frame_done(void)
 		read_controls();
 #endif
 	game_end_frame();
+#ifdef TMNT_CONSOLE
+	if (console_fast_forward())
+	{
+		/* (BOSS RUSH crossing an area: as fast as it goes, a frame in eight shown, no sound) */
+		static unsigned skipped;
+
+		if (++skipped % FAST_FORWARD_SHOWN != 0u)
+		{
+			read_events();
+			return;
+		}
+		show_frame();
+		return;
+	}
+#endif
 	queue_sound();
 	if (hashes)
 		fprintf(hashes, "%" PRIu64 " %016" PRIx64 "\n", tmnt_board.frame, tmnt_state_hash());

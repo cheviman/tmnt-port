@@ -154,7 +154,7 @@ void area_setup_clear_objects(void)
 }
 
 /* on to the area's story and title */
-void area_setup_done(void)
+void CONSOLE_ORIGINAL(area_setup_done)(void)
 {
 	scene++;
 	scene_step = 0u;
@@ -633,7 +633,7 @@ void flicker_fire_priority(void)
 }
 
 /* the enemies' level from the settings, the players in play and the play time */
-void update_difficulty(void)
+void CONSOLE_ORIGINAL(update_difficulty)(void)
 {
 	uint16_t count = 0;
 	uint16_t t1 = 0;
