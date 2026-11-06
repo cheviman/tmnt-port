@@ -48,7 +48,9 @@
  *    TMNT: no coins; Enter (player 1) and a controller's Start are START, which brings a player in; in the
  *    menus the arrows move, attack (Z, A) picks, jump (X, B) or Escape goes back; F3 the next kind of pixels.
  */
+#ifndef TMNT_HANDHELD    /* (a device makes nothing from the ROM set: its assets pack comes with the game) */
 #include "first_run.h"
+#endif
 
 #include "game/assets.h"
 #include "game/extract.h"
@@ -65,6 +67,11 @@
 
 #include <SDL.h>
 
+#ifdef __SWITCH__
+#include <switch.h>        /* romfsInit: the game's own files, its .nsp's or .nro's */
+#include <sys/stat.h>
+#endif
+
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -72,6 +79,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef TMNT_CONSOLE
+#define FILE_NAME           "tmnt"
+#else
+#define FILE_NAME           "tmnt-arcade"
+#endif
+#ifdef __SWITCH__
+#define SWITCH_FOLDER       "sdmc:/switch/" FILE_NAME    /* the game's folder on the SD card: its settings, its log */
+#endif
 #ifdef TMNT_CONSOLE
 #define TITLE               "TMNT"
 #define SETTINGS_FILE       "tmnt.ini"
@@ -1133,7 +1148,9 @@ static void on_frame_done(void)
    the executable's may not be written. The caller frees it (SDL_free) */
 static char *saves_folder(void)
 {
-#ifdef _WIN32
+#ifdef __SWITCH__
+	return SDL_strdup(SWITCH_FOLDER "/");
+#elif defined(_WIN32)
 	return SDL_GetBasePath();
 #else
 	return SDL_GetPrefPath("", "TMNT");
@@ -1167,6 +1184,26 @@ static bool assets_of_another_version(const char *folder)
 	return other;
 }
 
+static void fail(const char *message);
+
+#ifdef TMNT_HANDHELD
+/* A device's assets: the pack its package carries (in its romfs on the Switch); none, and the game says so */
+static bool find_assets(char *found, size_t size)
+{
+#ifdef __SWITCH__
+	snprintf(found, size, "romfs:/" GAME_PACK_FILE);
+#else
+	char *base = SDL_GetBasePath();
+
+	snprintf(found, size, "%s" GAME_PACK_FILE, base ? base : "");
+	SDL_free(base);
+#endif
+	if (!exists(found))
+		fail("The game's assets (" GAME_PACK_FILE ") are not in this package: make it again with its maker and your "
+			"ROM set");
+	return true;
+}
+#else
 /* On macOS the folder the .app is in, where 'base' (SDL_GetBasePath) is its Resources: where a player puts the ROM
    set or the assets beside the game, as beside an executable elsewhere (outrunners-port's). 0 elsewhere */
 static int app_folder(const char *base, char *folder, size_t size)
@@ -1239,6 +1276,7 @@ static bool find_assets(char *found, size_t size)
 	SDL_free(saves);
 	return ready;
 }
+#endif
 
 static FILE *open_output(const char *path)
 {
@@ -1290,6 +1328,14 @@ int main(int argc, char **argv)
 		else
 			fail(USAGE);
 	}
+#ifdef __SWITCH__
+	/* (the assets pack in the game's romfs; its settings and its log on the SD card: the Switch has no console, and
+	   SDL no message boxes there) */
+	romfsInit();
+	mkdir("sdmc:/switch", 0777);
+	mkdir(SWITCH_FOLDER, 0777);
+	freopen(SWITCH_FOLDER "/" FILE_NAME ".log", "w", stderr);
+#endif
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0)
 	{
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
@@ -1307,6 +1353,10 @@ int main(int argc, char **argv)
 		load_settings();
 		controls_open(controls_path);
 		scale = console_settings.window_scale;
+#ifdef TMNT_SCREEN_WIDE
+		console_settings.wide = WIDE_16_9;    /* (a device's screen: 16:9, its picture fixed) */
+		console_settings.full_screen = true;
+#endif
 	}
 #endif
 	if (!assets)
@@ -1350,8 +1400,13 @@ int main(int argc, char **argv)
 		script_frames = tmnt_script_frames(script);
 	}
 
+#ifdef __SWITCH__
+	(void)scale;
+	window = SDL_CreateWindow(TITLE, 0, 0, 1280, 720, 0);    /* (the Switch's screen, whole) */
+#else
 	window = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		view_width() * scale, TMNT_VIDEO_HEIGHT * scale, SDL_WINDOW_RESIZABLE);
+#endif
 	renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE) : NULL;
 	if (!renderer)
 		renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE) : NULL;
@@ -1427,5 +1482,8 @@ int main(int argc, char **argv)
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+#ifdef __SWITCH__
+	romfsExit();
+#endif
 	return 0;
 }

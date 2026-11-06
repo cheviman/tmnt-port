@@ -80,15 +80,30 @@
 #define PAUSE_LINES_Y       108
 #define PAUSE_LINE_STEP     14
 
+/* (a device's menus: no EXIT where the system leaves games, TMNT_SYSTEM_EXIT: the Switch's HOME; no CONTROLS nor VIDEO
+   where its controls and picture are fixed, TMNT_HANDHELD. Their names then past their lists, never chosen) */
+#ifdef TMNT_SYSTEM_EXIT
+enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_ITEMS, MENU_EXIT = 100 };
+#else
 enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_EXIT, MENU_ITEMS };
+#endif
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
 enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
+#ifdef TMNT_HANDHELD
+enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK,
+	OPTION_ITEMS, OPTION_CONTROLS = 100, OPTION_VIDEO };
+#else
 enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
+#endif
 enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
+#ifdef TMNT_SYSTEM_EXIT
+static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "LAN", "OPTIONS" };
+#else
 static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "LAN", "OPTIONS", "EXIT" };
+#endif
 static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN", "BACK" };    /* (RONIN: modes.c) */
 /* LEVEL SELECT: the areas by number (the game's 0-9 shown 1-10) and by what they are (the scenarios' names) */
 #define AREAS               10
@@ -97,8 +112,13 @@ static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET"
 /* OPTIONS as outrunners-port's (CONTROLS, VIDEO, VOLUME, SOUND TEST, FPS: Sebas), with the DIP switches by the test
    mode's DIP SW SELECT names (test_mode_texts), but its PLAYERS, the lives a credit gives (1, 2, 3 or 5), as LIVES;
    no coins at home, so no COIN1 (Sebas) */
+#ifdef TMNT_HANDHELD
+static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION", "VOLUME",
+	"SOUND TEST", "BACK" };
+#else
 static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
 	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
+#endif
 static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "FPS", "BACK" };
 static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9" };
 static const char *const sound_items[SOUND_ITEMS] = { "MUSIC", "EFFECT", "VOICE", "STOP", "BACK" };
@@ -1132,13 +1152,17 @@ static void options_overlay(void)
 	char value[40];
 
 	page_box("OPTIONS", OPTION_ITEMS);
+#ifndef TMNT_HANDHELD
 	option_line(option_items, OPTION_CONTROLS, NULL);
+#endif
 	option_line(option_items, OPTION_DIFFICULTY, difficulties[difficulty_switch()]);
 	snprintf(value, sizeof(value), "%d", lives_settings[lives_setting()]);
 	option_line(option_items, OPTION_LIVES, value);
 	option_line(option_items, OPTION_DEMO_SOUND, demo_sound_on() ? "ON" : "OFF");
 	option_line(option_items, OPTION_REGION, regions[console_settings.region]);
+#ifndef TMNT_HANDHELD
 	option_line(option_items, OPTION_VIDEO, NULL);
+#endif
 	snprintf(value, sizeof(value), "%d", console_settings.volume);
 	option_line(option_items, OPTION_VOLUME, value);
 	option_line(option_items, OPTION_SOUND_TEST, NULL);

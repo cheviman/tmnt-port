@@ -76,6 +76,20 @@ there is no pause: Escape leaves the game, which goes on for the others.
 
 Game controllers: the same, Start is START, Back pauses.
 
+The devices
+-----------
+Each device's games come in this package without assets; a tool beside them makes yours, on this
+computer, with your ROM set. What it makes is yours alone: never share it.
+
+Nintendo Switch       TMNT NSP (the folder switch beside it): TMNT.nsp and TMNT Arcade.nsp, with your
+                      console's keys (prod.keys). Install them with an installer (DBI, Tinfoil,
+                      Goldleaf) on a console with Atmosphere. Each controller is a player, up to four;
+                      HOME leaves the game. On TMNT Arcade, minus puts a coin in.
+
+Start the tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
+picture of yours for the icon), or run it from a command line: an option it does not know shows the ones
+it takes.
+
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
@@ -84,4 +98,4 @@ the games) and Kenney's (CC0: the letters of the window that asks for the ROM se
 and the pictures of the keys and buttons on its CONTROLS page).
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
-is not affiliated with or endorsed by either.
+is not affiliated with or endorsed by either, nor by Nintendo.

@@ -62,5 +62,20 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   bits), macOS's a ditto .zip; on a tag v* the release with the three and docs/releases/<tag>.md as its notes.
   docs/package/README.txt for the three systems (where the assets go, macOS's Open Anyway) and TMNT's menu as it is.
 
-To come, in this order: the Switch (the aarch64 tasks, switch.cmake, the NSP's maker), Android (android.cmake, the
-touch controls, the APK's maker), the Anbernic (Zig's aarch64 toolchain, the SDL2 stub, its maker).
+- **The Switch.** The game's tasks on aarch64 (the decompilation's tasks.c, 9d43e63: x19-x30 and d8-d15 on each task's
+  stack, outrunners-port's; newlib and bionic have no ucontext). ports/switch/switch.cmake: TMNT and TMNT Arcade, two
+  titles (0500544d4e540000, 0500544d4e541000: homebrew's range), each the window port's main.c with TMNT_HANDHELD,
+  TMNT_SCREEN_WIDE and TMNT_SYSTEM_EXIT, its .nsp's pieces in build/bin/switch/tmnt and tmnt-arcade (main, main.npdm
+  from ports/switch/npdm.json.in, control.nacp, icon.jpg drawn from the project's icon) and, where the build has the
+  pack, an .nro of each. On a device main.c reads the pack (romfs:/tmnt.assets) and never runs the first run; its
+  settings and log in sdmc:/switch/tmnt (tmnt-arcade); its window the Switch's 1280 x 720, TMNT's WIDE 16:9; TMNT's
+  menus with no EXIT (HOME), CONTROLS nor VIDEO. Built here with devkitPro (its MSYS2's aarch64-none-elf-cmake, with
+  CMAKE_DEPENDS_USE_COMPILER=FALSE: its gcc writes D:/ paths that make cannot read again). TMNT NSP
+  (ports/switch/nsp, outrunners-port's, the game's own extraction and pack: rom_pack.c) makes both .nsps, TMNT
+  Arcade.nsp beside TMNT.nsp; tried with keys made up: tools/check_nsp.py finds every hash holding, the program and
+  control data the build's, the pack identical to the first run's. The CI's switch job (devkitpro/devkita64) and its
+  pieces in every package beside TMNT NSP (the Windows one by tmnt_package: an .nro never goes in a package).
+  Not yet run on a Switch.
+
+To come, in this order: Android (android.cmake, the touch controls, the APK's maker), the Anbernic (Zig's aarch64
+toolchain, the SDL2 stub, its maker).

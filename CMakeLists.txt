@@ -24,6 +24,13 @@ endforeach()
 # own source: the package is the executable alone, no library beside it
 option(TMNT_STATIC_SDL2 "Build SDL2 from its source into the executables" OFF)
 
+# The devices (ports/PLAN.md): the Nintendo Switch with devkitPro's toolchain (aarch64-none-elf-cmake). A device
+# builds the games alone, from the assets pack its package carries (no first run, no tools, no headless runs)
+if(NINTENDO_SWITCH OR CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+	set(TMNT_SWITCH ON)
+	set(TMNT_DEVICE ON)
+endif()
+
 if(MSVC)
 	add_compile_options(/W3 /utf-8)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
@@ -103,8 +110,10 @@ if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 		target_compile_options(tmnt_game PRIVATE -fno-strict-aliasing)
 	endif()
 
-	add_executable(tmnt_game_headless ports/headless/main.c)
-	target_link_libraries(tmnt_game_headless PRIVATE tmnt_game)
+	if(NOT TMNT_DEVICE)
+		add_executable(tmnt_game_headless ports/headless/main.c)
+		target_link_libraries(tmnt_game_headless PRIVATE tmnt_game)
+	endif()
 	set(TMNT_WINDOW_PROGRAM tmnt_game)
 
 	# The console version (TMNT, console/PLAN.md): the same game with the console's own versions of the functions
@@ -131,11 +140,13 @@ if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 		target_compile_options(tmnt_console_game PRIVATE -fno-strict-aliasing)
 	endif()
 
-	add_executable(tmnt_console_headless ports/headless/main.c)
-	target_link_libraries(tmnt_console_headless PRIVATE tmnt_console_game)
-	add_custom_command(TARGET tmnt_console_headless POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
-			$<TARGET_FILE_DIR:tmnt_console_headless>)
+	if(NOT TMNT_DEVICE)
+		add_executable(tmnt_console_headless ports/headless/main.c)
+		target_link_libraries(tmnt_console_headless PRIVATE tmnt_console_game)
+		add_custom_command(TARGET tmnt_console_headless POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+				$<TARGET_FILE_DIR:tmnt_console_headless>)
+	endif()
 endif()
 
 # The translation scaffold: the 68000 runtime plus the C tools/recompile.py writes from the user's ROM into
@@ -165,7 +176,9 @@ endif()
 # The game in a window (ports/sdl2): the decompiled game, or the scaffold where there is none yet. SDL2 from the
 # system, or on Windows the development package unpacked in build/downloads/sdl2, a library beside the executable;
 # or, with TMNT_STATIC_SDL2, SDL2 built from its own source into the executable
-if(TMNT_WINDOW_PROGRAM)
+if(TMNT_WINDOW_PROGRAM AND TMNT_SWITCH)
+	include(ports/switch/switch.cmake)
+elseif(TMNT_WINDOW_PROGRAM)
 	if(TMNT_STATIC_SDL2)
 		include(FetchContent)
 		FetchContent_Declare(SDL2 GIT_REPOSITORY https://github.com/libsdl-org/SDL.git GIT_TAG release-2.32.10
@@ -281,6 +294,26 @@ if(TMNT_WINDOW_PROGRAM)
 			endif()
 		endif()
 
+		# TMNT NSP (ports/switch/nsp, outrunners-port's): on the player's computer, TMNT's and TMNT Arcade's .nsps out of
+		# the Switch builds' pieces (the folder switch beside it), the player's ROM set (its assets pack, as the first
+		# run makes it: the game's own extraction and pack) and the player's console keys. Its window when it is
+		# started with nothing (SDL2 without SDL2main: a console program), its letters (font.bmp) beside it; the
+		# folder dialog COM's on Windows
+		add_executable(tmnt_nsp ports/switch/nsp/main.c ports/switch/nsp/make_nsp.c ports/switch/nsp/crypto.c
+			ports/switch/nsp/formats.c ports/switch/nsp/rom_pack.c ports/switch/nsp/window.c
+			ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
+		list(GET TMNT_SDL2 0 TMNT_SDL2_LIBRARY)
+		target_include_directories(tmnt_nsp PRIVATE ports/sdl2)
+		target_compile_definitions(tmnt_nsp PRIVATE TMNT_NSP_WINDOW)
+		target_link_libraries(tmnt_nsp PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		set_target_properties(tmnt_nsp PROPERTIES OUTPUT_NAME "TMNT NSP")
+		if(WIN32)
+			target_link_libraries(tmnt_nsp PRIVATE ole32 shell32 uuid)
+		endif()
+		add_custom_command(TARGET tmnt_nsp POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+				$<TARGET_FILE_DIR:tmnt_nsp>)
+
 		# The Windows package (tmnt_package): what a player downloads, build/package/tmnt-windows-x64.zip, a folder
 		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL2 and the C runtime inside them), and the
 		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the package's README.txt (docs/package), the project's LICENSE.txt, and
@@ -288,6 +321,20 @@ if(TMNT_WINDOW_PROGRAM)
 		# sound), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the player's on its
 		# first run
 		if(WIN32 AND TMNT_STATIC_SDL2 AND TARGET tmnt_console)
+			# (the devices' games beside their makers, where this build has them: the folder switch, the Switch
+			# build's pieces, which TMNT NSP makes the player's .nsps of; the CI's switch job puts it in build/bin)
+			# (its four pieces of each game alone: an .nro beside them, one this computer made with its own assets,
+			# never goes in a package)
+			set(TMNT_PACKED_DEVICES "")
+			if(EXISTS ${TMNT_BIN_DIR}/switch/tmnt/main AND EXISTS ${TMNT_BIN_DIR}/switch/tmnt-arcade/main)
+				foreach(game tmnt tmnt-arcade)
+					list(APPEND TMNT_PACKED_DEVICES
+						COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/switch/${game}
+						COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/switch/${game}/main
+							${TMNT_BIN_DIR}/switch/${game}/main.npdm ${TMNT_BIN_DIR}/switch/${game}/control.nacp
+							${TMNT_BIN_DIR}/switch/${game}/icon.jpg ${CMAKE_SOURCE_DIR}/build/package/tmnt/switch/${game})
+				endforeach()
+			endif()
 			set(TMNT_PACKAGE_DIR ${CMAKE_SOURCE_DIR}/build/package)
 			set(TMNT_PACKAGE_NAME tmnt-windows-x64)
 			set(TMNT_PACKED ${TMNT_PACKAGE_DIR}/tmnt)
@@ -295,9 +342,10 @@ if(TMNT_WINDOW_PROGRAM)
 			add_custom_target(tmnt_package
 				COMMAND ${CMAKE_COMMAND} -E rm -rf ${TMNT_PACKED} ${TMNT_PACKAGE_DIR}/${TMNT_PACKAGE_NAME}.zip
 				COMMAND ${CMAKE_COMMAND} -E make_directory ${TMNT_PACKED}/licenses
-				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console>
+				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console> $<TARGET_FILE:tmnt_nsp>
 					${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp
 					${TMNT_PACKED}
+				${TMNT_PACKED_DEVICES}
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/docs/package/README.txt ${TMNT_PACKED}/README.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/LICENSE ${TMNT_PACKED}/LICENSE.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/docs/package/licenses/MAME.txt
@@ -311,7 +359,7 @@ if(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/Kenney-Input-Prompts.txt
 				COMMAND ${CMAKE_COMMAND} -E tar cf ${TMNT_PACKAGE_NAME}.zip --format=zip tmnt
 				WORKING_DIRECTORY ${TMNT_PACKAGE_DIR}
-				DEPENDS tmnt tmnt_console
+				DEPENDS tmnt tmnt_console tmnt_nsp
 				COMMENT "Packing TMNT Arcade and TMNT: build/package/${TMNT_PACKAGE_NAME}.zip"
 				VERBATIM)
 		endif()

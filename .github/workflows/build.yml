@@ -3,7 +3,8 @@
 #              and Intel), SDL2 and the C runtime inside the executables, and packs what a player runs: TMNT Arcade
 #              and TMNT, the console version, which take their assets out of the player's ROM set on their first
 #              run, with their README and the licenses (as outrunners-port's). On a tag v*, the release with the
-#              three packages and docs/releases/<tag>.md as its notes. The devices' jobs come later (ports/PLAN.md).
+#              three packages and docs/releases/<tag>.md as its notes. The Switch's pieces (its job, devkitPro's
+#              image) go in every package beside TMNT NSP, which makes the player's .nsps of them (ports/PLAN.md).
 #              It runs on main, its pull requests and its tags, and by hand on any branch
 # Version:     0.2.0
 # Created:     04-11-2026
@@ -33,11 +34,18 @@ jobs:
             os: windows-2022
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    needs: [switch]    # (its games go in the package, beside the tool that makes the player's .nsps of them)
     steps:
       # (tools/core, the shared core, holds ymfm's license, which the package carries; lan/, arcade-lan, TMNT's LAN)
       - uses: actions/checkout@v7
         with:
           submodules: true
+
+      # the Switch's pieces in build/bin/switch before CMake looks for them (the Windows package takes them)
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-switch
+          path: build/bin/switch
 
       # SDL2 is built from its source (TMNT_STATIC_SDL2): on Linux it needs the headers of what it talks to (it
       # loads the libraries themselves when the game runs). The reference tools, built on MAME's code, are
@@ -118,6 +126,28 @@ jobs:
         with:
           name: tmnt-${{ matrix.name }}
           path: dist/tmnt-${{ matrix.name }}.*
+
+  # The Nintendo Switch: TMNT's and TMNT Arcade's .nsp pieces (main, main.npdm, control.nacp, icon.jpg each), with
+  # devkitPro's toolchain in its own image (no .nro: that one carries a player's assets)
+  switch:
+    name: switch
+    runs-on: ubuntu-24.04
+    container: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Configure
+        run: /opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-cmake -S . -B build/switch -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF
+
+      - name: Build
+        run: cmake --build build/switch --target tmnt_switch_games --parallel
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-switch
+          path: build/bin/switch/
 
   # A tag v*: the release, the three packages and its notes (docs/releases/<tag>.md, written before the tag)
   release:
