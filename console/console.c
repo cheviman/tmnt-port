@@ -261,7 +261,7 @@ void console_actions(uint32_t pressed)
 
 /* A game over and the attract mode again: the players off their slots, the coins and the lives back to the
    switches' */
-static void game_over(void);
+static void slots_game_over(void);
 
 /* A LAN game over for this device (lan.c: ended, left, its host gone): the LAN page, after the game over the pause's
    QUIT GAME has (at the attract mode's next frame, when it was in the game itself); the board's controls and the
@@ -283,11 +283,11 @@ void console_back_to_lan_page(void)
 		lan_page_next = true;    /* (run_attract's game over first) */
 		return;
 	}
-	game_over();
+	slots_game_over();
 	console_open_lan_page();
 }
 
-static void game_over(void)
+static void slots_game_over(void)
 {
 	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
 	{
@@ -404,7 +404,7 @@ void run_attract(void)
 	{
 		/* (back from a game: the menu, the actions pressed during the game let go; after the pause's RESTART, the
 		   turtle choice, which picks the same turtle at once) */
-		game_over();
+		slots_game_over();
 		console.page = console.restarting ? PAGE_CHOICE : PAGE_MENU;
 		console.choice = 0;
 		console.page_frames = 0;

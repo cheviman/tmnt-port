@@ -42,3 +42,25 @@ Splinter Way, console/PLAN.md, complete), then the other platforms.
 - `runtime/src/tasks.c` has no aarch64 path for the Switch and Android (outrunners-port's keeps the registers on
   each task's stack): whether the decompiled game still needs it, or only the translation scaffold does.
 - `local/` (the player's own pictures for the icons) goes into `.gitignore`.
+
+## What was done (06-11-2026: Sebas, "hagamos las plataformas")
+
+How segasonic-port and outrunners-port build each platform was read first (outrunners-port's is the model: one
+SDL2 main for every platform with #ifdefs and feature macros, a .cmake of each device, makers in C on the computers
+for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch and Android).
+
+- **Linux.** Built in WSL's Ubuntu 24.04 (gcc 13, CMake 3.28, SDL2 2.30; `-DTMNT_BIN_DIR=build/bin-linux`, so that
+  its executables are not beside the Windows ones, which tools/core/check_scenarios.py would run first): the 18
+  scenarios identical with frames, picture and sound (`--bin build/bin-linux --out build/scenarios_frames`), and
+  TMNT's tests the same frame by frame as on Windows. gcc found what MSVC let by: the console's static game_over over
+  the game's own (slots_game_over now). The icon's .png beside the executables.
+- **macOS.** Both games as .apps (MACOSX_BUNDLE, io.github.cheviman.tmnt-arcade and .tmnt, the project's version),
+  their pictures and tmnt.icns in Resources; the assets and the ROM set looked for beside the .app too (app_folder,
+  outrunners-port's: SDL_GetBasePath is the .app's Resources). tasks.c's ucontext there already had _XOPEN_SOURCE.
+- **The CI**: linux-x64 (ubuntu-24.04, SDL2's build headers), macos-universal (macos-15, arm64 and x86_64, macOS 11
+  on, the .apps signed ad hoc) beside windows-x64; Linux's package a .tar.gz (the artifacts' zip loses the executable
+  bits), macOS's a ditto .zip; on a tag v* the release with the three and docs/releases/<tag>.md as its notes.
+  docs/package/README.txt for the three systems (where the assets go, macOS's Open Anyway) and TMNT's menu as it is.
+
+To come, in this order: the Switch (the aarch64 tasks, switch.cmake, the NSP's maker), Android (android.cmake, the
+touch controls, the APK's maker), the Anbernic (Zig's aarch64 toolchain, the SDL2 stub, its maker).

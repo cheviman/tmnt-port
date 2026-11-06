@@ -6,20 +6,30 @@ decompiled to C and checked frame by frame against MAME, github.com/cheviman/tmn
 game comes in this package: it takes the game's graphics and sounds out of your own ROM set.
 
 Two games come in it, the same program:
-- TMNT Arcade.exe, the arcade game as it is: coins, the test mode, the four players.
-- TMNT.exe, the console version: the game made for playing at home, with menus of its own, no coins
-  (START brings a player in) and Splinter Way, the modes of the port's own.
+- TMNT Arcade, the arcade game as it is: coins, the test mode, the four players.
+- TMNT, the console version: the game made for playing at home, with menus of its own, no coins (START
+  brings a player in), Splinter Way's modes and the game over the local network.
+
+They are TMNT Arcade.exe and TMNT.exe on Windows, TMNT Arcade.app and TMNT.app on macOS, and TMNT Arcade
+and TMNT on Linux.
 
 What you need
 -------------
 tmnt.zip, MAME's ROM set of Teenage Mutant Ninja Turtles (World 4 Players, version X), as MAME has it.
 Keep it beside the games, or drop it on the game's window when it asks for it; a folder rom beside the
-games with the set's files (or tmnt.zip) in it works too. Keep font.bmp beside the games: the window that
-asks for the set and TMNT's menus write with it.
+games with the set's files (or tmnt.zip) in it works too. Keep the games' pictures (font.bmp,
+input_prompts.bmp) beside them: the window that asks for the set and TMNT's menus write with them (on
+macOS they are inside the .apps).
 
-The first time a game starts it takes its assets out of the ROM set (a few seconds) and keeps them in the
-folder assets beside it; from then on both start from them and never open the ROM set again. The assets
-come from your ROM set, so they are yours alone: never share them.
+The first time a game starts it takes its assets out of the ROM set (a few seconds) and keeps them in
+the folder assets: beside the games on Windows, in ~/.local/share/TMNT on Linux, in
+~/Library/Application Support/TMNT on macOS. From then on both start from them and never open the ROM
+set again. The assets come from your ROM set, so they are yours alone: never share them.
+
+macOS: the .apps are not signed with a certificate. The first time, open one with a right click and
+Open (on macOS 15 and later: System Settings, Privacy & Security, Open Anyway).
+Linux: start ./TMNT or "./TMNT Arcade" from the folder; the games need SDL2's usual libraries of a
+desktop (X11 or Wayland, ALSA or PulseAudio), which they load themselves.
 
 Playing TMNT Arcade
 -------------------
@@ -37,15 +47,25 @@ attack button bring a turtle in: player 1 is Leonardo, 2 Michelangelo, 3 Donatel
 Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves,
 A attacks, B jumps, Back puts a coin in.
 
-From a command line, "TMNT Arcade.exe" --service starts the game in its test mode, as the cabinet's
+From a command line, TMNT Arcade with --service starts the game in its test mode, as the cabinet's
 switch does.
 
 Playing TMNT
 ------------
-The menu under the title's logo: ARCADE (the arcade game, its lives the PLAYERS switch's), SPLINTER WAY
-(NORMAL: 5 lives and 3 continues; more modes to come), OPTIONS (the cabinet's switches, the region, the
-volume, the pixels; kept in tmnt.ini beside the game) and EXIT. Choose a turtle, and the game starts with
-it. In a game, START brings in another player (or the same one again, a continue) on a turtle free.
+The menu under the title's logo:
+- ARCADE: the arcade game, its lives the cabinet's switches'.
+- SPLINTER WAY: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next: each area
+  crossed to its boss on its own) and RONIN (one player alone against the enemies of four).
+- LAN: a game of up to four computers on the same network, one player each. HOST makes a room, JOIN
+  finds the rooms and joins one, NAME is the name the room shows. The host's START begins the game on
+  every computer, with the host's switches and picture. The first time, your system may ask whether
+  TMNT may use the network: allow it on private networks.
+- OPTIONS: the cabinet's switches, the region, the controls of each player, the picture (its size, the
+  pixels, WIDE: 16:9 or 20:9), the volume, a sound test; kept in tmnt.ini.
+- EXIT.
+Choose a turtle, and the game starts with it. In a game, START brings in another player (or the same
+one again, a continue) on a turtle free; Escape pauses it (CONTINUE, RESTART, QUIT GAME). In a LAN game
+there is no pause: Escape leaves the game, which goes on for the others.
 
   Move (player 1)            the arrow keys
   Attack, jump               Z or left Ctrl; X or left Alt
@@ -54,13 +74,14 @@ it. In a game, START brings in another player (or the same one again, a continue
   Full screen                F11 or Alt+Enter
   The next kind of pixels    F3
 
-Game controllers: the same, Start is START.
+Game controllers: the same, Start is START, Back pauses.
 
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
 sound follow their behavior and tables), SDL2's (zlib: the window, the sound and the controls, inside
-the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus).
+the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
+and the pictures of the keys and buttons on its CONTROLS page).
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
 is not affiliated with or endorsed by either.

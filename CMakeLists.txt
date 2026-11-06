@@ -193,11 +193,20 @@ if(TMNT_WINDOW_PROGRAM)
 		# the arcade game, "TMNT Arcade" its executable and its window. Its first run takes the assets out of the
 		# player's ROM set (ports/sdl2/first_run.c, tmnt_extract), its window written with Kenney Mini (CC0,
 		# ports/sdl2/font), a picture beside the executable
-		add_executable(tmnt WIN32 ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c)
+		add_executable(tmnt WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c
+			ports/sdl2/font/font.bmp)
 		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2})
-		set_target_properties(tmnt PROPERTIES OUTPUT_NAME "TMNT Arcade")
-		add_custom_command(TARGET tmnt POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp $<TARGET_FILE_DIR:tmnt>)
+		set_target_properties(tmnt PROPERTIES OUTPUT_NAME "TMNT Arcade"
+			MACOSX_BUNDLE_BUNDLE_NAME "TMNT Arcade" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt-arcade
+			MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
+		# (its pictures beside it; in the .app's Resources on macOS, where SDL_GetBasePath finds them)
+		set_source_files_properties(ports/sdl2/font/font.bmp ports/sdl2/prompts/input_prompts.bmp
+			ports/sdl2/icon/tmnt.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+		if(NOT APPLE)
+			add_custom_command(TARGET tmnt POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+					$<TARGET_FILE_DIR:tmnt>)
+		endif()
 		if(WIN32 AND NOT TMNT_STATIC_SDL2)
 			add_custom_command(TARGET tmnt POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:tmnt>)
@@ -206,7 +215,7 @@ if(TMNT_WINDOW_PROGRAM)
 		# the executable's icon on Windows (tools/make_icon.py, ports/sdl2/icon): a resource, which SDL gives the
 		# window too. A picture of the player's own in its place where this computer has one (TMNT_PC_ICON, else
 		# local/icon_pc.png: local/ holds the player's own pictures, never committed), made an .ico here. (The
-		# icon's .png and .icns are for the Linux and macOS builds, later)
+		# icon's .png goes beside the Linux executables, its .icns in the macOS .apps)
 		set(TMNT_PC_ICON "" CACHE FILEPATH "The executable's icon on Windows: a picture of the player's own")
 		set(TMNT_PC_PICTURE ${TMNT_PC_ICON})
 		if(NOT TMNT_PC_PICTURE AND EXISTS ${CMAKE_SOURCE_DIR}/local/icon_pc.png)
@@ -231,6 +240,13 @@ if(TMNT_WINDOW_PROGRAM)
 		endif()
 		if(WIN32)
 			target_sources(tmnt PRIVATE ${TMNT_ICON_RC})
+		elseif(APPLE)
+			target_sources(tmnt PRIVATE ports/sdl2/icon/tmnt.icns)
+			set_target_properties(tmnt PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
+		else()
+			add_custom_command(TARGET tmnt POST_BUILD    # (Linux: the window's icon, tmnt.png beside it)
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
+					$<TARGET_FILE_DIR:tmnt>)
 		endif()
 
 		# the console version beside it, "TMNT" its executable and its window (console/PLAN.md): the same window
@@ -238,19 +254,30 @@ if(TMNT_WINDOW_PROGRAM)
 		# (ports/sdl2/controls.c), OPTIONS > CONTROLS drawing the keys and buttons with Kenney's Input Prompts Pixel
 		# (CC0, ports/sdl2/prompts), a picture beside the executable
 		if(TARGET tmnt_console_game)
-			add_executable(tmnt_console WIN32 ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c
-				ports/sdl2/controls.c)
+			add_executable(tmnt_console WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c
+				ports/sdl2/letters.c ports/sdl2/controls.c ports/sdl2/font/font.bmp ports/sdl2/prompts/input_prompts.bmp)
 			target_link_libraries(tmnt_console PRIVATE tmnt_console_game tmnt_extract ${TMNT_SDL2})
-			set_target_properties(tmnt_console PROPERTIES OUTPUT_NAME "TMNT")
-			add_custom_command(TARGET tmnt_console POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
-					${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp $<TARGET_FILE_DIR:tmnt_console>)
+			set_target_properties(tmnt_console PROPERTIES OUTPUT_NAME "TMNT"
+				MACOSX_BUNDLE_BUNDLE_NAME "TMNT" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt
+				MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
+			if(NOT APPLE)
+				add_custom_command(TARGET tmnt_console POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+						${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp $<TARGET_FILE_DIR:tmnt_console>)
+			endif()
 			if(WIN32 AND NOT TMNT_STATIC_SDL2)
 				add_custom_command(TARGET tmnt_console POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:tmnt_console>)
 			endif()
 			if(WIN32)
 				target_sources(tmnt_console PRIVATE ${TMNT_ICON_RC})
+			elseif(APPLE)
+				target_sources(tmnt_console PRIVATE ports/sdl2/icon/tmnt.icns)
+				set_target_properties(tmnt_console PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
+			else()
+				add_custom_command(TARGET tmnt_console POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
+						$<TARGET_FILE_DIR:tmnt_console>)
 			endif()
 		endif()
 

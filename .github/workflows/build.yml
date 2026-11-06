@@ -1,19 +1,20 @@
 # Name:        build.yml
-# Description: builds the game on a clean machine with no ROM set (Windows with MSVC), SDL2 and the C runtime
-#              inside the executables, and packs what a player runs: TMNT Arcade and TMNT, the console version,
-#              which take their assets out of the player's ROM set on their first run, with their README and the
-#              licenses (as outrunners-port's).
-#              The other platforms' jobs come later (ports/PLAN.md). It runs on main and its pull requests
-#              alone, and by hand on any branch
-# Version:     0.1.0
+# Description: builds the game on clean machines with no ROM set (Windows with MSVC, Linux, macOS for Apple silicon
+#              and Intel), SDL2 and the C runtime inside the executables, and packs what a player runs: TMNT Arcade
+#              and TMNT, the console version, which take their assets out of the player's ROM set on their first
+#              run, with their README and the licenses (as outrunners-port's). On a tag v*, the release with the
+#              three packages and docs/releases/<tag>.md as its notes. The devices' jobs come later (ports/PLAN.md).
+#              It runs on main, its pull requests and its tags, and by hand on any branch
+# Version:     0.2.0
 # Created:     04-11-2026
-# Modified:    04-11-2026
+# Modified:    06-11-2026
 # Author:      Sebastian Toyos
 name: build
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -24,18 +25,43 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: linux-x64
+            os: ubuntu-24.04
+          - name: macos-universal
+            os: macos-15    # (the .apps for macOS 11 on)
           - name: windows-x64
             os: windows-2022
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     steps:
-      # (tools/core, the shared core, holds ymfm's license, which the package carries)
+      # (tools/core, the shared core, holds ymfm's license, which the package carries; lan/, arcade-lan, TMNT's LAN)
       - uses: actions/checkout@v7
         with:
           submodules: true
 
-      # SDL2 is built from its source (TMNT_STATIC_SDL2); the reference tools, built on MAME's code, are
+      # SDL2 is built from its source (TMNT_STATIC_SDL2): on Linux it needs the headers of what it talks to (it
+      # loads the libraries themselves when the game runs). The reference tools, built on MAME's code, are
       # development tools: not in a player's package
+      - name: Tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libpulse-dev libx11-dev libxext-dev \
+            libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libxss-dev libxkbcommon-dev \
+            libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libudev-dev libdbus-1-dev
+
+      - name: Tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build/cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_STATIC_SDL2=ON
+
+      - name: Configure (macOS, Apple silicon and Intel)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build/cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_STATIC_SDL2=ON "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         run: cmake -S . -B build/cmake -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_STATIC_SDL2=ON
@@ -43,15 +69,77 @@ jobs:
       - name: Build
         run: cmake --build build/cmake --config Release --parallel
 
-      # what a player runs (no headless runs, no build leftovers), as the build packs it locally (tmnt_package,
-      # CMakeLists.txt): the folder tmnt with TMNT Arcade.exe, TMNT.exe and their font.bmp, the package's README.txt,
-      # the project's LICENSE.txt and licenses/ (MAME's and ymfm's: the board's video and sound follow their behavior
-      # and tables; SDL2's, zlib; Kenney's, CC0: the first run's and the menus' letters), in
-      # build/package/tmnt-windows-x64.zip
-      - name: Pack
-        run: cmake --build build/cmake --config Release --target tmnt_package
+      # what a player runs (no headless runs, no build leftovers), as the build packs it locally on Windows
+      # (tmnt_package, CMakeLists.txt): the folder tmnt with TMNT Arcade and TMNT (the .apps on macOS, signed ad hoc:
+      # with no certificate macOS offers to open them anyway, where a bundle signed in part is "damaged"), their
+      # pictures beside them on Linux, the package's README.txt, the project's LICENSE.txt and licenses/ (MAME's and
+      # ymfm's: the board's video and sound follow their behavior and tables; SDL2's, zlib; Kenney's, CC0: the first
+      # run's and the menus' letters, the controls' pictures). Linux's in a tar of our own: the artifacts' zip loses
+      # the executables' permissions
+      - name: Pack (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake --build build/cmake --config Release --target tmnt_package
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/package/tmnt-windows-x64.zip dist/
+
+      - name: Pack (Linux, macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist/tmnt/licenses
+          for file in build/bin/*; do
+            case "$(basename "$file")" in
+              *headless*|*assets_check*|kref*|oracle*|*.a|assets|*.ini) ;;
+              *) cp -R "$file" dist/tmnt/ ;;
+            esac
+          done
+          cp LICENSE dist/tmnt/LICENSE.txt
+          cp docs/package/README.txt dist/tmnt/README.txt
+          cp docs/package/licenses/MAME.txt dist/tmnt/licenses/MAME.txt
+          cp tools/core/konami/reference/ymfm/LICENSE dist/tmnt/licenses/ymfm.txt
+          cp build/cmake/_deps/sdl2-src/LICENSE.txt dist/tmnt/licenses/SDL2.txt
+          cp ports/sdl2/font/License.txt dist/tmnt/licenses/Kenney-Mini.txt
+          cp ports/sdl2/prompts/License.txt dist/tmnt/licenses/Kenney-Input-Prompts.txt
+          if [ "$RUNNER_OS" = macOS ]; then
+            for app in dist/tmnt/*.app; do
+              codesign --force --deep --sign - "$app"
+              codesign --verify --deep --strict --verbose=2 "$app"
+            done
+          fi
+          ls -la dist/tmnt dist/tmnt/licenses
+          cd dist
+          case "$RUNNER_OS" in
+            Linux) tar czf tmnt-${{ matrix.name }}.tar.gz tmnt ;;
+            macOS) ditto -c -k --keepParent tmnt tmnt-${{ matrix.name }}.zip ;;
+          esac
 
       - uses: actions/upload-artifact@v7
         with:
           name: tmnt-${{ matrix.name }}
-          path: build/package/tmnt-${{ matrix.name }}.zip
+          path: dist/tmnt-${{ matrix.name }}.*
+
+  # A tag v*: the release, the three packages and its notes (docs/releases/<tag>.md, written before the tag)
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: tmnt-*
+          path: dist
+          merge-multiple: true
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "TMNT $GITHUB_REF_NAME" \
+            --notes-file "docs/releases/$GITHUB_REF_NAME.md" \
+            dist/tmnt-windows-x64.zip dist/tmnt-linux-x64.tar.gz dist/tmnt-macos-universal.zip
