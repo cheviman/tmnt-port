@@ -64,7 +64,8 @@ The menu under the title's logo:
   pixels, WIDE: 16:9 or 20:9), the volume, a sound test; kept in tmnt.ini.
 - EXIT.
 Choose a turtle, and the game starts with it. In a game, START brings in another player (or the same
-one again, a continue) on a turtle free; Escape pauses it (CONTINUE, RESTART, QUIT GAME). In a LAN game
+one again, a continue) on a turtle free; Escape, or START of a player in the game, pauses it (CONTINUE,
+RESTART, QUIT GAME). In a LAN game
 there is no pause: Escape leaves the game, which goes on for the others.
 
   Move (player 1)            the arrow keys
@@ -74,7 +75,7 @@ there is no pause: Escape leaves the game, which goes on for the others.
   Full screen                F11 or Alt+Enter
   The next kind of pixels    F3
 
-Game controllers: the same, Start is START, Back pauses.
+Game controllers: the same, Start is START, Back pauses (Start too, in the game).
 
 The devices
 -----------
@@ -89,7 +90,8 @@ Android               TMNT APK (the folder android beside it): TMNT.apk and TMNT
                       a key of yours kept in your user folder (keep it: only an APK with the same key
                       installs over the last one). Copy them to the phone and open them there. The touch
                       screen has a stick where your left thumb lands, ATTACK and JUMP at the right, and
-                      START (COIN on TMNT Arcade); a game controller hides them. Back pauses TMNT.
+                      START (COIN on TMNT Arcade); a game controller hides them. Back, or START in the
+                      game, pauses TMNT; OPTIONS > VIDEO has the pixels and FPS.
 Anbernic H700         TMNT Anbernic (the folder anbernic beside it): the folder PORTS, beside the tool or
 handhelds             straight into the Roms folder of your handheld's card (choose it as the output
                       folder): the other ports there stay as they are. TMNT and TMNT Arcade show up in

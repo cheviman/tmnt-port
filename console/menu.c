@@ -80,8 +80,10 @@
 #define PAUSE_LINES_Y       108
 #define PAUSE_LINE_STEP     14
 
-/* (a device's menus: no EXIT where the system leaves games, TMNT_SYSTEM_EXIT: the Switch's HOME; no CONTROLS nor VIDEO
-   where its controls and picture are fixed, TMNT_HANDHELD. Their names then past their lists, never chosen) */
+/* (a device's menus: no EXIT where the system leaves games, TMNT_SYSTEM_EXIT: the Switch's HOME; no CONTROLS where its
+   controls are fixed, TMNT_HANDHELD, and in VIDEO the pixels and FPS alone: its screen is the window, WIDE as it is
+   (Sebas: "la version de android no tiene video, no le puedo poner filtros"). Their names then past their lists,
+   never chosen) */
 #ifdef TMNT_SYSTEM_EXIT
 enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_ITEMS, MENU_EXIT = 100 };
 #else
@@ -90,13 +92,14 @@ enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_EXIT, MENU_I
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
 enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
 #ifdef TMNT_HANDHELD
-enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK,
-	OPTION_ITEMS, OPTION_CONTROLS = 100, OPTION_VIDEO };
+enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO, OPTION_VOLUME, OPTION_SOUND_TEST,
+	OPTION_BACK, OPTION_ITEMS, OPTION_CONTROLS = 100 };
+enum { VIDEO_PIXELS, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100, VIDEO_FULL_SCREEN, VIDEO_WIDE };
 #else
 enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
-#endif
 enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
+#endif
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
 #ifdef TMNT_SYSTEM_EXIT
@@ -113,14 +116,17 @@ static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET"
    mode's DIP SW SELECT names (test_mode_texts), but its PLAYERS, the lives a credit gives (1, 2, 3 or 5), as LIVES;
    no coins at home, so no COIN1 (Sebas) */
 #ifdef TMNT_HANDHELD
-static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION", "VOLUME",
-	"SOUND TEST", "BACK" };
+static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION", "VIDEO",
+	"VOLUME", "SOUND TEST", "BACK" };
+static const char *const video_items[VIDEO_ITEMS] = { "PIXELS", "FPS", "BACK" };
 #else
 static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
 	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
-#endif
 static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "FPS", "BACK" };
+#endif
+#ifndef TMNT_HANDHELD
 static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9" };
+#endif
 static const char *const sound_items[SOUND_ITEMS] = { "MUSIC", "EFFECT", "VOICE", "STOP", "BACK" };
 /* SOUND TEST's songs in the game's order, by the names tools/sound_music.py gives them (music.txt): the songs'
    commands 60-78 (74 plays 60's song again: left out) and the title music (7D) */
@@ -611,7 +617,8 @@ static void options_page(uint32_t pressed)
 	}
 }
 
-/* VIDEO: the window's size (1 to 6 times the picture), full screen, the pixels, WIDE; the port applies them */
+/* VIDEO: the window's size (1 to 6 times the picture), full screen, the pixels, WIDE, FPS (a device's: the pixels and
+   FPS); the port applies them */
 static void video_page(uint32_t pressed)
 {
 	const int by = change(pressed) ? change(pressed) : (picked(pressed) ? 1 : 0);
@@ -1160,9 +1167,7 @@ static void options_overlay(void)
 	option_line(option_items, OPTION_LIVES, value);
 	option_line(option_items, OPTION_DEMO_SOUND, demo_sound_on() ? "ON" : "OFF");
 	option_line(option_items, OPTION_REGION, regions[console_settings.region]);
-#ifndef TMNT_HANDHELD
 	option_line(option_items, OPTION_VIDEO, NULL);
-#endif
 	snprintf(value, sizeof(value), "%d", console_settings.volume);
 	option_line(option_items, OPTION_VOLUME, value);
 	option_line(option_items, OPTION_SOUND_TEST, NULL);
@@ -1176,11 +1181,17 @@ static void video_overlay(void)
 	char value[16];
 
 	page_box("VIDEO", VIDEO_ITEMS);
+#ifndef TMNT_HANDHELD
 	snprintf(value, sizeof(value), "%dX", console_settings.window_scale);
 	option_line(video_items, VIDEO_WINDOW, value);
 	option_line(video_items, VIDEO_FULL_SCREEN, console_settings.full_screen ? "ON" : "OFF");
+#else
+	(void)value;
+#endif
 	option_line(video_items, VIDEO_PIXELS, filters[console_settings.pixels]);
+#ifndef TMNT_HANDHELD
 	option_line(video_items, VIDEO_WIDE, wide_kinds[console_settings.wide]);
+#endif
 	option_line(video_items, VIDEO_FPS, console_settings.fps ? "ON" : "OFF");
 	option_line(video_items, VIDEO_BACK, NULL);
 }

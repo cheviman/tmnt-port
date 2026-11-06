@@ -833,6 +833,12 @@ static void read_controls(void)
 	if (console_controls_defaults())
 		controls_defaults(console_controls_player());
 	read_players(players, &starts);
+	for (int player = 0; player < PLAYERS; player++)
+		if ((starts & (1u << player)) && console_start_pauses(player))
+		{
+			starts &= (uint8_t)~(1u << player);
+			pause_requested = true;    /* (START of a player in the game: the pause, as a console's) */
+		}
 	console_actions(console_controls_waiting() >= 0 ? 0 : actions_pressed);
 	console_controls(players, starts);
 	actions_pressed = 0;
@@ -867,8 +873,9 @@ static void lan_controls(void)
 
 /* ---- the pause ---- */
 
-/* The pause's actions from the events since the last look: the arrows, Enter, Escape or Backspace, a game
-   controller's pad, A, B, Start and Back; WINDOW_CLOSED when the window was closed */
+/* The pause's actions from the events since the last look: the arrows, Enter, Escape or Backspace (Android's back), a
+   game controller's pad, A, B, Start and Back; WINDOW_CLOSED when the window was closed. The touch screen's fingers
+   go to its controls (touch_pressed) */
 #define PAUSE_BACK  ACTION_BIT(ACTION_BACK)
 #define WINDOW_CLOSED (1u << 31)
 
@@ -878,6 +885,10 @@ static uint32_t pause_events(void)
 	uint32_t pressed = 0;
 
 	while (SDL_PollEvent(&event))
+	{
+#ifdef TMNT_TOUCH
+		touch_event(&event);
+#endif
 		switch (event.type)
 		{
 			case SDL_QUIT:
@@ -896,7 +907,7 @@ static uint32_t pause_events(void)
 						else
 							pressed |= ACTION_BIT(ACTION_ACCEPT);
 						break;
-					case SDLK_ESCAPE: case SDLK_BACKSPACE: pressed |= PAUSE_BACK; break;
+					case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_AC_BACK: pressed |= PAUSE_BACK; break;
 					case SDLK_F11: toggle_full_screen(); break;
 					default: break;
 				}
@@ -916,13 +927,33 @@ static uint32_t pause_events(void)
 			default:
 				break;
 		}
+	}
 	return pressed;
 }
 
+#ifdef TMNT_TOUCH
+/* The pause's actions from the touch screen's controls newly held: the stick's up and down, ATTACK the line chosen,
+   JUMP and START go on ('held' and 'start_held': what they held at the last look) */
+static uint32_t touch_pressed(uint8_t *held, bool *start_held)
+{
+	const uint8_t now = touch_controls(), fresh = (uint8_t)(now & ~*held);
+	const bool start = touch_start();
+	uint32_t pressed = 0;
+
+	pressed |= (fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u;
+	pressed |= (fresh & TMNT_DOWN) ? ACTION_BIT(ACTION_DOWN) : 0u;
+	pressed |= (fresh & TMNT_ATTACK) ? ACTION_BIT(ACTION_ACCEPT) : 0u;
+	pressed |= ((fresh & TMNT_JUMP) || (start && !*start_held)) ? PAUSE_BACK : 0u;
+	*held = now;
+	*start_held = start;
+	return pressed;
+}
+#endif
+
 /* The game stopped, its sound too, the picture in grey under PAUSE (as outrunners-port's): Escape, Backspace or a
-   game controller's B, Start or Back goes on, as CONTINUE does; RESTART starts the same game again
-   (console_restart_game), QUIT GAME ends it, back to the menu (console_quit_game). What was held over it is no new
-   press after it */
+   game controller's B, Start or Back goes on, as CONTINUE does (the touch screen's JUMP or START, Android's back);
+   RESTART starts the same game again (console_restart_game), QUIT GAME ends it, back to the menu
+   (console_quit_game). What was held over it is no new press after it */
 static void run_pause(void)
 {
 	static uint32_t frozen_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
@@ -930,6 +961,10 @@ static void run_pause(void)
 	console_picture shown = { shown_pixels, TMNT_VIDEO_MAX_WIDTH, 0, 0 };
 	int choice = CONSOLE_PAUSE_CONTINUE;
 	uint8_t players[PLAYERS], starts;
+#ifdef TMNT_TOUCH
+	uint8_t touch_held = touch_controls();    /* (what the fingers held as the pause came: no new press) */
+	bool touch_start_held = touch_start();
+#endif
 
 	pause_requested = false;
 	if (audio)
@@ -939,8 +974,11 @@ static void run_pause(void)
 	shown.right = picture.right;
 	for (;;)
 	{
-		const uint32_t pressed = pause_events();
+		uint32_t pressed = pause_events();
 
+#ifdef TMNT_TOUCH
+		pressed |= touch_pressed(&touch_held, &touch_start_held);
+#endif
 		if (pressed & WINDOW_CLOSED)
 			return;
 		if (pressed & ACTION_BIT(ACTION_UP))
@@ -1461,6 +1499,9 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
+#ifdef TMNT_HANDHELD_KEYS
+	add_device_mappings();
+#endif
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0)
 	{
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
@@ -1498,9 +1539,6 @@ int main(int argc, char **argv)
 		if (!find_assets(assets_path, sizeof(assets_path)))
 		{
 			/* (the first run's window closed before a ROM set came) */
-#endif
-#ifdef TMNT_HANDHELD_KEYS
-	add_device_mappings();
 			SDL_Quit();
 			return 0;
 		}
@@ -1541,6 +1579,9 @@ int main(int argc, char **argv)
 #ifdef __SWITCH__
 	(void)scale;
 	window = SDL_CreateWindow(TITLE, 0, 0, 1280, 720, 0);    /* (the Switch's screen, whole) */
+#elif defined(TMNT_HANDHELD_KEYS)
+	(void)scale;
+	window = SDL_CreateWindow(TITLE, 0, 0, 640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);    /* (the handheld's, whole) */
 #else
 	window = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		view_width() * scale, TMNT_VIDEO_HEIGHT * scale, SDL_WINDOW_RESIZABLE);
@@ -1579,9 +1620,6 @@ int main(int argc, char **argv)
 		   handheld's 4:3) */
 		int out_width = 0, out_height = 0;
 
-#elif defined(TMNT_HANDHELD_KEYS)
-	(void)scale;
-	window = SDL_CreateWindow(TITLE, 0, 0, 640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);    /* (the handheld's, whole) */
 		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
 		if (out_width < out_height)
 		{

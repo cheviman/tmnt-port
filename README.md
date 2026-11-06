@@ -233,8 +233,8 @@ come), OPTIONS (over BEST 10 PLAYERS' picture: the cabinet's DIP switches by the
 volume, the pixels, WIDE 16:9 and 20:9 for the play and the menus; kept in `tmnt.ini` beside the executable), KONAMI
 CODE (the level select the Konami code will open: any of the ten areas, infinite lives, every turtle in a red
 bandana, everyone the same turtle) and EXIT. A game starts on the coin's screen, each player choosing the turtle he plays (the others come in with START).
-Its menus write with the game's own letters; what it draws of the game's comes from your assets. Escape pauses a
-game. `console/PLAN.md` has the plan, and what was done.
+Its menus write with the game's own letters; what it draws of the game's comes from your assets. Escape (or START of a
+player in the game) pauses a game. `console/PLAN.md` has the plan, and what was done.
 
 | Control | Keys |
 |---|---|

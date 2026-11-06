@@ -3,7 +3,7 @@
  *    Description: the touch screen's controls (Android): a stick where the left thumb lands, ATTACK and JUMP at the
  *                 right, START (TMNT) or COIN (TMNT Arcade) over them, drawn over the picture, and what the fingers
  *                 on them hold: player 1's controls
- *    Version:     0.1.0
+ *    Version:     0.1.1
  *    Created:     06-11-2026
  *    Modified:    06-11-2026
  *    Author:      Sebastian Toyos
@@ -221,10 +221,20 @@ static void disc(SDL_Renderer *renderer, const circle *where, SDL_Color colour)
 	}
 }
 
-/* A button's name, centred on it */
-static void label(SDL_Renderer *renderer, const circle *where, const char *text)
+/* The letters' scale on a button: as large as the button makes them, but 'widest' (the longest name of the buttons
+   of its size) inside eight tenths of its width. Sebas: "el attack queda muy grande en el boton" */
+static int label_scale(const circle *where, const char *widest)
 {
-	const int scale = SDL_max(1, (int)(where->radius / 22.0f));
+	int scale = SDL_max(1, (int)(where->radius / 22.0f));
+
+	while (scale > 1 && letters_width(&touch.font, widest, scale) > (int)(where->radius * 1.6f))
+		scale--;
+	return scale;
+}
+
+/* A button's name, centred on it, its letters 'scale' times the font's */
+static void label(SDL_Renderer *renderer, const circle *where, const char *text, int scale)
+{
 	const int width = letters_width(&touch.font, text, scale);
 	const SDL_Rect area = { (int)where->x - width / 2, (int)where->y - LETTERS_CELL * scale / 2, width,
 		LETTERS_CELL * scale };
@@ -271,8 +281,13 @@ void touch_draw(SDL_Renderer *renderer, int width, int height)
 	disc(renderer, &touch.attack, (holding & TMNT_ATTACK) ? held : idle);
 	disc(renderer, &touch.jump, (holding & TMNT_JUMP) ? held : idle);
 	disc(renderer, &touch.start, start_held ? held : idle);
-	label(renderer, &touch.attack, "ATTACK");
-	label(renderer, &touch.jump, "JUMP");
-	label(renderer, &touch.start, START_LABEL);
+	if (touch.have_font)
+	{
+		const int scale = label_scale(&touch.attack, "ATTACK");    /* (JUMP's the same as ATTACK's) */
+
+		label(renderer, &touch.attack, "ATTACK", scale);
+		label(renderer, &touch.jump, "JUMP", scale);
+		label(renderer, &touch.start, START_LABEL, label_scale(&touch.start, START_LABEL));
+	}
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }

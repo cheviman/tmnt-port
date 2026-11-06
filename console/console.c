@@ -576,6 +576,16 @@ bool console_can_pause(void)
 		pause would hold every device: Escape leaves it) */
 }
 
+/* Whether a START of 'player' pauses the game: his turtle plays, or is coming in (a START of one who does not play
+   brings him in, start_pressed). Sebas: "no anda el start para la pausa" */
+bool console_start_pauses(int player)
+{
+	const int slot = player >= 0 && player < CONSOLE_PLAYERS ? console_slot_of[player] : -1;
+
+	return slot >= 0 && console_can_pause()
+		&& ((players_in_play & (1u << slot)) != 0u || (players_joining & (1u << slot)) != 0u);
+}
+
 /* The game ended where it is, as its own game over ends it (back_to_attract): the play, the layers and the players
    cleared, the sound silenced; the console's menu (or RESTART's turtle choice) at the attract mode's next frame */
 void console_quit_game(void)

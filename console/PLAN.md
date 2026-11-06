@@ -198,7 +198,8 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   their keys and first button (Kenney's Input Prompts Pixel, CC0, input_prompts.bmp), DEFAULTS, BACK; a control picked
   takes the next key or button (Escape leaves it). Defaults: MAME's keys for the four players, every pad's A B and Start.
   The menus take the arrows, Enter and Escape besides whatever the players' are.
-- **The pause** (Escape or a pad's Back in a game; START brings players in): the frame in grey under PAUSE, CONTINUE,
+- **The pause** (Escape or a pad's Back in a game, or START of a player whose turtle plays; another's START brings him
+  in): the frame in grey under PAUSE, CONTINUE,
   RESTART (the same game, the same turtle for the same player), QUIT GAME (the game's own back_to_attract after the
   play, the layers and the players cleared: the menu).
 - **9, WIDE** (console/wide.c): 16:9 (48 columns more at each side, the window 398) and 20:9 (88, 496), in a game's
@@ -477,3 +478,15 @@ submodule (CMake's ARCADE_LAN_DIR; without it the build has no LAN and the page 
 To come: a device's second player (local players: the library takes them, the menu has no PLAYERS yet), the
 window's own try on two computers of a LAN, and the other platforms when the ports come (the library's sockets
 are outrunners-port's: Winsock, POSIX, libnx).
+
+## The devices' menus and pause (06-11-2026: Sebas tried TMNT on his phone)
+
+- "la version de android no tiene video, no le puedo poner filtros", "ni fps ni nada": OPTIONS has VIDEO on the
+  devices too (TMNT_HANDHELD), with PIXELS and FPS alone: the screen is the window, WIDE as it is (the Switch's 16:9,
+  the phone's by its shape, the Anbernic's none).
+- "no anda el start para la pausa": START of a player whose turtle plays (or comes in) pauses the game, on every
+  platform (console_start_pauses; the port takes that START out of the ones it gives the console). In the pause the
+  touch screen's controls work (the stick's up and down, ATTACK the line, JUMP or START go on) and Android's back
+  goes on too.
+- "el attack queda muy grande en el boton": the touch buttons' names at a scale that fits ATTACK in eight tenths of
+  the button (JUMP the same).

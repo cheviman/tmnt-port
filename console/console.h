@@ -97,7 +97,8 @@ uint32_t console_lan_frame_number(void);
 bool console_quit_requested(void);
 
 /* The pause (as outrunners-port's): true while a game the menus started is played, when the port may stop it
-   (Escape, a game controller's Back: START brings players in); its picture over the frame it stopped at, the line
+   (Escape, a game controller's Back, or START of a player whose turtle plays: console_start_pauses; another's START
+   brings him in); its picture over the frame it stopped at, the line
    'choice' chosen; QUIT GAME ends the game, back to the menu; RESTART ends it and starts the same game again, the
    same turtle for the same player */
 enum
@@ -109,6 +110,7 @@ enum
 };
 
 bool console_can_pause(void);
+bool console_start_pauses(int player);
 void console_pause_overlay(console_picture *picture, int choice);
 void console_quit_game(void);
 void console_restart_game(void);
