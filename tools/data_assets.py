@@ -69,6 +69,16 @@ CODE_READ_AS_DATA = {
     # finds one player: in the continue scenario (frame timing, frame 4212) A5 holds 048A94, the handler's
     # own address, and the byte read is its code's (move.l's 2F)
     0x048A98: (0x048A99, "second_player_through_a_stale_pointer"),
+    # the same compare with the other handlers the object routines' dispatcher calls with A5 at their own address
+    # and that come to it with one player (each the fifth byte of its code, over the enemies a turtle may have:
+    # the retargeting takes the least crowded slot): the skateboard soldier's thinking, 04EFEC, through
+    # enemy_think's (its "jsr $48a94.l": 8A; a console build's boss rush, area 6, frame 5430), and the
+    # retargeting of the Mousers', Rodney's and Shredder's (051132, 051DBE, 05287E "cmp.b ($4,A6), D0" after
+    # their "exg A5, A6"), 0510F4, 051D80, 052840 (move.l's 2F)
+    0x04EFF0: (0x04EFF1, "second_player_through_the_skateboard_soldier"),
+    0x0510F8: (0x0510F9, "second_player_through_the_mouser"),
+    0x051D84: (0x051D85, "second_player_through_rodney"),
+    0x052844: (0x052845, "second_player_through_shredder"),
     # intro_turtle_lands_animation ends on 00 FF (02DF50), which the sprite engine takes for a jump to the long after
     # it, 00001800 (047134 "move.b ($1,A3), D1", 04713C "movea.l ($2,A3), A3"), and reads the frame's count there
     # (047140 "move.b (A3), D0"): a byte of the boot's "move.w #$3ff, D3" (03). In the intro_untouched scenario, where

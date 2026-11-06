@@ -4727,7 +4727,10 @@ local enemy_enter 048A6A a1 slot player_slot
 # enemy_nearest_slots leaves A5 as it found it when it finds one player (in the continue scenario, frame 4212, A5
 # holds 048A94, a handler's address, and the byte read is its code's: data_assets.py's
 # second_player_through_a_stale_pointer), so that read goes over the bus, as the original's, not into a slot; the
-# same retargeting in the Mousers', Rodney's and Shredder's thinking (051130, 051DBC, 05287C "exg A5, A6")
+# same retargeting in the Mousers', Rodney's and Shredder's thinking (051130, 051DBC, 05287C "exg A5, A6"). A5 is
+# the address the object routines' dispatcher called the handler at: enemy_think's, the skateboard soldier's
+# (04EFEC, which calls enemy_think), the Mousers', Rodney's and Shredder's, each read at its fifth byte
+# (data_assets.py's second_player_through_the_skateboard_soldier, _the_mouser, _rodney, _shredder)
 local enemy_think 048AD0 a6 second_slot none
 local enemy_mouser_think 051130 a6 second_slot none
 local enemy_rodney_think 051DBC a6 second_slot none
