@@ -372,3 +372,14 @@ void boss_rush_overlay(console_picture *frame)
 	if (area < 10u && boss_names[area][0])
 		draw_boss_name(frame, boss_names[area]);
 }
+
+/* For a LAN game's start (console_power_on): the modes' state as at power-on */
+void modes_power_on(void)
+{
+	rush_area = 0xFFu;
+	rush_place = rush_still = rush_frames = 0u;
+	rush_music = 0u;
+	memset(rush_blocked, 0, sizeof(rush_blocked));
+	rush_lift_set = false;
+	rush_announced = 0u;
+}

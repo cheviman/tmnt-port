@@ -48,6 +48,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#ifdef _WIN32
+__declspec(dllimport) void __stdcall Sleep(unsigned long milliseconds);
+#endif
 
 #define USAGE "Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
 	" [--script FILE] [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]" \
@@ -64,6 +69,43 @@ static const char *dump_dir = ".";
 static uint64_t video_dumps[MAX_VIDEO_DUMPS];
 static int video_dump_count;
 static const char *video_dir = ".";
+
+/* The frames run, a LAN game's reset (tmnt_board.frame from 0 again) counted in: the actions', the dumps' and --frames'
+   (the same as tmnt_board.frame where nothing resets the board) */
+static uint64_t frames_before_reset;
+#define FRAMES_RUN          (frames_before_reset + tmnt_board.frame)
+static bool pace;          /* --pace: 60 frames a second, as a window's (a LAN game's waits are counted in frames) */
+
+static void sleep_ms(int milliseconds)
+{
+#ifdef _WIN32
+	Sleep((unsigned long)milliseconds);
+#else
+	const struct timespec wait = { 0, (long)milliseconds * 1000000L };
+
+	nanosleep(&wait, NULL);
+#endif
+}
+
+static double seconds_now(void)
+{
+	struct timespec now;
+
+	timespec_get(&now, TIME_UTC);
+	return (double)now.tv_sec + (double)now.tv_nsec / 1e9;
+}
+
+static void pace_frame(void)
+{
+	static double next;
+	double now = seconds_now();
+
+	if (next == 0.0 || now > next + 0.1)
+		next = now;
+	next += 1.0 / 60.0;
+	while ((now = seconds_now()) < next)
+		sleep_ms(1);
+}
 
 #ifdef TMNT_CONSOLE
 /* --actions: the console's menus' actions, and the players' START */
@@ -84,6 +126,8 @@ static size_t action_count;
 #define ACTION_QUIT     (1u << 30)
 #define ACTION_RESTART  (1u << 31)
 static bool pause_shown;
+static bool lan_given;     /* a LAN frame's controls on the board: its hash after the frame (--lan-hashes) */
+static FILE *lan_hashes;
 static bool wide_check;    /* --wide-check: each frame, WIDE's sides' columns that are not their map's */
 
 static const char *load_actions(const char *path)
@@ -132,11 +176,16 @@ static void console_inputs(void)
 	for (int player = 0; player < CONSOLE_PLAYERS; player++)
 		pressed[player] = (uint8_t)~tmnt_board.players[player];
 	for (size_t index = 0; index < action_count; index++)
-		if (actions[index].frame == tmnt_board.frame)
+		if (actions[index].frame == FRAMES_RUN)
 		{
 			if (actions[index].action == ACTION_PAUSE)
 			{
 				pause_shown = console_can_pause();
+				continue;
+			}
+			if (actions[index].action == ACTION_QUIT && console_lan_playing())
+			{
+				console_lan_quit();    /* (a LAN game's: out of it, as the window's Escape) */
 				continue;
 			}
 			if (actions[index].action == ACTION_QUIT || actions[index].action == ACTION_RESTART)
@@ -169,6 +218,24 @@ static void console_inputs(void)
 			}
 			menu_actions |= actions[index].action;
 		}
+	if (console_lan_playing())
+	{
+		/* (a LAN game: player 1's controls and START to the network, every player's back on the board; held a frame
+		   at a time till they come) */
+		int held = 0;
+
+		while (!console_lan_frame(pressed[0], (starts & 1u) != 0))
+		{
+			sleep_ms(16);
+			if (++held > 60 * 30)
+			{
+				fprintf(stderr, "the LAN game held 30 seconds\n");
+				exit(4);
+			}
+		}
+		lan_given = console_lan_playing();
+		return;
+	}
 	console_actions(menu_actions);
 	console_controls(pressed, starts);
 }
@@ -222,7 +289,7 @@ static void dump_video(void)
 	char path[1100];
 
 	for (int index = 0; index < video_dump_count; index++)
-		if (video_dumps[index] == tmnt_board.frame)
+		if (video_dumps[index] == FRAMES_RUN)
 		{
 			/* the frame the video drew: WIDE's, with its sides (--wide, --wide-side), or the board's */
 			int width, left = 0;
@@ -248,12 +315,12 @@ static void dump_video(void)
 				if (pause_shown)
 					console_pause_overlay(&picture, CONSOLE_PAUSE_CONTINUE);
 				console_describe(text, sizeof(text));
-				printf("frame %" PRIu64 ": %s\n", tmnt_board.frame, text);
+				printf("frame %" PRIu64 ": %s\n", FRAMES_RUN, text);
 			}
 #else
 			(void)left;
 #endif
-			snprintf(path, sizeof(path), "%s/frame_%" PRIu64 ".bmp", video_dir, tmnt_board.frame);
+			snprintf(path, sizeof(path), "%s/frame_%" PRIu64 ".bmp", video_dir, FRAMES_RUN);
 			write_bmp(path, pixels, width, TMNT_VIDEO_MAX_WIDTH);
 		}
 }
@@ -291,8 +358,16 @@ static void dump_memories(void)
 static void on_frame_done(void)
 {
 	/* the controls change when the VBLANK starts, then the frame's state is taken */
-	tmnt_script_apply(script, tmnt_board.frame);
+	tmnt_script_apply(script, FRAMES_RUN);
 #ifdef TMNT_CONSOLE
+	if (lan_given && lan_hashes)
+		fprintf(lan_hashes, "%" PRIu32 " %016" PRIx64 "\n", console_lan_frame_number(), tmnt_state_hash());
+	lan_given = false;
+	if (console_lan_reset_wanted())
+	{
+		program_stop();    /* (a LAN game's start: the program again from its start, main's) */
+		return;
+	}
 	console_inputs();
 	console_wide_frame();    /* (--wide: from the next frame drawn) */
 	if (wide_check)
@@ -311,12 +386,14 @@ static void on_frame_done(void)
 	if (sound_hashes)
 		fprintf(sound_hashes, "%" PRIu64 " %016" PRIx64 " %016" PRIx64 "\n", tmnt_board.frame,
 			tmnt_sound_samples_hash(), tmnt_sound_state_hash());
-	if (tmnt_board.frame == dump_frame)
+	if (FRAMES_RUN == dump_frame)
 		dump_memories();
 	if (video_dump_count)
 		dump_video();
-	if (tmnt_board.frame >= frames_wanted)
+	if (FRAMES_RUN >= frames_wanted)
 		program_stop();
+	else if (pace)
+		pace_frame();
 }
 
 static FILE *open_output(const char *path)
@@ -381,6 +458,14 @@ int main(int argc, char **argv)
 #ifdef TMNT_CONSOLE
 		else if (strcmp(argv[index], "--arcade-start") == 0)
 			console_arcade_test();
+#ifdef TMNT_CONSOLE
+		else if (strcmp(argv[index], "--lan-name") == 0 && index + 1 < argc)
+			snprintf(console_settings.name, sizeof(console_settings.name), "%s", argv[++index]);
+		else if (strcmp(argv[index], "--lan-hashes") == 0 && index + 1 < argc)
+			lan_hashes = open_output(argv[++index]);
+#endif
+		else if (strcmp(argv[index], "--pace") == 0)
+			pace = true;
 		else if (strcmp(argv[index], "--wide-check") == 0)
 			wide_check = true;
 		else if (strcmp(argv[index], "--wide") == 0 && index + 1 < argc)
@@ -485,6 +570,26 @@ int main(int argc, char **argv)
 
 	program_frame_done = on_frame_done;
 	program_run();
+#ifdef TMNT_CONSOLE
+	while (console_lan_reset_wanted())
+	{
+		/* (a LAN game: the board reset, the console as at power-on with the host's settings, the program from its
+		   start, as on every device of the game) */
+		const char *problem;
+
+		frames_before_reset += tmnt_board.frame;
+		problem = game_reset(false, video_hashes_path != NULL || video_dump_count > 0);
+		if (problem)
+		{
+			fprintf(stderr, "The game does not start again: %s\n", problem);
+			return 1;
+		}
+		console_lan_begin();
+		program_run();
+	}
+	if (lan_hashes)
+		fclose(lan_hashes);
+#endif
 
 	if (hashes)
 		fclose(hashes);
@@ -493,7 +598,7 @@ int main(int argc, char **argv)
 	if (sound_hashes)
 		fclose(sound_hashes);
 	tmnt_script_free(script);
-	printf("frames:            %" PRIu64 "\n", program_frames());
+	printf("frames:            %" PRIu64 "\n", FRAMES_RUN);
 	printf("interrupts taken:  %u\n", program_interrupts());
 	printf("sound commands:    %u\n", tmnt_board.sound_irqs);
 	printf("watchdog resets:   %u\n", tmnt_board.watchdog_resets);

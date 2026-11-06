@@ -1,7 +1,8 @@
 # tmnt_console_headless --actions: OPTIONS from the menu (the presentation is over by 360, the menu's logo in by
-# 500), then down to REGION and its next value (HERO)
+# 500; past ARCADE, SPLINTER WAY and LAN), then down to REGION and its next value (HERO)
 520 down
 530 down
+535 down
 540 accept
 700 down
 710 down

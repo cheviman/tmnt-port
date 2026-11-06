@@ -277,8 +277,11 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   turtle choice (AREA N - CHOOSE YOUR TURTLE), its area set when the game has put its own 0 and not yet read it (the
   game's turtle choice, scene 1, or the area's set-up before its first step: area_setup_variables takes the stage
   by it), as the scenarios poke it; infinite lives kept at 5, the box drawn again; RESTART starts the same area.
-  `tests/console/konami_code.txt`: area 5. To come: the code itself in the menu (up, up, down, down, left, right,
-  left, right, jump, attack) opening it, the line gone; "everyone the same turtle".
+  `tests/console/konami_code.txt`: area 5. The code itself (06-11, Sebas: "agreguemos el konami code"): on the menu
+  up, up, down, down, left, right, left, right, B (the jump, BACK), A (the attack, ACCEPT), from any player's keys or
+  game controller, opens the level select with the coin's sound (PCM 86), and the menu's KONAMI CODE line is gone;
+  the code's ups and downs take the menu's line there and back, its A picks nothing, and BACK from the level select
+  goes back to that line. The last ten presses kept, one a frame (several at once, none of the code's).
 - **18, "Original turtles", tried in KONAMI CODE** (< ORIGINAL TURTLES ON | OFF >): the turtles' sprites show with
   the palette RAM's sprite banks 0-3 (colours 16-19 x 16, by their animations' pieces), whose pens 10 and 11 are
   the bandana's; each frame Raphael's two go into the other three as the palette RAM has them, faded with them:
@@ -410,6 +413,67 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   goes on past it (April's turtle's arm, at the left: the pink all at the right). The place is read from the last
   frame drawn: at the picture's first frame it shows in the middle, on the black before it.
 
-Left for later: the Konami code itself (8: the code opening KONAMI CODE, the line gone), save states (15), "Original turtles" as a mode of its own (18: in KONAMI CODE meanwhile), the
-multiplayer over the local network (20); a turtle chosen by a player who comes in during a game (today the first
+Left for later: save states (15), "Original turtles" as a mode of its own (18: in KONAMI CODE meanwhile); a turtle chosen by a player who comes in during a game (today the first
 slot free); Kenney Mini still loaded and nothing drawing with it.
+
+## The LAN game (guideline 20): the design (06-11-2026)
+
+Sebas: "avancemos con el proyecto de multiplayer". The library is **arcade-lan** (D:\vs-cheviman\arcade-lan, a
+repository of its own for Sebas to create on GitHub, taken by the ports as a submodule as tools/core is
+arcade-decomp), in C, with no game in it:
+
+- **The devices.** Up to four in a room, each with its local players (one or more), the room's players four at
+  most. Every datagram is UDP, written byte by byte (devices need not be alike: a computer, a phone, a Switch); its
+  sockets those of outrunners-port's net_udp.c (Winsock, POSIX, libnx). A device is a handle (lan_open), so that a
+  test runs several in one program.
+- **The rooms**, as outrunners-port's: a host sends its beacon to the network every half second (and to 127.0.0.1,
+  for a second game on the same computer); JOIN lists the rooms heard, forgotten after 3 seconds unheard; a device
+  joins by asking until the host's list has it; the host sends the list (its devices in order, the host first),
+  and a device's players take the slots in that order. A device unheard for a third of a second is waited for, and
+  after 3 seconds it is gone.
+- **The game: lockstep through the host**, as the guideline says (one cabinet, as the arcade's TMNT is). The host's
+  START sends the game's settings (bytes the game writes and reads: its mode, DIP switches, WIDE...) to every
+  device, and frame 0 begins for all. At each of its frames a device hands its local players' controls (a few
+  bytes each), which play `delay` frames later (2-3 on a LAN, so that the datagrams have come by then); it sends
+  them to the host, the host puts every slot's together and sends every device the frame's inputs of all the
+  players; a device runs a frame only once it has them, else it holds (the game shows its last picture). Each
+  datagram carries the last frames again, so that a lost one costs nothing. A device gone: its slots' inputs are
+  none from a frame the host says, and the game goes on; the host gone: the game ends.
+- **Out of step.** Each device hands the state's hash of its frames (tmnt_state_hash: work RAM, palette, the video
+  chips' memories); the host compares them with its own and says so to every device when one differs.
+- **What a port does**: opens a device with the game's four letters and version, draws its own menus (HOST, JOIN,
+  the rooms, the room's list, a player's NAME), gives its controls each frame and runs the frames with the inputs it
+  hands back.
+
+**Done in TMNT (06-11, Sebas: the LAN in the root menu).** github.com/cheviman/arcade-lan, the port's `lan/`
+submodule (CMake's ARCADE_LAN_DIR; without it the build has no LAN and the page says NO NETWORK); console/lan.c:
+
+- The menu: ARCADE, SPLINTER WAY, **LAN**, OPTIONS, EXIT. LAN's pages over BEST 10 PLAYERS' picture, as OPTIONS':
+  HOST, JOIN, NAME (letter by letter, kept in tmnt.ini; HOST or JOIN with none yet ask it first, YOUR NAME, then go
+  on: Sebas, "que pueda poner nombre el usuario que se conecta"), BACK, and what went wrong last under them; JOIN the rooms
+  found (the host's name, its players "1 OF 4", PLAYING); the room its devices (their player, HOST, YOU, WAITING
+  when unheard) and the host's START (two devices or more) and LEAVE.
+- The game's start: the host's START sends its DIP switches, region and WIDE; on every device the port stops the
+  program (program_stop), resets the board (game_reset) and runs the program again from its start, and the console
+  starts as at power-on (console_power_on: every file's own state, wide.c's two statics of functions moved to the
+  file) with those settings, no presentation, Splinter Way's turtle choice open from the boot on (under black, LAN
+  GAME). The region the host's as the choice opens (show_step). This device's settings back as its game ends, never
+  saved over by the host's.
+- Each frame: the device's player 1's controls and START (newly pressed) to the network (2 bytes, 3 frames' delay),
+  every player's back through console_controls: the room's devices in its list's order are the console's players 1-4,
+  each on the turtle he picks (the host's the first). The frame held till they come (the window shows its last
+  picture, WAITING FOR its name after a third of a second); the state's hash after each frame to the host.
+- No pause: Escape (a game controller's Back) leaves the LAN game, which goes on for the others (the device gone
+  after 3 seconds, its turtle standing). The game over, the host gone or OUT OF STEP: the LAN page again, after the
+  game over the pause's QUIT GAME has (console_back_to_lan_page: the board's controls and the network's presses let
+  go: the headless read the network's back as its players' and its JOIN was taken for HOST).
+- tmnt_console_headless: --lan-name, --lan-hashes (each LAN frame's hash), --pace (60 frames a second: the library's
+  waits are frames), "quit" leaving a LAN game, its frames counted across the reset (the actions', the dumps').
+  Tried with two of them on this computer: a host and a guest that finds the room by its beacon, comes in with START
+  on the turtle choice and picks Donatello, the host Leonardo: 2297 LAN frames, every one's hash the same on both, the
+  pictures the same pixel for pixel; with the host in 16:9 and the guest in 20:9 and through OPTIONS first, 2197 frames
+  the same (the game in the host's 416 columns on both); the guest leaving at frame 2800, the host's game going on.
+
+To come: a device's second player (local players: the library takes them, the menu has no PLAYERS yet), the
+window's own try on two computers of a LAN, and the other platforms when the ports come (the library's sockets
+are outrunners-port's: Winsock, POSIX, libnx).

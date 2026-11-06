@@ -661,8 +661,8 @@ static void read_events(void)
 				}
 				if (!(event.key.keysym.mod & KMOD_ALT))    /* (Alt+Enter: the full screen alone) */
 					action_key(event.key.keysym.sym);
-				if (event.key.keysym.sym == SDLK_ESCAPE && console_can_pause())
-					pause_requested = true;
+				if (event.key.keysym.sym == SDLK_ESCAPE && (console_can_pause() || console_lan_playing()))
+					pause_requested = true;    /* (a LAN game's: out of it, console_lan_quit) */
 #else
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 				{
@@ -752,6 +752,33 @@ static void read_controls(void)
 	console_actions(console_controls_waiting() >= 0 ? 0 : actions_pressed);
 	console_controls(players, starts);
 	actions_pressed = 0;
+}
+
+/* TMNT's LAN game: this device's player's controls (player 1's keys and game controller) and START go to the network,
+   and every player's come back onto the board (console_lan_frame); till they have come, the game holds: the last
+   picture again (WAITING FOR its device's name, after a third of a second), the events read, the pace kept */
+static void wait_for_frame(void);
+static void show_frame(void);
+
+static void lan_controls(void)
+{
+	uint8_t players[PLAYERS], starts;
+
+	read_players(players, &starts);
+	actions_pressed = 0;
+	while (!console_lan_frame(players[0], (starts & 1u) != 0))
+	{
+		read_events();
+		actions_pressed = 0;
+		if (pause_requested)
+		{
+			pause_requested = false;
+			console_lan_quit();
+			return;
+		}
+		show_frame();
+		wait_for_frame();
+	}
 }
 
 /* ---- the pause ---- */
@@ -919,12 +946,12 @@ static void save_settings(void)
 	const console_settings_t *settings = &console_settings;
 	FILE *output;
 
-	if (script || !settings_path[0] || (output = fopen(settings_path, "w")) == NULL)
-		return;
+	if (script || !settings_path[0] || console_lan_playing() || (output = fopen(settings_path, "w")) == NULL)
+		return;    /* (a LAN game's: the host's settings, not this device's) */
 	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\nwide=%s\nvolume=%d\nfps=%d\nregion=%d\ndsw1=%02X\n"
-		"dsw2=%02X\ndsw3=%02X\n", settings->window_scale, settings->full_screen, console_pixel_names[settings->pixels],
-		console_wide_names[settings->wide], settings->volume, settings->fps, settings->region, settings->dsw[0],
-		settings->dsw[1], settings->dsw[2]);
+		"dsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale, settings->full_screen,
+		console_pixel_names[settings->pixels], console_wide_names[settings->wide], settings->volume, settings->fps,
+		settings->region, settings->dsw[0], settings->dsw[1], settings->dsw[2], settings->name);
 	fclose(output);
 }
 
@@ -952,6 +979,18 @@ static void load_settings(void)
 			settings->dsw[number - 1] = (uint8_t)bits;
 		else if (sscanf(line, "fps=%d", &number) == 1)
 			settings->fps = number != 0;
+		else if (strncmp(line, "name=", 5) == 0)
+		{
+			/* (LAN > NAME's letters only, as many as it holds) */
+			int length = 0;
+
+			for (const char *at = line + 5; *at && length < CONSOLE_NAME_LENGTH; at++)
+				if ((*at >= 'A' && *at <= 'Z') || (*at >= '0' && *at <= '9') || *at == '.' || *at == '-' || *at == ' ')
+					settings->name[length++] = *at;
+			while (length > 0 && settings->name[length - 1] == ' ')
+				length--;
+			settings->name[length] = '\0';
+		}
 		else if (sscanf(line, "pixels=%31s", text) == 1)
 		{
 			for (int kind = 0; kind < PIXELS_KINDS; kind++)
@@ -1024,6 +1063,8 @@ static void on_frame_done(void)
 			players[player] = (uint8_t)~tmnt_board.players[player];
 		console_controls(players, 0);
 	}
+	else if (console_lan_playing())
+		lan_controls();
 	else
 		read_controls();
 	console_wide_frame();    /* (WIDE: from the next frame drawn) */
@@ -1057,9 +1098,16 @@ static void on_frame_done(void)
 			tmnt_sound_samples_hash(), tmnt_sound_state_hash());
 	show_frame();
 #ifdef TMNT_CONSOLE
-	if (pause_requested && console_can_pause())
+	if (pause_requested && console_lan_playing())
+		console_lan_quit();
+	else if (pause_requested && console_can_pause())
 		run_pause();
 	pause_requested = false;
+	if (console_lan_reset_wanted())
+	{
+		program_stop();    /* (a LAN game's start: the program again from its start, main's) */
+		return;
+	}
 	if (console_settings.changed)
 	{
 		console_settings.changed = false;
@@ -1319,6 +1367,19 @@ int main(int argc, char **argv)
 		tmnt_script_apply(script, 0);
 	program_frame_done = on_frame_done;
 	program_run();
+#ifdef TMNT_CONSOLE
+	while (console_lan_reset_wanted())
+	{
+		/* (a LAN game: the board reset, the console as at power-on with the host's settings, the program from its
+		   start, on every device alike) */
+		const char *problem = game_reset(false, true);
+
+		if (problem)
+			fail(problem);
+		console_lan_begin();
+		program_run();
+	}
+#endif
 
 	if (hashes)
 		fclose(hashes);

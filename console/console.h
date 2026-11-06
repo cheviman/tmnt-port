@@ -75,6 +75,24 @@ void console_overlay(console_picture *picture);
    it can, showing one in eight, without their sound */
 bool console_fast_forward(void);
 
+/* The LAN game (console/lan.c): the host's START has begun it, and the board is to be reset for it (the port:
+   program_stop, then game_reset and console_lan_begin, and program_run again from the program's start) */
+bool console_lan_reset_wanted(void);
+void console_lan_begin(void);
+
+/* True through a LAN game, from its reset: each frame's controls come from the network, in place of console_controls
+   (console_lan_frame), and there is no pause (Escape or Back leaves the game: console_lan_quit) */
+bool console_lan_playing(void);
+
+/* Each frame of a LAN game: this device's player's controls (TMNT_* bits) and his START newly pressed. True when
+   the next frame's every player's controls have come and are on the board; false while the game holds (the port
+   shows its last picture again, and calls it again at its next frame) */
+bool console_lan_frame(uint8_t pressed, bool start);
+void console_lan_quit(void);
+
+/* The LAN frame whose controls are on the board (for checks: tmnt_console_headless --lan-hashes) */
+uint32_t console_lan_frame_number(void);
+
 /* True once the menu's EXIT was picked: the port closes the game */
 bool console_quit_requested(void);
 
@@ -153,6 +171,8 @@ enum
 };
 
 #define CONSOLE_REGIONS 4    /* the program's version byte (06009F): 0-3 */
+#define CONSOLE_NAME_LENGTH 10
+#define CONSOLE_DEFAULT_NAME "PLAYER"
 
 typedef struct
 {
@@ -164,6 +184,7 @@ typedef struct
 	bool fps;              /* OPTIONS > FPS: the frames a second at the picture's top right, and in the window's title */
 	int region;            /* the version byte: 0 NINJA (the set's own), 1 HERO, 2 and 3 (console/PLAN.md) */
 	uint8_t dsw[3];        /* the DIP switches as the board has them (active low), tmnt/machine.h */
+	char name[CONSOLE_NAME_LENGTH + 1];    /* LAN > NAME: this device's player's, as the rooms show it */
 	bool changed;
 } console_settings_t;
 

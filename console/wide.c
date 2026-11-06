@@ -562,18 +562,20 @@ static bool write_sprite(uint32_t *sprite_place, uint8_t size_code, uint8_t code
 /* The title's TURTLES (object 12) waits past the board's right edge while the banner comes down (start_title_logo's
    place), then slides in (title_turtles_slide_in): with WIDE it waits past the wider screen's (Sebas: its T showed
    there), its slide the longer */
+static bool title_turtles_moved;
+
 static void title_turtles_out_of_sight(int side_right)
 {
-	static bool moved;
+	bool *const moved = &title_turtles_moved;
 
 	if (game_step != ATTRACT_TITLE || scene != 1u || scene_step != 1u)
 	{
-		moved = false;
+		*moved = false;
 		return;
 	}
-	if (!moved)
+	if (!*moved)
 		OBJECT(OBJECT_ADDRESS(12))->screen_x += (uint16_t)side_right;
-	moved = true;
+	*moved = true;
 }
 
 /* The game's draw_sprites (engine/sprites.c), each piece written when it shows on the wider screen */
@@ -1037,16 +1039,18 @@ static void draw_shown_columns(int layer, int left, int right)
 }
 
 /* At each frame's end: the layers drawn whole, or all of them when WIDE's sides come, rebuilt past the board's */
+static bool rebuild_had_sides;    /* (the last frame's: WIDE's sides there) */
+
 static void rebuild_layers(int left, int right)
 {
-	static bool had_sides;
+	bool *const had = &rebuild_had_sides;
 	const bool sides = left || right;
 	const bool in_play = sides && console.page == PAGE_GAME && !exit_picture();    /* (the menus' screens: the
 	                                                                                   attract's, no area's map) */
 
-	if (sides && !had_sides)
+	if (sides && !*had)
 		layer_rebuild[0] = layer_rebuild[1] = true;
-	had_sides = sides;
+	*had = sides;
 	for (int layer = 0; layer < 2 && in_play; layer++)
 		if (layer_rebuild[layer])
 		{
@@ -1214,4 +1218,31 @@ int console_wide_check(char *text, size_t size)
 		}
 	}
 	return bad;
+}
+
+/* For a LAN game's start (console_power_on): WIDE's state as at power-on */
+void wide_power_on(void)
+{
+	layer_maps = 0;
+	looping_maps = 0;
+	area_started = false;
+	wide_hidden = 0;
+	picture_place = PICTURE_MIDDLE;
+	lift_bar_left = lift_bar_right = lift_bar_left_now = lift_bar_right_now = 0;
+	memset(lift_cache, 0, sizeof(lift_cache));
+	lift_cache_blocks = 0;
+	wide_left_now = wide_right_now = 0;
+	title_turtles_moved = false;
+	rebuild_had_sides = false;
+	checking = -1;
+	checked = 0;
+	for (int layer = 0; layer < 2; layer++)
+	{
+		drawn_first[layer] = drawn_last[layer] = drawn_y[layer] = 0;
+		drawn_known[layer] = false;
+		looping_last_x[layer] = 0;
+		layer_first[layer] = 0;
+		layer_codes[layer] = CODES_PLAIN;
+		layer_rebuild[layer] = false;
+	}
 }

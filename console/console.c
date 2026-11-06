@@ -70,6 +70,33 @@ void console_arcade_test(void)
 	console.powered_on = true;
 }
 
+void console_power_on(bool lan_game)
+{
+	const console_state fresh = { .last_presser = 0 };
+
+	console = fresh;
+	console.powered_on = lan_game;    /* (a LAN game: no presentation, the turtle choice from the boot on) */
+	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
+	{
+		console_slot_of[slot] = -1;
+		console_coins_put[slot] = 0;
+		joins[slot].frames = -1;
+		joins[slot].coin = false;
+		controls_last[slot] = 0;
+	}
+	console_same_turtle = -1;
+	arcade_test = false;
+	free_play = 0u;
+	tmnt_board.dsw[0] = console_settings.dsw[0];
+	tmnt_board.dsw[1] = console_settings.dsw[1];
+	tmnt_board.dsw[2] = (uint8_t)(console_settings.dsw[2] | TMNT_DSW3_SERVICE);    /* (the test mode's switch off) */
+	menu_power_on(lan_game);
+	wide_power_on();
+	wide_turtles_power_on();
+	modes_power_on();
+	draw_power_on();
+}
+
 /* ---- the DIP switches and the lives ---- */
 
 /* As the boot reads them (reset): the switches' copies, the coins and credits of each slot, the lives a credit
@@ -234,6 +261,32 @@ void console_actions(uint32_t pressed)
 
 /* A game over and the attract mode again: the players off their slots, the coins and the lives back to the
    switches' */
+static void game_over(void);
+
+/* A LAN game over for this device (lan.c: ended, left, its host gone): the LAN page, after the game over the pause's
+   QUIT GAME has (at the attract mode's next frame, when it was in the game itself); the board's controls and the
+   presses the network put let go */
+static bool lan_page_next;
+
+void console_back_to_lan_page(void)
+{
+	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
+	{
+		tmnt_board.players[slot] = 0xFFu;
+		controls_last[slot] = 0;
+		console.player_pressed[slot] = 0;
+	}
+	tmnt_board.coins = 0xFFu;
+	console.pressed = 0;
+	if (console.page == PAGE_GAME)
+	{
+		lan_page_next = true;    /* (run_attract's game over first) */
+		return;
+	}
+	game_over();
+	console_open_lan_page();
+}
+
 static void game_over(void)
 {
 	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
@@ -355,6 +408,13 @@ void run_attract(void)
 		console.page = console.restarting ? PAGE_CHOICE : PAGE_MENU;
 		console.choice = 0;
 		console.page_frames = 0;
+		if (console_lan_playing())
+			console_lan_game_over();    /* (a LAN game's: the LAN page again) */
+		else if (lan_page_next)
+		{
+			lan_page_next = false;    /* (a LAN game left in the game itself) */
+			console_open_lan_page();
+		}
 		pressed = 0;
 		memset(player_pressed, 0, sizeof(player_pressed));
 	}
@@ -473,6 +533,21 @@ void console_overlay(console_picture *frame)
 	else
 		menu_overlay(frame);
 	boss_rush_overlay(frame);
+	if (console_lan_playing() && game_state < GAME_STATE_ATTRACT)
+	{
+		/* (a LAN game's start: the board's boot, its RAM and ROM checks, under black) */
+		draw_fill(frame, PICTURE_FIRST(frame), 0, PICTURE_END(frame) - PICTURE_FIRST(frame), TMNT_VIDEO_HEIGHT,
+			0x000000u);
+		draw_game_letters_centred(frame, 108, 1, GAME_LETTERS_OWN, "LAN GAME");
+	}
+	if (console_lan_waiting())
+	{
+		char text[40];
+
+		snprintf(text, sizeof(text), "WAITING FOR %s", console_lan_waiting());
+		draw_shade(frame, PICTURE_FIRST(frame), 100, PICTURE_END(frame) - PICTURE_FIRST(frame), 24, 80);
+		draw_game_letters_centred(frame, 108, 1, GAME_LETTERS_OWN, text);
+	}
 	/* the picture's first 6 columns black: the K052109 shows layers A and B 6 pixels further than the fixed layer
 	   (tmnt.cpp: -90 and -96), and there they show the end of their maps, which the game never draws for that
 	   place; the cabinet's monitor hid them under its bezel (the arcade build keeps them, as MAME draws them). The
@@ -497,7 +572,8 @@ bool console_quit_requested(void)
 
 bool console_can_pause(void)
 {
-	return console.page == PAGE_GAME && game_state == GAME_STATE_GAME;
+	return console.page == PAGE_GAME && game_state == GAME_STATE_GAME && !console_lan_playing();    /* (a LAN game's
+		pause would hold every device: Escape leaves it) */
 }
 
 /* The game ended where it is, as its own game over ends it (back_to_attract): the play, the layers and the players
@@ -538,7 +614,7 @@ void console_controls_held(const uint8_t pressed[CONSOLE_PLAYERS])
 void console_describe(char *text, size_t size)
 {
 	static const char *const pages[] = { "presentation", "menu", "splinter way", "level select", "options", "video",
-		"sound test", "controls", "choice", "starting", "game" };
+		"sound test", "controls", "lan", "lan name", "lan rooms", "lan room", "choice", "starting", "game" };
 
 	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u, difficulty %u%s%s%s%s",
 		pages[console.page],

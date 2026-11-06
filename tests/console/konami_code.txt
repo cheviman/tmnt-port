@@ -1,10 +1,17 @@
-# tmnt_console_headless --actions: the menu's KONAMI CODE (the code's level select, in the open while it is tried),
-# AREA 5 (the parked cars), infinite lives (as it starts), down past ORIGINAL TURTLES and SAME TURTLE to START:
-# Leonardo picked on the turtle choice and the game starts there. With --script tests/console/skip_intro.txt
+# tmnt_console_headless --actions: the Konami code on the menu (up, up, down, down, left, right, left, right, back,
+# accept: B and A) opens its level select; AREA 5 (the parked cars), infinite lives (as it starts), down past ORIGINAL
+# TURTLES and SAME TURTLE to START: Leonardo picked on the turtle choice and the game starts there. With --script
+# tests/console/skip_intro.txt
+500 up
+510 up
 520 down
 530 down
-540 down
-550 accept
+540 left
+550 right
+560 left
+570 right
+580 back
+590 accept
 600 right
 610 right
 620 right

@@ -654,3 +654,10 @@ void draw_board_sprites(console_picture *frame)
 			}
 	}
 }
+
+/* For a LAN game's start (console_power_on): the sprites' lists as at power-on */
+void draw_power_on(void)
+{
+	memset(sprites_next, 0, sizeof(sprites_next));
+	memset(sprites_shown, 0, sizeof(sprites_shown));
+}

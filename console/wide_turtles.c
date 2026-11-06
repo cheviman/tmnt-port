@@ -1406,3 +1406,8 @@ void turtle_knockback_arc(uint16_t jump_speed, uint32_t object)
 	OBJECT(object)->turtle.falling--;
 }
 
+/* For a LAN game's start (console_power_on): as at power-on */
+void wide_turtles_power_on(void)
+{
+	turtle_left = turtle_right = 0;
+}

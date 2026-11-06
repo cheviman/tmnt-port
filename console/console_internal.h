@@ -29,7 +29,7 @@
 enum
 {
 	PAGE_PRESENTATION,     /* the Konami presentation, at power-on */
-	PAGE_MENU,             /* the title's logo and the menu: ARCADE, SPLINTER WAY, OPTIONS, EXIT */
+	PAGE_MENU,             /* the title's logo and the menu: ARCADE, SPLINTER WAY, LAN, OPTIONS, EXIT */
 	PAGE_SPLINTER_WAY,     /* Splinter Way's modes: NORMAL, BOSS RUSH, RONIN, BACK */
 	PAGE_LEVEL_SELECT,     /* the Konami code's level select (guideline 8; the menu's KONAMI CODE while it is tried):
 	                          the area to start in, infinite lives */
@@ -37,13 +37,17 @@ enum
 	PAGE_VIDEO,            /* OPTIONS > VIDEO: the window's size, full screen, the pixels, WIDE */
 	PAGE_SOUND_TEST,       /* OPTIONS > SOUND TEST: the songs by name, the effects, the voices */
 	PAGE_CONTROLS,         /* OPTIONS > CONTROLS: each player's keys and game controller buttons */
+	PAGE_LAN,              /* the menu's LAN (guideline 20, lan.c): HOST, JOIN, NAME, BACK, over the same picture */
+	PAGE_LAN_NAME,         /* LAN > NAME: the name written letter by letter */
+	PAGE_LAN_ROOMS,        /* LAN > JOIN: the rooms found */
+	PAGE_LAN_ROOM,         /* the room hosted or joined: its devices, the host's START */
 	PAGE_CHOICE,           /* the coin's screen: the turtle chosen */
 	PAGE_STARTING,         /* the chosen turtle's coin and attack going in */
 	PAGE_GAME              /* the game's own, from its start to the attract mode */
 };
 
 /* OPTIONS and its pages, over the same picture */
-#define OPTIONS_PAGE(page) ((page) >= PAGE_OPTIONS && (page) <= PAGE_CONTROLS)
+#define OPTIONS_PAGE(page) ((page) >= PAGE_OPTIONS && (page) <= PAGE_LAN_ROOM)    /* (and LAN's, over it too) */
 
 /* The games the menus start */
 enum
@@ -131,6 +135,44 @@ void console_wide_menus(void);
 
 /* WIDE in an area's exit's picture (wide.c): its sides painted with its background's colour */
 void wide_picture_sides(console_picture *frame);
+
+/* The LAN game's rooms (lan.c), for the menu's LAN pages: HOST, JOIN (the rooms found, one joined), the room's list
+   and the host's START (two devices or more), what went wrong last (until a line is moved to), and the datagrams at
+   each frame of those pages */
+bool console_lan_host(void);
+void console_lan_search(void);
+void console_lan_leave(void);
+void console_lan_name_changed(void);
+bool console_lan_searching(void);
+bool console_lan_in_room(void);
+bool console_lan_joining(void);
+bool console_lan_hosting(void);
+int console_lan_room_count(void);
+void console_lan_room_text(int index, char *text, size_t size);
+bool console_lan_join(int index);
+int console_lan_member_count(void);
+void console_lan_member_text(int index, char *text, size_t size);
+bool console_lan_can_start(void);
+void console_lan_start(void);
+const char *console_lan_problem(void);
+void console_lan_problem_seen(void);
+void console_lan_update(void);
+void console_lan_game_over(void);
+const char *console_lan_waiting(void);    /* (a LAN game held: the device it waits for) */
+
+/* The console as at power-on (console.c and each file's own state: menu.c, wide.c, wide_turtles.c, modes.c, draw.c),
+   for a LAN game's start on every device alike; with 'lan_game' Splinter Way's turtle choice open (menu.c) */
+void console_power_on(bool lan_game);
+void menu_power_on(bool lan_game);
+void wide_power_on(void);
+void wide_turtles_power_on(void);
+void modes_power_on(void);
+void draw_power_on(void);
+
+/* The menu's LAN page again: console_back_to_lan_page as a LAN game ends for this device (console.c: after the game's
+   game over), console_open_lan_page the page itself (menu.c) */
+void console_back_to_lan_page(void);
+void console_open_lan_page(void);
 
 /* ---- drawing over the frame (draw.c) ---- */
 
