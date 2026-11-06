@@ -111,12 +111,16 @@ const char *assets_load_pack(const char *path)
 		return "the assets pack cannot be read";
 	}
 	fclose(input);
-	if (size < 12 || memcmp(bytes, PACK_MAGIC, 4) != 0)
-		problem = "the assets pack is not one";
-	else if (get32(bytes + 4) != PACK_FORMAT || get32(bytes + 8) != tables_version())
-		problem = "the assets pack is of another version of the game";
-	else
-		problem = assets_pack_get(bytes + 12, (size_t)size - 12u);
+	problem = assets_load_pack_bytes(bytes, (size_t)size);
 	free(bytes);
 	return problem;
+}
+
+const char *assets_load_pack_bytes(const uint8_t *bytes, size_t size)
+{
+	if (size < 12 || memcmp(bytes, PACK_MAGIC, 4) != 0)
+		return "the assets pack is not one";
+	if (get32(bytes + 4) != PACK_FORMAT || get32(bytes + 8) != tables_version())
+		return "the assets pack is of another version of the game";
+	return assets_pack_get(bytes + 12, size - 12u);
 }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	Name:        AndroidManifest.xml.in
+	Description: an Android app of TMNT's (TMNT, TMNT Arcade): SDL's activity (org.libsdl.app.SDLActivity, its Java
+	             from SDL's source) starting the game in libmain.so, on its side of the screen, full screen
+	Version:     0.1.0
+	Created:     06-11-2026
+	Modified:    06-11-2026
+	Author:      Sebastian Toyos
+
+	android.cmake writes each game's from it (its package and its name), as outrunners-port's manifest is; the
+	version and the SDKs come from aapt2 link. A touch screen and a game controller are both welcome and neither is
+	needed (the touch screen's controls, or a Bluetooth or USB controller's).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="@TMNT_ANDROID_PACKAGE@"
+	android:installLocation="auto">
+
+	<uses-feature android:glEsVersion="0x00020000" />
+	<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+	<uses-feature android:name="android.hardware.gamepad" android:required="false" />
+	<uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+	<uses-feature android:name="android.hardware.usb.host" android:required="false" />
+	<uses-feature android:name="android.hardware.wifi" android:required="false" />
+
+	<!-- LAN: the rooms' datagrams on the local network (arcade-lan, lan/) -->
+	<uses-permission android:name="android.permission.INTERNET" />
+
+	<application
+		android:label="@TMNT_ANDROID_LABEL@"
+		android:icon="@mipmap/ic_launcher"
+		android:allowBackup="true"
+		android:hardwareAccelerated="true"
+		android:isGame="true"
+		android:appCategory="game"
+		android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+		<activity
+			android:name="org.libsdl.app.SDLActivity"
+			android:label="@TMNT_ANDROID_LABEL@"
+			android:alwaysRetainTaskState="true"
+			android:launchMode="singleInstance"
+			android:screenOrientation="sensorLandscape"
+			android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+			android:preferMinimalPostProcessing="true"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+	</application>
+</manifest>

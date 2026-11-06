@@ -77,5 +77,20 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   pieces in every package beside TMNT NSP (the Windows one by tmnt_package: an .nro never goes in a package).
   Not yet run on a Switch.
 
-To come, in this order: Android (android.cmake, the touch controls, the APK's maker), the Anbernic (Zig's aarch64
-toolchain, the SDL2 stub, its maker).
+- **Android.** ports/android/android.cmake (the NDK's toolchain, no Gradle: javac, d8, aapt2, aapt, zipalign,
+  apksigner): TMNT and TMNT Arcade, each its libmain.so (SDL2 shared, from its source) with TMNT_HANDHELD,
+  TMNT_SYSTEM_EXIT and TMNT_TOUCH (TMNT's WIDE as the phone's screen is: 20:9, 16:9, or none squarer than 3:2), its
+  manifest from AndroidManifest.xml.in (io.github.cheviman.tmnt and .tmnt.arcade), the launcher's icon drawn from the
+  project's (ports/android/res); of each a base APK (no pack, no signature) and this computer's -debug.apk (with
+  build/bin/tmnt.assets, the debug key). main.c on Android: the pack read whole from the APK's assets
+  (assets_load_pack_bytes, runtime/src/assets_pack.c: the port's), the log in the app's folder on the storage, back
+  the menus' back and the pause, the background a pause, exit(0) at the end. ports/sdl2/touch.c, TMNT's own: a stick
+  where the left thumb lands (eight ways), ATTACK and JUMP at the right (a thumb sliding between them), START (COIN in
+  TMNT Arcade) at the top right, player 1's; a game controller or a key hides them. Built here with segasonic-port's
+  downloaded SDK copied into build/downloads/android (NDK 28.2, build-tools 35.0.1, JDK 17; Ninja from Visual
+  Studio): apksigner verifies them (v2, v3), aligned, their packages and names. TMNT APK (ports/android/apk,
+  outrunners-port's maker) makes both, TMNT Arcade.apk beside TMNT.apk, signed with the player's key (made once in
+  %APPDATA%\TMNT): apksigner verifies them, the pack the first run's. The CI's android job and its base APKs in every
+  package beside TMNT APK. Not yet run on a phone (nor the touch controls seen).
+
+To come: the Anbernic (Zig's aarch64 toolchain, the SDL2 stub, its maker).

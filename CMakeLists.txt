@@ -29,6 +29,9 @@ option(TMNT_STATIC_SDL2 "Build SDL2 from its source into the executables" OFF)
 if(NINTENDO_SWITCH OR CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
 	set(TMNT_SWITCH ON)
 	set(TMNT_DEVICE ON)
+elseif(ANDROID)    # (the NDK's toolchain: ports/android/android.cmake)
+	set(TMNT_ANDROID ON)
+	set(TMNT_DEVICE ON)
 endif()
 
 if(MSVC)
@@ -178,6 +181,8 @@ endif()
 # or, with TMNT_STATIC_SDL2, SDL2 built from its own source into the executable
 if(TMNT_WINDOW_PROGRAM AND TMNT_SWITCH)
 	include(ports/switch/switch.cmake)
+elseif(TMNT_WINDOW_PROGRAM AND TMNT_ANDROID)
+	include(ports/android/android.cmake)
 elseif(TMNT_WINDOW_PROGRAM)
 	if(TMNT_STATIC_SDL2)
 		include(FetchContent)
@@ -314,6 +319,22 @@ elseif(TMNT_WINDOW_PROGRAM)
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
 				$<TARGET_FILE_DIR:tmnt_nsp>)
 
+		# TMNT APK (ports/android/apk, outrunners-port's): on the player's computer, TMNT's and TMNT Arcade's APKs out of
+		# the Android builds (android/tmnt-base.apk and tmnt-arcade-base.apk beside it) with the assets pack of the
+		# player's ROM set (TMNT NSP's rom_pack.c) and the player's icon, signed with a key of the player's own made
+		# once (v2's signature, no Java nor Android SDK on the player's computer). Its window as TMNT NSP's
+		add_executable(tmnt_apk_maker ports/android/apk/main.c ports/android/apk/make_apk.c ports/android/apk/zip.c
+			ports/android/apk/sign.c ports/android/apk/key.c ports/android/apk/ecdsa.c ports/switch/nsp/crypto.c
+			ports/switch/nsp/rom_pack.c ports/android/apk/window.c ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
+		target_include_directories(tmnt_apk_maker PRIVATE ports/switch/nsp ports/sdl2)
+		target_compile_definitions(tmnt_apk_maker PRIVATE TMNT_APK_WINDOW
+			[[FOLDER_TITLE="The folder for TMNT.apk and TMNT Arcade.apk"]])
+		target_link_libraries(tmnt_apk_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		set_target_properties(tmnt_apk_maker PROPERTIES OUTPUT_NAME "TMNT APK")
+		if(WIN32)
+			target_link_libraries(tmnt_apk_maker PRIVATE bcrypt ole32 shell32 uuid)    # (BCryptGenRandom: the key)
+		endif()
+
 		# The Windows package (tmnt_package): what a player downloads, build/package/tmnt-windows-x64.zip, a folder
 		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL2 and the C runtime inside them), and the
 		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the package's README.txt (docs/package), the project's LICENSE.txt, and
@@ -335,6 +356,14 @@ elseif(TMNT_WINDOW_PROGRAM)
 							${TMNT_BIN_DIR}/switch/${game}/icon.jpg ${CMAKE_SOURCE_DIR}/build/package/tmnt/switch/${game})
 				endforeach()
 			endif()
+			# (Android's: the games' base APKs alone, which TMNT APK makes the player's APKs of; this computer's
+			# -debug.apk carry its own assets and never go in a package)
+			if(EXISTS ${TMNT_BIN_DIR}/android/tmnt-base.apk AND EXISTS ${TMNT_BIN_DIR}/android/tmnt-arcade-base.apk)
+				list(APPEND TMNT_PACKED_DEVICES
+					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/android
+					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/android/tmnt-base.apk
+						${TMNT_BIN_DIR}/android/tmnt-arcade-base.apk ${CMAKE_SOURCE_DIR}/build/package/tmnt/android)
+			endif()
 			set(TMNT_PACKAGE_DIR ${CMAKE_SOURCE_DIR}/build/package)
 			set(TMNT_PACKAGE_NAME tmnt-windows-x64)
 			set(TMNT_PACKED ${TMNT_PACKAGE_DIR}/tmnt)
@@ -343,6 +372,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 				COMMAND ${CMAKE_COMMAND} -E rm -rf ${TMNT_PACKED} ${TMNT_PACKAGE_DIR}/${TMNT_PACKAGE_NAME}.zip
 				COMMAND ${CMAKE_COMMAND} -E make_directory ${TMNT_PACKED}/licenses
 				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console> $<TARGET_FILE:tmnt_nsp>
+					$<TARGET_FILE:tmnt_apk_maker>
 					${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp
 					${TMNT_PACKED}
 				${TMNT_PACKED_DEVICES}
@@ -359,7 +389,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/Kenney-Input-Prompts.txt
 				COMMAND ${CMAKE_COMMAND} -E tar cf ${TMNT_PACKAGE_NAME}.zip --format=zip tmnt
 				WORKING_DIRECTORY ${TMNT_PACKAGE_DIR}
-				DEPENDS tmnt tmnt_console tmnt_nsp
+				DEPENDS tmnt tmnt_console tmnt_nsp tmnt_apk_maker
 				COMMENT "Packing TMNT Arcade and TMNT: build/package/${TMNT_PACKAGE_NAME}.zip"
 				VERBATIM)
 		endif()

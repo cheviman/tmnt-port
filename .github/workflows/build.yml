@@ -4,7 +4,8 @@
 #              and TMNT, the console version, which take their assets out of the player's ROM set on their first
 #              run, with their README and the licenses (as outrunners-port's). On a tag v*, the release with the
 #              three packages and docs/releases/<tag>.md as its notes. The Switch's pieces (its job, devkitPro's
-#              image) go in every package beside TMNT NSP, which makes the player's .nsps of them (ports/PLAN.md).
+#              image) go in every package beside TMNT NSP, which makes the player's .nsps of them; Android's base
+#              APKs (its job, the runner's SDK and NDK) beside TMNT APK, which makes the player's APKs (ports/PLAN.md).
 #              It runs on main, its pull requests and its tags, and by hand on any branch
 # Version:     0.2.0
 # Created:     04-11-2026
@@ -34,7 +35,7 @@ jobs:
             os: windows-2022
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    needs: [switch]    # (its games go in the package, beside the tool that makes the player's .nsps of them)
+    needs: [switch, android]    # (their games go in the package, beside the tools that make the player's of them)
     steps:
       # (tools/core, the shared core, holds ymfm's license, which the package carries; lan/, arcade-lan, TMNT's LAN)
       - uses: actions/checkout@v7
@@ -46,6 +47,11 @@ jobs:
         with:
           name: tmnt-switch
           path: build/bin/switch
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-android
+          path: build/bin/android
 
       # SDL2 is built from its source (TMNT_STATIC_SDL2): on Linux it needs the headers of what it talks to (it
       # loads the libraries themselves when the game runs). The reference tools, built on MAME's code, are
@@ -148,6 +154,39 @@ jobs:
         with:
           name: tmnt-switch
           path: build/bin/switch/
+
+  # Android: TMNT's and TMNT Arcade's base APKs, without an assets pack or a signature (build/bin/android/*-base.apk),
+  # with the NDK and the SDK's tools of the runner's Android SDK and its Java 17 (ports/android/android.cmake)
+  android:
+    name: android
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35" "build-tools;35.0.1" > /dev/null
+
+      - name: Configure
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          cmake -S . -B build/android -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24
+
+      - name: Build
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          cmake --build build/android --target tmnt_apks --parallel
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-android
+          path: build/bin/android/*-base.apk
 
   # A tag v*: the release, the three packages and its notes (docs/releases/<tag>.md, written before the tag)
   release:

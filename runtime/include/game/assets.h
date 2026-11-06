@@ -34,6 +34,9 @@ const char *assets_load(const char *folder);
 const char *assets_pack_write(const char *path);
 const char *assets_load_pack(const char *path);
 
+/* A pack already read whole (an Android APK's assets, which are no files): what assets_load_pack loads */
+const char *assets_load_pack_bytes(const uint8_t *bytes, size_t size);
+
 /* the pack's body, after its header: the memories and the programs' data as they are loaded, and back */
 int assets_pack_put(FILE *output);
 const char *assets_pack_get(const uint8_t *bytes, size_t size);

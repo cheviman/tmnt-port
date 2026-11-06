@@ -85,8 +85,13 @@ Nintendo Switch       TMNT NSP (the folder switch beside it): TMNT.nsp and TMNT 
                       console's keys (prod.keys). Install them with an installer (DBI, Tinfoil,
                       Goldleaf) on a console with Atmosphere. Each controller is a player, up to four;
                       HOME leaves the game. On TMNT Arcade, minus puts a coin in.
+Android               TMNT APK (the folder android beside it): TMNT.apk and TMNT Arcade.apk, signed with
+                      a key of yours kept in your user folder (keep it: only an APK with the same key
+                      installs over the last one). Copy them to the phone and open them there. The touch
+                      screen has a stick where your left thumb lands, ATTACK and JUMP at the right, and
+                      START (COIN on TMNT Arcade); a game controller hides them. Back pauses TMNT.
 
-Start the tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
+Start a tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
 picture of yours for the icon), or run it from a command line: an option it does not know shows the ones
 it takes.
 

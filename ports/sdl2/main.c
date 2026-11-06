@@ -64,6 +64,9 @@
 #include "console.h"
 #include "controls.h"
 #endif
+#ifdef TMNT_TOUCH
+#include "touch.h"         /* (Android's touch screen: player 1's controls) */
+#endif
 
 #include <SDL.h>
 
@@ -467,6 +470,9 @@ static void present(void)
 	count_fps();
 	draw_fps(&frame);
 #endif
+#ifdef TMNT_TOUCH
+	touch_draw(renderer, out_width, out_height);
+#endif
 	SDL_RenderPresent(renderer);
 }
 
@@ -630,7 +636,7 @@ static void action_key(SDL_Keycode key)
 		case SDLK_DOWN: actions_pressed |= ACTION_BIT(ACTION_DOWN); break;
 		case SDLK_LEFT: actions_pressed |= ACTION_BIT(ACTION_LEFT); break;
 		case SDLK_RIGHT: actions_pressed |= ACTION_BIT(ACTION_RIGHT); break;
-		case SDLK_ESCAPE: case SDLK_BACKSPACE: actions_pressed |= ACTION_BIT(ACTION_BACK); break;
+		case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_AC_BACK: actions_pressed |= ACTION_BIT(ACTION_BACK); break;
 		case SDLK_RETURN: case SDLK_KP_ENTER: actions_pressed |= ACTION_BIT(ACTION_START); break;
 		default: break;
 	}
@@ -657,11 +663,20 @@ static void read_events(void)
 
 	while (SDL_PollEvent(&event))
 	{
+#ifdef TMNT_TOUCH
+		touch_event(&event);
+#endif
 		switch (event.type)
 		{
 			case SDL_QUIT:
 				program_stop();    /* (back to main: the game runs on a task's stack) */
 				return;
+#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+			case SDL_APP_WILLENTERBACKGROUND:
+				if (console_can_pause())
+					pause_requested = true;    /* (Android may end the game there: a game waits, paused) */
+				break;
+#endif
 			case SDL_KEYDOWN:
 				if (event.key.repeat)
 					break;
@@ -676,8 +691,9 @@ static void read_events(void)
 				}
 				if (!(event.key.keysym.mod & KMOD_ALT))    /* (Alt+Enter: the full screen alone) */
 					action_key(event.key.keysym.sym);
-				if (event.key.keysym.sym == SDLK_ESCAPE && (console_can_pause() || console_lan_playing()))
-					pause_requested = true;    /* (a LAN game's: out of it, console_lan_quit) */
+				if ((event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_AC_BACK)
+					&& (console_can_pause() || console_lan_playing()))
+					pause_requested = true;    /* (a LAN game's: out of it, console_lan_quit; Android's back too) */
 #else
 				if (event.key.keysym.sym == SDLK_ESCAPE)
 				{
@@ -741,9 +757,16 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 	for (int player = 0; player < PLAYERS; player++)
 	{
 		SDL_GameController *pad = controllers[player];
-		const bool start = controls_holds(player, pad, CONTROL_START);
+		bool start = controls_holds(player, pad, CONTROL_START);
 		uint8_t pressed = 0;
 
+#ifdef TMNT_TOUCH
+		if (player == 0)
+		{
+			pressed |= touch_controls();
+			start = start || touch_start();
+		}
+#endif
 		pressed |= controls_holds(player, pad, CONTROL_LEFT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, -1) ? TMNT_LEFT : 0;
 		pressed |= controls_holds(player, pad, CONTROL_RIGHT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, 1) ? TMNT_RIGHT : 0;
 		pressed |= controls_holds(player, pad, CONTROL_UP) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, -1) ? TMNT_UP : 0;
@@ -941,9 +964,17 @@ static void read_controls(void)
 		pressed |= down ? TMNT_DOWN : 0;
 		pressed |= attack ? TMNT_ATTACK : 0;
 		pressed |= jump ? TMNT_JUMP : 0;
+#ifdef TMNT_TOUCH
+		if (player == 0)
+			pressed |= touch_controls();
+#endif
 		tmnt_board.players[player] = (uint8_t)~pressed;
 		if (keys[SDL_SCANCODE_5 + player] || button(pad, SDL_CONTROLLER_BUTTON_BACK))
 			coins &= (uint8_t)~(TMNT_COIN1 << player);
+#ifdef TMNT_TOUCH
+		if (player == 0 && touch_start())
+			coins &= (uint8_t)~TMNT_COIN1;    /* (TMNT Arcade's touch screen: COIN) */
+#endif
 	}
 	if (keys[SDL_SCANCODE_9])
 		coins &= (uint8_t)~TMNT_SERVICE1;
@@ -1150,6 +1181,8 @@ static char *saves_folder(void)
 {
 #ifdef __SWITCH__
 	return SDL_strdup(SWITCH_FOLDER "/");
+#elif defined(__ANDROID__)
+	return SDL_GetPrefPath("", "TMNT");    /* (the app's own folder, its internal storage) */
 #elif defined(_WIN32)
 	return SDL_GetBasePath();
 #else
@@ -1186,7 +1219,37 @@ static bool assets_of_another_version(const char *folder)
 
 static void fail(const char *message);
 
+#ifdef __ANDROID__
+/* Android's pack, in the APK's assets (stored there, android.cmake): no file, so read whole through SDL's files and
+   loaded from its bytes. NULL, or what is wrong */
+static const char *load_android_pack(void)
+{
+	SDL_RWops *packed = SDL_RWFromFile(GAME_PACK_FILE, "rb");
+	const Sint64 size = packed ? SDL_RWsize(packed) : -1;
+	uint8_t *bytes = size > 0 ? malloc((size_t)size) : NULL;
+	size_t got = 0;
+	const char *problem;
+
+	if (!packed)
+		return "The game's assets (" GAME_PACK_FILE ") are not in this APK: make it again with TMNT APK and your ROM set";
+	while (bytes && got < (size_t)size)
+	{
+		/* (its bytes as the asset manager hands them: maybe fewer than asked for at a time) */
+		const size_t now = SDL_RWread(packed, bytes + got, 1, (size_t)size - got);
+
+		if (now == 0)
+			break;
+		got += now;
+	}
+	SDL_RWclose(packed);
+	problem = !bytes || got != (size_t)size ? "The game's assets cannot be read" : assets_load_pack_bytes(bytes, got);
+	free(bytes);
+	return problem;
+}
+#endif
+
 #ifdef TMNT_HANDHELD
+#ifndef __ANDROID__    /* (Android's pack: load_android_pack) */
 /* A device's assets: the pack its package carries (in its romfs on the Switch); none, and the game says so */
 static bool find_assets(char *found, size_t size)
 {
@@ -1203,6 +1266,7 @@ static bool find_assets(char *found, size_t size)
 			"ROM set");
 	return true;
 }
+#endif
 #else
 /* On macOS the folder the .app is in, where 'base' (SDL_GetBasePath) is its Resources: where a player puts the ROM
    set or the assets beside the game, as beside an executable elsewhere (outrunners-port's). 0 elsewhere */
@@ -1336,6 +1400,21 @@ int main(int argc, char **argv)
 	mkdir(SWITCH_FOLDER, 0777);
 	freopen(SWITCH_FOLDER "/" FILE_NAME ".log", "w", stderr);
 #endif
+#ifdef __ANDROID__
+	/* (what the game says goes to its .log in the app's folder on the storage, Android/data/<the app>/files: stderr
+	   goes nowhere there) */
+	if (SDL_AndroidGetExternalStoragePath())
+	{
+		char log_path[1024];
+
+		snprintf(log_path, sizeof(log_path), "%s/" FILE_NAME ".log", SDL_AndroidGetExternalStoragePath());
+		freopen(log_path, "w", stderr);
+	}
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");    /* (back is the menus' back, never the end) */
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");          /* (fingers are the touch controls, not the mouse) */
+	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#endif
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0)
 	{
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
@@ -1359,6 +1438,15 @@ int main(int argc, char **argv)
 #endif
 	}
 #endif
+#ifdef __ANDROID__
+	(void)assets_path;
+	{
+		const char *problem = load_android_pack();
+
+		if (problem)
+			fail(problem);
+	}
+#else
 	if (!assets)
 	{
 		if (!find_assets(assets_path, sizeof(assets_path)))
@@ -1378,6 +1466,7 @@ int main(int argc, char **argv)
 			fail(message);
 		}
 	}
+#endif
 	if (pack_path)
 	{
 		const char *problem = assets_pack_write(pack_path);
@@ -1423,6 +1512,36 @@ int main(int argc, char **argv)
 		fail(message);
 	}
 	SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+#ifdef TMNT_TOUCH
+	{
+#ifdef __ANDROID__
+		char *base = SDL_strdup("");    /* (the APK's assets, which SDL's files read by a relative path) */
+#else
+		char *base = SDL_GetBasePath();
+#endif
+
+		touch_open(renderer, base ? base : "");
+		SDL_free(base);
+	}
+#endif
+#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+	{
+		/* WIDE as the phone's screen is: 20:9 (most phones), 16:9, or the board's 320 on a screen squarer than 3:2 (a
+		   handheld's 4:3) */
+		int out_width = 0, out_height = 0;
+
+		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
+		if (out_width < out_height)
+		{
+			const int turned = out_width;    /* (the screen still upright as the game starts) */
+
+			out_width = out_height;
+			out_height = turned;
+		}
+		console_settings.wide = out_height <= 0 ? WIDE_16_9 : out_width * 9 >= out_height * 20 ? WIDE_20_9
+			: out_width * 2 >= out_height * 3 ? WIDE_16_9 : WIDE_OFF;
+	}
+#endif
 	SDL_RaiseWindow(window);    /* (the keyboard's: after the first run's window closed, another may have had it) */
 
 	{
@@ -1484,6 +1603,9 @@ int main(int argc, char **argv)
 	SDL_Quit();
 #ifdef __SWITCH__
 	romfsExit();
+#endif
+#ifdef __ANDROID__
+	exit(0);    /* (the app's process ends with the game: Android would start the next one in it, as this one left it) */
 #endif
 	return 0;
 }
