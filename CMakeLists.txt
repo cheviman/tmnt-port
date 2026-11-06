@@ -33,6 +33,11 @@ elseif(ANDROID)    # (the NDK's toolchain: ports/android/android.cmake)
 	set(TMNT_ANDROID ON)
 	set(TMNT_DEVICE ON)
 endif()
+# Anbernic's H700 handhelds on their stock firmware (with the toolchain ports/anbernic/zig_aarch64.cmake)
+option(TMNT_ANBERNIC "Build for Anbernic's H700 handhelds (ports/anbernic/anbernic.cmake)" OFF)
+if(TMNT_ANBERNIC)
+	set(TMNT_DEVICE ON)
+endif()
 
 if(MSVC)
 	add_compile_options(/W3 /utf-8)
@@ -183,6 +188,8 @@ if(TMNT_WINDOW_PROGRAM AND TMNT_SWITCH)
 	include(ports/switch/switch.cmake)
 elseif(TMNT_WINDOW_PROGRAM AND TMNT_ANDROID)
 	include(ports/android/android.cmake)
+elseif(TMNT_WINDOW_PROGRAM AND TMNT_ANBERNIC)
+	include(ports/anbernic/anbernic.cmake)
 elseif(TMNT_WINDOW_PROGRAM)
 	if(TMNT_STATIC_SDL2)
 		include(FetchContent)
@@ -335,11 +342,25 @@ elseif(TMNT_WINDOW_PROGRAM)
 			target_link_libraries(tmnt_apk_maker PRIVATE bcrypt ole32 shell32 uuid)    # (BCryptGenRandom: the key)
 		endif()
 
+		# TMNT Anbernic (ports/anbernic/maker, outrunners-port's): on the player's computer, the folder PORTS for an
+		# Anbernic H700 handheld's card out of the games' Anbernic build (the folder anbernic beside it) and the assets
+		# pack of the player's ROM set (TMNT NSP's rom_pack.c). Its window as TMNT NSP's
+		add_executable(tmnt_anbernic_maker ports/anbernic/maker/main.c ports/anbernic/maker/make_ports.c
+			ports/switch/nsp/rom_pack.c ports/anbernic/maker/window.c ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
+		target_include_directories(tmnt_anbernic_maker PRIVATE ports/switch/nsp ports/sdl2)
+		target_compile_definitions(tmnt_anbernic_maker PRIVATE TMNT_ANBERNIC_WINDOW
+			[[FOLDER_TITLE="The folder for PORTS (the card's Roms)"]])
+		target_link_libraries(tmnt_anbernic_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		set_target_properties(tmnt_anbernic_maker PROPERTIES OUTPUT_NAME "TMNT Anbernic")
+		if(WIN32)
+			target_link_libraries(tmnt_anbernic_maker PRIVATE ole32 shell32 uuid)
+		endif()
+
 		# The Windows package (tmnt_package): what a player downloads, build/package/tmnt-windows-x64.zip, a folder
 		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL2 and the C runtime inside them), and the
 		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the package's README.txt (docs/package), the project's LICENSE.txt, and
 		# licenses/ with the terms of what is in it or what it follows: MAME's and ymfm's (the board's video and
-		# sound), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the player's on its
+		# sound), arcade-lan's (TMNT's LAN game), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the player's on its
 		# first run
 		if(WIN32 AND TMNT_STATIC_SDL2 AND TARGET tmnt_console)
 			# (the devices' games beside their makers, where this build has them: the folder switch, the Switch
@@ -364,15 +385,29 @@ elseif(TMNT_WINDOW_PROGRAM)
 					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/android/tmnt-base.apk
 						${TMNT_BIN_DIR}/android/tmnt-arcade-base.apk ${CMAKE_SOURCE_DIR}/build/package/tmnt/android)
 			endif()
+			# (the Anbernic's: its launchers and its folder tmnt, without an assets pack, which TMNT Anbernic writes)
+			if(EXISTS ${TMNT_BIN_DIR}/anbernic/tmnt/TMNT)
+				list(APPEND TMNT_PACKED_DEVICES
+					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic/tmnt
+					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/anbernic/TMNT.sh "${TMNT_BIN_DIR}/anbernic/TMNT Arcade.sh"
+						${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic
+					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/anbernic/tmnt/TMNT "${TMNT_BIN_DIR}/anbernic/tmnt/TMNT Arcade"
+						${TMNT_BIN_DIR}/anbernic/tmnt/input_prompts.bmp ${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic/tmnt)
+			endif()
 			set(TMNT_PACKAGE_DIR ${CMAKE_SOURCE_DIR}/build/package)
 			set(TMNT_PACKAGE_NAME tmnt-windows-x64)
 			set(TMNT_PACKED ${TMNT_PACKAGE_DIR}/tmnt)
+			set(TMNT_PACKED_LAN "")    # (arcade-lan's terms, where TMNT has its LAN game)
+			if(TARGET arcade_lan)
+				set(TMNT_PACKED_LAN COMMAND ${CMAKE_COMMAND} -E copy ${ARCADE_LAN_DIR}/LICENSE
+					${TMNT_PACKED}/licenses/arcade-lan.txt)
+			endif()
 			file(MAKE_DIRECTORY ${TMNT_PACKAGE_DIR})
 			add_custom_target(tmnt_package
 				COMMAND ${CMAKE_COMMAND} -E rm -rf ${TMNT_PACKED} ${TMNT_PACKAGE_DIR}/${TMNT_PACKAGE_NAME}.zip
 				COMMAND ${CMAKE_COMMAND} -E make_directory ${TMNT_PACKED}/licenses
 				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console> $<TARGET_FILE:tmnt_nsp>
-					$<TARGET_FILE:tmnt_apk_maker>
+					$<TARGET_FILE:tmnt_apk_maker> $<TARGET_FILE:tmnt_anbernic_maker>
 					${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp
 					${TMNT_PACKED}
 				${TMNT_PACKED_DEVICES}
@@ -382,6 +417,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/MAME.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/tools/core/konami/reference/ymfm/LICENSE
 					${TMNT_PACKED}/licenses/ymfm.txt
+				${TMNT_PACKED_LAN}
 				COMMAND ${CMAKE_COMMAND} -E copy ${sdl2_SOURCE_DIR}/LICENSE.txt ${TMNT_PACKED}/licenses/SDL2.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/font/License.txt
 					${TMNT_PACKED}/licenses/Kenney-Mini.txt
@@ -389,7 +425,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/Kenney-Input-Prompts.txt
 				COMMAND ${CMAKE_COMMAND} -E tar cf ${TMNT_PACKAGE_NAME}.zip --format=zip tmnt
 				WORKING_DIRECTORY ${TMNT_PACKAGE_DIR}
-				DEPENDS tmnt tmnt_console tmnt_nsp tmnt_apk_maker
+				DEPENDS tmnt tmnt_console tmnt_nsp tmnt_apk_maker tmnt_anbernic_maker
 				COMMENT "Packing TMNT Arcade and TMNT: build/package/${TMNT_PACKAGE_NAME}.zip"
 				VERBATIM)
 		endif()

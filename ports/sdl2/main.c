@@ -657,6 +657,32 @@ static void bind_button(SDL_JoystickID which, SDL_GameControllerButton button)
 }
 #endif
 
+#ifdef TMNT_HANDHELD_KEYS
+/* Anbernic's H700 handhelds: their buttons, a joystick SDL 2.0.12 (the stock firmware's) does not know, as a game
+   controller's (outrunners-port's mapping); MENU, its button 8, leaves the game as the firmware's other games */
+#define HANDHELD_MENU_BUTTON 8
+
+static const char *const device_mappings[] = {
+	"19000000010000000100000000010000,ANBERNIC-keys,a:b0,b:b1,x:b3,y:b2,leftshoulder:b4,rightshoulder:b10,"
+	"lefttrigger:b5,righttrigger:b11,back:b6,start:b7,guide:b8,dpup:h0.1,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,"
+	"leftx:a0,lefty:a1,rightx:a2,righty:a3,leftstick:b9,rightstick:b12,platform:Linux,",
+};
+
+/* The mappings as a hint before SDL starts: the game controllers it finds then are opened as such */
+static void add_device_mappings(void)
+{
+	static char mappings[2048];
+
+	mappings[0] = '\0';
+	for (size_t mapping = 0; mapping < SDL_arraysize(device_mappings); mapping++)
+	{
+		SDL_strlcat(mappings, device_mappings[mapping], sizeof(mappings));
+		SDL_strlcat(mappings, "\n", sizeof(mappings));
+	}
+	SDL_SetHint(SDL_HINT_GAMECONTROLLERCONFIG, mappings);
+}
+#endif
+
 static void read_events(void)
 {
 	SDL_Event event;
@@ -671,6 +697,15 @@ static void read_events(void)
 			case SDL_QUIT:
 				program_stop();    /* (back to main: the game runs on a task's stack) */
 				return;
+#ifdef TMNT_HANDHELD_KEYS
+			case SDL_JOYBUTTONDOWN:
+				if (event.jbutton.button == HANDHELD_MENU_BUTTON)
+				{
+					program_stop();    /* (MENU leaves the game, as the firmware's other games) */
+					return;
+				}
+				break;
+#endif
 #if defined(__ANDROID__) && defined(TMNT_CONSOLE)
 			case SDL_APP_WILLENTERBACKGROUND:
 				if (console_can_pause())
@@ -680,6 +715,17 @@ static void read_events(void)
 			case SDL_KEYDOWN:
 				if (event.key.repeat)
 					break;
+#if defined(TMNT_HANDHELD_KEYS) && defined(TMNT_CONSOLE)
+				if (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)
+				{
+					/* (the handheld's volume keys: OPTIONS > VOLUME's, kept) */
+					const int volume = console_settings.volume + (event.key.keysym.sym == SDLK_VOLUMEUP ? 1 : -1);
+
+					console_settings.volume = SDL_clamp(volume, 0, 10);
+					console_settings.changed = true;
+					break;
+				}
+#endif
 #ifdef TMNT_CONSOLE
 				if (console_controls_waiting() >= 0)
 				{
@@ -1183,8 +1229,8 @@ static char *saves_folder(void)
 	return SDL_strdup(SWITCH_FOLDER "/");
 #elif defined(__ANDROID__)
 	return SDL_GetPrefPath("", "TMNT");    /* (the app's own folder, its internal storage) */
-#elif defined(_WIN32)
-	return SDL_GetBasePath();
+#elif defined(_WIN32) || defined(TMNT_HANDHELD)
+	return SDL_GetBasePath();    /* (a handheld's: the game's folder on its card) */
 #else
 	return SDL_GetPrefPath("", "TMNT");
 #endif
@@ -1452,6 +1498,9 @@ int main(int argc, char **argv)
 		if (!find_assets(assets_path, sizeof(assets_path)))
 		{
 			/* (the first run's window closed before a ROM set came) */
+#endif
+#ifdef TMNT_HANDHELD_KEYS
+	add_device_mappings();
 			SDL_Quit();
 			return 0;
 		}
@@ -1530,6 +1579,9 @@ int main(int argc, char **argv)
 		   handheld's 4:3) */
 		int out_width = 0, out_height = 0;
 
+#elif defined(TMNT_HANDHELD_KEYS)
+	(void)scale;
+	window = SDL_CreateWindow(TITLE, 0, 0, 640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);    /* (the handheld's, whole) */
 		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
 		if (out_width < out_height)
 		{

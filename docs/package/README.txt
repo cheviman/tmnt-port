@@ -90,6 +90,11 @@ Android               TMNT APK (the folder android beside it): TMNT.apk and TMNT
                       installs over the last one). Copy them to the phone and open them there. The touch
                       screen has a stick where your left thumb lands, ATTACK and JUMP at the right, and
                       START (COIN on TMNT Arcade); a game controller hides them. Back pauses TMNT.
+Anbernic H700         TMNT Anbernic (the folder anbernic beside it): the folder PORTS, beside the tool or
+handhelds             straight into the Roms folder of your handheld's card (choose it as the output
+                      folder): the other ports there stay as they are. TMNT and TMNT Arcade show up in
+                      the firmware's PORTS. A attacks, B jumps, SELECT puts a coin in on TMNT Arcade;
+                      MENU leaves the game.
 
 Start a tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
 picture of yours for the icon), or run it from a command line: an option it does not know shows the ones
@@ -98,9 +103,10 @@ it takes.
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
-sound follow their behavior and tables), SDL2's (zlib: the window, the sound and the controls, inside
+sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's LAN game, its rooms and
+datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound and the controls, inside
 the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
-is not affiliated with or endorsed by either, nor by Nintendo.
+is not affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.

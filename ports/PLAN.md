@@ -93,4 +93,15 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   %APPDATA%\TMNT): apksigner verifies them, the pack the first run's. The CI's android job and its base APKs in every
   package beside TMNT APK. Not yet run on a phone (nor the touch controls seen).
 
-To come: the Anbernic (Zig's aarch64 toolchain, the SDL2 stub, its maker).
+- **Anbernic** (H700, the stock firmware). ports/anbernic/anbernic.cmake with zig_aarch64.cmake (outrunners-port's:
+  Zig 0.17's C compiler for aarch64-linux-gnu.2.35, the firmware's Ubuntu 22.04), TMNT and TMNT Arcade with
+  TMNT_HANDHELD and TMNT_HANDHELD_KEYS, linked against a stand-in of the firmware's SDL2 (sdl2_stub.c: the functions
+  main.c calls, by name, as libSDL2-2.0.so.0) with SDL 2.32's headers, so the handheld's own SDL 2.0.12 runs them.
+  main.c on it: the handheld's buttons as a game controller's (the mapping as a hint before SDL starts), MENU (button 8)
+  leaves the game, the volume keys OPTIONS > VOLUME's, the whole screen (640 x 480, the game's 4:3), its settings
+  beside the game on the card. In build/bin/anbernic, PORTS's files without the pack: TMNT.sh and TMNT Arcade.sh, the
+  folder tmnt with both executables and input_prompts.bmp. Checked here: ELF aarch64, glibc 2.34 at most, NEEDED
+  libSDL2-2.0.so.0 and the C library alone, no SDL function newer than 2.0.12. TMNT Anbernic (ports/anbernic/maker,
+  outrunners-port's) writes PORTS from them and the player's ROM set, the pack identical to the first run's. The CI's
+  anbernic job and its files in every package beside TMNT Anbernic; arcade-lan's license in the packages too. Not yet
+  run on a handheld.

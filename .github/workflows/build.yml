@@ -5,9 +5,10 @@
 #              run, with their README and the licenses (as outrunners-port's). On a tag v*, the release with the
 #              three packages and docs/releases/<tag>.md as its notes. The Switch's pieces (its job, devkitPro's
 #              image) go in every package beside TMNT NSP, which makes the player's .nsps of them; Android's base
-#              APKs (its job, the runner's SDK and NDK) beside TMNT APK, which makes the player's APKs (ports/PLAN.md).
-#              It runs on main, its pull requests and its tags, and by hand on any branch
-# Version:     0.2.0
+#              APKs (its job, the runner's SDK and NDK) beside TMNT APK, which makes the player's APKs; Anbernic's
+#              PORTS files without the assets (its job, Zig) beside TMNT Anbernic, which makes the player's PORTS
+#              (ports/PLAN.md). It runs on main, its pull requests and its tags, and by hand on any branch
+# Version:     0.3.0
 # Created:     04-11-2026
 # Modified:    06-11-2026
 # Author:      Sebastian Toyos
@@ -35,7 +36,7 @@ jobs:
             os: windows-2022
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    needs: [switch, android]    # (their games go in the package, beside the tools that make the player's of them)
+    needs: [switch, android, anbernic]    # (their games go in the package, beside the tools that make the player's of them)
     steps:
       # (tools/core, the shared core, holds ymfm's license, which the package carries; lan/, arcade-lan, TMNT's LAN)
       - uses: actions/checkout@v7
@@ -52,6 +53,11 @@ jobs:
         with:
           name: tmnt-android
           path: build/bin/android
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-anbernic
+          path: build/bin/anbernic
 
       # SDL2 is built from its source (TMNT_STATIC_SDL2): on Linux it needs the headers of what it talks to (it
       # loads the libraries themselves when the game runs). The reference tools, built on MAME's code, are
@@ -87,7 +93,7 @@ jobs:
       # (tmnt_package, CMakeLists.txt): the folder tmnt with TMNT Arcade and TMNT (the .apps on macOS, signed ad hoc:
       # with no certificate macOS offers to open them anyway, where a bundle signed in part is "damaged"), their
       # pictures beside them on Linux, the package's README.txt, the project's LICENSE.txt and licenses/ (MAME's and
-      # ymfm's: the board's video and sound follow their behavior and tables; SDL2's, zlib; Kenney's, CC0: the first
+      # ymfm's: the board's video and sound follow their behavior and tables; arcade-lan's, TMNT's LAN; SDL2's, zlib; Kenney's, CC0: the first
       # run's and the menus' letters, the controls' pictures). Linux's in a tar of our own: the artifacts' zip loses
       # the executables' permissions
       - name: Pack (Windows)
@@ -112,6 +118,7 @@ jobs:
           cp docs/package/README.txt dist/tmnt/README.txt
           cp docs/package/licenses/MAME.txt dist/tmnt/licenses/MAME.txt
           cp tools/core/konami/reference/ymfm/LICENSE dist/tmnt/licenses/ymfm.txt
+          cp lan/LICENSE dist/tmnt/licenses/arcade-lan.txt
           cp build/cmake/_deps/sdl2-src/LICENSE.txt dist/tmnt/licenses/SDL2.txt
           cp ports/sdl2/font/License.txt dist/tmnt/licenses/Kenney-Mini.txt
           cp ports/sdl2/prompts/License.txt dist/tmnt/licenses/Kenney-Input-Prompts.txt
@@ -187,6 +194,36 @@ jobs:
         with:
           name: tmnt-android
           path: build/bin/android/*-base.apk
+
+  # Anbernic's H700 handhelds: PORTS's files without the assets (build/bin/anbernic), built with Zig for the stock
+  # firmware's glibc and against its SDL2 (SDL's headers from its source; ports/anbernic/anbernic.cmake)
+  anbernic:
+    name: anbernic
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          mkdir -p build/downloads/zig build/downloads/sdl2-source
+          curl -fsSL https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz | tar xJ -C build/downloads/zig
+          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz             | tar xz -C build/downloads/sdl2-source
+
+      - name: Configure
+        run: |
+          cmake -S . -B build/anbernic -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF             -DCMAKE_TOOLCHAIN_FILE=ports/anbernic/zig_aarch64.cmake -DTMNT_ANBERNIC=ON             -DTMNT_SDL2_INCLUDE="$PWD/build/downloads/sdl2-source/SDL2-2.32.10/include"
+
+      - name: Build
+        run: cmake --build build/anbernic --target tmnt_anbernic_games --parallel
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-anbernic
+          path: build/bin/anbernic/
 
   # A tag v*: the release, the three packages and its notes (docs/releases/<tag>.md, written before the tag)
   release:
