@@ -230,8 +230,9 @@ presentation of its own (the fixed layer's Konami logo, large, lit by the four t
 menu under the title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack
 in, and the boxes say PRESS START), SPLINTER WAY (the port's own modes: NORMAL, 5 lives and 3 continues; more to
 come), OPTIONS (over BEST 10 PLAYERS' picture: the cabinet's DIP switches by the test mode's names, the region, the
-volume, the pixels, WIDE 16:9 and 20:9 for the play and the menus; kept in `tmnt.ini` beside the executable) and
-EXIT. A game starts on the coin's screen, each player choosing the turtle he plays (the others come in with START).
+volume, the pixels, WIDE 16:9 and 20:9 for the play and the menus; kept in `tmnt.ini` beside the executable), KONAMI
+CODE (the level select the Konami code will open: any of the ten areas, infinite lives, every turtle in a red
+bandana, everyone the same turtle) and EXIT. A game starts on the coin's screen, each player choosing the turtle he plays (the others come in with START).
 Its menus write with the game's own letters; what it draws of the game's comes from your assets. Escape pauses a
 game. `console/PLAN.md` has the plan, and what was done.
 

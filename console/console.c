@@ -44,6 +44,7 @@
 
 console_state console = { .last_presser = 0 };
 int console_slot_of[CONSOLE_PLAYERS] = { -1, -1, -1, -1 };
+int console_same_turtle = -1;
 int console_coins_put[CONSOLE_PLAYERS];
 
 console_settings_t console_settings = { .window_scale = 3, .pixels = PIXELS_SHARP, .volume = 5,
@@ -60,6 +61,7 @@ static struct
 } joins[CONSOLE_PLAYERS] = { { -1, false }, { -1, false }, { -1, false }, { -1, false } };
 
 static uint8_t controls_last[CONSOLE_PLAYERS];    /* each player's controls at the last frame */
+static void level_select_frame(void);
 static bool arcade_test;                          /* console_arcade_test */
 
 void console_arcade_test(void)
@@ -156,6 +158,7 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 	uint8_t coins = 0;
 
 	console_keep_sprites();
+	level_select_frame();
 	if (arcade_test)
 	{
 		/* (the board's inputs as the script left them: its coins, and each player's buttons on his own slot) */
@@ -237,6 +240,56 @@ static void game_over(void)
 	}
 	free_play = 0u;
 	console_set_mode_lives(MODE_ARCADE);
+	if (!console.restarting)
+	{
+		console.level_select = false;    /* (RESTART: LEVEL SELECT's game again, in its area, its turtle) */
+		console_same_turtle = -1;
+	}
+	console.level_pending = false;
+}
+
+/* LEVEL SELECT's game: its area set when the game has put its own (new_game_first_area: area 0) and not yet read it
+   (area_setup_variables, the area's set-up's first step: its stage and the rest by it), as the scenarios poke it;
+   its lives kept up, each box drawn again when they are (players_credited, redraw_new_lives) */
+/* "Original turtles" (guideline 18: as the comics first drew them): each turtle keeps its moves and weapon, and its
+   bandana is Raphael's red. The turtles' sprites show with the palette RAM's sprite banks 0-3 (its colours 16-19 x 16:
+   Leonardo's, Michelangelo's, Donatello's, Raphael's, by their animations' pieces), whose pens 10 and 11 are the
+   bandana's (the other pens nearly the same in the four): each frame Raphael's two go into the other three as the
+   palette RAM has them (faded with them) */
+#define TURTLE_BANKS        16      /* the sprites' first palette, Leonardo's */
+#define RAPHAEL_BANK        19
+#define BANDANA_PENS        10      /* 10 and 11 */
+
+static void red_bandanas(void)
+{
+	for (int bank = TURTLE_BANKS; bank < RAPHAEL_BANK; bank++)
+		for (int pen = BANDANA_PENS; pen < BANDANA_PENS + 2; pen++)
+		{
+			tmnt_board.palette[(bank * 16 + pen) * 2] = tmnt_board.palette[(RAPHAEL_BANK * 16 + pen) * 2];
+			tmnt_board.palette[(bank * 16 + pen) * 2 + 1] = tmnt_board.palette[(RAPHAEL_BANK * 16 + pen) * 2 + 1];
+		}
+}
+
+#define SCENE_CHOOSE_TURTLES    1u
+#define SCENE_AREA_SETUP        2u
+
+static void level_select_frame(void)
+{
+	if (!console.level_select || game_state != GAME_STATE_GAME)
+		return;
+	if (console.level_pending && (scene == SCENE_CHOOSE_TURTLES || (scene == SCENE_AREA_SETUP && scene_step == 0u)))
+	{
+		area = (uint8_t)console.level_area;
+		console.level_pending = false;
+	}
+	if (console.original_turtles)
+		red_bandanas();
+	for (int slot = 0; slot < CONSOLE_PLAYERS && console.infinite_lives; slot++)
+		if ((players_in_play & (1u << slot)) != 0u && PLAYER(PLAYER_ADDRESS(slot))->lives < SPLINTER_WAY_LIVES)
+		{
+			PLAYER(PLAYER_ADDRESS(slot))->lives = SPLINTER_WAY_LIVES;
+			players_credited |= (uint8_t)(1u << slot);
+		}
 }
 
 /* ---- the game's functions in the console's versions ---- */
@@ -364,6 +417,8 @@ void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_co
 
 bool console_attach(const char *folder)
 {
+	console.infinite_lives = true;    /* (KONAMI CODE's at first; set here, not in the data: their bytes matched a
+	                                     stretch of the sprites' planes, tools/rom_in_executables.py) */
 	console_settings.dsw[0] = TMNT_DSW1_DEFAULT;    /* (the coins: 1 coin 1 credit, a START's coin a credit) */
 	tmnt_board.dsw[0] = console_settings.dsw[0];
 	tmnt_board.dsw[1] = console_settings.dsw[1];
@@ -434,11 +489,14 @@ void console_controls_held(const uint8_t pressed[CONSOLE_PLAYERS])
 
 void console_describe(char *text, size_t size)
 {
-	static const char *const pages[] = { "presentation", "menu", "splinter way", "options", "video", "sound test",
-		"controls", "choice", "starting", "game" };
+	static const char *const pages[] = { "presentation", "menu", "splinter way", "level select", "options", "video",
+		"sound test", "controls", "choice", "starting", "game" };
 
-	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X", pages[console.page],
+	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u%s%s%s",
+		pages[console.page],
 		console.mode == MODE_SPLINTER_WAY ? "splinter way" : "arcade", console.turtle, console_slot_of[0],
 		console_slot_of[1], console_slot_of[2], console_slot_of[3], console_coins_put[0], console_coins_put[1],
-		console_coins_put[2], console_coins_put[3], (unsigned)lives_per_credit);
+		console_coins_put[2], console_coins_put[3], (unsigned)lives_per_credit, (unsigned)area,
+		console.level_select ? (console.infinite_lives ? ", level select, infinite lives" : ", level select") : "",
+		console.level_select && console.original_turtles ? ", original turtles" : "", console_same_turtle >= 0 ? ", same turtle" : "");
 }

@@ -850,7 +850,7 @@ void CONSOLE_ORIGINAL(turtle_run_all)(void)
 }
 
 /* the turtle against solid objects, the floor map and its walls, and falling when nothing holds it */
-void turtle_collide(uint32_t object, uint32_t inputs)
+void CONSOLE_ORIGINAL(turtle_collide)(uint32_t object, uint32_t inputs)
 {
 	uint32_t carry = 0;
 	uint8_t forced_input = 0, raised_y = 0, sound = 0;
@@ -1882,7 +1882,7 @@ void turtle_push_scroll_down(uint32_t object, uint32_t inputs, uint32_t *p_new_r
 }
 
 /* the turtle's walking speeds, straight or on a diagonal */
-void turtle_walk_speed(uint32_t object, uint32_t inputs, uint32_t *p_speed_offset, uint32_t *p_walk_speeds)
+void CONSOLE_ORIGINAL(turtle_walk_speed)(uint32_t object, uint32_t inputs, uint32_t *p_speed_offset, uint32_t *p_walk_speeds)
 {
 	uint8_t direction_copy = 0, direction_inputs = 0;
 	uint16_t diagonal_offset = 0, speed_offset = 0;
@@ -2097,7 +2097,7 @@ void turtle_start_walk(uint8_t stick, uint32_t object)
 }
 
 /* the jump button starts a jump, or the special attack with the attack button too */
-void turtle_start_jump(uint32_t object, uint32_t inputs, uint32_t presses)
+void CONSOLE_ORIGINAL(turtle_start_jump)(uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t move = 0;
 	uint16_t routine_state = 0;
@@ -2136,7 +2136,7 @@ void turtle_start_jump(uint32_t object, uint32_t inputs, uint32_t presses)
 }
 
 /* the attack button starts a combo at random, or the attack behind when an enemy is there */
-void turtle_start_combo(uint32_t object, uint32_t inputs)
+void CONSOLE_ORIGINAL(turtle_start_combo)(uint32_t object, uint32_t inputs)
 {
 	uint8_t attack = 0, combo_step = 0, move = 0;
 	uint16_t routine_state = 0;
@@ -2192,7 +2192,7 @@ void turtle_start_attack(uint8_t move, uint32_t object)
 }
 
 /* the attack's kind, sound and damage, and the turtle attacking */
-void turtle_set_attack(uint16_t move, uint16_t attack, uint32_t object)
+void CONSOLE_ORIGINAL(turtle_set_attack)(uint16_t move, uint16_t attack, uint32_t object)
 {
 	uint8_t sound = 0;
 	uint32_t ignored = 0, ignored_2 = 0, ignored_3 = 0;
@@ -2250,7 +2250,7 @@ void turtle_set_state(uint16_t routine_state, uint32_t object, uint32_t *p_playe
 }
 
 /* the turtle's animation for its routine and state */
-uint32_t turtle_set_animation(uint32_t held, uint32_t object)
+uint32_t CONSOLE_ORIGINAL(turtle_set_animation)(uint32_t held, uint32_t object)
 {
 	uint16_t table_offset = 0;
 	uint32_t animation_entry = 0, animation_set = 0;
@@ -2368,7 +2368,7 @@ void turtle_walk(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs
 }
 
 /* in the air: a jump attack by its height, or the jump's state */
-void turtle_jump(uint8_t held, uint32_t object, uint32_t inputs, uint32_t presses)
+void CONSOLE_ORIGINAL(turtle_jump)(uint8_t held, uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t attack_height = 0, height_above_floor = 0, move = 0;
 
@@ -2689,7 +2689,7 @@ void turtle_wall_jump(uint32_t object, uint32_t inputs)
 }
 
 /* attacking: the jump attacks' arcs, steps forward, the end of the attack */
-void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses)
+void CONSOLE_ORIGINAL(turtle_attack)(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t input_bit = 0, side_wall_bit = 0, wall_bit = 0;
 	uint16_t jump_speed = 0;
@@ -2822,7 +2822,7 @@ void turtle_attack(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inpu
 }
 
 /* the attack ended: the combo's next attack, the throw, or back to standing */
-void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses)
+void CONSOLE_ORIGINAL(turtle_attack_over)(uint8_t held, uint8_t pressed, uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint8_t facing = 0, sound = 0, stick = 0;
 	uint16_t attack_2 = 0, job = 0, kind_offset = 0, move = 0, routine_state = 0, throw_move = 0;
@@ -3095,7 +3095,7 @@ void turtle_attack_over(uint8_t held, uint8_t pressed, uint32_t object, uint32_t
 }
 
 /* hit: the reaction by the attack that hit it, and out of play when its bars run out */
-void turtle_hit(uint32_t object, uint32_t inputs, uint32_t presses)
+void CONSOLE_ORIGINAL(turtle_hit)(uint32_t object, uint32_t inputs, uint32_t presses)
 {
 	uint16_t floor_height = 0, hit_reaction = 0, knockback_flags = 0, reaction_offset = 0, reaction_variant = 0, routine_state = 0;
 	uint32_t hit_by = 0, ignored = 0, ignored_2 = 0, ignored_3 = 0, target = 0, x = 0, x_2 = 0;

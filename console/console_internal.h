@@ -31,6 +31,8 @@ enum
 	PAGE_PRESENTATION,     /* the Konami presentation, at power-on */
 	PAGE_MENU,             /* the title's logo and the menu: ARCADE, SPLINTER WAY, OPTIONS, EXIT */
 	PAGE_SPLINTER_WAY,     /* Splinter Way's modes: NORMAL, BOSS RUSH, RONIN, BACK */
+	PAGE_LEVEL_SELECT,     /* the Konami code's level select (guideline 8; the menu's KONAMI CODE while it is tried):
+	                          the area to start in, infinite lives */
 	PAGE_OPTIONS,          /* over BEST 10 PLAYERS' picture: the DIP switches, the region, the volume, its pages */
 	PAGE_VIDEO,            /* OPTIONS > VIDEO: the window's size, full screen, the pixels, WIDE */
 	PAGE_SOUND_TEST,       /* OPTIONS > SOUND TEST: the songs by name, the effects, the voices */
@@ -69,11 +71,23 @@ typedef struct
 	uint32_t player_pressed[CONSOLE_PLAYERS];    /* each player's actions since the game's last frame, out of a
 	                                                game: his stick, buttons and START (the port's fixed keys go
 	                                                with player 1's) */
+	bool level_select;         /* the game being started or played is LEVEL SELECT's: */
+	int level_area;            /* its area (0-9, the game's), */
+	bool infinite_lives;       /* its lives kept up, */
+	bool original_turtles;     /* every turtle in a red bandana (guideline 18), */
+	bool same_turtle;          /* every player the turtle the first one picks (guideline 8), */
+	bool level_pending;        /* and its area not yet set in the game started */
 	int choice_turtle[CONSOLE_PLAYERS];    /* the turtle choice: each player's turtle there (-1: not in it), */
 	bool choice_picked[CONSOLE_PLAYERS];   /* and whether he picked it (kept for the pause's RESTART) */
 } console_state;
 
 extern console_state console;
+
+/* "Everyone the same turtle" (guideline 8): the turtle every player plays in the game (0 Leonardo ... 3 Raphael), each
+   on his own slot, or -1 (each his own); a turtle object's kind stays its player's, and the turtle's own tables are
+   taken by TURTLE_KIND (same_turtle.c, wide_turtles.c) */
+extern int console_same_turtle;
+#define TURTLE_KIND(object) (console_same_turtle >= 0 ? (uint8_t)console_same_turtle : OBJECT(object)->kind)
 
 /* Each player's slot (0-3, the cabinet's: its turtle), -1 for none; and the coins put in on each slot this game */
 extern int console_slot_of[CONSOLE_PLAYERS];

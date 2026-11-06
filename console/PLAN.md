@@ -270,6 +270,28 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   and holes as on the board). Measured walking left in area 0: 0x90 in 4:3, 0x60 in 16:9, 0x38 in 20:9, the same
   distance from the picture's edge; at the right 0x190. Without WIDE the game's own run.
 
-Left for later: BOSS RUSH and RONIN (6, 7), the Konami code (8), save states (15), "Original turtles" (18), the
+- **8, the Konami code's level select, in the open** (Sebas: "habilita el menu sin poner el codigo, y despues lo
+  escondemos", "pone konami code en el raiz"): the menu's KONAMI CODE, after OPTIONS: < AREA 1-10 > by the areas'
+  names (BUILDING ... KRANG), < LIVES INFINITE | NORMAL > (infinite at first), START, BACK; Splinter Way's game on the
+  turtle choice (AREA N - CHOOSE YOUR TURTLE), its area set when the game has put its own 0 and not yet read it (the
+  game's turtle choice, scene 1, or the area's set-up before its first step: area_setup_variables takes the stage
+  by it), as the scenarios poke it; infinite lives kept at 5, the box drawn again; RESTART starts the same area.
+  `tests/console/konami_code.txt`: area 5. To come: the code itself in the menu (up, up, down, down, left, right,
+  left, right, jump, attack) opening it, the line gone; "everyone the same turtle".
+- **18, "Original turtles", tried in KONAMI CODE** (< ORIGINAL TURTLES ON | OFF >): the turtles' sprites show with
+  the palette RAM's sprite banks 0-3 (colours 16-19 x 16, by their animations' pieces), whose pens 10 and 11 are
+  the bandana's; each frame Raphael's two go into the other three as the palette RAM has them, faded with them:
+  every turtle keeps its moves and weapon, in Raphael's red.
+- **8, "everyone the same turtle", in KONAMI CODE** (< SAME TURTLE ON | OFF >; the turtle choice's heading AREA N -
+  EVERYONE THE SAME TURTLE): every player plays the turtle the first one picks, its moves, weapon and colours, each
+  on his own slot (the others pick their slots as before). A turtle object's kind is both the turtle
+  (turtle_animation_sets, whose pieces carry its palette; turtle_combos, turtle_attack_firsts,
+  turtle_hit_animation_tables, turtle_hit_waits, the walk speeds, Raphael's own states, Michelangelo's and
+  Donatello's turn in turtle_attack_over) and its player (his lives and health, his box, his prompts, the bits of
+  his score and knock-out, where he starts and comes in): the kind stays the player's, and the console's versions
+  of the ten functions that take the turtle's tables by it (console/same_turtle.c, with turtle_run_all in
+  wide_turtles.c: TURTLE_KIND) take them by the chosen one. The boxes keep each slot's own turtle's face.
+
+Left for later: BOSS RUSH and RONIN (6, 7), the Konami code itself (8: the code opening KONAMI CODE, the line gone), save states (15), "Original turtles" as a mode of its own (18: in KONAMI CODE meanwhile), the
 multiplayer over the local network (20); a turtle chosen by a player who comes in during a game (today the first
 slot free); Kenney Mini still loaded and nothing drawing with it.

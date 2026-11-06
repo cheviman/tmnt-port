@@ -21,3 +21,13 @@ turtle_knocked_back_slide
 turtle_knocked_flying_slide
 turtle_knocked_flying_from_behind_slide
 turtle_knockback_arc
+turtle_collide           # everyone the same turtle: the turtle's own tables by the one chosen (console/same_turtle.c)
+turtle_walk_speed
+turtle_start_jump
+turtle_start_combo
+turtle_set_attack
+turtle_set_animation
+turtle_jump
+turtle_attack
+turtle_attack_over
+turtle_hit

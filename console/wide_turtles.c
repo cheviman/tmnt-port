@@ -16,7 +16,8 @@
  *    izquierda"). These are the game's own (src/objects/turtles.c, the same C), those limits moved by the left side's
  *    columns and by the right side's, at most 48: the game draws the floor map only 8 pixels past the board's right
  *    edge (its new column), while at the left the floor map's ring keeps the columns the scroll has passed, so a turtle
- *    there reads its walls and holes as on the board. Without WIDE (or out of a game's play) the game's own run.
+ *    there reads its walls and holes as on the board. Without WIDE (or out of a game's play) the game's own run; but
+ *    turtle_run_all, whose Raphael's states are the turtle's (TURTLE_KIND: everyone the same turtle, same_turtle.c).
  */
 #include "console_internal.h"
 
@@ -48,7 +49,7 @@ void turtle_run_all(void)
 	uint8_t routine = 0, end_axis = 0;
 	uint32_t y = 0;
 
-	if (!turtle_limits())
+	if (!turtle_limits() && console_same_turtle < 0)
 	{
 		original_turtle_run_all();
 		return;
@@ -84,7 +85,7 @@ void turtle_run_all(void)
 		{
 			turtle_control(object, inputs, presses);
 			turtle_move(object, inputs);
-			if (OBJECT(object)->kind == 3u && (((uint32_t)OBJECT(object)->routine << 8u) | OBJECT(object)->state) == 0x307u)
+			if (TURTLE_KIND(object) == 3u && (((uint32_t)OBJECT(object)->routine << 8u) | OBJECT(object)->state) == 0x307u)
 				OBJECT(object)->contacts |= 0x80u;
 			if (stage != 8u || scroll_mode >= 0)
 			{
@@ -176,7 +177,7 @@ void turtle_run_all(void)
 			else
 				turtle_collide(object, inputs);
 		}
-		if (OBJECT(object)->kind == 3u && OBJECT(object)->state == 7u)
+		if (TURTLE_KIND(object) == 3u && OBJECT(object)->state == 7u)
 			OBJECT(object)->contacts |= 0x80u;
 		OBJECT(object)->screen_x = (OBJECT(object)->screen_x & 0xFFu) | (((uint8_t)(OBJECT(object)->x >> 16u) & 0xFFu) << 8u);
 		OBJECT(object)->screen_x = (OBJECT(object)->screen_x & 0xFF00u) | ((uint8_t)(OBJECT(object)->x >> 8u) & 0xFFu);

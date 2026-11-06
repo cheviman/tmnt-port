@@ -71,22 +71,29 @@
 #define PICTURE_TOP         56
 #define PICTURE_WIDTH       64
 #define PICTURE_HEIGHT      128
-#define CHOICE_HEADING_Y    44
+#define CHOICE_HEADING_Y    42
 #define CHOICE_NAME_Y       188
 #define CHOICE_JOIN_Y       206          /* PRESS START TO JOIN, under the pictures */
 #define PAUSE_Y             76           /* the pause's PAUSE, and its lines under it */
 #define PAUSE_LINES_Y       108
 #define PAUSE_LINE_STEP     14
 
-enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_OPTIONS, MENU_EXIT, MENU_ITEMS };
+enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_OPTIONS, MENU_KONAMI_CODE, MENU_EXIT, MENU_ITEMS };
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
+enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
 enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
 enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
-static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "OPTIONS", "EXIT" };
+/* (KONAMI CODE in the open while its level select is tried, after OPTIONS, so that the others keep their places:
+   Sebas, "pone konami code en el raiz"; the code itself will open it, and the line go) */
+static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "OPTIONS", "KONAMI CODE", "EXIT" };
 static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN", "BACK" };
+/* LEVEL SELECT: the areas by number (the game's 0-9 shown 1-10) and by what they are (the scenarios' names) */
+#define AREAS               10
+static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET", "SEWER", "PARKED CARS", "HIGHWAY",
+	"SKATEBOARDS", "BUILDING SITE", "TECHNODROME", "KRANG" };
 /* OPTIONS as outrunners-port's (CONTROLS, VIDEO, VOLUME, SOUND TEST, FPS: Sebas), with the DIP switches by the test
    mode's DIP SW SELECT names (test_mode_texts), but its PLAYERS, the lives a credit gives (1, 2, 3 or 5), as LIVES;
    no coins at home, so no COIN1 (Sebas) */
@@ -228,6 +235,7 @@ static void menu_page(uint32_t pressed)
 	switch (console.choice)
 	{
 		case MENU_ARCADE:
+			console.level_select = false;
 			choose_turtle(MODE_ARCADE);
 			break;
 		case MENU_SPLINTER_WAY:
@@ -235,6 +243,9 @@ static void menu_page(uint32_t pressed)
 			break;
 		case MENU_OPTIONS:
 			open_page(PAGE_OPTIONS, 0);
+			break;
+		case MENU_KONAMI_CODE:
+			open_page(PAGE_LEVEL_SELECT, LEVEL_AREA);
 			break;
 		case MENU_EXIT:
 			console.quit = true;
@@ -252,9 +263,44 @@ static void way_page(uint32_t pressed)
 	if (!picked(pressed))
 		return;
 	if (console.choice == WAY_NORMAL)
+	{
+		console.level_select = false;
 		choose_turtle(MODE_SPLINTER_WAY);
+	}
 	else if (console.choice == WAY_BACK)
 		open_page(PAGE_MENU, MENU_SPLINTER_WAY);
+}
+
+/* The Konami code's level select (guideline 8: the code will open it; in the open meanwhile, the menu's KONAMI CODE:
+   Sebas, "habilita el menu sin poner el codigo, y despues lo escondemos"): LEFT and RIGHT choose the area and the
+   lives, START or attack on START
+   opens the turtle choice; Splinter Way's game (5 lives a coin, 3 continues), started in that area, its lives kept
+   up when they are infinite */
+static void level_select_page(uint32_t pressed)
+{
+	const int by = change(pressed) ? change(pressed) : (picked(pressed) ? 1 : 0);
+
+	if ((pressed & ACTION_BIT(ACTION_BACK)) || (picked(pressed) && console.choice == LEVEL_BACK))
+	{
+		open_page(PAGE_MENU, MENU_KONAMI_CODE);
+		return;
+	}
+	if (picked(pressed) && console.choice == LEVEL_START)
+	{
+		console.level_select = true;
+		choose_turtle(MODE_SPLINTER_WAY);
+		return;
+	}
+	if (!by)
+		return;
+	if (console.choice == LEVEL_AREA)
+		console.level_area = step(console.level_area, by, 0, AREAS - 1);
+	else if (console.choice == LEVEL_LIVES)
+		console.infinite_lives = !console.infinite_lives;
+	else if (console.choice == LEVEL_ORIGINAL)
+		console.original_turtles = !console.original_turtles;    /* (guideline 18: tried here meanwhile) */
+	else if (console.choice == LEVEL_SAME)
+		console.same_turtle = !console.same_turtle;
 }
 
 /* The DIP switches as OPTIONS shows them (active low on the board) */
@@ -581,6 +627,9 @@ static void start_chosen_game(void)
 			console_slot_of[player] = console.choice_turtle[player];
 			console_join(console.choice_turtle[player]);
 		}
+	console.level_pending = console.level_select;    /* (its area, once the game has started) */
+	console_same_turtle = console.level_select && console.same_turtle && console.choice_turtle[console.chooser] >= 0
+		? console.choice_turtle[console.chooser] : -1;    /* (everyone the turtle the first player picked) */
 	open_page(PAGE_STARTING, 0);
 }
 
@@ -620,7 +669,9 @@ static void choice_page(const uint32_t player_pressed[CONSOLE_PLAYERS])
 			else
 			{
 				free_play = 0u;
-				if (console.mode == MODE_SPLINTER_WAY)
+				if (console.level_select)
+					open_page(PAGE_LEVEL_SELECT, LEVEL_START);
+				else if (console.mode == MODE_SPLINTER_WAY)
 					open_page(PAGE_SPLINTER_WAY, WAY_NORMAL);
 				else
 					open_page(PAGE_MENU, MENU_ARCADE);
@@ -672,7 +723,8 @@ static bool skip_title;
 
 static bool title_coming_in(void)
 {
-	return (console.page == PAGE_MENU || console.page == PAGE_SPLINTER_WAY) && !logo_in();
+	return (console.page == PAGE_MENU || console.page == PAGE_SPLINTER_WAY || console.page == PAGE_LEVEL_SELECT)
+		&& !logo_in();
 }
 
 static void title_skipped(void)
@@ -703,6 +755,7 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 	{
 		case PAGE_MENU: lines = MENU_ITEMS; break;
 		case PAGE_SPLINTER_WAY: lines = WAY_ITEMS; break;
+		case PAGE_LEVEL_SELECT: lines = LEVEL_ITEMS; break;
 		case PAGE_OPTIONS: lines = OPTION_ITEMS; break;
 		case PAGE_VIDEO: lines = VIDEO_ITEMS; break;
 		case PAGE_SOUND_TEST: lines = SOUND_ITEMS; break;
@@ -716,7 +769,8 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 			console.choice = step(console.choice, 1, 0, lines - 1);
 	}
 	if (page != PAGE_SOUND_TEST && ((lines && (pressed & (ACTION_BIT(ACTION_UP) | ACTION_BIT(ACTION_DOWN))))
-		|| ((page == PAGE_OPTIONS || page == PAGE_VIDEO || page == PAGE_CHOICE) && change(pressed))
+		|| ((page == PAGE_OPTIONS || page == PAGE_VIDEO || page == PAGE_CHOICE || page == PAGE_LEVEL_SELECT)
+			&& change(pressed))
 		|| (page == PAGE_CONTROLS && controls_waiting < 0 && controls_settle == 0
 			&& (pressed & (ACTION_BIT(ACTION_UP) | ACTION_BIT(ACTION_DOWN) | ACTION_BIT(ACTION_LEFT)
 				| ACTION_BIT(ACTION_RIGHT))))))
@@ -728,6 +782,9 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 			break;
 		case PAGE_SPLINTER_WAY:
 			way_page(pressed);
+			break;
+		case PAGE_LEVEL_SELECT:
+			level_select_page(pressed);
 			break;
 		case PAGE_OPTIONS:
 			options_page(pressed);
@@ -752,6 +809,7 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 	{
 		case PAGE_MENU:
 		case PAGE_SPLINTER_WAY:
+		case PAGE_LEVEL_SELECT:
 			show_step(ATTRACT_TITLE);
 			break;
 		case PAGE_OPTIONS:
@@ -913,12 +971,39 @@ static void picture_frame(int x, int out, uint32_t colour)
 /* The choice: each player in a frame around his turtle's picture (the one who opened it alone: in yellow, the
    turtle's name under it; more of them: each in his box's colour, his 1P to 4P under it, blinking until he picks),
    the turtles no one is on darkened, and while there is room, PRESS START TO JOIN */
+/* LEVEL SELECT's lines under the logo, as the menu's, their values between < > */
+static void level_select_overlay(void)
+{
+	char lines[LEVEL_ITEMS][40];
+
+	snprintf(lines[LEVEL_AREA], sizeof(lines[0]), "< AREA %d %s >", console.level_area + 1,
+		area_names[console.level_area]);
+	snprintf(lines[LEVEL_LIVES], sizeof(lines[0]), "< LIVES %s >", console.infinite_lives ? "INFINITE" : "NORMAL");
+	snprintf(lines[LEVEL_ORIGINAL], sizeof(lines[0]), "< ORIGINAL TURTLES %s >", console.original_turtles ? "ON" : "OFF");
+	snprintf(lines[LEVEL_SAME], sizeof(lines[0]), "< SAME TURTLE %s >", console.same_turtle ? "ON" : "OFF");
+	snprintf(lines[LEVEL_START], sizeof(lines[0]), "START");
+	snprintf(lines[LEVEL_BACK], sizeof(lines[0]), "BACK");
+	{
+		const char *items[LEVEL_ITEMS] = { lines[0], lines[1], lines[2], lines[3], lines[4], lines[5] };
+
+		list(items, LEVEL_ITEMS, MENU_Y);
+	}
+}
+
 static void choice_overlay(void)
 {
 	static const uint32_t player_colours[CONSOLE_PLAYERS] = { 0x58A8FFu, 0xFFD840u, 0xC878FFu, 0xFF5868u };
 	static const char *const tags[CONSOLE_PLAYERS] = { "1P", "2P", "3P", "4P" };
 	const char *heading = console.mode == MODE_SPLINTER_WAY ? "SPLINTER WAY - CHOOSE YOUR TURTLE" : "CHOOSE YOUR TURTLE";
 	int in = 0, on[4] = { 0, 0, 0, 0 }, drawn[4] = { 0, 0, 0, 0 };
+	char level_heading[48];
+
+	if (console.level_select)
+	{
+		snprintf(level_heading, sizeof(level_heading), console.same_turtle ? "AREA %d - EVERYONE THE SAME TURTLE"
+			: "AREA %d - CHOOSE YOUR TURTLE", console.level_area + 1);
+		heading = level_heading;
+	}
 
 	if (game_step != ATTRACT_COIN_SCREEN || scene != 1u || scene_step < 4u)
 		return;
@@ -952,7 +1037,7 @@ static void choice_overlay(void)
 			continue;
 		}
 		colour = player_colours[player];
-		picture_frame(x, 2 * drawn[turtle], colour);
+		picture_frame(x, drawn[turtle], colour);    /* (nested, a pixel apart: clear of the heading) */
 		if (console.choice_picked[player] || (console.page_frames & 16) == 0)
 			draw_game_letters(target, x + (PICTURE_WIDTH - on[turtle] * 24) / 2 + drawn[turtle] * 24 + 4, CHOICE_NAME_Y, 1,
 				colour, tags[player]);
@@ -1000,6 +1085,12 @@ void menu_overlay(console_picture *frame)
 				list(menu_items, MENU_ITEMS, MENU_Y);
 			else
 				list(way_items, WAY_ITEMS, MENU_Y);
+			draw_small_letters_centred(frame, SIGNATURE_Y, SIGNATURE);
+			break;
+		case PAGE_LEVEL_SELECT:
+			if (!logo_in())
+				return;
+			level_select_overlay();
 			draw_small_letters_centred(frame, SIGNATURE_Y, SIGNATURE);
 			break;
 		case PAGE_OPTIONS:
