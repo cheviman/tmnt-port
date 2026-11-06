@@ -37,14 +37,26 @@
 static char loaded_from[PATH_SIZE];    /* the ROM set whose assets the tool holds, or "" */
 static int loaded_whole;               /* ... and they loaded */
 
-/* The folder at 'path' and everything in it, gone (nothing when there is none) */
+/* The folder at 'path' and everything in it, gone (nothing when there is none). A link (a symbolic link, a junction)
+   goes as the link alone, at the top or inside: what it points to is never followed into, nor deleted */
 static void remove_folder(const char *path)
 {
 	char inside[PATH_SIZE];
 #ifdef _WIN32
 	WIN32_FIND_DATAA found;
 	HANDLE search;
+	const DWORD attributes = GetFileAttributesA(path);
 
+	if (attributes == INVALID_FILE_ATTRIBUTES)
+		return;
+	if (attributes & FILE_ATTRIBUTE_REPARSE_POINT)
+	{
+		if (!RemoveDirectoryA(path))
+			DeleteFileA(path);    /* (the link itself) */
+		return;
+	}
+	if (!(attributes & FILE_ATTRIBUTE_DIRECTORY))
+		return;
 	snprintf(inside, sizeof(inside), "%s\\*", path);
 	if ((search = FindFirstFileA(inside, &found)) != INVALID_HANDLE_VALUE)
 	{
@@ -53,7 +65,12 @@ static void remove_folder(const char *path)
 			if (strcmp(found.cFileName, ".") == 0 || strcmp(found.cFileName, "..") == 0)
 				continue;
 			snprintf(inside, sizeof(inside), "%s\\%s", path, found.cFileName);
-			if (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if (found.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+			{
+				if (!RemoveDirectoryA(inside))
+					DeleteFileA(inside);    /* (a link: itself alone) */
+			}
+			else if (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 				remove_folder(inside);
 			else
 				DeleteFileA(inside);
@@ -62,9 +79,19 @@ static void remove_folder(const char *path)
 	}
 	RemoveDirectoryA(path);
 #else
-	DIR *folder = opendir(path);
+	DIR *folder;
 	struct dirent *entry;
+	struct stat top;
 
+	if (lstat(path, &top) != 0)
+		return;
+	if (!S_ISDIR(top.st_mode))
+	{
+		if (S_ISLNK(top.st_mode))
+			unlink(path);    /* (a link: itself alone) */
+		return;
+	}
+	folder = opendir(path);
 	if (folder)
 	{
 		while ((entry = readdir(folder)) != NULL)
