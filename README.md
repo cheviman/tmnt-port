@@ -6,10 +6,21 @@ sound board) into platform-agnostic C, not an emulator, following the method of
 [outrunners-decomp](https://github.com/cheviman/outrunners-decomp): both of the game's programs decompiled one
 function at a time into readable C, and checked frame by frame against MAME in state, picture and sound.
 
-**This repository contains no game data.** The game's programs are here as C, decompiled from the original
-machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64), you bring your own ROM set
-(MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you build your own executable,
-which runs from the assets and opens no ROM.
+**Apart from the screenshots on this page, this repository contains no game data.** The game's programs are here
+as C, decompiled from the original machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64),
+you bring your own ROM set (MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you
+build your own executable, which runs from the assets and opens no ROM.
+
+<p align="center">
+  <img src="docs/screenshots/title.png" width="32%" alt="The title screen">
+  <img src="docs/screenshots/burning_apartment.png" width="32%" alt="Four turtles in April's burning apartment">
+  <img src="docs/screenshots/shredder_takes_april.png" width="32%" alt="Shredder carries April off">
+  <img src="docs/screenshots/four_turtles_street.png" width="32%" alt="The street, and April on the TV">
+  <img src="docs/screenshots/krang.png" width="32%" alt="Krang's android body">
+  <img src="docs/screenshots/shredder.png" width="32%" alt="Shredder and his copies">
+</p>
+<p align="center"><sub>Frames drawn by the game's own video library (<code>runtime/src/video.c</code>) while the
+decompiled game plays the scenarios of <code>tests/controls/</code>.</sub></p>
 
 ## Status
 
@@ -18,10 +29,11 @@ As of 04-11-2026:
 - [x] ROM set verification (MAME set `tmnt`, World 4 Players, version X), by CRC32 and SHA-1 of every file
 - [x] A reference: the original programs on MAME's 68000 and Z80 cores, with MAME's K052109, K051960, K007232
       and uPD7759 and ymfm's YM2151, against a model of the board in C (`kref`, in the shared core)
-- [x] 17 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
-      one and four players, the continue and GAME OVER, the DIP switches, and a game in each of the ten areas
-      played until its boss falls, the last one through the ending and the staff roll: 507,382 frames, which
-      run 25,328 addresses of the 68000 program and 4,486 of the Z80's
+- [x] 18 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
+      one and four players, the continue and GAME OVER, the story before area 0 with no button pressed to its end,
+      the DIP switches, and a game in each of the ten areas played until its boss falls, the last one through the
+      ending and the staff roll: 513,383 frames, which run 25,526 addresses of the 68000 program and 4,486 of the
+      Z80's
 - [x] A 68000 disassembler identical to MAME's at every offset of the program and of an image of every opcode,
       and a static analysis that finds, without traces, every address the scenarios run: 28,515 instructions
       in the 68000 program, and the Z80's the same way
@@ -32,7 +44,7 @@ As of 04-11-2026:
       data read by name from the assets, never through an address of the ROM. 2,423 of the 2,439 functions
       (99.3 %, and 99.9 % of the lines) have nothing in them but the faithful leftovers "Reading the C" lists;
       each of the other 16 has its reason there too
-- [x] The game matches the reference in state, picture and sound in all 17 scenarios, frame by frame, and its
+- [x] The game matches the reference in state, picture and sound in all 18 scenarios, frame by frame, and its
       own sound board matches MAME's in every frame (samples and RAM); the structure of every function, the
       code no scenario runs too, checks against its jumps; no executable holds a stretch of the ROM set
 - [x] The board in C (`runtime/`): the memory map, the inputs, the interrupts, the video chips drawing what MAME
@@ -147,7 +159,8 @@ frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a ha
 picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
 says where the assets are (a folder, or a pack: a file whose name ends in `.assets`); `--write-pack FILE` writes
 the pack of the assets loaded and stops. `tmnt_game_headless` also takes `--frames N`, `--dump FRAME --dump-dir
-DIR` (the board's memories at the end of a frame) and `--video-dump FRAME ... --video-dir DIR` (frames as BMP).
+DIR` (the board's memories at the end of a frame) and `--video-dump FRAME ... --video-dir DIR` (those frames' pictures as BMP,
+as the game's own video draws them: the screenshots above).
 
 ## The port's first run
 
@@ -515,7 +528,8 @@ results before each of its two returns (`print_tall_text`).
 - This project is licensed under the BSD 3-Clause License; see `LICENSE`.
 - The C in `src/` is the game's programs decompiled into a new form: logic only, with names and comments written
   for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
-  project; they come from your own ROM set.
+  project; they come from your own ROM set. The screenshots in `docs/screenshots/` show the game running from this
+  code.
 - The first run's window and TMNT's menus write with Kenney Mini by Kenney (www.kenney.nl), CC0:
   `ports/sdl2/font/License.txt`.
   `runtime/src/deflate.c` makes the streams zlib's deflate makes at level 9, following its algorithm (zlib, by
