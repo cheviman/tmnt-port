@@ -61,7 +61,8 @@ The menu under the title's logo:
   every computer, with the host's switches and picture. The first time, your system may ask whether
   TMNT may use the network: allow it on private networks.
 - OPTIONS: the cabinet's switches, the region, the controls of each player, the picture (its size, the
-  pixels, WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9), the volume, a sound test; kept in tmnt.ini.
+  pixels, WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9; VSYNC, each frame at the screen's refresh), the
+  volume, a sound test; kept in tmnt.ini.
 - EXIT.
 Choose a turtle, and the game starts with it. In a game, START brings in another player (or the same
 one again, a continue) on a turtle free; Escape, or START of a player in the game, pauses it (CONTINUE,

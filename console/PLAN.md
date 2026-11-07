@@ -506,3 +506,11 @@ are outrunners-port's: Winsock, POSIX, libnx).
   of 384), the window's middle 358 (224 x 16 / 10; the menus' crop 13 at each side, wide_crops); after the others in
   the enum (tmnt.ini keeps WIDE by name, a LAN game sends its number: an older device takes it as OFF), second in
   VIDEO's order (wide_order). Android: 20:9, 16:9, 16:10 down to 3:2, OFF.
+
+## VSYNC (07-11-2026: Sebas, "tenemos que hacer el modo vsync en el modo consola")
+
+- OPTIONS > VIDEO > VSYNC, ON by default (as outrunners-port's), kept in tmnt.ini: the renderer shows each frame at
+  the screen's refresh (SDL_RenderSetVSync, ports/sdl2/main.c's apply_vsync), the game keeping its own pace, the
+  board's 59.19 frames a second (wait_for_frame); a frame a whole frame behind that pace is not shown
+  (frame_behind), so the game and its sound never wait for the screen. Not with --fast. On the devices the line is
+  not there: their screens keep the system's refresh (and the Anbernic's SDL 2.0.12 has no SDL_RenderSetVSync).

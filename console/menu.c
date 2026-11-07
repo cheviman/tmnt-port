@@ -95,11 +95,11 @@ enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_B
 #ifdef TMNT_HANDHELD
 enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO, OPTION_VOLUME, OPTION_SOUND_TEST,
 	OPTION_BACK, OPTION_ITEMS, OPTION_CONTROLS = 100 };
-enum { VIDEO_PIXELS, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100, VIDEO_FULL_SCREEN, VIDEO_WIDE };
+enum { VIDEO_PIXELS, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100, VIDEO_FULL_SCREEN, VIDEO_WIDE, VIDEO_VSYNC };
 #else
 enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
-enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
+enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_VSYNC, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
 #endif
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
@@ -123,7 +123,8 @@ static const char *const video_items[VIDEO_ITEMS] = { "PIXELS", "FPS", "BACK" };
 #else
 static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
 	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
-static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "FPS", "BACK" };
+static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "VSYNC", "FPS",
+	"BACK" };
 #endif
 #ifndef TMNT_HANDHELD
 static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9", "16:10" };
@@ -619,8 +620,8 @@ static void options_page(uint32_t pressed)
 	}
 }
 
-/* VIDEO: the window's size (1 to 6 times the picture), full screen, the pixels, WIDE, FPS (a device's: the pixels and
-   FPS); the port applies them */
+/* VIDEO: the window's size (1 to 6 times the picture), full screen, the pixels, WIDE, VSYNC, FPS (a device's: the
+   pixels and FPS, its screen's refresh the system's); the port applies them */
 static void video_page(uint32_t pressed)
 {
 	const int by = change(pressed) ? change(pressed) : (picked(pressed) ? 1 : 0);
@@ -653,6 +654,9 @@ static void video_page(uint32_t pressed)
 			settings->wide = wide_order[step(place, by, 0, WIDE_KINDS - 1)];
 			break;
 		}
+		case VIDEO_VSYNC:
+			settings->vsync = !settings->vsync;
+			break;
 		case VIDEO_FPS:
 			settings->fps = !settings->fps;
 			break;
@@ -1200,6 +1204,7 @@ static void video_overlay(void)
 	option_line(video_items, VIDEO_PIXELS, filters[console_settings.pixels]);
 #ifndef TMNT_HANDHELD
 	option_line(video_items, VIDEO_WIDE, wide_kinds[console_settings.wide]);
+	option_line(video_items, VIDEO_VSYNC, console_settings.vsync ? "ON" : "OFF");
 #endif
 	option_line(video_items, VIDEO_FPS, console_settings.fps ? "ON" : "OFF");
 	option_line(video_items, VIDEO_BACK, NULL);

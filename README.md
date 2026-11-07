@@ -44,7 +44,7 @@ what each tool needs.
   against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).
 - **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
-  (window, full screen, sharp, smooth, bilinear or CRT pixels, WIDE 16:10, 16:9 or 20:9, FPS), volume, sound test.
+  (window, full screen, sharp, smooth, bilinear or CRT pixels, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS), volume, sound test.
 - **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
 - And the Konami code on the menu.
 

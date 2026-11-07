@@ -47,7 +47,7 @@ int console_slot_of[CONSOLE_PLAYERS] = { -1, -1, -1, -1 };
 int console_same_turtle = -1;
 int console_coins_put[CONSOLE_PLAYERS];
 
-console_settings_t console_settings = { .window_scale = 3, .pixels = PIXELS_SHARP, .volume = 5,
+console_settings_t console_settings = { .window_scale = 3, .pixels = PIXELS_SHARP, .volume = 5, .vsync = true,
 	.dsw = { TMNT_DSW1_DEFAULT, TMNT_DSW2_DEFAULT, TMNT_DSW3_DEFAULT } };
 
 const char *const console_pixel_names[PIXELS_KINDS] = { "sharp", "smooth", "bilinear", "crt" };

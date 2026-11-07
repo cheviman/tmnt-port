@@ -120,6 +120,7 @@ static SDL_GameController *controllers[PLAYERS];
 static bool smooth;                   /* F3: the picture as SDL softens it */
 #endif
 static uint64_t next_frame;          /* performance counter value the next frame waits for */
+static bool vsync_on;                /* the renderer shows each frame at the screen's refresh (apply_vsync) */
 static tmnt_script *script;
 static uint64_t script_frames;
 static bool fast;
@@ -410,6 +411,15 @@ static int view_width(void)
 static SDL_Rect content = { SHOWN_LEFT, 0, SHOWN_WIDTH, TMNT_VIDEO_HEIGHT };
 
 /* The picture in the window, as large as it fits with its proportions */
+/* A frame a whole frame's time behind the game's pace (a screen a little slower than the board's 59.19 a second, or
+   the machine busy) is not shown, so that it does not wait for the screen's refresh: the game, and its sound, keep
+   their pace, a frame left out now and then (as outrunners-port's) */
+static bool frame_behind(void)
+{
+	return vsync_on && SDL_GetPerformanceCounter()
+		> next_frame + SDL_GetPerformanceFrequency() * FRAME_RATE_DENOMINATOR / FRAME_RATE_NUMERATOR;
+}
+
 static void present(void)
 {
 	const int kind = pixels_kind();
@@ -473,7 +483,8 @@ static void present(void)
 #ifdef TMNT_TOUCH
 	touch_draw(renderer, out_width, out_height);
 #endif
-	SDL_RenderPresent(renderer);
+	if (!frame_behind())
+		SDL_RenderPresent(renderer);
 }
 
 /* ---- the picture ---- */
@@ -1107,10 +1118,10 @@ static void save_settings(void)
 
 	if (script || !settings_path[0] || console_lan_playing() || (output = fopen(settings_path, "w")) == NULL)
 		return;    /* (a LAN game's: the host's settings, not this device's) */
-	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\nwide=%s\nvolume=%d\nfps=%d\nregion=%d\ndsw1=%02X\n"
-		"dsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale, settings->full_screen,
-		console_pixel_names[settings->pixels], console_wide_names[settings->wide], settings->volume, settings->fps,
-		settings->region, settings->dsw[0], settings->dsw[1], settings->dsw[2], settings->name);
+	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\nwide=%s\nvsync=%d\nvolume=%d\nfps=%d\nregion=%d\n"
+		"dsw1=%02X\ndsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale, settings->full_screen,
+		console_pixel_names[settings->pixels], console_wide_names[settings->wide], settings->vsync, settings->volume,
+		settings->fps, settings->region, settings->dsw[0], settings->dsw[1], settings->dsw[2], settings->name);
 	fclose(output);
 }
 
@@ -1138,6 +1149,8 @@ static void load_settings(void)
 			settings->dsw[number - 1] = (uint8_t)bits;
 		else if (sscanf(line, "fps=%d", &number) == 1)
 			settings->fps = number != 0;
+		else if (sscanf(line, "vsync=%d", &number) == 1)
+			settings->vsync = number != 0;
 		else if (strncmp(line, "name=", 5) == 0)
 		{
 			/* (LAN > NAME's letters only, as many as it holds) */
@@ -1166,11 +1179,27 @@ static void load_settings(void)
 	fclose(input);
 }
 
+/* VSYNC (OPTIONS > VIDEO): the renderer shows each frame at the screen's refresh, unless the frames run as fast as
+   they can (--fast). The game keeps its own pace, the board's 59.19 frames a second (wait_for_frame): a faster screen
+   (120 Hz) shows a frame twice. A device's screen keeps the system's own refresh (and the Anbernic's SDL 2.0.12 has
+   no SDL_RenderSetVSync) */
+static void apply_vsync(void)
+{
+#ifndef TMNT_HANDHELD
+	const bool wanted = console_settings.vsync && !fast;
+
+	if (renderer && wanted != vsync_on)
+		vsync_on = SDL_RenderSetVSync(renderer, wanted ? 1 : 0) == 0 ? wanted : false;
+#endif
+}
+
 /* The window as the settings say: full screen or not, and out of it the picture times window_scale; done again
    only when they change (OPTIONS > VIDEO, F11), so a window sized by hand keeps its size otherwise */
 static void apply_settings(void)
 {
 	static int applied_scale = -1, applied_full = -1, applied_wide = -1;
+
+	apply_vsync();
 
 	if (applied_scale == console_settings.window_scale && applied_full == (int)console_settings.full_screen
 		&& applied_wide == console_settings.wide)

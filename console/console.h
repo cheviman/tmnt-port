@@ -186,6 +186,7 @@ typedef struct
 	int wide;              /* WIDE_* */
 	int volume;            /* 0-10: 5 is the game's own */
 	bool fps;              /* OPTIONS > FPS: the frames a second at the picture's top right, and in the window's title */
+	bool vsync;            /* OPTIONS > VIDEO > VSYNC: each frame shown at the screen's refresh (a computer's) */
 	int region;            /* the version byte: 0 NINJA (the set's own), 1 HERO, 2 and 3 (console/PLAN.md) */
 	uint8_t dsw[3];        /* the DIP switches as the board has them (active low), tmnt/machine.h */
 	char name[CONSOLE_NAME_LENGTH + 1];    /* LAN > NAME: this device's player's, as the rooms show it */
