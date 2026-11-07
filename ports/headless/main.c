@@ -470,7 +470,7 @@ int main(int argc, char **argv)
 			wide_check = true;
 		else if (strcmp(argv[index], "--wide") == 0 && index + 1 < argc)
 		{
-			console_settings.wide = atoi(argv[++index]);    /* (OPTIONS > VIDEO > WIDE: 1 16:9, 2 20:9) */
+			console_settings.wide = atoi(argv[++index]);    /* (OPTIONS > VIDEO > WIDE: 1 16:9, 2 20:9, 3 16:10) */
 			if (console_settings.wide < 0 || console_settings.wide >= WIDE_KINDS)
 				console_settings.wide = 0;
 		}

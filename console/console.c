@@ -51,7 +51,7 @@ console_settings_t console_settings = { .window_scale = 3, .pixels = PIXELS_SHAR
 	.dsw = { TMNT_DSW1_DEFAULT, TMNT_DSW2_DEFAULT, TMNT_DSW3_DEFAULT } };
 
 const char *const console_pixel_names[PIXELS_KINDS] = { "sharp", "smooth", "bilinear", "crt" };
-const char *const console_wide_names[WIDE_KINDS] = { "off", "16:9", "20:9" };
+const char *const console_wide_names[WIDE_KINDS] = { "off", "16:9", "20:9", "16:10" };
 
 /* Each slot's join: its frames since START (-1: none), and whether a coin goes in first */
 static struct

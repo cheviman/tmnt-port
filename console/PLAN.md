@@ -502,3 +502,7 @@ are outrunners-port's: Winsock, POSIX, libnx).
   the player's Xbox controller played player 2): ports/sdl2/main.c's controller_added.
 - Android's window full screen (SDL's immersive mode: TMNT Arcade's opened as a window, Android 15 drawing it under
   the system's bars), and a device's settings always full screen.
+- WIDE 16:10 (a player's request, for the Steam Deck's 1280 x 800): WIDE_16_10, 32 columns more at each side (frames
+  of 384), the window's middle 358 (224 x 16 / 10; the menus' crop 13 at each side, wide_crops); after the others in
+  the enum (tmnt.ini keeps WIDE by name, a LAN game sends its number: an older device takes it as OFF), second in
+  VIDEO's order (wide_order). Android: 20:9, 16:9, 16:10 down to 3:2, OFF.

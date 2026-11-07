@@ -42,8 +42,9 @@
                                             outrunners-port's) */
 #define VERSION_Y           212
 #define VERSION_MARGIN      3            /* its right edge, to the window's */
-#define WIDE_16_9_CROP      9            /* 16:9's picture: 416 columns, the window's the middle 398 (ports/sdl2's
-                                            view_width; Sebas: "en options esta mal la version", cut at the right) */
+/* WIDE's columns the window leaves out at each side: 16:9's picture 416 columns, the window's the middle 398; 16:10's
+   384, the middle 358 (ports/sdl2's view_width; Sebas: "en options esta mal la version", cut at the right) */
+static const int wide_crops[WIDE_KINDS] = { 0, 9, 0, 13 };
 #define PAGE_Y              28           /* OPTIONS' heading, and its pages' */
 #define LINE_Y              52           /* and its first line */
 #define LINE_STEP           13
@@ -125,8 +126,9 @@ static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY"
 static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "FPS", "BACK" };
 #endif
 #ifndef TMNT_HANDHELD
-static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9" };
+static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9", "16:10" };
 #endif
+static const int wide_order[WIDE_KINDS] = { WIDE_OFF, WIDE_16_10, WIDE_16_9, WIDE_20_9 };    /* (VIDEO's, narrow to wide) */
 static const char *const sound_items[SOUND_ITEMS] = { "MUSIC", "EFFECT", "VOICE", "STOP", "BACK" };
 /* SOUND TEST's songs in the game's order, by the names tools/sound_music.py gives them (music.txt): the songs'
    commands 60-78 (74 plays 60's song again: left out) and the title music (7D) */
@@ -643,8 +645,14 @@ static void video_page(uint32_t pressed)
 			settings->pixels = step(settings->pixels, by, 0, PIXELS_KINDS - 1);
 			break;
 		case VIDEO_WIDE:
-			settings->wide = step(settings->wide, by, 0, WIDE_KINDS - 1);
+		{
+			int place = 0;
+
+			while (place < WIDE_KINDS - 1 && wide_order[place] != settings->wide)
+				place++;
+			settings->wide = wide_order[step(place, by, 0, WIDE_KINDS - 1)];
 			break;
+		}
 		case VIDEO_FPS:
 			settings->fps = !settings->fps;
 			break;
@@ -1148,10 +1156,11 @@ static void option_line(const char *const *items, int index, const char *value)
 		draw_game_letters(target, LINE_RIGHT - draw_game_letters_width(value, 1), y, 1, colour, value);
 }
 
-/* The picture's end as the window shows it: 16:9's less WIDE_16_9_CROP */
+/* The picture's end as the window shows it: less the columns WIDE's window leaves out (wide_crops) */
 static int shown_end(const console_picture *picture)
 {
-	return PICTURE_END(picture) - (picture->right && console_settings.wide == WIDE_16_9 ? WIDE_16_9_CROP : 0);
+	return PICTURE_END(picture) - (picture->right && console_settings.wide > 0 && console_settings.wide < WIDE_KINDS
+		? wide_crops[console_settings.wide] : 0);
 }
 
 static void options_overlay(void)

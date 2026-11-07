@@ -232,7 +232,7 @@ static void lift_room(int *room_left, int *room_right)
 static void wide_sides_target(int *left, int *right)
 {
 	static const uint32_t records[2] = { LAYER_A, LAYER_B };
-	static const int sides[WIDE_KINDS] = { 0, 48, 88 };
+	static const int sides[WIDE_KINDS] = { 0, 48, 88, 32 };
 	int side, room_left = 0x10000, room_right = 0x10000, more;
 
 	*left = *right = 0;

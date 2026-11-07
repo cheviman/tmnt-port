@@ -393,11 +393,11 @@ static void draw_controls(console_picture *picture)
 /* The window's picture, in the game's pixels: the board's 314 columns in the console version (its first 6 left out:
    console_internal.h's LEFT_STRIPE, there the K052109's layers A and B show the end of their maps, which the cabinet's
    bezel hid; Sebas: "no la quiero"), the arcade game's 320 whole, as MAME draws it; or the console's WIDE, 398 (16:9,
-   the 416 columns its frames have less 9 at each side) or 496 (20:9) */
+   the 416 columns its frames have less 9 at each side), 496 (20:9) or 358 (16:10, the Steam Deck's: 384 less 13) */
 static int view_width(void)
 {
 #ifdef TMNT_CONSOLE
-	static const int widths[WIDE_KINDS] = { SHOWN_WIDTH, 398, 496 };
+	static const int widths[WIDE_KINDS] = { SHOWN_WIDTH, 398, 496, 358 };
 
 	return console_settings.wide > 0 && console_settings.wide < WIDE_KINDS ? widths[console_settings.wide] : SHOWN_WIDTH;
 #else
@@ -1652,8 +1652,8 @@ int main(int argc, char **argv)
 #endif
 #if defined(__ANDROID__) && defined(TMNT_CONSOLE)
 	{
-		/* WIDE as the phone's screen is: 20:9 (most phones), 16:9, or the board's 320 on a screen squarer than 3:2 (a
-		   handheld's 4:3) */
+		/* WIDE as the phone's screen is: 20:9 (most phones), 16:9, 16:10 (a tablet's, down to 3:2), or the board's 320
+		   on a screen squarer than that (a handheld's 4:3) */
 		int out_width = 0, out_height = 0;
 
 		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
@@ -1665,7 +1665,7 @@ int main(int argc, char **argv)
 			out_height = turned;
 		}
 		console_settings.wide = out_height <= 0 ? WIDE_16_9 : out_width * 9 >= out_height * 20 ? WIDE_20_9
-			: out_width * 2 >= out_height * 3 ? WIDE_16_9 : WIDE_OFF;
+			: out_width * 9 >= out_height * 16 ? WIDE_16_9 : out_width * 2 >= out_height * 3 ? WIDE_16_10 : WIDE_OFF;
 	}
 #endif
 	SDL_RaiseWindow(window);    /* (the keyboard's: after the first run's window closed, another may have had it) */

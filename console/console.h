@@ -169,6 +169,8 @@ enum
 	WIDE_OFF,           /* the board's 320 pixels */
 	WIDE_16_9,          /* 48 more at each side */
 	WIDE_20_9,          /* 88 more at each side: a phone's screen */
+	WIDE_16_10,         /* 32 more at each side: the Steam Deck's screen (a player's request), a tablet's (after the
+	                       others: tmnt.ini keeps WIDE by name, a LAN game sends its number; OPTIONS shows it second) */
 	WIDE_KINDS
 };
 
