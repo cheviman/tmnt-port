@@ -21,6 +21,10 @@ not found, or what is wrong with it):
 - **Launcher icon**: a square PNG or JPEG of yours, at most 2048 x 2048, which the launcher shows whole, its
   shape cutting the corners: `icon.jpg` beside the tool (taken by itself, by TMNT NSP too) or one dropped
   on the window; else the game's own (the project's: Raphael from a friend's mural, ports/sdl2/icon);
+- **TV banner**: a PNG or JPEG of yours wider than tall, at most 2048 wide, which Android TV and Google TV show as
+  16:9 in their apps (the Chromecast with Google TV's): `banner.jpg` beside the tool or one dropped on the window
+  (a dropped picture wider than tall is the banner, else the icon); else the game's own (the four turtles from a
+  friend's mural, ports/sdl2/icon/turtles_mural.png);
 - **The game's Android build**: `tmnt-base.apk` in the folder `android` beside the tool (TMNT Arcade's,
   `tmnt-arcade-base.apk`, beside it);
 - **Signing key**: yours, kept from before, or made with the first APK (below);
@@ -35,7 +39,7 @@ Files dropped on the tool itself, not on its window, are taken the same way, and
 its console. With options, from a command line, it is a console program and nothing else:
 
 ```
-TMNT APK --rom tmnt.zip --icon my_icon.png --base android/tmnt-base.apk --out TMNT.apk
+TMNT APK --rom tmnt.zip --icon my_icon.png --banner my_banner.jpg --base android/tmnt-base.apk --out TMNT.apk
 ```
 
 When it cannot show its window (no display, no `font.bmp` beside it, a build without SDL2), the tool started
@@ -74,8 +78,10 @@ APPNOTE.TXT, Android's APK Signature Scheme v2, FIPS-186-4, RFC 6979) and from w
    itself: an adaptive icon whose background is `ic_launcher_art` inset by 18 dp), and
    `res/mipmap-xxxhdpi-v4/ic_launcher_art.png` and `ic_launcher.png` (the legacy icon) your picture's
    (Android's decoders tell a PNG from a JPEG by its bytes, whatever the entry's name). A build without
-   those entries does not take an icon, and the tool says so.
-4. **The APK**: the build's entries, copied packed as they are, then `assets/tmnt.assets`, stored (the
+   those entries does not take an icon, and the tool says so. With a TV banner of yours,
+   `res/drawable-xhdpi-v4/banner.png` (the manifest's `android:banner`) takes your picture's bytes the same way.
+4. **The APK**: the build's entries, copied packed as they are (the libraries of both ABIs, `arm64-v8a` and
+   `armeabi-v7a`: Android installs the one its device runs), then `assets/tmnt.assets`, stored (the
    game reads it in place, through Android's asset manager). Each stored entry's data starts at a multiple
    of 4, a library's (`.so`) at 4096, as `zipalign -p 4` aligns them: apksigner's alignment field (0xD935)
    in its local header.

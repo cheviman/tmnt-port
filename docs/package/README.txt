@@ -94,6 +94,11 @@ Android               TMNT APK (the folder android beside it): TMNT.apk and TMNT
                       screen has a stick where your left thumb lands, ATTACK and JUMP at the right, and
                       START (COIN on TMNT Arcade); a game controller hides them. Back, or START in the
                       game, pauses TMNT; OPTIONS > VIDEO has the pixels and FPS.
+                      On a TV with Android TV or Google TV (the Chromecast with Google TV too) they are
+                      in the TV's apps, with a banner (a 16:9 picture of yours, dropped on TMNT APK's
+                      window, takes its place). A game controller is a player; the TV's remote too,
+                      after them: in TMNT its pad moves, OK attacks (and brings in a player who is not
+                      playing), back jumps, home pauses.
 Anbernic H700         TMNT Anbernic (the folder anbernic beside it): the folder PORTS, beside the tool or
 handhelds             straight into the Roms folder of your handheld's card (choose it as the output
                       folder): the other ports there stay as they are. TMNT and TMNT Arcade show up in
@@ -101,7 +106,7 @@ handhelds             straight into the Roms folder of your handheld's card (cho
                       MENU leaves the game.
 
 Start a tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
-picture of yours for the icon), or run it from a command line: an option it does not know shows the ones
+picture of yours for the icon, a 16:9 one for the TV's banner), or run it from a command line: an option it does not know shows the ones
 it takes.
 
 Licenses

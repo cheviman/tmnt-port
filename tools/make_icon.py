@@ -1,7 +1,8 @@
 """
 Name:        make_icon.py
-Description: makes the port's icons from the picture of Raphael on a friend's wall (ports/sdl2/icon/raphael_mural.png)
-Version:     0.2.0
+Description: makes the port's icons from the picture of Raphael on a friend's wall (ports/sdl2/icon/raphael_mural.png),
+             and the TV's banner from the four turtles on it (turtles_mural.png)
+Version:     0.3.0
 Created:     04-11-2026
 Modified:    07-11-2026
 Author:      Sebastian Toyos
@@ -17,6 +18,8 @@ nothing of the game's: the picture's square around the face, scaled to each icon
   that the launcher shows, mipmap-anydpi-v26/ic_launcher.xml) and ic_launcher.png (192 x 192, the icon before
   Android 8);
 - ports/switch/icon.jpg (256 x 256, the HOME menu's).
+The TV's banner (Android TV, Google TV: the Chromecast with Google TV's apps) is the band of the same mural's four
+turtles' faces, 16:9 (Sebas: "recorta de donde quieras"): ports/android/res/drawable-xhdpi/banner.png, 320 x 180.
 A player's own picture still takes its place in his builds and in what the tools make (local/, TMNT APK, TMNT NSP).
 
 --ico makes the Windows executable's icon of a picture of the player's own instead (CMakeLists.txt, with
@@ -33,6 +36,10 @@ FACE = (10, 0, 170, 160)                 # the picture's square around the face 
 OUT = ROOT / "ports" / "sdl2" / "icon"
 ANDROID = ROOT / "ports" / "android" / "res" / "mipmap-xxxhdpi"
 SWITCH = ROOT / "ports" / "switch" / "icon.jpg"
+TURTLES = ROOT / "ports" / "sdl2" / "icon" / "turtles_mural.png"
+TURTLES_BAND = (0, 196, 575, 519)        # the four faces' band, 16:9 (left, top, right, bottom)
+BANNER = ROOT / "ports" / "android" / "res" / "drawable-xhdpi" / "banner.png"
+BANNER_SIZE = (320, 180)                 # Android TV's banner, in xhdpi's pixels
 NAME = "tmnt"
 SIZE = 1024
 CORNER = 180                             # the computers' icon's rounded corners, in its pixels
@@ -63,8 +70,16 @@ def main():
     face(288).save(ANDROID / "ic_launcher_art.png")
     rounded(face(192), 192 * CORNER // SIZE).save(ANDROID / "ic_launcher.png")
     face(256).save(SWITCH, quality=95)
+    banner()
     print(f"written: {NAME}.png, {NAME}.ico, {NAME}.icns in {OUT.relative_to(ROOT)}; ic_launcher_art.png and "
-          f"ic_launcher.png in {ANDROID.relative_to(ROOT)}; {SWITCH.relative_to(ROOT)}")
+          f"ic_launcher.png in {ANDROID.relative_to(ROOT)}; {SWITCH.relative_to(ROOT)}; {BANNER.relative_to(ROOT)}")
+
+
+def banner():
+    """The TV's banner: the four turtles' faces."""
+    BANNER.parent.mkdir(parents=True, exist_ok=True)
+    picture = Image.open(TURTLES).convert("RGB").crop(TURTLES_BAND)
+    picture.resize(BANNER_SIZE, Image.LANCZOS).save(BANNER, optimize=True)
 
 
 def picture_ico(picture, ico):

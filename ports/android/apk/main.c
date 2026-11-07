@@ -2,18 +2,19 @@
  *    Name:        main.c
  *    Description: TMNT APK: the Android game as an APK to install, made on the player's computer from
  *                 the game's Android build and the player's ROM set, signed with the player's own key
- *    Version:     0.1.0
+ *    Version:     0.2.0
  *    Created:     06-11-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
- *    Usage: TMNT APK [--rom FILE] [--icon FILE] [--base FILE] [--out FILE]
+ *    Usage: TMNT APK [--rom FILE] [--icon FILE] [--banner FILE] [--base FILE] [--out FILE]
  *
  *    The APK is made in make_apk.c. By default every file is beside the tool, the game's Android build in
  *    the folder android beside it, and the APK is written beside it; the signing key is the player's own
  *    (key.c), made the first time. Files dropped on the tool are taken by what they are: an .apk the
- *    game's Android build, a .png or .jpg the icon, anything else the ROM set (tmnt.zip, or a folder of
+ *    game's Android build, a .png or .jpg the icon (the TV's banner if it is wider than tall), anything
+ *    else the ROM set (tmnt.zip, or a folder of
  *    its files); started so, its console waits for Enter at the end. Started with nothing (a double
  *    click), it opens its window (window.c, when it is built with SDL2 and the computer can show one),
  *    which shows the same inputs, takes files dropped on it and makes the same APK; else it makes the APK
@@ -74,17 +75,21 @@ int main(int argc, char **argv)
 			target = inputs.rom;
 		else if (strcmp(argv[at], "--icon") == 0)
 			target = inputs.icon;
+		else if (strcmp(argv[at], "--banner") == 0)
+			target = inputs.banner;
 		else if (strcmp(argv[at], "--base") == 0)
 			target = inputs.base;
 		else if (strcmp(argv[at], "--out") == 0)
 			target = inputs.out;
 		if (!target || at + 1 >= argc)
 		{
-			fprintf(stderr, "Usage: TMNT APK [--rom FILE] [--icon FILE] [--base FILE] [--out FILE]\n"
-				"  --rom   the arcade ROM set (tmnt.zip, MAME's, World; by default beside it)\n"
-				"  --icon  the launcher's icon, a square PNG or JPEG of yours (by default icon.jpg beside it, else the game's)\n"
-				"  --base  the game's Android build (by default android/tmnt-base.apk beside it)\n"
-				"  --out   the APK to write (by default TMNT.apk beside it)\n");
+			fprintf(stderr, "Usage: TMNT APK [--rom FILE] [--icon FILE] [--banner FILE] [--base FILE] [--out FILE]\n"
+				"  --rom     the arcade ROM set (tmnt.zip, MAME's, World; by default beside it)\n"
+				"  --icon    the launcher's icon, a square PNG or JPEG of yours (by default icon.jpg beside it, else the game's)\n"
+				"  --banner  the TV's banner (Android TV, Google TV), a 16:9 PNG or JPEG of yours (by default banner.jpg\n"
+				"            beside it, else the game's)\n"
+				"  --base    the game's Android build (by default android/tmnt-base.apk beside it)\n"
+				"  --out     the APK to write (by default TMNT.apk beside it)\n");
 			return 2;
 		}
 		snprintf(target, APK_PATH_SIZE, "%s", argv[++at]);

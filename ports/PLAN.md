@@ -130,3 +130,29 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   (the host's WIDE). touch.c reads the density again with the new size. Built for Android, not yet seen on a Fold.
 - **The icon** (07-11-2026: Sebas): Raphael's face from a friend's mural, ports/sdl2/icon/raphael_mural.png, of which
   tools/make_icon.py makes every size (the computers', the Android launcher's, the Switch's); the drawn manhole gone.
+
+- **The Chromecast with Google TV** (07-11-2026: Sebas, "un port especial para el chromecast de 4ta generacion", for his
+  nephews). Its Android is 32-bit (armeabi-v7a alone) on a 64-bit chip, and Google TV shows only the apps that ask for
+  its launcher. Not a build of its own: the same APKs, on phones and TVs alike.
+  - **32-bit ARM**: runtime/src/tasks.c (the decompilation's, D:/vs-cheviman/tmnt first) switches the game's tasks on
+    32-bit ARM as on aarch64: r4-r12, lr and d8-d15 on the task's stack, a naked function in unified syntax (the same
+    in ARM and Thumb). android.cmake builds armeabi-v7a's libraries too, a build of its own of the same source
+    (ExternalProject in build/android/abi/armeabi-v7a, TMNT_ANDROID_LIBRARIES_ONLY), and each APK has both ABIs:
+    Android installs the one its device runs. No change in the CI's job.
+  - **The check without the device**: ports/android/zig_arm_check.cmake builds the headless games for 32-bit ARM
+    Linux (Zig, musl, Thumb-2 with VFPv3-D16 as armeabi-v7a), and WSL's qemu-arm runs the scenarios: 4-byte pointers,
+    char without a sign, the tasks, and the alignment QEMU holds LDRD/LDM/VLDM to (an unaligned one ends a 32-bit
+    process on Android's arm64 kernels). The 18 scenarios identical frame by frame, state, picture and sound
+    (build/scenarios_arm32; area2, area4 and area5 run again three at a time and with no time limit: qemu takes them
+    past check_scenarios.py's 15 minutes six at a time). The NDK's armeabi-v7a library switches tasks with the same
+    Thumb-2 instructions the check ran.
+  - **Google TV's launcher**: the manifest's LEANBACK_LAUNCHER and android.software.leanback (not required), and a
+    banner, res/drawable-xhdpi/banner.png (320 x 180): the four turtles' faces from the same friend's mural
+    (ports/sdl2/icon/turtles_mural.png, tools/make_icon.py). TMNT APK takes a banner of the player's own: banner.jpg
+    beside it, --banner, or a picture wider than tall dropped on its window (its row, TV banner).
+  - **The TV's remote** (pad, OK and back alone): main.c's is_remote also knows a remote on Android by its buttons (no
+    B and no Start), whatever its name. In TMNT its back is JUMP (the menus' back, the pause's CONTINUE) and not the
+    pause, its OK attacks and is the START of a player out of the game (in, or a continue); home pauses
+    (SDL_APP_WILLENTERBACKGROUND). SDL 2.32's Android joystick (the remote is one: SOURCE_DPAD) gives OK as A and back
+    as Back. TMNT Arcade as before (back puts a coin in).
+  Not yet run on a Chromecast: installing, the banner, the remote and the speed are to be seen there.

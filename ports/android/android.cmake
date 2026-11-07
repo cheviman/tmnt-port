@@ -1,9 +1,9 @@
 # Name:        android.cmake
 # Description: the Android build (the NDK's toolchain): TMNT and TMNT Arcade, each its libmain.so beside SDL2's, both
 #              from their source, and the APKs around them: each game's for TMNT APK, and this computer's own
-# Version:     0.1.0
+# Version:     0.2.0
 # Created:     06-11-2026
-# Modified:    06-11-2026
+# Modified:    07-11-2026
 # Author:      Sebastian Toyos
 #
 # Included by CMakeLists.txt when the toolchain is the NDK's (build/cmake/android.toolchain.cmake, with ANDROID_ABI and
@@ -20,6 +20,10 @@
 #                                        debug key of its Android tools (~/.android/debug.keystore, which keytool
 #                                        makes when there is none; the same key each time, so a new APK installs over
 #                                        the last one and keeps what the game wrote)
+# Each APK has the libraries of two ABIs, and Android installs the one its device runs: this build's (ANDROID_ABI,
+# arm64-v8a: the phones, the tablets, the Shield) and 32-bit ARM's (armeabi-v7a: the Chromecast with Google TV, whose
+# Android is 32-bit on a 64-bit chip, and older phones), built by a build of its own of the same source (the NDK builds
+# one ABI at a time) in build/<this>/abi/armeabi-v7a, with TMNT_ANDROID_LIBRARIES_ONLY: its libraries alone.
 
 target_compile_definitions(tmnt_console_game PUBLIC TMNT_HANDHELD TMNT_SYSTEM_EXIT TMNT_SCREEN_WIDE TMNT_TOUCH)
 
@@ -47,6 +51,24 @@ set(SDL_SHARED ON CACHE BOOL "" FORCE)
 set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SDL2)
+
+# A game's libmain.so: 'target', the window port's main.c and the sources after 'program' besides, on 'program'
+function(tmnt_android_library target program)
+	add_library(${target} SHARED ports/sdl2/main.c ports/sdl2/letters.c ports/sdl2/touch.c ${ARGN})
+	target_link_libraries(${target} PRIVATE ${program} tmnt_controller_db SDL2::SDL2)
+	target_compile_definitions(${target} PRIVATE TMNT_HANDHELD TMNT_SYSTEM_EXIT TMNT_TOUCH)
+	target_include_directories(${target} PRIVATE ports/sdl2)
+	set_target_properties(${target} PROPERTIES OUTPUT_NAME main LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${target})
+endfunction()
+
+# The build of one more ABI's libraries, for the APKs of the build that starts it (below): the games' libraries alone,
+# no SDK, no Java, no APK
+option(TMNT_ANDROID_LIBRARIES_ONLY "Build the games' libraries alone: one more ABI for another build's APKs" OFF)
+if(TMNT_ANDROID_LIBRARIES_ONLY)
+	tmnt_android_library(tmnt_android tmnt_console_game ports/sdl2/controls.c)
+	tmnt_android_library(tmnt_arcade_android ${TMNT_WINDOW_PROGRAM})
+	return()
+endif()
 
 # The SDK around the NDK (sdk/ndk/<version>), else ANDROID_HOME: the platform's android.jar, the newest build-tools
 if(DEFINED ENV{ANDROID_HOME})
@@ -92,7 +114,33 @@ add_custom_command(OUTPUT ${TMNT_APK_WORK}/dex/classes.dex
 	VERBATIM)
 
 file(GLOB_RECURSE TMNT_ANDROID_RES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/ports/android/res/*)
-set(TMNT_APK_LIB lib/${ANDROID_ABI})
+
+# The ABIs in the APKs: this build's and TMNT_ANDROID_MORE_ABIS', each of those a build of its own (ExternalProject,
+# its libraries alone), always run: its own build tells what changed
+set(TMNT_ANDROID_MORE_ABIS armeabi-v7a CACHE STRING "The ABIs whose libraries go into the APKs beside this build's")
+set(TMNT_MORE_ABIS ${TMNT_ANDROID_MORE_ABIS})
+list(REMOVE_ITEM TMNT_MORE_ABIS ${ANDROID_ABI})
+set(TMNT_APK_LIBRARIES "")    # (as the APK has them: lib/<ABI>/<library>)
+foreach(abi IN LISTS ANDROID_ABI TMNT_MORE_ABIS)
+	list(APPEND TMNT_APK_LIBRARIES lib/${abi}/libmain.so lib/${abi}/libSDL2.so)
+endforeach()
+include(ExternalProject)
+foreach(abi IN LISTS TMNT_MORE_ABIS)
+	set(dir ${CMAKE_BINARY_DIR}/abi/${abi})
+	ExternalProject_Add(tmnt_android_${abi}
+		SOURCE_DIR ${CMAKE_SOURCE_DIR}
+		BINARY_DIR ${dir}
+		CMAKE_GENERATOR ${CMAKE_GENERATOR}
+		CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DANDROID_ABI=${abi} -DANDROID_PLATFORM=${ANDROID_PLATFORM}
+			-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -DTMNT_REFERENCE_TOOLS=OFF
+			-DTMNT_ANDROID_LIBRARIES_ONLY=ON -DTMNT_BIN_DIR=${dir}/bin -DFETCHCONTENT_SOURCE_DIR_SDL2=${sdl2_SOURCE_DIR}
+			-DARCADE_LAN_DIR=${ARCADE_LAN_DIR}
+		BUILD_COMMAND ${CMAKE_COMMAND} --build ${dir} --target tmnt_android tmnt_arcade_android
+		INSTALL_COMMAND ""
+		BUILD_ALWAYS TRUE
+		BUILD_BYPRODUCTS ${dir}/tmnt_android/libmain.so ${dir}/tmnt_arcade_android/libmain.so
+			${dir}/_deps/sdl2-build/libSDL2.so)
+endforeach()
 
 # The key this computer's APKs are signed with: the debug key of its Android tools (made once)
 if(TMNT_ANDROID_KEYSTORE)
@@ -134,11 +182,10 @@ function(tmnt_apk apk stage manifest files commands depends)
 			--min-sdk-version ${TMNT_ANDROID_MIN_SDK} --target-sdk-version ${TMNT_ANDROID_TARGET_SDK}
 			--version-code ${TMNT_ANDROID_VERSION_CODE} --version-name ${TMNT_ANDROID_VERSION}
 			-A ${stage}/assets -0 assets ${stage}/res.zip    # (the pack stored: read in place, never unpacked)
-		COMMAND ${CMAKE_COMMAND} -E chdir ${files} ${TMNT_AAPT} add ${stage}/linked.apk classes.dex
-			${TMNT_APK_LIB}/libmain.so ${TMNT_APK_LIB}/libSDL2.so
+		COMMAND ${CMAKE_COMMAND} -E chdir ${files} ${TMNT_AAPT} add ${stage}/linked.apk classes.dex ${TMNT_APK_LIBRARIES}
 		COMMAND ${TMNT_ZIPALIGN} -p -f 4 ${stage}/linked.apk ${apk}
 		DEPENDS ${manifest} ${TMNT_ANDROID_RES} ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${files}/classes.dex
-			${files}/${TMNT_APK_LIB}/libmain.so ${files}/${TMNT_APK_LIB}/libSDL2.so ${depends}
+			${TMNT_APK_LIBRARIES_IN_FILES} ${depends}
 		COMMENT "The APK: ${apk}"
 		VERBATIM)
 endfunction()
@@ -146,27 +193,37 @@ endfunction()
 # A game of Android: its libmain.so ('target', the window port's main.c and 'sources' besides), its manifest
 # ('package', 'label'), its base APK (build/bin/android/'base'-base.apk) and this computer's ('debug'-debug.apk)
 function(tmnt_android_game target program base debug package label)
-	add_library(${target} SHARED ports/sdl2/main.c ports/sdl2/letters.c ports/sdl2/touch.c ${ARGN})
-	target_link_libraries(${target} PRIVATE ${program} tmnt_controller_db SDL2::SDL2)
-	target_compile_definitions(${target} PRIVATE TMNT_HANDHELD TMNT_SYSTEM_EXIT TMNT_TOUCH)
-	target_include_directories(${target} PRIVATE ports/sdl2)
-	set_target_properties(${target} PROPERTIES OUTPUT_NAME main LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${target})
+	tmnt_android_library(${target} ${program} ${ARGN})
 
 	set(TMNT_ANDROID_PACKAGE ${package})
 	set(TMNT_ANDROID_LABEL ${label})
 	set(manifest ${TMNT_APK_WORK}/${base}/AndroidManifest.xml)
 	configure_file(${CMAKE_SOURCE_DIR}/ports/android/AndroidManifest.xml.in ${manifest} @ONLY)
 
-	# the game's files in its APKs: the libraries (without their symbols) and the Java, named as the APK has them
+	# the game's files in its APKs: the libraries of every ABI (without their symbols: llvm-strip takes any) and the
+	# Java, named as the APK has them
 	set(files ${TMNT_APK_WORK}/${base}/files)
-	add_custom_command(OUTPUT ${files}/classes.dex ${files}/${TMNT_APK_LIB}/libmain.so ${files}/${TMNT_APK_LIB}/libSDL2.so
+	set(this_abi ${files}/lib/${ANDROID_ABI})
+	set(more_libraries "")
+	set(more_depends "")
+	foreach(abi IN LISTS TMNT_MORE_ABIS)
+		set(dir ${CMAKE_BINARY_DIR}/abi/${abi})
+		list(APPEND more_libraries
+			COMMAND ${CMAKE_COMMAND} -E make_directory ${files}/lib/${abi}
+			COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${files}/lib/${abi}/libmain.so ${dir}/${target}/libmain.so
+			COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${files}/lib/${abi}/libSDL2.so ${dir}/_deps/sdl2-build/libSDL2.so)
+		list(APPEND more_depends tmnt_android_${abi} ${dir}/${target}/libmain.so ${dir}/_deps/sdl2-build/libSDL2.so)
+	endforeach()
+	list(TRANSFORM TMNT_APK_LIBRARIES PREPEND ${files}/ OUTPUT_VARIABLE TMNT_APK_LIBRARIES_IN_FILES)
+	add_custom_command(OUTPUT ${files}/classes.dex ${TMNT_APK_LIBRARIES_IN_FILES}
 		COMMAND ${CMAKE_COMMAND} -E rm -rf ${files}
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${files}/${TMNT_APK_LIB}
-		COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${files}/${TMNT_APK_LIB}/libmain.so $<TARGET_FILE:${target}>
-		COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${files}/${TMNT_APK_LIB}/libSDL2.so $<TARGET_FILE:SDL2::SDL2>
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${this_abi}
+		COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${this_abi}/libmain.so $<TARGET_FILE:${target}>
+		COMMAND ${CMAKE_STRIP} --strip-unneeded -o ${this_abi}/libSDL2.so $<TARGET_FILE:SDL2::SDL2>
+		${more_libraries}
 		COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_APK_WORK}/dex/classes.dex ${files}
-		DEPENDS ${target} SDL2 ${TMNT_APK_WORK}/dex/classes.dex
-		COMMENT "${label}'s libraries and Java"
+		DEPENDS ${target} SDL2 ${TMNT_APK_WORK}/dex/classes.dex ${more_depends}
+		COMMENT "${label}'s libraries (${ANDROID_ABI} ${TMNT_MORE_ABIS}) and Java"
 		VERBATIM)
 
 	# its base APK, for TMNT APK (ports/android/apk), which puts the player's assets pack in it (and their icon,

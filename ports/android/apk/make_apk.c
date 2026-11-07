@@ -3,9 +3,9 @@
  *    Description: TMNT APK's work: the Android game as an APK to install, made from the game's Android
  *                 build and the player's ROM set, signed with the player's own key (for the command line
  *                 and the window alike)
- *    Version:     0.1.0
+ *    Version:     0.2.0
  *    Created:     06-11-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -19,7 +19,9 @@
  *    the launcher's adaptive icon (res/mipmap-anydpi-v26/ic_launcher.xml) takes the bytes of the one made
  *    for it (ic_launcher_own.xml, compiled binary XML, whose background is ic_launcher_art inset by 18 dp),
  *    and the pictures ic_launcher_art and ic_launcher (the legacy icon) the player's picture's (Android's
- *    decoders tell a PNG from a JPEG by its bytes, whatever the entry's name). The rest of the build's
+ *    decoders tell a PNG from a JPEG by its bytes, whatever the entry's name). A TV banner of the player's
+ *    own (Android TV's, Google TV's: a picture wider than tall, which the TV shows as 16:9) goes in the
+ *    build's banner entry the same way (res/drawable-xhdpi-v4/banner.png). The rest of the build's
  *    entries are copied packed as they are, aligned as zipalign -p 4 aligns them (zip.c), and the APK is
  *    signed with APK Signature Scheme v2 (sign.c) by the player's key (key.c), the same for every APK, so
  *    that each installs over the last. Nothing it reads or writes leaves the player's computer. The command
@@ -46,6 +48,8 @@
 #define ICON_OWN_SHAPE  "ic_launcher_own.xml"    /* the adaptive icon made for a picture of the player's */
 #define ICON_LEGACY     "ic_launcher"            /* the pictures, by their names without their type */
 #define ICON_ART        "ic_launcher_art"
+#define BANNERS_FOLDER  "res/drawable-"
+#define BANNER          "banner"                 /* the TV's banner's picture, by its name without its type */
 #define ENTRY_DATE      0x0221                   /* 1 January 1981 in MS-DOS's date, aapt2's for every entry */
 
 #ifdef _WIN32
@@ -63,7 +67,7 @@ typedef struct
 /* What making the APK holds as it goes: all of it freed at the end */
 typedef struct
 {
-	bytes base, icon, assets;
+	bytes base, icon, banner, assets;
 	zip_archive archive;
 	zip_writer apk;
 	apk_key key;
@@ -78,7 +82,8 @@ enum
 	ENTRY_ASSETS,       /* an assets pack: replaced */
 	ENTRY_SHAPE,        /* the adaptive icon */
 	ENTRY_ART,          /* the adaptive icon's picture */
-	ENTRY_LEGACY        /* the legacy icon's picture */
+	ENTRY_LEGACY,       /* the legacy icon's picture */
+	ENTRY_BANNER        /* the TV's banner's picture */
 };
 
 static void bytes_free(bytes *data)
@@ -180,6 +185,20 @@ static const char *picture_problem(const bytes *picture)
 	return NULL;
 }
 
+/* The TV's banner: the TV shows it as 16:9, so a picture wider than tall (16:9's is shown as it is) */
+static const char *banner_problem(const bytes *picture)
+{
+	unsigned width = 0, height = 0;
+
+	if (!picture_size(picture, &width, &height) || !width || !height)
+		return "not a PNG or JPEG";
+	if (width <= height)
+		return "not wider than tall";
+	if (width > APK_ICON_MOST)
+		return "wider than 2048";
+	return NULL;
+}
+
 /* ---- the build's entries ---- */
 
 /* An entry's name past its last '/' */
@@ -236,6 +255,8 @@ static int entry_kind(const zip_entry *entry)
 		return ENTRY_SIGNATURE;
 	if (zip_named(entry, ASSETS_ENTRY))
 		return ENTRY_ASSETS;
+	if (starts(entry, BANNERS_FOLDER) && icon_picture(file, size, BANNER))
+		return ENTRY_BANNER;
 	if (!starts(entry, ICONS_FOLDER))
 		return ENTRY_KEPT;
 	if (size == strlen(ICON_SHAPE) && memcmp(file, ICON_SHAPE, size) == 0)
@@ -279,7 +300,30 @@ static int takes_icon(const zip_archive *archive)
 	return shapes && arts && legacies;
 }
 
+/* The build has a TV banner (its manifest's android:banner, a picture) */
+static int takes_banner(const zip_archive *archive)
+{
+	for (size_t index = 0; index < archive->count; index++)
+		if (entry_kind(&archive->entries[index]) == ENTRY_BANNER)
+			return 1;
+	return 0;
+}
+
 /* ---- the inputs ---- */
+
+/* A picture wider than tall: the TV's banner, else the icon */
+static int is_banner(const char *path)
+{
+	bytes picture;
+	unsigned width = 0, height = 0;
+	int wide;
+
+	if (!read_file(path, &picture))
+		return 0;
+	wide = picture_size(&picture, &width, &height) && width > height;
+	bytes_free(&picture);
+	return wide;
+}
 
 void apk_take_dropped(apk_inputs *inputs, const char *path)
 {
@@ -291,7 +335,7 @@ void apk_take_dropped(apk_inputs *inputs, const char *path)
 		target = inputs->base;
 	else if (dot && (named_alike(dot, size, ".png", 0) || named_alike(dot, size, ".jpg", 0)
 		|| named_alike(dot, size, ".jpeg", 0)))
-		target = inputs->icon;
+		target = is_banner(path) ? inputs->banner : inputs->icon;
 	else
 		target = inputs->rom;    /* (tmnt.zip, or a folder of its files) */
 	snprintf(target, APK_PATH_SIZE, "%s", path);
@@ -311,6 +355,12 @@ void apk_defaults(apk_inputs *inputs, const char *here)
 		if (!exists(inputs->icon))
 			inputs->icon[0] = '\0';    /* (the game's own) */
 	}
+	if (!inputs->banner[0])
+	{
+		snprintf(inputs->banner, sizeof(inputs->banner), "%s" APK_OWN_BANNER, here);
+		if (!exists(inputs->banner))
+			inputs->banner[0] = '\0';    /* (the game's own) */
+	}
 }
 
 const char *apk_icon_problem(const char *path)
@@ -321,6 +371,18 @@ const char *apk_icon_problem(const char *path)
 	if (!read_file(path, &picture))
 		return exists(path) ? "cannot be read" : "not found";
 	problem = picture_problem(&picture);
+	bytes_free(&picture);
+	return problem;
+}
+
+const char *apk_banner_problem(const char *path)
+{
+	bytes picture;
+	const char *problem;
+
+	if (!read_file(path, &picture))
+		return exists(path) ? "cannot be read" : "not found";
+	problem = banner_problem(&picture);
 	bytes_free(&picture);
 	return problem;
 }
@@ -348,6 +410,20 @@ int apk_base_takes_icon(const char *path)
 	if (!read_file(path, &base))
 		return 0;
 	takes = zip_read(base.data, base.size, &archive) && takes_icon(&archive);
+	zip_free(&archive);
+	bytes_free(&base);
+	return takes;
+}
+
+int apk_base_takes_banner(const char *path)
+{
+	bytes base;
+	zip_archive archive;
+	int takes;
+
+	if (!read_file(path, &base))
+		return 0;
+	takes = zip_read(base.data, base.size, &archive) && takes_banner(&archive);
 	zip_free(&archive);
 	bytes_free(&base);
 	return takes;
@@ -388,9 +464,19 @@ static void tell(apk_step step, void *context, const char *name)
 		step(context, name);
 }
 
-/* The build's entries, but its signature's and an assets pack; with an icon of the player's, its
-   entries; then the assets pack, stored */
-static void put_entries(apk_work *work, int own_icon)
+/* An entry of the build with a picture of the player's in its place, stored */
+static void put_picture(zip_entry *entry, const bytes *picture)
+{
+	entry->flags &= ~0x0006u;    /* (deflate's own flags) */
+	entry->method = ZIP_STORED;
+	entry->data = picture->data;
+	entry->packed = entry->unpacked = (uint32_t)picture->size;
+	entry->crc = zip_crc32(picture->data, picture->size);
+}
+
+/* The build's entries, but its signature's and an assets pack; with an icon or a banner of the player's,
+   their entries; then the assets pack, stored */
+static void put_entries(apk_work *work, int own_icon, int own_banner)
 {
 	zip_entry assets;
 
@@ -402,13 +488,9 @@ static void put_entries(apk_work *work, int own_icon)
 		if (kind == ENTRY_SIGNATURE || kind == ENTRY_ASSETS)
 			continue;
 		if (own_icon && (kind == ENTRY_ART || kind == ENTRY_LEGACY))
-		{
-			entry.flags &= ~0x0006u;    /* (deflate's own flags) */
-			entry.method = ZIP_STORED;
-			entry.data = work->icon.data;
-			entry.packed = entry.unpacked = (uint32_t)work->icon.size;
-			entry.crc = zip_crc32(work->icon.data, work->icon.size);
-		}
+			put_picture(&entry, &work->icon);
+		else if (own_banner && kind == ENTRY_BANNER)
+			put_picture(&entry, &work->banner);
 		else if (own_icon && kind == ENTRY_SHAPE)
 		{
 			const zip_entry *const own = own_shape(&work->archive, &entry);
@@ -451,7 +533,7 @@ static int build(const apk_inputs *inputs, FILE *log, apk_step step, void *conte
 	apk_outcome *outcome)
 {
 	char what[80], pack_path[APK_PATH_SIZE + 16], key_path[APK_PATH_SIZE + 64];
-	const int own_icon = inputs->icon[0] != '\0';
+	const int own_icon = inputs->icon[0] != '\0', own_banner = inputs->banner[0] != '\0';
 	const char *problem;
 	size_t central, block_size, offset;
 	FILE *output;
@@ -485,6 +567,23 @@ static int build(const apk_inputs *inputs, FILE *log, apk_step step, void *conte
 			fprintf(log, "icon      %s\n", inputs->icon);
 	}
 
+	/* the TV's banner */
+	if (own_banner)
+	{
+		tell(step, context, "reading the TV banner");
+		if (!read_file(inputs->banner, &work->banner))
+			return failed(outcome, "The TV banner cannot be read", inputs->banner);
+		if ((problem = banner_problem(&work->banner)) != NULL)
+		{
+			snprintf(what, sizeof(what), "The TV banner is %s", problem);
+			return failed(outcome, what, inputs->banner);
+		}
+		if (!takes_banner(&work->archive))
+			return failed(outcome, "The TV banner cannot go into this build of the game", inputs->base);
+		if (log)
+			fprintf(log, "banner    %s\n", inputs->banner);
+	}
+
 	/* the assets, as the computer's first run takes them out (beside the APK, for a moment: where it goes is
 	   tried first, so that a folder it cannot go in is not told as a ROM set that cannot be used) */
 	tell(step, context, "taking the assets out of the ROM set");
@@ -514,13 +613,14 @@ static int build(const apk_inputs *inputs, FILE *log, apk_step step, void *conte
 	if (log)
 		fprintf(log, "key       %s (%s)\n", key_path, work->key.made ? "made now" : "kept from before");
 
-	/* the APK: the build's entries, the icon, the assets */
+	/* the APK: the build's entries, the icon, the banner, the assets */
 	tell(step, context, "putting the APK together");
-	put_entries(work, own_icon);
+	put_entries(work, own_icon, own_banner);
 	if (!zip_finish(&work->apk, &central))
 		return failed(outcome, "There is not memory enough for the APK", NULL);
 	bytes_free(&work->assets);
 	bytes_free(&work->icon);
+	bytes_free(&work->banner);
 
 	/* its signature, before its central directory, whose offset moves past it */
 	tell(step, context, "signing the APK");
@@ -553,6 +653,7 @@ static int make_one(const apk_inputs *inputs, FILE *log, apk_step step, void *co
 	zip_free(&work.archive);
 	bytes_free(&work.base);
 	bytes_free(&work.icon);
+	bytes_free(&work.banner);
 	bytes_free(&work.assets);
 	return made;
 }

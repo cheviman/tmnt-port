@@ -1,11 +1,11 @@
 /**
  *    Name:        window.c
- *    Description: TMNT APK's window: the APK's inputs and their state (the ROM set, the icon, the
- *                 game's Android build, the signing key, the output folder), files dropped on it taken by
- *                 what they are, a button for the output folder and one (or Enter) that makes the APK
- *    Version:     0.1.0
+ *    Description: TMNT APK's window: the APK's inputs and their state (the ROM set, the icon, the TV's
+ *                 banner, the game's Android build, the signing key, the output folder), files dropped on it
+ *                 taken by what they are, a button for the output folder and one (or Enter) that makes the APK
+ *    Version:     0.2.0
  *    Created:     06-11-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -43,18 +43,18 @@
 
 #define WINDOW_TITLE     "TMNT APK"
 #define WINDOW_WIDTH     800
-#define WINDOW_HEIGHT    472
+#define WINDOW_HEIGHT    516
 #define MARGIN           24
 #define TITLE_TOP        24
-#define ROWS             5
+#define ROWS             6
 #define ROWS_TOP         116
 #define ROW_HEIGHT       44
 #define LINE_GAP         4
-#define BUTTONS_TOP      344
+#define BUTTONS_TOP      388
 #define BUTTON_WIDTH     300
 #define BUTTON_HEIGHT    36
 #define BUTTON_GAP       24
-#define STATUS_TOP       400
+#define STATUS_TOP       444
 #define BAR_WIDTH        480
 #define BAR_HEIGHT       6
 #define BAR_EVERY        40      /* milliseconds between two of the bar's frames while it works */
@@ -181,7 +181,7 @@ static void key_row(input_row *row)
 static void refresh(void)
 {
 	apk_inputs *const inputs = &tool.inputs;
-	const char *base_problem, *icon_problem;
+	const char *base_problem, *icon_problem, *banner_problem;
 	char path[APK_PATH_SIZE + 16];
 
 	*inputs = tool.given;
@@ -200,11 +200,21 @@ static void refresh(void)
 	else
 		set_row(&tool.rows[1], "Launcher icon (a square PNG or JPEG)", "in the game's Android build", NULL,
 			"the game's own");
-	set_row(&tool.rows[2], "The game's Android build (" APK_BASE_FILE ")",
+	if (inputs->banner[0])
+	{
+		banner_problem = apk_banner_problem(inputs->banner);
+		if (!banner_problem && !base_problem && !apk_base_takes_banner(inputs->base))
+			banner_problem = "cannot go into this build of the game";
+		set_row(&tool.rows[2], "TV banner (a 16:9 PNG or JPEG)",
+			tool.given.banner[0] ? inputs->banner : APK_OWN_BANNER ", " BESIDE_TOOL, banner_problem, "yours");
+	}
+	else
+		set_row(&tool.rows[2], "TV banner (a 16:9 PNG or JPEG)", "in the game's Android build", NULL, "the game's own");
+	set_row(&tool.rows[3], "The game's Android build (" APK_BASE_FILE ")",
 		tool.given.base[0] ? inputs->base : "in the folder " APK_BASE_FOLDER ", " BESIDE_TOOL, base_problem, "found");
-	key_row(&tool.rows[3]);
+	key_row(&tool.rows[4]);
 	apk_folder_of(inputs->out, path, sizeof(path));
-	set_row(&tool.rows[4], "Output folder", tool.given.out[0] ? path : BESIDE_TOOL,
+	set_row(&tool.rows[5], "Output folder", tool.given.out[0] ? path : BESIDE_TOOL,
 		apk_folder_exists(path) ? NULL : "not found", APK_FILE " goes here");
 }
 
@@ -213,12 +223,12 @@ static void refresh(void)
 static void place_failure(void)
 {
 	const char *const detail = tool.outcome.detail;
-	const char *const given[4] = { tool.given.rom, tool.given.icon, tool.given.base, tool.given.out };
+	const char *const given[5] = { tool.given.rom, tool.given.icon, tool.given.banner, tool.given.base, tool.given.out };
 	const size_t here = strlen(tool.here), keys = strlen(tool.key_folder);
 	char *const out = tool.failed_place;
 	const size_t size = sizeof(tool.failed_place);
 
-	for (int input = 0; input < 4; input++)
+	for (int input = 0; input < 5; input++)
 		if (given[input][0] && strcmp(detail, given[input]) == 0)
 		{
 			snprintf(out, size, "%s", detail);

@@ -2,9 +2,9 @@
  *    Name:        make_apk.h
  *    Description: TMNT APK's work, for its command line and its window alike: the APK from its inputs,
  *                 their defaults, and what the window shows of each
- *    Version:     0.1.0
+ *    Version:     0.2.0
  *    Created:     06-11-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -19,17 +19,20 @@
 #define APK_PATH_SIZE    1100
 #define APK_FILE         "TMNT.apk"
 #define APK_OWN_ICON     "icon.jpg"         /* the player's own icon, taken when it is beside the tool */
+#define APK_OWN_BANNER   "banner.jpg"       /* the player's own TV banner, taken when it is beside the tool */
 #define APK_BASE_FOLDER  "android"
 #define APK_BASE_FILE    "tmnt-base.apk"
 #define APK_ARCADE_FILE  "TMNT Arcade.apk"    /* (TMNT Arcade's, beside TMNT's) */
 #define APK_ARCADE_BASE_FILE "tmnt-arcade-base.apk"
-#define APK_ICON_MOST    2048    /* the icon's most pixels a side: the launcher draws it from memory */
+#define APK_ICON_MOST    2048    /* the icon's and the banner's most pixels a side: the launcher draws them from memory */
 
 /* What the APK is made of, and where it goes */
 typedef struct
 {
 	char rom[APK_PATH_SIZE];     /* the arcade ROM set: tmnt.zip, or a folder of its files */
 	char icon[APK_PATH_SIZE];    /* the launcher's icon, a square PNG or JPEG of the player's; "" the game's own */
+	char banner[APK_PATH_SIZE];  /* the TV's banner (Android TV, Google TV), a PNG or JPEG of the player's wider than
+	                                tall, shown as 16:9; "" the game's own */
 	char base[APK_PATH_SIZE];    /* TMNT's Android build: tmnt-base.apk, without the assets or a signature;
 	                                TMNT Arcade's, tmnt-arcade-base.apk, beside it */
 	char out[APK_PATH_SIZE];     /* TMNT's APK to write; TMNT Arcade's beside it */
@@ -48,12 +51,13 @@ typedef struct
 typedef void (*apk_step)(void *context, const char *step);
 
 /* A file dropped on the tool, taken by what it is: an .apk the game's Android build, a .png or .jpg the
-   icon, anything else the ROM set (tmnt.zip, or a folder of its files) */
+   icon (the TV's banner if it is wider than tall), anything else the ROM set (tmnt.zip, or a folder of its
+   files) */
 void apk_take_dropped(apk_inputs *inputs, const char *path);
 
 /* The inputs not given, beside the tool (in the folder 'here', with its separator): tmnt.zip,
-   android/tmnt-base.apk, TMNT.apk, and the player's icon.jpg when it is there (else the game's
-   own icon) */
+   android/tmnt-base.apk, TMNT.apk, and the player's icon.jpg and banner.jpg when they are there (else the
+   game's own) */
 void apk_defaults(apk_inputs *inputs, const char *here);
 
 /* The APKs, TMNT's and TMNT Arcade's: true when both are written. Each step's lines go to 'log' (the command line's) unless it is NULL;
@@ -65,8 +69,10 @@ void apk_folder_of(const char *path, char *folder, size_t size);
 
 /* What the window shows of each input: NULL when it is good, else what is wrong with it ("not found") */
 const char *apk_icon_problem(const char *path);
+const char *apk_banner_problem(const char *path);
 const char *apk_base_problem(const char *path);
 int apk_base_takes_icon(const char *path);    /* the build has the entries an icon of the player's goes in */
+int apk_base_takes_banner(const char *path);  /* ... and a TV banner of the player's */
 int apk_file_exists(const char *path);
 int apk_folder_exists(const char *path);
 

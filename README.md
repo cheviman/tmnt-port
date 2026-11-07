@@ -31,7 +31,9 @@ The package also has the tools that make the game for your devices, with your RO
 
 - **Nintendo Switch**: TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp`, for a console with Atmosphere.
 - **Android**: TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk`, signed with a key of yours
-  ([ports/android/apk](ports/android/apk/README.md)).
+  ([ports/android/apk](ports/android/apk/README.md)): phones, tablets, and TVs with Android TV or Google TV (the
+  Chromecast with Google TV too: its Android is 32-bit, and the APKs have both kinds), in the TV's apps with a
+  banner.
 - **Anbernic's H700 handhelds** (RG40XX H...): TMNT Anbernic makes the folder for PORTS.
 
 What a tool makes has the game's data in it: it is yours alone, never share it. The package's `README.txt` has
@@ -60,6 +62,8 @@ what each tool needs.
   and a coin and the attack bring a turtle in.
 - **Android**: a stick where your left thumb lands, ATTACK and JUMP at the right, START (COIN in TMNT Arcade);
   a controller hides them. Back pauses.
+- **A TV's remote** (Google TV, Android TV), in TMNT: the pad moves, OK attacks (and brings in a player who is not
+  playing, or continues), back jumps (and goes back in the menus); home pauses. A game controller is better.
 
 ## MULTIPLAYER
 

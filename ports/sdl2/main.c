@@ -790,7 +790,9 @@ static void log_press(const SDL_Event *event)
 		fprintf(stderr, "(no more presses in the log)\n");
 }
 
-/* A TV's remote, which SDL takes for a game controller (the Shield's, Android TV's, Fire TV's: "... Remote") */
+/* A TV's remote, which SDL takes for a game controller (the Shield's, Android TV's, Fire TV's: "... Remote"); on
+   Android also one by its buttons, whatever its name: a pad, OK (A) and back (Back), but no B and no Start (the
+   Chromecast with Google TV's) */
 static bool is_remote(SDL_GameController *pad)
 {
 	const char *name = SDL_GameControllerName(pad);
@@ -798,8 +800,25 @@ static bool is_remote(SDL_GameController *pad)
 	for (const char *at = name ? name : ""; *at; at++)
 		if (SDL_strncasecmp(at, "remote", 6) == 0)
 			return true;
+#ifdef __ANDROID__
+	if (!SDL_GameControllerHasButton(pad, SDL_CONTROLLER_BUTTON_B)
+		&& !SDL_GameControllerHasButton(pad, SDL_CONTROLLER_BUTTON_START))
+		return true;
+#endif
 	return false;
 }
+
+#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+/* The game controller 'which' is a TV's remote: its Back is its player's JUMP, not the pause (read_players) */
+static bool remote_back(SDL_JoystickID which)
+{
+	SDL_GameController *pad = SDL_GameControllerFromInstanceID(which);
+
+	return pad && is_remote(pad);
+}
+#else
+#define remote_back(which) false
+#endif
 
 /* A game controller plugged in: the first player without one, but a game controller before a TV's remote (a
    player's report: the Shield's remote, found first, took player 1 from his Xbox controller) */
@@ -900,8 +919,9 @@ static void read_events(void)
 				/* ... or a button of the game controller plugged in for that player */
 				if (console_controls_waiting() >= 0)
 					bind_button(event.cbutton.which, (SDL_GameControllerButton)event.cbutton.button);
-				else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && console_can_pause())
-					pause_requested = true;
+				else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && console_can_pause()
+					&& !remote_back(event.cbutton.which))
+					pause_requested = true;    /* (a TV remote's: its home pauses, SDL_APP_WILLENTERBACKGROUND) */
 				break;
 			case SDL_CONTROLLERAXISMOTION:
 				/* ... or one of its triggers, pressed halfway */
@@ -959,6 +979,19 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 		pressed |= controls_holds(player, pad, CONTROL_DOWN) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, 1) ? TMNT_DOWN : 0;
 		pressed |= controls_holds(player, pad, CONTROL_ATTACK) ? TMNT_ATTACK : 0;
 		pressed |= controls_holds(player, pad, CONTROL_JUMP) ? TMNT_JUMP : 0;
+#ifdef __ANDROID__
+		/* a TV's remote (the Chromecast with Google TV's, which has a pad, OK and back alone): its back is JUMP (the
+		   menus' back, the pause's CONTINUE), and its OK, ATTACK, the START of a player out of the game (in, or a
+		   continue) */
+		if (pad && is_remote(pad))
+		{
+			if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK))
+				pressed |= TMNT_JUMP;
+			if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) && console_can_pause()
+				&& !console_start_pauses(player))
+				start = true;
+		}
+#endif
 		if (start && !starts_held[player] && !waiting)
 			*starts |= (uint8_t)(1u << player);
 		starts_held[player] = start;
