@@ -514,3 +514,16 @@ are outrunners-port's: Winsock, POSIX, libnx).
   board's 59.19 frames a second (wait_for_frame); a frame a whole frame behind that pace is not shown
   (frame_behind), so the game and its sound never wait for the screen. Not with --fast. On the devices the line is
   not there: their screens keep the system's refresh (and the Anbernic's SDL 2.0.12 has no SDL_RenderSetVSync).
+
+## A continue's turtle change (07-11-2026: Sebas, "que dps de un game over y use un continue deje cambiar de tortuga")
+
+- A player whose slot's turtle has no lives (players_in_play without it, PLAYER(...)->lives 0) and START: instead of
+  console_join on his slot, console.turtle_change opens on it (start_pressed; a new player, with no slot, still takes
+  the first free one). A line a player over the game's lower part (menu.c's turtle_change_overlay, "1P < LEONARDO >"
+  in his colour); LEFT and RIGHT among the slots free for him (not playing, not joining, no other player's); attack or
+  START: his slot the chosen one, Splinter Way's count of coins with him (console_coins_put moved), console_join; jump
+  closes it. While it is open his controls go to no slot (the continue's countdown, under 16, runs faster while a
+  player out of lives holds attack or jump); GAME OVER (the continue scene's step 2) or the game's end closes it.
+  The console's own state, from the players' controls and STARTs: the same on every device of a LAN game. Not in
+  RONIN, BOSS RUSH, nor with everyone the same turtle. Tried in the headless: one player, one life (poked), the
+  continue at 19, START, right twice, attack: Donatello in on 3UP, his coins 2.

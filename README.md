@@ -39,7 +39,8 @@ what each tool needs.
 
 ## The console version
 
-- **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four.
+- **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four, and on a
+  continue lets him pick his turtle again.
 - **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next) and RONIN (one turtle
   against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).

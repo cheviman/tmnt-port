@@ -1368,10 +1368,40 @@ static void level_select_overlay(void)
 	}
 }
 
+/* Each player's colour and tag where the menus show whose a choice is */
+static const uint32_t player_colours[CONSOLE_PLAYERS] = { 0x58A8FFu, 0xFFD840u, 0xC878FFu, 0xFF5868u };
+static const char *const tags[CONSOLE_PLAYERS] = { "1P", "2P", "3P", "4P" };
+
+/* A continue's turtle change (console.c's turtle_change_frame): a line a player, "1P < MICHELANGELO >" in his colour,
+   over the game's lower part */
+#define CHANGE_Y            176
+#define CHANGE_STEP         12
+
+void turtle_change_overlay(console_picture *frame)
+{
+	int lines = 0, line = 0;
+
+	if (console.page != PAGE_GAME)
+		return;
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		lines += console.turtle_change[player] != 0;
+	if (!lines)
+		return;
+	draw_shade(frame, PICTURE_FIRST(frame), CHANGE_Y - 6, PICTURE_END(frame) - PICTURE_FIRST(frame),
+		lines * CHANGE_STEP + 8, 80);
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		char text[32];
+
+		if (!console.turtle_change[player])
+			continue;
+		snprintf(text, sizeof(text), "%s  < %s >", tags[player], turtle_names[console.turtle_change[player] - 1]);
+		draw_game_letters_centred(frame, CHANGE_Y + line++ * CHANGE_STEP, 1, player_colours[player], text);
+	}
+}
+
 static void choice_overlay(void)
 {
-	static const uint32_t player_colours[CONSOLE_PLAYERS] = { 0x58A8FFu, 0xFFD840u, 0xC878FFu, 0xFF5868u };
-	static const char *const tags[CONSOLE_PLAYERS] = { "1P", "2P", "3P", "4P" };
 	const char *heading = console.mode == MODE_SPLINTER_WAY ? "SPLINTER WAY - CHOOSE YOUR TURTLE" : "CHOOSE YOUR TURTLE";
 	int in = 0, on[4] = { 0, 0, 0, 0 }, drawn[4] = { 0, 0, 0, 0 };
 	char level_heading[48];

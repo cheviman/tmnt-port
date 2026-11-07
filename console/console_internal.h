@@ -86,6 +86,8 @@ typedef struct
 	bool level_pending;        /* and its area not yet set in the game started */
 	int choice_turtle[CONSOLE_PLAYERS];    /* the turtle choice: each player's turtle there (-1: not in it), */
 	bool choice_picked[CONSOLE_PLAYERS];   /* and whether he picked it (kept for the pause's RESTART) */
+	int turtle_change[CONSOLE_PLAYERS];    /* a continue's turtle change: the turtle each player has on it, plus 1
+	                                          (0: none; console.c's start_pressed, turtle_change_frame) */
 } console_state;
 
 extern console_state console;
@@ -117,6 +119,7 @@ void presentation_overlay(console_picture *frame);
    pressed (any player's) and each player's own; their picture */
 void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]);
 void menu_overlay(console_picture *frame);
+void turtle_change_overlay(console_picture *frame);    /* (a continue's turtle change, over the game: menu.c) */
 
 /* Splinter Way's modes (modes.c), at each frame before the game's: RONIN's other boxes kept clear; BOSS RUSH's
    crossing (its turtles' controls), its spawn lists' Foot soldiers passed (spawn_enemies), its picture */

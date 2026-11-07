@@ -154,13 +154,101 @@ void console_join(int slot)
 	joins[slot].coin = coin;
 }
 
-/* A START in a game: the player on his slot (the first free one when he has none), unless his turtle plays */
+#define SCENE_CONTINUE      7u    /* the game's continue's countdown (its step 2, GAME OVER) */
+
+/* ---- a continue's turtle change (Sebas: "que despues de un game over y use un continue deje cambiar de tortuga") ----
+
+   A player whose turtle has no lives left, coming back with START, chooses his turtle again: a line over the game
+   ("1P < MICHELANGELO >", turtle_change_overlay) starts on his own; LEFT and RIGHT go among the free ones (their
+   turtle not playing nor coming in, no other player on them), attack or START brings him in on it (his continues
+   with him: Splinter Way's count goes to the new slot), jump leaves it. The game goes on meanwhile (the countdown
+   too), and it is the console's own state, the same on every device of a LAN game. Not in RONIN (its one turtle),
+   BOSS RUSH (its crossings' turtles) nor with everyone the same turtle */
+
+static bool turtle_change_allowed(void)
+{
+	return !console.ronin && !console.boss_rush && console_same_turtle < 0;
+}
+
+/* Whether 'player' may move to 'slot' */
+static bool slot_free_for(int player, int slot)
+{
+	if (((players_in_play | players_joining) & (1u << slot)) != 0u || joins[slot].frames >= 0)
+		return false;
+	for (int other = 0; other < CONSOLE_PLAYERS; other++)
+		if (other != player && console_slot_of[other] == slot)
+			return false;
+	return true;
+}
+
+/* 'slot', or the next free one for 'player' in the direction 'by' (+1, -1); -1 for none */
+static int free_slot_for(int player, int slot, int by)
+{
+	for (int tries = 0; tries < CONSOLE_PLAYERS; tries++, slot = (slot + by + CONSOLE_PLAYERS) % CONSOLE_PLAYERS)
+		if (slot_free_for(player, slot))
+			return slot;
+	return -1;
+}
+
+/* A frame of 'player''s turtle change: his controls newly pressed ('fresh') and his START */
+static void turtle_change_frame(int player, uint8_t fresh, bool start)
+{
+	int turtle = console.turtle_change[player] - 1;
+
+	if (fresh & TMNT_JUMP)
+	{
+		console.turtle_change[player] = 0;    /* (left: his START opens it again) */
+		return;
+	}
+	if (fresh & (TMNT_LEFT | TMNT_RIGHT))
+	{
+		const int by = (fresh & TMNT_LEFT) ? -1 : 1;
+
+		turtle = free_slot_for(player, (turtle + by + CONSOLE_PLAYERS) % CONSOLE_PLAYERS, by);
+	}
+	else if (!slot_free_for(player, turtle))
+		turtle = free_slot_for(player, turtle, 1);    /* (another player came in on it meanwhile) */
+	if (turtle < 0)
+	{
+		console.turtle_change[player] = 0;
+		return;
+	}
+	if ((fresh & TMNT_ATTACK) || start)
+	{
+		const int old = console_slot_of[player];
+
+		console.turtle_change[player] = 0;
+		if (turtle != old)
+		{
+			console_coins_put[turtle] = console_coins_put[old];    /* (his continues go with him) */
+			console_coins_put[old] = 0;
+			console_slot_of[player] = turtle;
+		}
+		console_join(turtle);
+		return;
+	}
+	console.turtle_change[player] = turtle + 1;
+}
+
+/* A START in a game: the player on his slot (the first free one when he has none), unless his turtle plays; with
+   no lives left, his turtle chosen again first (turtle_change_frame) */
 static void start_pressed(int player)
 {
 	int slot = console_slot_of[player];
 
 	if (game_state != GAME_STATE_GAME || (console.ronin && slot < 0))
 		return;    /* (RONIN: its one player alone) */
+	if (slot >= 0 && PLAYER(PLAYER_ADDRESS(slot))->lives == 0u && turtle_change_allowed() && start_open(slot)
+		&& (players_in_play & (1u << slot)) == 0u && (players_joining & (1u << slot)) == 0u && joins[slot].frames < 0)
+	{
+		const int first = free_slot_for(player, slot, 1);
+
+		if (first >= 0)
+		{
+			console.turtle_change[player] = first + 1;    /* (a continue: his turtle chosen again) */
+			return;
+		}
+	}
 	if (slot < 0)
 	{
 		for (int free_slot = 0; free_slot < CONSOLE_PLAYERS && slot < 0; free_slot++)
@@ -197,10 +285,14 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 			tmnt_board.players[slot] = (uint8_t)~pressed[slot];
 		return;
 	}
+	uint8_t fresh_of[CONSOLE_PLAYERS];
+
 	for (int player = 0; player < CONSOLE_PLAYERS; player++)
 	{
 		const uint8_t buttons = TMNT_ATTACK | TMNT_JUMP;
 		const uint8_t fresh = (uint8_t)(pressed[player] & ~controls_last[player]);
+
+		fresh_of[player] = fresh;
 
 		if ((starts & (1u << player)) || (fresh & buttons))
 			console.last_presser = player;
@@ -222,14 +314,19 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 	}
 	if (console.page != PAGE_GAME && starts)
 		console.pressed |= ACTION_BIT(ACTION_START);    /* (any player's START, in the menus) */
+	if (console.page != PAGE_GAME || game_state != GAME_STATE_GAME || (scene == SCENE_CONTINUE && scene_step >= 2u))
+		memset(console.turtle_change, 0, sizeof(console.turtle_change));    /* (GAME OVER: no change open) */
 	if (console.page == PAGE_GAME)
 	{
 		for (int player = 0; player < CONSOLE_PLAYERS; player++)
 		{
-			if (starts & (1u << player))
+			if (console.turtle_change[player])
+				turtle_change_frame(player, fresh_of[player], (starts & (1u << player)) != 0);
+			else if (starts & (1u << player))
 				start_pressed(player);
-			if (console_slot_of[player] >= 0)
-				slots[console_slot_of[player]] |= pressed[player];
+			if (console_slot_of[player] >= 0 && !console.turtle_change[player])
+				slots[console_slot_of[player]] |= pressed[player];    /* (choosing a turtle: none, so that his
+					buttons do not hurry the continue's countdown) */
 		}
 	}
 	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
@@ -533,6 +630,7 @@ void console_overlay(console_picture *frame)
 	else
 		menu_overlay(frame);
 	boss_rush_overlay(frame);
+	turtle_change_overlay(frame);
 	if (console_lan_playing() && game_state < GAME_STATE_ATTRACT)
 	{
 		/* (a LAN game's start: the board's boot, its RAM and ROM checks, under black) */

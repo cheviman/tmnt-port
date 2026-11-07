@@ -64,8 +64,9 @@ The menu under the title's logo:
   pixels, WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9; VSYNC, each frame at the screen's refresh), the
   volume, a sound test; kept in tmnt.ini.
 - EXIT.
-Choose a turtle, and the game starts with it. In a game, START brings in another player (or the same
-one again, a continue) on a turtle free; Escape, or START of a player in the game, pauses it (CONTINUE,
+Choose a turtle, and the game starts with it. In a game, START brings in another player on a turtle
+free; a player with no lives left comes back with START too (a continue), choosing his turtle again:
+left and right, attack or START (jump: not now). Escape, or START of a player in the game, pauses it (CONTINUE,
 RESTART, QUIT GAME). In a MULTIPLAYER game
 there is no pause: Escape leaves the game, which goes on for the others.
 
