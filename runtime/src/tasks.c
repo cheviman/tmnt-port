@@ -1,10 +1,10 @@
 /**
  *    Name:        tasks.c
  *    Description: native stacks for the game's tasks (host/tasks.h): fibers on Windows, the registers on the
- *                 task's stack on the Switch and Android (aarch64), ucontext elsewhere
+ *                 task's stack on the Switch and Android (aarch64) and on 32-bit ARM, ucontext elsewhere
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -82,12 +82,16 @@ void host_task_switch(host_task *to)
 	SwitchToFiber(to->fiber);
 }
 
-#elif defined(__aarch64__) && (defined(__SWITCH__) || defined(__ANDROID__))
+#elif (defined(__aarch64__) && (defined(__SWITCH__) || defined(__ANDROID__))) || defined(__arm__)
 
-/* The Switch's C library and Android's have no ucontext: a task's registers are kept on its own stack. What
-   a call keeps for its caller (AAPCS64: x19-x29, the return address x30, d8-d15) is pushed where the task
-   stops and popped where it goes on; the stack pointer is all the task keeps beside it */
+/* The Switch's C library and Android's have no ucontext (nor musl's), and 32-bit ARM's C libraries none at all:
+   a task's registers are kept on its own stack. What a call keeps for its caller is pushed where the task stops
+   and popped where it goes on; the stack pointer is all the task keeps beside it */
+#ifdef __aarch64__
+
+/* AAPCS64: x19-x29, the return address x30, d8-d15 */
 #define SAVED_BYTES 160    /* x19-x30 and d8-d15, 8 bytes each */
+#define RETURN_SLOT 11     /* x30: where the first ret goes */
 
 void host_switch_stacks(void **from_stack, void *to_stack);
 
@@ -124,6 +128,33 @@ __asm__(
 	"	ret\n"
 	".size host_switch_stacks, .-host_switch_stacks\n");
 
+#else
+
+/* 32-bit ARM (Android's armeabi-v7a: the Chromecast with Google TV's apps, older phones), AAPCS: r4-r11, the
+   return address lr, d8-d15 (VFP, which armeabi-v7a always has); r12 besides, so that the 104 bytes keep the
+   stack 8-byte aligned. Its instructions are the same in ARM and in Thumb (unified syntax), so the function is
+   built in whichever the compiler builds the rest; bx goes back in the caller's */
+#ifndef __ARM_FP
+#error "32-bit ARM's tasks keep d8-d15: a build with VFP (armeabi-v7a's)"
+#endif
+#define SAVED_BYTES 104    /* d8-d15, 8 bytes each, then r4-r12 and lr, 4 bytes each */
+#define RETURN_SLOT 25     /* lr, after d8-d15's 16 words and r4-r12's 9: where the first bx goes */
+
+__attribute__((naked)) void host_switch_stacks(void **from_stack, void *to_stack)
+{
+	__asm__ volatile(
+		"	push {r4-r12, lr}\n"
+		"	vpush {d8-d15}\n"
+		"	mov r2, sp\n"
+		"	str r2, [r0]\n"
+		"	mov sp, r1\n"
+		"	vpop {d8-d15}\n"
+		"	pop {r4-r12, lr}\n"
+		"	bx lr\n");
+}
+
+#endif
+
 struct host_task
 {
 	void *stack_pointer;    /* where it stopped: its registers on top */
@@ -151,7 +182,7 @@ static void run_task(void)
 host_task *host_task_create(void (*start)(void))
 {
 	host_task *task = calloc(1, sizeof(*task));
-	uint64_t *registers;
+	uintptr_t *registers;    /* (a register's size: 8 bytes on aarch64, 4 on 32-bit ARM) */
 
 	if (task)
 		task->stack = malloc(TASK_STACK_SIZE);
@@ -162,9 +193,9 @@ host_task *host_task_create(void (*start)(void))
 	}
 	task->start = start;
 	/* its first switch pops registers that return into run_task, at the top of its stack (16-byte aligned) */
-	registers = (uint64_t *)(((uintptr_t)task->stack + TASK_STACK_SIZE - SAVED_BYTES) & ~(uintptr_t)15);
+	registers = (uintptr_t *)(((uintptr_t)task->stack + TASK_STACK_SIZE - SAVED_BYTES) & ~(uintptr_t)15);
 	memset(registers, 0, SAVED_BYTES);
-	registers[11] = (uint64_t)(uintptr_t)run_task;    /* (x30: where the first ret goes) */
+	registers[RETURN_SLOT] = (uintptr_t)run_task;
 	task->stack_pointer = registers;
 	return task;
 }
