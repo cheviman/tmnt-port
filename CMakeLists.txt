@@ -5,7 +5,7 @@
 # Modified:    04-11-2026
 # Author:      Sebastian Toyos
 cmake_minimum_required(VERSION 3.20)
-project(tmnt VERSION 1.0.2 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
+project(tmnt VERSION 1.0.3 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -181,6 +181,34 @@ elseif(TMNT_SCAFFOLD)
 	message(STATUS "No generated program in build/generated (tools/recompile.py) or no sound program in src/sound: no scaffold")
 endif()
 
+# SDL_GameControllerDB (ports/sdl2/controllerdb, zlib License): the community's mappings of game controllers, this
+# platform's lines built into the window port's games on the computers and Android (a player's report: an Nvidia
+# Shield's PS4 and Xbox controllers); the Switch and the Anbernic keep their own controls. TMNT_CONTROLLER_DB to
+# whatever links it: main.c gives SDL the mappings as it starts
+if(TMNT_WINDOW_PROGRAM AND NOT TMNT_SWITCH AND NOT TMNT_ANBERNIC)
+	if(TMNT_ANDROID)
+		set(TMNT_CONTROLLER_PLATFORM "Android")
+	elseif(APPLE)
+		set(TMNT_CONTROLLER_PLATFORM "Mac OS X")
+	elseif(WIN32)
+		set(TMNT_CONTROLLER_PLATFORM "Windows")
+	else()
+		set(TMNT_CONTROLLER_PLATFORM "Linux")
+	endif()
+	set(TMNT_CONTROLLER_DB_C ${CMAKE_BINARY_DIR}/controller_db.c)
+	add_custom_command(OUTPUT ${TMNT_CONTROLLER_DB_C}
+		COMMAND ${CMAKE_COMMAND} -DDB=${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/gamecontrollerdb.txt
+			"-DPLATFORM=${TMNT_CONTROLLER_PLATFORM}" -DOUT=${TMNT_CONTROLLER_DB_C}
+			-P ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/embed.cmake
+		DEPENDS ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/gamecontrollerdb.txt
+			${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/embed.cmake
+		COMMENT "SDL_GameControllerDB's mappings for ${TMNT_CONTROLLER_PLATFORM}"
+		VERBATIM)
+	add_library(tmnt_controller_db STATIC ${TMNT_CONTROLLER_DB_C})
+	set_target_properties(tmnt_controller_db PROPERTIES POSITION_INDEPENDENT_CODE ON)
+	target_compile_definitions(tmnt_controller_db INTERFACE TMNT_CONTROLLER_DB)
+endif()
+
 # The game in a window (ports/sdl2): the decompiled game, or the scaffold where there is none yet. SDL2 from the
 # system, or on Windows the development package unpacked in build/downloads/sdl2, a library beside the executable;
 # or, with TMNT_STATIC_SDL2, SDL2 built from its own source into the executable
@@ -220,7 +248,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 		# ports/sdl2/font), a picture beside the executable
 		add_executable(tmnt WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c
 			ports/sdl2/font/font.bmp)
-		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2})
+		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract tmnt_controller_db ${TMNT_SDL2})
 		set_target_properties(tmnt PROPERTIES OUTPUT_NAME "TMNT Arcade"
 			MACOSX_BUNDLE_BUNDLE_NAME "TMNT Arcade" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt-arcade
 			MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
@@ -281,7 +309,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 		if(TARGET tmnt_console_game)
 			add_executable(tmnt_console WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c
 				ports/sdl2/letters.c ports/sdl2/controls.c ports/sdl2/font/font.bmp ports/sdl2/prompts/input_prompts.bmp)
-			target_link_libraries(tmnt_console PRIVATE tmnt_console_game tmnt_extract ${TMNT_SDL2})
+			target_link_libraries(tmnt_console PRIVATE tmnt_console_game tmnt_extract tmnt_controller_db ${TMNT_SDL2})
 			set_target_properties(tmnt_console PROPERTIES OUTPUT_NAME "TMNT"
 				MACOSX_BUNDLE_BUNDLE_NAME "TMNT" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt
 				MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
@@ -419,6 +447,8 @@ elseif(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/ymfm.txt
 				${TMNT_PACKED_LAN}
 				COMMAND ${CMAKE_COMMAND} -E copy ${sdl2_SOURCE_DIR}/LICENSE.txt ${TMNT_PACKED}/licenses/SDL2.txt
+				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/LICENSE
+					${TMNT_PACKED}/licenses/SDL_GameControllerDB.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/font/License.txt
 					${TMNT_PACKED}/licenses/Kenney-Mini.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/License.txt

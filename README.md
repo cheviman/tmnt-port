@@ -110,6 +110,8 @@ MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s RE
   `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause).
 - MULTIPLAYER's rooms and datagrams are [arcade-lan](https://github.com/cheviman/arcade-lan) (`lan/`, a submodule),
   BSD 3-Clause, whose terms are in `lan/LICENSE`.
+- The game controllers' mappings are [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)'s
+  (`ports/sdl2/controllerdb`, zlib License), built into the games on the computers and Android.
 - The menus write with Kenney Mini and CONTROLS shows Kenney's Input Prompts (www.kenney.nl), CC0. The window
   port links SDL2 (zlib License); the packages carry it inside the executables, with its terms and the ones above
   in `licenses/`. The icon is the project's own drawing (`tools/make_icon.py`).

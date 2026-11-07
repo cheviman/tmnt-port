@@ -120,6 +120,7 @@ jobs:
           cp tools/core/konami/reference/ymfm/LICENSE dist/tmnt/licenses/ymfm.txt
           cp lan/LICENSE dist/tmnt/licenses/arcade-lan.txt
           cp build/cmake/_deps/sdl2-src/LICENSE.txt dist/tmnt/licenses/SDL2.txt
+          cp ports/sdl2/controllerdb/LICENSE dist/tmnt/licenses/SDL_GameControllerDB.txt
           cp ports/sdl2/font/License.txt dist/tmnt/licenses/Kenney-Mini.txt
           cp ports/sdl2/prompts/License.txt dist/tmnt/licenses/Kenney-Input-Prompts.txt
           if [ "$RUNNER_OS" = macOS ]; then

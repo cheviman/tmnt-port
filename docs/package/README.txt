@@ -109,7 +109,7 @@ Licenses
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
 sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER, its rooms and
 datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound and the controls, inside
-the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
+the games), SDL_GameControllerDB's (zlib: the game controllers' mappings, inside the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project

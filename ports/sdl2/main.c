@@ -697,6 +697,51 @@ static void add_device_mappings(void)
 }
 #endif
 
+#ifdef TMNT_CONTROLLER_DB
+/* SDL_GameControllerDB's mappings for this platform (ports/sdl2/controllerdb, built in by CMakeLists.txt) */
+extern const unsigned char tmnt_controller_db[];
+extern const size_t tmnt_controller_db_size;
+#endif
+
+/* What SDL finds of each joystick, in the log (a player's report: on an Nvidia Shield the controllers' buttons did
+   what they should not): its name, its GUID, whether it is a game controller and its mapping; and the first presses
+   of keys and buttons, to tell a controller's button that comes as a key */
+#define INPUT_LOG_PRESSES   48
+
+static void log_joystick(int index)
+{
+	char guid_text[33];
+	const SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID(index);
+	const char *name = SDL_JoystickNameForIndex(index);
+	char *mapping;
+
+	SDL_JoystickGetGUIDString(guid, guid_text, sizeof(guid_text));
+	mapping = SDL_GameControllerMappingForGUID(guid);
+	fprintf(stderr, "Joystick %d: %s, GUID %s, %s%s\n", index, name ? name : "(no name)", guid_text,
+		SDL_IsGameController(index) ? "a game controller: " : "no game controller (no mapping)",
+		SDL_IsGameController(index) && mapping ? mapping : "");
+	SDL_free(mapping);
+}
+
+static void log_press(const SDL_Event *event)
+{
+	static int presses;
+
+	if (presses >= INPUT_LOG_PRESSES)
+		return;
+	if (event->type == SDL_KEYDOWN && !event->key.repeat)
+		fprintf(stderr, "Key %s (scancode %d)\n", SDL_GetKeyName(event->key.keysym.sym), (int)event->key.keysym.scancode);
+	else if (event->type == SDL_CONTROLLERBUTTONDOWN)
+		fprintf(stderr, "Game controller %d: %s\n", (int)event->cbutton.which,
+			SDL_GameControllerGetStringForButton((SDL_GameControllerButton)event->cbutton.button));
+	else if (event->type == SDL_JOYBUTTONDOWN)
+		fprintf(stderr, "Joystick %d: button %d\n", (int)event->jbutton.which, (int)event->jbutton.button);
+	else
+		return;
+	if (++presses == INPUT_LOG_PRESSES)
+		fprintf(stderr, "(no more presses in the log)\n");
+}
+
 /* A TV's remote, which SDL takes for a game controller (the Shield's, Android TV's, Fire TV's: "... Remote") */
 static bool is_remote(SDL_GameController *pad)
 {
@@ -737,6 +782,7 @@ static void read_events(void)
 
 	while (SDL_PollEvent(&event))
 	{
+		log_press(&event);
 #ifdef TMNT_TOUCH
 		touch_event(&event);
 #endif
@@ -817,6 +863,9 @@ static void read_events(void)
 						? CONTROL_LEFT_TRIGGER : CONTROL_RIGHT_TRIGGER);
 				break;
 #endif
+			case SDL_JOYDEVICEADDED:
+				log_joystick(event.jdevice.which);
+				break;
 			case SDL_CONTROLLERDEVICEADDED:
 				controller_added(event.cdevice.which);
 				break;
@@ -1568,6 +1617,10 @@ int main(int argc, char **argv)
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
 		fail(message);
 	}
+#ifdef TMNT_CONTROLLER_DB
+	fprintf(stderr, "Game controllers: %d mappings of SDL_GameControllerDB\n",
+		SDL_GameControllerAddMappingsFromRW(SDL_RWFromConstMem(tmnt_controller_db, (int)tmnt_controller_db_size), 1));
+#endif
 #ifdef TMNT_CONSOLE
 	{
 		char *saves = saves_folder();

@@ -119,6 +119,11 @@ void SDL_GameControllerGetJoystick(void)
 {
 }
 
+void SDL_GameControllerMappingForGUID(void);
+void SDL_GameControllerMappingForGUID(void)
+{
+}
+
 void SDL_GameControllerName(void);
 void SDL_GameControllerName(void)
 {

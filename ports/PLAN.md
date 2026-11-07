@@ -113,3 +113,12 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   controls along the middle of the room under it, START between the stick and the buttons, the unit the room's
   height over 4. Seen only as a drawing of the same formulas over the game's frames (local/touch_layout_mock.png),
   not yet on a Fold.
+
+- **Game controllers' mappings** (07-11-2026: a player's Nvidia Shield, its PS4 and Xbox controllers moving no
+  turtle and their A and B pausing): SDL_GameControllerDB (ports/sdl2/controllerdb, zlib, its commit in its README),
+  this platform's lines built into the games on the computers and Android (embed.cmake: a byte array, MSVC taking no
+  string longer than 64 KB; CMakeLists.txt's tmnt_controller_db), given to SDL after SDL_Init. The log says what SDL
+  finds of each joystick (name, GUID, game controller or not, its mapping) and the first 48 keys and buttons pressed,
+  for the player to send (Android: Android/data/<the app>/files/tmnt.log). Checked: the Linux build in WSL with SDL's
+  dummy video, "Game controllers: 453 mappings of SDL_GameControllerDB" (745 for Linux, the rest SDL's own updated).
+  Not yet on the Shield.
