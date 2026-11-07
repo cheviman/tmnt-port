@@ -683,6 +683,40 @@ static void add_device_mappings(void)
 }
 #endif
 
+/* A TV's remote, which SDL takes for a game controller (the Shield's, Android TV's, Fire TV's: "... Remote") */
+static bool is_remote(SDL_GameController *pad)
+{
+	const char *name = SDL_GameControllerName(pad);
+
+	for (const char *at = name ? name : ""; *at; at++)
+		if (SDL_strncasecmp(at, "remote", 6) == 0)
+			return true;
+	return false;
+}
+
+/* A game controller plugged in: the first player without one, but a game controller before a TV's remote (a
+   player's report: the Shield's remote, found first, took player 1 from his Xbox controller) */
+static void controller_added(int which)
+{
+	for (int player = 0; player < PLAYERS; player++)
+		if (!controllers[player])
+		{
+			controllers[player] = SDL_GameControllerOpen(which);
+			if (!controllers[player] || is_remote(controllers[player]))
+				return;
+			for (int before = 0; before < player; before++)
+				if (is_remote(controllers[before]))
+				{
+					SDL_GameController *remote = controllers[before];
+
+					controllers[before] = controllers[player];
+					controllers[player] = remote;
+					return;
+				}
+			return;
+		}
+}
+
 static void read_events(void)
 {
 	SDL_Event event;
@@ -770,12 +804,7 @@ static void read_events(void)
 				break;
 #endif
 			case SDL_CONTROLLERDEVICEADDED:
-				for (int player = 0; player < PLAYERS; player++)
-					if (!controllers[player])
-					{
-						controllers[player] = SDL_GameControllerOpen(event.cdevice.which);
-						break;
-					}
+				controller_added(event.cdevice.which);
 				break;
 			case SDL_CONTROLLERDEVICEREMOVED:
 				for (int player = 0; player < PLAYERS; player++)

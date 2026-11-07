@@ -1,563 +1,102 @@
-# Teenage Mutant Ninja Turtles — decompilation and port
+# Teenage Mutant Ninja Turtles — port
 
-A reconstruction of Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* (a 68000 main board with a Z80
-sound board) into platform-agnostic C, not an emulator, following the method of
-[segasonic-decomp](https://github.com/cheviman/segasonic-decomp) and
-[outrunners-decomp](https://github.com/cheviman/outrunners-decomp): both of the game's programs decompiled one
-function at a time into readable C, and checked frame by frame against MAME in state, picture and sound.
-
-**Apart from the screenshots on this page, this repository contains no game data.** The game's programs are here
-as C, decompiled from the original machine code (`src/`); as with [n64decomp/sm64](https://github.com/n64decomp/sm64),
-you bring your own ROM set (MAME's `tmnt`) for everything else: the tools verify it, extract the assets, and you
-build your own executable, which runs from the assets and opens no ROM.
-
-<p align="center">
-  <img src="docs/screenshots/title.png" width="32%" alt="The title screen">
-  <img src="docs/screenshots/burning_apartment.png" width="32%" alt="Four turtles in April's burning apartment">
-  <img src="docs/screenshots/shredder_takes_april.png" width="32%" alt="Shredder carries April off">
-  <img src="docs/screenshots/four_turtles_street.png" width="32%" alt="The street, and April on the TV">
-  <img src="docs/screenshots/krang.png" width="32%" alt="Krang's android body">
-  <img src="docs/screenshots/shredder.png" width="32%" alt="Shredder and his copies">
-</p>
-<p align="center"><sub>Frames drawn by the game's own video library (<code>runtime/src/video.c</code>) while the
-decompiled game plays the scenarios of <code>tests/controls/</code>.</sub></p>
-
-## Playing it
-
-Download the package for Windows, Linux or macOS from the
-[releases](https://github.com/cheviman/tmnt-port/releases). Keep `tmnt.zip` beside the game, or drop it on its
-window when it asks: the first time, it takes the assets out of it. Two games come in it, the same program:
+Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* as a native game for computers, the Nintendo Switch,
+Android and Anbernic's handhelds, built on its decompilation,
+[tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp): the game's programs in C, checked frame by
+frame against MAME in state, picture and sound. Two games come out of it:
 
 - **TMNT Arcade**: the arcade game as it is: coins, the test mode, four players.
-- **TMNT**: the console version (see "The console version (TMNT)"): no coins, START brings a player in, Splinter
-  Way's modes (NORMAL, BOSS RUSH, RONIN), LAN for up to four computers
-  ([arcade-lan](https://github.com/cheviman/arcade-lan)), WIDE 16:9 and 20:9, the pixels' filters, the pause.
+- **TMNT**: the console version, the arcade game made for playing at home.
 
-The package also has the tools that make the game for your devices, with your ROM set:
-
-- **Nintendo Switch**: TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp`, for a console with Atmosphere.
-- **Android**: TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk`, signed with a key of yours.
-- **Anbernic's H700 handhelds** (RG40XX H...): TMNT Anbernic makes the folder for PORTS.
-
-What a tool makes has the game's data in it: it is yours alone, never share it. The package's `README.txt`
-(`docs/package/README.txt`) has the controls and what each tool needs.
+This repository contains no game data: you bring your own ROM set (MAME's `tmnt`, World 4 Players), and the game
+takes its assets out of it.
 
 <p align="center">
   <img src="docs/screenshots/console_title_menu.png" width="32%" alt="TMNT's menu under the title, in 16:9: ARCADE, SPLINTER WAY, LAN, OPTIONS, EXIT">
   <img src="docs/screenshots/console_four_turtles_wide.png" width="32%" alt="Four players on the street in 16:9, the Foot coming in from the right">
   <img src="docs/screenshots/console_options.png" width="32%" alt="OPTIONS: controls, difficulty, lives, demo sound, region, video, volume, sound test">
+  <br>
+  <img src="docs/screenshots/burning_apartment.png" width="25%" alt="Four turtles in April's burning apartment">
+  <img src="docs/screenshots/shredder_takes_april.png" width="25%" alt="Shredder carries April off">
+  <img src="docs/screenshots/krang.png" width="25%" alt="Krang's android body">
 </p>
-<p align="center"><sub>TMNT, the console version, in WIDE 16:9: its menu, four turtles on the street, OPTIONS.</sub></p>
 
-## Status
+## Playing it
 
-As of 06-11-2026:
+Download the package for Windows, Linux or macOS from the
+[releases](https://github.com/cheviman/tmnt-port/releases). Keep `tmnt.zip` beside the game, or drop it on its
+window when it asks: the first time, it takes the assets out of it.
 
-- [x] ROM set verification (MAME set `tmnt`, World 4 Players, version X), by CRC32 and SHA-1 of every file
-- [x] A reference: the original programs on MAME's 68000 and Z80 cores, with MAME's K052109, K051960, K007232
-      and uPD7759 and ymfm's YM2151, against a model of the board in C (`kref`, in the shared core)
-- [x] 18 scenarios (`tests/controls/`): the attract mode, the test mode through every page and sound, games of
-      one and four players, the continue and GAME OVER, the story before area 0 with no button pressed to its end,
-      the DIP switches, and a game in each of the ten areas played until its boss falls, the last one through the
-      ending and the staff roll: 513,383 frames, which run 25,526 addresses of the 68000 program and 4,486 of the
-      Z80's
-- [x] A 68000 disassembler identical to MAME's at every offset of the program and of an image of every opcode,
-      and a static analysis that finds, without traces, every address the scenarios run: 28,515 instructions
-      in the 68000 program, and the Z80's the same way
-- [x] Every byte of both programs explained: the 68000's 32.5 % code, 65.9 % data described with its layout,
-      types and a name, 1.6 % fill; the Z80's 35.6 % code, 64.3 % data, 0.1 % fill. Nothing unexplained
-- [x] Both programs decompiled: 2,058 functions of the 68000 program and 381 of the sound program, no goto,
-      every function, variable, field, parameter and local with a name and every function with a comment, the
-      data read by name from the assets, never through an address of the ROM. 2,423 of the 2,439 functions
-      (99.3 %, and 99.9 % of the lines) have nothing in them but the faithful leftovers "Reading the C" lists;
-      each of the other 16 has its reason there too
-- [x] The game matches the reference in state, picture and sound in all 18 scenarios, frame by frame, and its
-      own sound board matches MAME's in every frame (samples and RAM); the structure of every function, the
-      code no scenario runs too, checks against its jumps; no executable holds a stretch of the ROM set
-- [x] The board in C (`runtime/`): the memory map, the inputs, the interrupts, the video chips drawing what MAME
-      draws pixel for pixel, the YM2151, the K007232, the uPD7759 and the title music sample making the samples
-      MAME makes
-- [x] The assets (see "The assets"): tiles and sprites in sheets by subject with their own colours, the
-      programs' data as text by subject with every piece named, the samples as WAV, the music as Standard MIDI
-      Files; the game loads them, and they build back into the ROM set byte for byte
-- [x] A window port (`ports/sdl2/`, SDL2): the game with its sound, the keyboard and four game controllers, on
-      Windows, Linux and macOS (the 18 scenarios identical on Linux too)
-- [x] The port's first run in C: the game takes the assets out of your ROM set itself, the same files
-      `extract_assets.py` writes, byte for byte; and the pack the devices load
-- [x] The packages for Windows, Linux and macOS (see "The Windows package"): TMNT Arcade and TMNT, SDL2 inside
-      them, an icon of the project's own, its README and licenses, the devices' tools; built by the CI, and
-      released on a tag
-- [x] The console version (see "The console version (TMNT)"): its presentation, its menus, no coins, the turtle
-      choice, Splinter Way's NORMAL, BOSS RUSH and RONIN, OPTIONS, WIDE 16:9 and 20:9, the pause
-- [x] LAN: up to four computers in one game, in lockstep through the host
-      ([arcade-lan](https://github.com/cheviman/arcade-lan))
-- [x] The devices: the Nintendo Switch, Android (touch controls) and Anbernic's H700 handhelds, each made on the
-      player's computer from the ROM set (`ports/PLAN.md`); not yet tried on a real Switch or Anbernic
-- [ ] Save states, the original turtles as a mode of their own (`console/PLAN.md`)
+The package also has the tools that make the game for your devices, with your ROM set:
 
-## Getting started
+- **Nintendo Switch**: TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp`, for a console with Atmosphere.
+- **Android**: TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk`, signed with a key of yours
+  ([ports/android/apk](ports/android/apk/README.md)).
+- **Anbernic's H700 handhelds** (RG40XX H...): TMNT Anbernic makes the folder for PORTS.
 
-Requirements: Python 3.10 or newer, CMake 3.20 or newer, a C11 and C++20 compiler (Visual Studio 2026 Build
-Tools on Windows) and, for the game's window, the SDL2 development files: on Windows, unpack
-`SDL2-devel-2.x.x-VC.zip` from [SDL's releases](https://github.com/libsdl-org/SDL/releases) into
-`build/downloads/sdl2/`; elsewhere, the system's package (`libsdl2-dev`). Without SDL2 only the headless builds
-are made.
+What a tool makes has the game's data in it: it is yours alone, never share it. The package's `README.txt` has
+what each tool needs.
 
-1. Clone with the shared core, [arcade-decomp](https://github.com/cheviman/arcade-decomp), which this repository
-   keeps in `tools/core` as a git submodule (a clone made without `--recursive` takes it with
-   `git submodule update --init`):
+## The console version
 
-   ```bash
-   git clone --recursive https://github.com/cheviman/tmntarcade-decomp
-   ```
+- **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four.
+- **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next) and RONIN (one turtle
+  against the enemies of a four-player game).
+- **LAN**: up to four computers on the local network in one game (below).
+- **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
+  (window, full screen, sharp, smooth, bilinear or CRT pixels, WIDE 16:9 or 20:9, FPS), volume, sound test.
+- **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
+- And the Konami code on the menu.
 
-2. Put your own copy of MAME's `tmnt` set in `rom/` (the .zip as is, or its files), and check it:
+## Controls
 
-   ```bash
-   python tools/verify_rom.py
-   ```
+- **Keyboard**: the arrows move, Z or left Ctrl attacks, X or left Alt jumps, Enter is START; Escape pauses (and
+  goes back in the menus). F11 or Alt+Enter is the full screen, F3 the next kind of pixels. OPTIONS > CONTROLS
+  changes each player's keys and buttons.
+- **Game controller**: the pad or the left stick moves, A attacks, B jumps, Start is START; Back or Start pauses.
+  Each controller is a player, in the order they are plugged in (a TV's remote after them).
+- **TMNT Arcade**: 5 to 8 put a coin in each slot (a controller's Back, its player's), 9 is the service switch,
+  and a coin and the attack bring a turtle in.
+- **Android**: a stick where your left thumb lands, ATTACK and JUMP at the right, START (COIN in TMNT Arcade);
+  a controller hides them. Back pauses.
 
-   | File | Size | CRC32 | What it holds |
-   |---|---|---|---|
-   | `963-x23.j17`, `963-x24.k17` | 128 KB each | `a9549004`, `e5cc9067` | 68000 program, 0x00000-0x3FFFF (even, odd bytes) |
-   | `963-x21.j15`, `963-x22.k15` | 64 KB each | `5789cf92`, `0a74e277` | 68000 program, 0x40000-0x5FFFF (even, odd bytes) |
-   | `963e20.g13` | 32 KB | `1692a6d6` | Z80 sound program |
-   | `963a28.h27`, `963a29.k27` | 512 KB each | `db4769a8`, `8069cd2e` | tile graphics (K052109) |
-   | `963a17.h4`, `963a15.k4`, `963a18.h6`, `963a16.k6` | 512 KB each | `b5239a44`, `1f324eed`, `dd51adef`, `d4bd9984` | sprite graphics (K051960) |
-   | `963a30.g7`, `963a31.g19` | 256 bytes each | `abd82680`, `f8004a1c` | sprite address decoder, priority PROMs |
-   | `963a26.c13` | 128 KB | `e2ac3063` | K007232 samples |
-   | `963a27.d18` | 128 KB | `2dfd674b` | uPD7759 speech |
-   | `963a25.d5` | 512 KB | `fca078c7` | title music sample |
+## LAN
 
-3. Extract the assets into `assets/`, and check that they build back into your ROM set byte for byte:
+Up to four computers play one game on the same local network, a turtle each:
 
-   ```bash
-   python tools/extract_assets.py
-   ```
+1. LAN > NAME: your name, as the rooms show it.
+2. One computer picks HOST.
+3. The others pick JOIN, and the room.
+4. The host's START begins the game on all of them, with the host's settings.
 
-   ```bash
-   python tools/extract_assets.py --check
-   ```
+A computer that stops being heard leaves after 3 seconds, its turtle standing, and the game goes on. A firewall
+that asks about the game should let it reach the private network. The rooms and the game's datagrams are
+[arcade-lan](https://github.com/cheviman/arcade-lan)'s, which the ports of other decompiled arcade games share.
 
-4. Build the game and the development tools into `build/bin/`:
+## Building it
 
-   ```bash
-   cmake -S . -B build/msvc
-   ```
-
-   ```bash
-   cmake --build build/msvc --config Release --parallel 6
-   ```
-
-5. Play:
-
-   ```bash
-   "build/bin/TMNT Arcade"
-   ```
-
-   The game reads its assets from `--assets FOLDER`, or from an `assets` folder beside the executable or in the
-   current folder; with none, it takes them out of your ROM set itself, once (see "The port's first run"). The
-   executable can be copied anywhere with SDL2's library and `font.bmp` beside it (the build puts them next to
-   it): the assets come from your ROM set, so they are yours, not to share.
-
-   Or run the game without a window, here with the controls of the attract mode, writing a hash of every
-   frame:
-
-   ```bash
-   build/bin/tmnt_game_headless --script tests/controls/attract.txt --hashes build/attract.txt
-   ```
-
-## Playing
-
-It is the arcade game for four: each player has a coin slot and no start button; a coin and the attack button
-bring a turtle in (player 1 is Leonardo, 2 Michelangelo, 3 Donatello, 4 Raphael).
-
-| Control | Keys |
-|---|---|
-| Move (player 1) | the arrow keys |
-| Attack, jump | Z or left Ctrl; X or left Alt |
-| Coins 1-4 | 5, 6, 7, 8 |
-| Service | 9 |
-| Full screen | F11 or Alt+Enter |
-| Smooth or sharp pixels | F3 |
-| Quit | Escape |
-
-Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves, A
-attacks, B jumps, Back puts a coin in.
-
-Options of `TMNT Arcade` and `tmnt_game_headless`: `--script FILE` plays a control script (format in
-`runtime/include/tmnt/script.h`) instead of the controls (`--fast` in the window runs it without waiting for each
-frame's time); `--hashes`, `--video-hashes` and `--sound-hashes FILE` write a hash of every frame's state,
-picture and sound, as the reference does; `--service` turns the test mode's DIP switch on; `--assets FOLDER`
-says where the assets are (a folder, or a pack: a file whose name ends in `.assets`); `--write-pack FILE` writes
-the pack of the assets loaded and stops. `tmnt_game_headless` also takes `--frames N`, `--dump FRAME --dump-dir
-DIR` (the board's memories at the end of a frame) and `--video-dump FRAME ... --video-dir DIR` (those frames' pictures as BMP,
-as the game's own video draws them: the screenshots above).
-
-## The port's first run
-
-A player of the port has no Python: with no assets, `TMNT Arcade` takes them out of the ROM set itself, once.
-
-- **Where.** It loads the pack `tmnt.assets` or the folder `assets` beside the executable, in the folder where
-  the game keeps its files (beside the executable on Windows; `~/.local/share/TMNT` on Linux,
-  `~/Library/Application Support/TMNT` on macOS) or in the current folder; `--assets` picks one. With none, it
-  looks for the ROM set, `tmnt.zip` or a folder `rom/` with its files (or its .zip), beside the executable or in
-  the game's folder; with none there, a window asks for it to be dropped on it and says what it is doing and
-  what failed. The assets go into `assets/` in the game's folder, and the game plays.
-- **The same files.** The first run (`runtime/src/extract.c` and the files beside it) writes the folder
-  `tools/extract_assets.py` writes, every file byte for byte: the sheets' PNGs packed as zlib's level 9 packs them
-  (`deflate.c`), the WAVs, the data as text, the songs' MIDI files (`extract_music.c`, `tools/sound_music.py`'s
-  writer in C). What the Python tools work out from the static analysis (which bytes are which piece, their names
-  and formats, the sheets' codes and palettes) it takes from `runtime/src/extract_layout.c`, which
-  `tools/extract_layout.py` writes with positions, names and codes only, no byte of the ROM; run it again when
-  `symbols.txt`, `sound_symbols.txt`, `graphics_subjects.txt` or the extractor change. `tmnt_assets_check ROM_SET
-  PYTHON_ASSETS [OUT]` (built with the reference tools) runs the first run into OUT and compares every file with
-  the folder `extract_assets.py --out PYTHON_ASSETS` wrote.
-- **Versions.** The first run writes `version.txt` last (the version of its tables and writers); a folder of
-  another version is taken out again, and one with no `data/layout.txt` (a first run that did not finish) is not
-  taken. `extract_assets.py`'s folders have no `version.txt` and are taken as they are.
-- **The pack.** `tmnt.assets` is one file with what the game loads (the video and sound chips' memories and the
-  programs' data, as the assets give them), for the devices, which never take the assets out of a ROM set:
-  `"TMNT Arcade" --write-pack tmnt.assets` makes it from the assets. It holds the version of the tables the game's
-  C reads by name: a pack of another build says so instead of loading.
-- **The window** writes with Kenney Mini (CC0, `ports/sdl2/font/`, `font.bmp` beside the executable): none of the
-  game's letters are there before its assets.
-
-## The Windows package
-
-What a player downloads: `tmnt-windows-x64.zip`, a folder `tmnt` with `TMNT Arcade.exe`, `TMNT.exe` (the console
-version) and the `font.bmp` their first run and TMNT's menus write with, the package's `README.txt` (`docs/package/`: what the player needs, their own ROM set, how
-the first run takes it, the controls), `LICENSE.txt`, and `licenses/` with MAME's and ymfm's terms (the board's
-video and sound follow them), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the
-player's.
-
-- **SDL2 inside.** `TMNT_STATIC_SDL2` builds SDL2 2.32.10 from its source (CMake's FetchContent, from GitHub) into
-  the executable, and the C runtime with it: it needs no library beside it, nor Visual C++'s redistributable.
-  Without it (the default) the build is the one above, SDL2's library beside the executable.
-- **The icon** is the project's own drawing, nothing of the game's art (`tools/make_icon.py` writes
-  `ports/sdl2/icon/`: a manhole's lid lit from below): a resource of the executable, which Explorer and the window
-  show. A picture of your own takes its place in your builds: `local/icon_pc.png` (`local/` is never committed) or
-  `-DTMNT_PC_ICON=PICTURE`.
-- **Made locally** in a build folder of its own, without the reference tools, its executables in
-  `build/release/bin` (the usual build's in `build/bin` stay as they are):
-
-  ```bash
-  cmake -S . -B build/release -DTMNT_STATIC_SDL2=ON -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_BIN_DIR=build/release/bin
-  ```
-
-  ```bash
-  cmake --build build/release --config Release --parallel 6 --target tmnt_package
-  ```
-
-  writes `build/package/tmnt-windows-x64.zip`, and the folder `build/package/tmnt` it packs.
-- **The CI** (`.github/workflows/build.yml`) builds and packs it the same way on a clean Windows with no ROM set,
-  on every push to main and its pull requests: the zip is the job's artifact, `tmnt-windows-x64`.
-
-## The console version (TMNT)
-
-`TMNT` (`build/bin/TMNT.exe`, beside `TMNT Arcade`) is the same game made for playing at home: the program with
-the functions `console/replaced.txt` lists in the console's own versions (`console/*.c`; the decompiled C writes
-their definitions as `CONSOLE_ORIGINAL(name)`, so TMNT Arcade runs the program as it is). It starts with a Konami
-presentation of its own (the fixed layer's Konami logo, large, lit by the four turtles running across it), then a
-menu under the title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack
-in, and the boxes say PRESS START), SPLINTER WAY (the port's own modes: NORMAL, 5 lives and 3 continues; more to
-come), OPTIONS (over BEST 10 PLAYERS' picture: the cabinet's DIP switches by the test mode's names, the region, the
-volume, the pixels, WIDE 16:9 and 20:9 for the play and the menus; kept in `tmnt.ini` beside the executable), KONAMI
-CODE (the level select the Konami code will open: any of the ten areas, infinite lives, every turtle in a red
-bandana, everyone the same turtle) and EXIT. A game starts on the coin's screen, each player choosing the turtle he plays (the others come in with START).
-Its menus write with the game's own letters; what it draws of the game's comes from your assets. Escape (or START of a
-player in the game) pauses a game. `console/PLAN.md` has the plan, and what was done.
-
-| Control | Keys |
-|---|---|
-| Move (player 1) | the arrow keys |
-| Attack (in the menus: pick), jump (back) | Z or left Ctrl; X or left Alt |
-| START | Enter, a controller's Start |
-| Back in the menus | Escape |
-| Full screen; the next kind of pixels | F11 or Alt+Enter; F3 |
-
-`tmnt_console_headless` runs it with no window for scripted checks: the script's controls are the players',
-`--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`: with a
-PLAYER, that player's own stick, buttons or START; `pause`, `quit`, `restart` in a game), `--wide 1|2` WIDE
-(`--wide-check`: each frame, the columns of its sides that are not their map's), and
-`--video-dump FRAME ... --video-dir DIR` writes those frames with the console's picture over them
-(`tests/console/` has the menus' actions of a few runs):
+Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer (on Windows its
+development package for Visual C++ unpacked in `build/downloads/sdl2/`; elsewhere the system's, `libsdl2-dev` on
+Debian and Ubuntu; or `-DTMNT_STATIC_SDL2=ON` to build it from its source). Clone it with its submodules and build
+it:
 
 ```bash
-build/bin/tmnt_console_headless --actions tests/console/arcade_donatello.txt --script tests/console/skip_intro.txt --video-dump 110 680 700 1200 --video-dir build
-```
-
-## Changing the decompilation
-
-`src/` is written by the decompiler from your ROM set, `symbols.txt` and `tools/game_profile.py`; `src/sound/`
-from the sound program and `sound_symbols.txt`. Change those (names, types, comments, what the analysis cannot
-work out alone), not the C, and write it again:
-
-```bash
-python tools/decompile.py
+git clone --recursive https://github.com/cheviman/tmnt-port
 ```
 
 ```bash
-python tools/decompile_sound.py --checks
+cmake -S . -B build/cmake
 ```
-
-`decompile_sound.py` also writes the Z80's timing table, `build/sound/timing.txt`, which the reference needs to
-keep the sound program's time as the game's own sound board does: run it once in a new clone before the checks
-below.
-
-`build/bin/kref` runs the original programs on MAME's cores against the same board model. Both it and the game
-take the control scripts of `tests/controls/` (written by `tools/make_scenarios.py`), and both write hashes of
-every frame. This runs every script on both, compares them frame by frame in state, picture and sound, and
-checks that the static analysis alone finds all the code the reference ran (`--native-only` reuses the
-reference's results of an earlier run, in `build/scenarios_frames/`):
 
 ```bash
-python tools/check_scenarios.py --video --sound --jobs 6 --out build/scenarios_frames
+cmake --build build/cmake --config Release
 ```
 
-The game's own sound board against MAME's, sample for sample:
-
-```bash
-python tools/check_sound_board.py --jobs 6 --bin build/bin
-```
-
-Every function's ifs, loops and switches against the program's jumps, the code no scenario runs too:
-
-```bash
-python tools/check_structure.py build/structure
-```
-
-What the C still has of the CPU, of the decompiler and of the ROM's places, against `tools/noise_baseline.txt`
-(`--save` makes the current numbers the baseline):
-
-```bash
-python tools/noise_report.py
-```
-
-No executable holds a stretch of the ROM set (with no paths, the headless in `build/bin`; the window's and the
-package's by theirs):
-
-```bash
-python tools/rom_in_executables.py "build/bin/TMNT Arcade.exe" build/bin/TMNT.exe build/bin/tmnt_game_headless.exe build/bin/tmnt_console_headless.exe "build/release/bin/TMNT Arcade.exe" build/release/bin/TMNT.exe
-```
-
-Other tools:
-
-- `tools/disassemble.py` writes the listing, `build/listing/tmnt.s`, with a report beside it.
-- `tools/coverage.py --reads build/scenarios` classifies every byte of the 68000 program (code, data the code or
-  `symbols.txt` describes, fill) with the bytes the reference read as data (`kref --rom-reads FILE` for each
-  script); `tools/sound_coverage.py` does the same for the sound program (`kref --sound-rom-reads`).
-- `tools/data_walk.py` walks the data the engines read from where the code hands it over (animations, maps,
-  palettes, texts, spawn lists...): `build/listing/data_walk.txt`.
-- `tools/graphics_subjects.py --run` runs `kref --graphics-uses` on every script (the tiles and sprites each
-  scene shows first, with their palettes) and writes `graphics_subjects.txt`, which the extractor reads.
-- `tools/recompile.py` writes the translation scaffold the decompiler grew from (a C statement per
-  instruction); CMake builds it with `-DTMNT_SCAFFOLD=ON`, and `check_scenarios.py --translated` checks it.
-- `python tools/decompile.py --trace --out DIR` writes a copy of the C in which every function reports itself;
-  `--variables FILE` lists every local with the instructions that write it, which `symbols.txt`'s `local` lines
-  name them by.
-- `kref --dump FRAME ... --dump-dir DIR` saves the board's memories at the end of frames, `--video-dump FRAME
-  ... --video-dir DIR` the frames as BMP, `--sound-wav FILE` the sound mixed, `--text FRAME` the fixed layer as
-  text, `--jumps FILE` where each jump through a register went, `--video-check FILE` and `--sound-check` the
-  game's own video and sound chips against MAME's, `--assets-check assets` the assets against the ROM set.
-- `tools/core/konami/reference/compare_m68k_with_mame.py` checks the 68000 disassembler against MAME's, and
-  `compare_lift_with_mame.py --c` the lift of every opcode against MAME's 68000 core, from random states.
-
-## Layout
-
-```
-rom/                      your ROM set (not in the repository)
-assets/, build/           made on your machine (not in the repository)
-src/                      the 68000 program's C, decompiled (tools/decompile.py writes it), in files by subject
-src/sound/                the Z80 sound program's C (tools/decompile_sound.py writes it)
-symbols.txt               the 68000 program's names, types, structures and fields, parameters and locals, what
-                          pointers point at, the files, and the layout of the tables the analysis cannot measure
-                          alone; its comments keep the evidence for each name, and its "comment" lines are what
-                          the C says above each function
-sound_symbols.txt         the same for the sound program
-graphics_subjects.txt     the subject of each tile and sprite the scenarios show, and the palettes, for the sheets
-runtime/                  the board in C: its memory map, inputs and interrupts (machine.c), the video
-                          (video.c), the sound board and its chips (sound_board.c, sound_cpu.c, ym2151.c,
-                          sound_chips.c), the assets into the board's memories and the programs' data by name
-                          (assets.c, music.c; the pack, assets_pack.c), the first run's assets out of the ROM set
-                          (extract.c and the extract_*.c, deflate.c), and the decompiled programs' runtime
-                          (game_program.c, the frame, the interrupts, the tables); part of the game
-runtime/replaced.txt      the functions the board puts its own in place of (the boot's ROM test)
-console/                  the console version, TMNT: the game's functions it puts its own in place of
-                          (replaced.txt), its presentation, menus and drawing; its plan (PLAN.md)
-ports/headless/           the game with no screen or sound, for the checks
-ports/sdl2/               the game in a window, on SDL2: picture, sound, keyboard and game controllers; its first
-                          run (first_run.c), whose window writes with Kenney Mini (font/); its icon (icon/)
-docs/package/             the Windows package's README.txt and MAME's terms for it (licenses/)
-.github/workflows/        the CI: the Windows package built on a clean machine
-tests/controls/           the control scripts: coins, buttons, moves and pokes by frame
-tests/console/            the console version's menus' actions for tmnt_console_headless, and a script
-tools/core/               arcade-decomp, the shared core (git submodule): the decompiler, the 68000 and Z80
-                          frontends, the analyses, the checks; its konami/reference/ holds kref and the copies
-                          of MAME's and ymfm's code it builds from
-tools/game_profile.py     what the core needs to know of this game
-tools/tmnt_rom.py         the ROM set: its files by hash, and the regions as the board lays them out
-tools/verify_rom.py       the ROM set's check
-tools/extract_assets.py   the assets from the ROM set, and --check back (tmnt_graphics, sound_assets,
-                          data_assets, sound_data_assets, sound_music)
-tools/extract_layout.py   runtime/src/extract_layout.c: what the port's first run takes from the analysis
-tools/sound_music.py      the songs as Standard MIDI Files, and back to the driver's bytes
-tools/data_walk.py        the data the engines read, walked from the code
-tools/sound_data_walk.py  the music's tracks, walked from the song table
-tools/graphics_subjects.py  what each scene of the scenarios shows: graphics_subjects.txt
-tools/make_scenarios.py   writes the control scripts
-tools/disassemble.py      the static analysis: build/listing/tmnt.s and report.txt (the core's)
-tools/coverage.py, sound_coverage.py   every byte of each program as code, data or fill
-tools/decompile.py, decompile_sound.py   the programs as C
-tools/check_scenarios.py, check_sound_board.py, check_structure.py, rom_in_executables.py   the checks
-tools/noise_report.py     what the C still has of the CPU, against tools/noise_baseline.txt
-tools/make_icon.py        the port's icon (ports/sdl2/icon/), and an icon of a picture of your own
-```
-
-## The assets
-
-`python tools/extract_assets.py` writes them from your ROM set into `assets/`, by subject, and `--check` builds
-every byte of the ROM set but the code back from them:
-
-```
-tiles/     the K052109's tiles in 19 tilesets: one an area (its layers' maps, and what its play shows besides),
-           the fixed layer's fonts, logos and HUD, the speech balloons, the opening, the story before area 0, the
-           pictures of the areas' exits, the ending
-sprites/   the K051960's sprites in 306 sheets, by the animations that show them (the function that starts the
-           animation, or the table it is in: leonardo_animation_set, krang_animations, enemy_rodney...)
-sounds/    title.wav (the title music's sample), pcm/ (the K007232's 12 samples), speech/ (the uPD7759's 36
-           voices), WAV files
-sound/music/  a Standard MIDI File a song (area_0.mid ... area_9.mid, boss, continue, staff_roll, ending...),
-           and music.txt: the songs table's entries each plays
-data/      the 68000 program's data as text, a file a subject (animations, sprite lists, layers, palettes,
-           palette effects, texts, screens, enemies, scroll, demos, tables), a section a piece, every piece named
-sound_data.txt   the sound program's data the same way: the driver's tables, voices, instruments, drums
-```
-
-- **Sheets.** 8-bit indexed PNGs, 16 tiles or sprites a row: a pixel is the pen plus 16 times the palette it
-  shows with, so the pens come back as they are, and the sheet's colours are the palettes its tiles and
-  sprites show with in the game. A tile or sprite goes to the first sheet that uses it: the areas' maps and the
-  animations first, then what each scene of the scenarios shows (`graphics_subjects.txt`), and one nothing uses
-  or shows goes with its neighbours in the ROM; `tilesets.txt` and `sprites.txt` list each sheet's codes, and
-  those neighbours on a line of their own.
-- **Data.** A piece is a section, `[name]`, of typed lines that give its bytes back in order: numbers (`u8`,
-  `u16`, `s16`, `u32`), `ref NAME` for the address of a piece or a function, `frame`, `end` and `jump` for an
-  animation, `sprite` for a sprite list's entry, `colours` for a palette, `text` for the game's texts. A piece is
-  named by `symbols.txt`, by the routine that reads it, by the named piece that points at it, or by the routines
-  a table of states holds; none by its address.
-- **Music.** One tick of a file is one of the driver's (24 a quarter note) and its tempo events give the
-  game's speed (within 1 %); a track is one of the song's channels (the YM2151's seven, the K007232's two) with
-  its loops and parts played as the driver plays them; a note is a Note On and Off at its key (the drums on
-  General MIDI's percussion), and what MIDI has no event for (the octave, the instrument, the gate, detune,
-  portamento, LFO, loops, calls, jumps, held notes, rests) is in sequencer-specific events with the driver's
-  bytes. `tools/sound_music.py`'s docstring has the format.
-
-Edit them and run the game: it loads them. A piece keeps its size (the code reaches the data at fixed places),
-and so does a song's channel; a note's pitch and length, a palette's colours, a sprite's pixels can change.
-
-## Reading the C
-
-The 68000 program's C lives in `src/`, in files by subject:
-
-```
-game.h  ram.h  table.c   the prototypes; the work RAM's variables and structures, the data's tables and records
-system/   boot.c         the reset, the RAM and ROM tests, the main loop that runs the jobs the frames queue
-          frame.c        the VBLANK interrupt: the inputs, the frame's work, the game's states, the job queue
-          test_mode.c    the exceptions' handler and the test mode's pages
-          sound_commands.c   the commands to the sound board, queued and sent one a frame
-          palette_editor.c, animation_viewer.c   two tools of the developers' no code runs
-scenes/   attract.c  opening.c  intro.c  game.c  demo.c  area_exits.c  continue.c  ending.c  ranking.c
-stage/    layers.c  scroll.c  area_clear.c  floor_map.c  fire.c  drill_arrival.c
-engine/   sprites.c      the sprite engine: animations, the sprites into the K051960, the boxes
-          directions.c   the direction from one object to another
-objects/  turtles.c      the turtles: joining, the area's entry, the controls, the moves and the scroll
-          states.c       the objects' state dispatcher and the enemies' and their shots' states
-          spawns.c  krang.c  stockman.c  rock_soldiers.c  air_attacks.c  scenery.c  explosions.c  helpers.c
-video/    palettes.c  texts.c  tile_blocks.c  speech_balloons.c
-sound/    sound.h  main.c  commands.c  music.c  fm_effects.c  pcm_effects.c  chips.c  tables.c   the Z80's
-```
-
-Each file's header says what it holds; `symbols.txt`'s `file` lines give each stretch of the program to its file,
-and a file's functions are in the order of their addresses. What the C uses besides memory is in
-`runtime/include/game/support.h`.
-
-- **Memory.** The game's variables are lvalues over the work RAM by name (`area`, `frame_count`); the work RAM is
-  kept the other way round in the host's memory, so that a value of any width at any address is a value of the
-  host's. Its structures are reached with `OBJECT(address)` (the 50 objects from 062000, `OBJECT_ADDRESS(n)`),
-  `PLAYER(address)`, the coin slots, the layers (`LAYER_A`), the palette effects and requests: the game keeps
-  24-bit addresses in its variables, as the original does. What each kind of object keeps in its bytes is a view
-  of the object for its family of functions (`OBJECT(object)->enemy.target_direction`), and a family whose name
-  starts with another's reads that one's fields too. The program's data are read by name from the assets: tables
-  (`krang_animations[3]`, `TABLE16(name, i)` where the code reads one at another width or past its start), records
-  (`ANIMATION_FRAME(frame)->last_sprite`), the bytes a pointer walks (`TEXT(p)`, `MAP_ENTRY(p)`). The video chips'
-  memories are reached through the board's bus (`io_write8(sprite_place, priority)`), as the board has them.
-- **Links.** The game keeps the low word of an object's address in a field: `LINKED(base, link)` is the object it
-  names, in the page of `base`.
-- **Registers.** Everything a function keeps in registers is a parameter, a result or a local, named by
-  `symbols.txt` or by what it holds (the object a handler runs on is `object`). What one routine leaves in a part
-  of a register and another reads before setting it, all through the frame, is the game's state, and the C keeps
-  it in eight global variables named for what their readers take them as (`game.h`: `offset_high_word`,
-  `object_loop_slot`, `palette_place`...); the runtime puts them back when an interrupt's handler returns, as the
-  VBLANK handler puts back the registers it saves.
-- **Results.** A function hands back one value as its return value and more through pointers
-  (`uint32_t *p_object`); a caller's variable goes in and comes out.
-- **Comments.** Every function has a comment above it in the game's terms (the `comment` lines of `symbols.txt`
-  and `sound_symbols.txt`); code nothing runs starts with "Unused:". The rest of `symbols.txt`'s comments keep the
-  evidence: the instructions of the listing that show each name.
-- **Control flow.** Loops, `if`, `switch` and `return` come from the original's branches; there is no `goto`. A
-  jump through a table of handlers is a `switch` on the handler the table holds, its cases named after them
-  (`case krang_appear_ADDRESS:`). Where the original's jumps cross in a way blocks cannot, a `bool` named after
-  the place the jump goes to carries it: 8 functions (`draw_sprites`, `turtle_move`, `update_layers_street`,
-  `enemy_think` and the three bosses', and the sound program's `read_track`). A function whose every path returns
-  from a switch ends with `unreachable()`.
-- **Interrupts and the frame.** `frame_wait()` is where the main loop finds no job and the board moves on to the
-  next frame, `take_interrupts()` where the interrupts raised are handled; the interrupt handlers are ordinary
-  functions. The boot's ROM test is the board's own (`BOARD_ORIGINAL`, `runtime/replaced.txt`): the game has no
-  ROM to sum.
-- **The sound program.** `src/sound/` is the Z80 program the same way: its channels' records by what plays on
-  each (`CHANNEL(SPEECH)->sound`, `CHANNEL(MUSIC_FM_6)`), their fields as the music and the effects use them,
-  the chips through the board; `z80_block(cycles)` opens each stretch of code with the time it takes, so the
-  chips' timers, the interrupt and the samples happen when they did on the board.
-
-What the C keeps of the original's machine code, and why (`python tools/noise_report.py`):
-
-- 8 global variables for what the frame carries in registers (above).
-- 301 places that read or write several fields at once or a table at another width (`AS16`, `AT8`, `TABLE16`):
-  the original does.
-- 140 partial writes of a variable, `x = (x & ~0xFFu) | y`: a byte written into a value whose other bytes are
-  read afterwards; 3 of them put a part of one value into another.
-- 474 places that reach memory through an address the code works out (`mem_read8`, `mem_write32`): the memory
-  routines that clear, copy or test memory wherever they are told (`tools/game_profile.py` lists each with its
-  reason) and the functions below; and 813 reads and writes of the board's devices through the bus.
-- 878 values the decompiler works out once, named by a number (`t1`), 357 locals that keep a flag of the CPU
-  for a later branch, and 2,820 casts.
-- 3 results written back before an early return, and one routine nothing runs that keeps a stack frame the C has
-  not (`lost_stack`).
-
-16 functions have more than that, each for a reason: the 8 with a control flag; the enemies' retargeting
-(`enemy_think` and the three bosses') reads a second slot that may be none through the bus, as the original
-does; the demo's input channels read past a player's record (`update_game_inputs`, and `record_demo_inputs`, a
-recorder no code runs); the name entry adds one to an initial through an address the instruction works out
-(`enter_initials`); Rocksteady's moves index a table with a word whose low byte comes from the data
-(`enemy_rocksteady_think`); and code nothing runs: the palette editor keeps its stick at address 000006, in the
-program (`palette_editor_frame`), a list of palette requests whose place is not known
-(`post_palette_request_list`), a routine with a stack frame (`word_to_decimal_digits`) and one that writes its
-results before each of its two returns (`print_tall_text`).
-
-## How the port works
-
-- **Game code.** The 68000 and Z80 machine code is decompiled to C (`src/`, `src/sound/`), so the game runs
-  natively with no CPU emulation. `runtime/src/game_program.c` runs it by frames: the main loop, the VBLANK
-  interrupt as a function, the sound board's frames on its own timing.
-- **Data.** The game loads its assets (`runtime/src/assets.c`, `music.c`): the sheets into the video chips'
-  memories, the samples into the sound chips', and the programs' data, piece by piece, by name; the numbers the
-  original keeps in its state (addresses, tile and sprite codes) are resolved through the assets' index. It
-  opens no ROM.
-- **Video and sound.** The K052109, K051960 and the palette are a library (`runtime/src/video.c`) that draws each
-  frame from the board's memories into a 320 x 224 picture; the YM2151, K007232, uPD7759 and the title music's
-  sample are libraries that make the samples a platform plays.
-- **Platforms.** A port provides a window, input, audio output and the frame's pace, through the board's hooks
-  (`runtime/include/tmnt/machine.h`); `ports/sdl2/` is the first.
+Both games land in `build/bin/`, and take their assets out of `tmnt.zip` the first time (beside them, or in
+`rom/`). How the port runs the game, its first run, the packages and the console version's checks are in
+[docs/port.md](docs/port.md); each device's build in `ports/PLAN.md`; the console version's plan and what is done
+in `console/PLAN.md`. The decompilation itself (its status, the tools, the assets' formats, the checks against
+MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s README.
 
 ## Legal
 
@@ -566,15 +105,12 @@ results before each of its two returns (`print_tall_text`).
   for this project. No ROM contents (graphics, sound, data) and no extracted assets are distributed by this
   project; they come from your own ROM set. The screenshots in `docs/screenshots/` show the game running from this
   code.
-- The first run's window and TMNT's menus write with Kenney Mini by Kenney (www.kenney.nl), CC0:
-  `ports/sdl2/font/License.txt`.
-  `runtime/src/deflate.c` makes the streams zlib's deflate makes at level 9, following its algorithm (zlib, by
-  Jean-loup Gailly and Mark Adler, zlib License); none of its code is copied.
 - `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
-  `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause); the ROM set's layout comes
-  from MAME's `tmnt.cpp`. Copies of MAME's and ymfm's code are in arcade-decomp's reference tools only, under
-  their licenses.
-- The Windows package carries SDL2 (zlib License) inside its executable, and the terms of all of the above in
-  `licenses/`. Its icon is the project's own drawing (`tools/make_icon.py`).
+  `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause).
+- LAN's rooms and datagrams are [arcade-lan](https://github.com/cheviman/arcade-lan) (`lan/`, a submodule),
+  BSD 3-Clause, whose terms are in `lan/LICENSE`.
+- The menus write with Kenney Mini and CONTROLS shows Kenney's Input Prompts (www.kenney.nl), CC0. The window
+  port links SDL2 (zlib License); the packages carry it inside the executables, with its terms and the ones above
+  in `licenses/`. The icon is the project's own drawing (`tools/make_icon.py`).
 - *Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project is not
-  affiliated with or endorsed by either.
+  affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.

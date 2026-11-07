@@ -79,6 +79,7 @@ static int g_first_next[3] = { -0x10000, -0x10000, -0x10000 }, g_last_next[3] = 
 static uint32_t g_wide[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
 static int g_wide_width = TMNT_VIDEO_WIDTH;
 static int g_wide_left;    /* (g_left when g_wide was drawn) */
+static int g_band_dx, g_band_rows, g_band_dx_next, g_band_rows_next;    /* WIDE: the fixed layer's top rows moved */
 
 uint8_t *tmnt_video_tiles_shown = NULL;
 uint8_t *tmnt_video_sprites_shown = NULL;
@@ -233,34 +234,38 @@ static void draw_layer(int map, bool opaque)
 	for (int y = CLIP_TOP; y <= CLIP_BOTTOM; y++)
 	{
 		uint16_t *line = &g_bitmap[y * BITMAP_WIDTH + BITMAP_LEFT];
+		const bool banded = map == 0 && y < CLIP_TOP + g_band_rows;    /* (WIDE: tmnt_video_set_fixed_band) */
 
 		for (int x = CLIP_LEFT - g_left; x <= CLIP_RIGHT + g_right; x++)
 		{
 			int px, py, colour, pen, tile;
+			const int source_x = banded ? x - g_band_dx : x;    /* (the map's column drawn at x) */
 
+			if (banded && (source_x < CLIP_LEFT || source_x > CLIP_RIGHT))
+				continue;    /* (the band: the board's 320 columns alone, moved) */
 			if (mixed)
 			{
 				const int band = y / (MAP_HEIGHT / scroll->rows);
 				int start_x = scroll->rowscroll[flipped ? scroll->rows - 1 - band : band] & ~7;
 
-				px = wrap(x - rowscroll[band], MAP_WIDTH);
+				px = wrap(source_x - rowscroll[band], MAP_WIDTH);
 				if (!flipped)
 					start_x = -start_x;
 				py = wrap(y - colscroll[((start_x + (px & ~7)) >> 3) & 0x3F], MAP_HEIGHT);
 			}
 			else if (rows == 1 && cols == 1)
 			{
-				px = wrap(x - rowscroll[0], MAP_WIDTH);
+				px = wrap(source_x - rowscroll[0], MAP_WIDTH);
 				py = wrap(y - colscroll[0], MAP_HEIGHT);
 			}
 			else if (cols == 1)
 			{
 				py = wrap(y - colscroll[0], MAP_HEIGHT);
-				px = wrap(x - rowscroll[py / (MAP_HEIGHT / rows)], MAP_WIDTH);
+				px = wrap(source_x - rowscroll[py / (MAP_HEIGHT / rows)], MAP_WIDTH);
 			}
 			else
 			{
-				px = wrap(x - rowscroll[0], MAP_WIDTH);
+				px = wrap(source_x - rowscroll[0], MAP_WIDTH);
 				py = wrap(y - colscroll[px / (MAP_WIDTH / cols)], MAP_HEIGHT);
 			}
 			if (flipped)
@@ -431,6 +436,12 @@ void tmnt_video_set_wide(int left, int right)
 	g_right_next = right < 0 ? 0 : (right > TMNT_VIDEO_MAX_MORE - g_left_next ? TMNT_VIDEO_MAX_MORE - g_left_next : right);
 }
 
+void tmnt_video_set_fixed_band(int dx, int rows)
+{
+	g_band_dx_next = dx;
+	g_band_rows_next = rows < 0 ? 0 : (rows > TMNT_VIDEO_HEIGHT ? TMNT_VIDEO_HEIGHT : rows);
+}
+
 const uint32_t *tmnt_video_wide_frame(int *width)
 {
 	*width = g_wide_width;
@@ -446,6 +457,8 @@ void tmnt_video_vblank_start(tmnt_frame *frame)
 {
 	g_left = g_left_next;
 	g_right = g_right_next;
+	g_band_dx = g_left || g_right ? g_band_dx_next : 0;    /* (only with a wider picture) */
+	g_band_rows = g_left || g_right ? g_band_rows_next : 0;
 	for (int map = 0; map < 3; map++)
 	{
 		/* (the maps' ends only with a wider picture: the board's own shows them all) */

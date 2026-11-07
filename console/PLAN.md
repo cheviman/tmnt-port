@@ -490,3 +490,15 @@ are outrunners-port's: Winsock, POSIX, libnx).
   goes on too.
 - "el attack queda muy grande en el boton": the touch buttons' names at a scale that fits ATTACK in eight tenths of
   the button (JUMP the same).
+
+## 1.0.1 (06-11-2026: the players' reports on Reddit)
+
+- The players' boxes in WIDE ("the character health indicators would not stay locked to center"): at an area's start
+  WIDE's sides are all at the right, and the boxes (the fixed layer's first 32 rows on the screen) moved with the
+  board's 320 columns. The video draws that band of the fixed layer where the console says
+  (tmnt_video_set_fixed_band, runtime/src/video.c: the port's, as all of WIDE), and wide.c keeps it in the middle
+  of the picture: (right - left) / 2 columns further right. The 18 scenarios identical (no WIDE there).
+- A game controller before a TV's remote (a Shield's, which Android reports as a game controller and comes first:
+  the player's Xbox controller played player 2): ports/sdl2/main.c's controller_added.
+- Android's window full screen (SDL's immersive mode: TMNT Arcade's opened as a window, Android 15 drawing it under
+  the system's bars), and a device's settings always full screen.

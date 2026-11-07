@@ -60,6 +60,12 @@ void tmnt_video_set_wide(int left, int right);
    0-319 the board's), black or nothing past them (B, A), where the map has no more (the area's ends: its ring of 512
    pixels holds other columns there); from the next frame drawn on, and only with a wider picture */
 void tmnt_video_set_layer_window(int map, int first, int last);
+
+/* WIDE's band of the fixed layer: its first 'rows' rows on the screen drawn 'dx' columns further right than the
+   board's, its 320 columns alone (the console's players' boxes kept in the middle of a picture whose sides differ:
+   a player's report, the boxes moved as WIDE's sides did); from the next frame drawn on, and only with a wider
+   picture */
+void tmnt_video_set_fixed_band(int dx, int rows);
 const uint32_t *tmnt_video_wide_frame(int *width);    /* (its rows TMNT_VIDEO_MAX_WIDTH apart) */
 int tmnt_video_wide_left(void);    /* (the columns of that frame left of the board's column 0) */
 

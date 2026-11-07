@@ -38,6 +38,10 @@
                                                         (the K052109's -90 and the program's scroll, x - 0x60) */
 #define BLOCK_PIXELS        16                       /* a map's row: map_width bytes, 2 a block of 32 pixels */
 #define RING_PIXELS         512                      /* a map no wider than the K052109's ring repeats itself */
+#define BOXES_ROWS          32                       /* the players' boxes: the fixed layer's first 32 rows on the
+                                                        screen, kept in the middle of the wider picture whatever its
+                                                        sides (a player's report, on Reddit: the boxes did not stay
+                                                        in the middle at an area's start, its sides all at the right) */
 #define LEAST(a, b)         ((a) < (b) ? (a) : (b))
 #define MOST(a, b)          ((a) > (b) ? (a) : (b))
 
@@ -513,6 +517,7 @@ void console_wide_frame(void)
 	console_wide_sides(&left, &right);
 	rebuild_layers(left, right);
 	tmnt_video_set_wide(left, right);
+	tmnt_video_set_fixed_band((right - left) / 2, BOXES_ROWS);    /* (the boxes in the picture's middle) */
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const int width = LAYER(records[layer])->map_width * BLOCK_PIXELS;

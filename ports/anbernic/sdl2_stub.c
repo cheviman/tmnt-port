@@ -119,6 +119,11 @@ void SDL_GameControllerGetJoystick(void)
 {
 }
 
+void SDL_GameControllerName(void);
+void SDL_GameControllerName(void)
+{
+}
+
 void SDL_GameControllerGetStringForAxis(void);
 void SDL_GameControllerGetStringForAxis(void)
 {
@@ -591,6 +596,11 @@ void SDL_memset(void)
 
 void SDL_strcasecmp(void);
 void SDL_strcasecmp(void)
+{
+}
+
+void SDL_strncasecmp(void);
+void SDL_strncasecmp(void)
 {
 }
 
