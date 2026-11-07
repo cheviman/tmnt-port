@@ -35,14 +35,14 @@ const char *game_load(const char *folder);
 const char *game_reset(bool service, bool draw);
 
 /* Closes the frame's sound, which the ports call when the frame is done (after their controls): its
-   samples mixed (game_sound) and its hashes (tmnt/sound_board.h) */
+   samples mixed (game_sound_samples) and its hashes (tmnt/sound_board.h) */
 void game_end_frame(void);
 
 /* The frame drawn when the last VBLANK started */
 const tmnt_frame *game_frame(void);
 
 /* The last frame's sound, mixed to one speaker at game_sound_rate() samples a second */
-const int16_t *game_sound(size_t *count);
+const int16_t *game_sound_samples(size_t *count);
 uint32_t game_sound_rate(void);
 
 #ifdef __cplusplus

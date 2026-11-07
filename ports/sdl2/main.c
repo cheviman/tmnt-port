@@ -120,7 +120,7 @@ static void open_audio(void)
 static void queue_sound(void)
 {
 	size_t count;
-	const int16_t *samples = game_sound(&count);
+	const int16_t *samples = game_sound_samples(&count);
 
 	if (!audio || !count || fast)
 		return;

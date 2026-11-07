@@ -78,7 +78,7 @@ const tmnt_frame *game_frame(void)
 	return &g_frame;
 }
 
-const int16_t *game_sound(size_t *count)
+const int16_t *game_sound_samples(size_t *count)
 {
 	return tmnt_sound_mix(count);
 }
