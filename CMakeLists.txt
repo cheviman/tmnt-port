@@ -296,6 +296,8 @@ elseif(TMNT_WINDOW_PROGRAM)
 		elseif(APPLE)
 			target_sources(tmnt PRIVATE ports/sdl2/icon/tmnt.icns)
 			set_target_properties(tmnt PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
+			# (first_run.c's app_folder: the folder a translocated .app was put in, CoreFoundation's URLs)
+			target_link_libraries(tmnt PRIVATE "-framework CoreFoundation")
 		else()
 			add_custom_command(TARGET tmnt POST_BUILD    # (Linux: the window's icon, tmnt.png beside it)
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
@@ -327,6 +329,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 			elseif(APPLE)
 				target_sources(tmnt_console PRIVATE ports/sdl2/icon/tmnt.icns)
 				set_target_properties(tmnt_console PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
+				target_link_libraries(tmnt_console PRIVATE "-framework CoreFoundation")
 			else()
 				add_custom_command(TARGET tmnt_console POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png

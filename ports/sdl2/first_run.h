@@ -11,9 +11,17 @@
 #ifndef TMNT_SDL2_FIRST_RUN_H
 #define TMNT_SDL2_FIRST_RUN_H
 
+#include <stddef.h>
+
+/* On macOS the folder the .app is in (with its separator), where 'base' (SDL_GetBasePath) is its Resources: where a
+   player puts the ROM set or the assets beside the game, as beside an executable elsewhere (outrunners-port's); the
+   folder the player put it in when macOS runs it from a copy of its own (App Translocation). 0 elsewhere */
+int app_folder(const char *base, char *folder, size_t size);
+
 /* The game's assets into 'folder' from the player's ROM set: tmnt.zip or a folder rom/ beside the executable
-   ('base', with its separator) or in the folder of what the game keeps ('saves'); else one dropped on a window
-   that asks for it, with 'title' on it. 1 when the assets are written, 0 when the window is closed first */
-int first_run(const char *title, const char *base, const char *saves, const char *folder);
+   ('base', with its separator: the window's letters are there too), in 'beside' (the folder the .app is in on
+   macOS; NULL elsewhere) or in the folder of what the game keeps ('saves'); else one dropped on a window that asks
+   for it, with 'title' on it. 1 when the assets are written, 0 when the window is closed first */
+int first_run(const char *title, const char *base, const char *beside, const char *saves, const char *folder);
 
 #endif

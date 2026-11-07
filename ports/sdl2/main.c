@@ -1543,30 +1543,6 @@ static bool find_assets(char *found, size_t size)
 }
 #endif
 #else
-/* On macOS the folder the .app is in, where 'base' (SDL_GetBasePath) is its Resources: where a player puts the ROM
-   set or the assets beside the game, as beside an executable elsewhere (outrunners-port's). 0 elsewhere */
-static int app_folder(const char *base, char *folder, size_t size)
-{
-#ifdef __APPLE__
-	static const char inside[] = ".app/Contents/Resources/";
-	const size_t length = base ? strlen(base) : 0, tail = sizeof(inside) - 1;
-	size_t end;
-
-	if (length < tail || length >= size || strcmp(base + length - tail, inside) != 0)
-		return 0;
-	for (end = length - tail; end > 0 && base[end - 1] != '/'; end--)
-		;    /* (back over the .app's name) */
-	memcpy(folder, base, end);
-	folder[end] = ' ';
-	return end > 0;
-#else
-	(void)base;
-	(void)folder;
-	(void)size;
-	return 0;
-#endif
-}
-
 /* The game's assets into 'found': the pack or the folder 'assets' beside the executable (beside the .app on macOS),
    in the folder of what the game keeps or in the current folder; with none (or a folder of another version), the
    first run's, in the folder of what the game keeps. false when the first run's window was closed before a ROM set
@@ -1609,7 +1585,7 @@ static bool find_assets(char *found, size_t size)
 	{
 		if (!stale)
 			snprintf(found, size, "%sassets", saves ? saves : (base ? base : ""));
-		ready = first_run(TITLE, in_app ? beside_app : base, saves, found) != 0;    /* (the ROM set beside it) */
+		ready = first_run(TITLE, base, in_app ? beside_app : NULL, saves, found) != 0;    /* (the ROM set beside it) */
 	}
 	SDL_free(base);
 	SDL_free(saves);

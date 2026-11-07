@@ -156,3 +156,14 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
     (SDL_APP_WILLENTERBACKGROUND). SDL 2.32's Android joystick (the remote is one: SOURCE_DPAD) gives OK as A and back
     as Back. TMNT Arcade as before (back puts a coin in).
   Not yet run on a Chromecast: installing, the banner, the remote and the speed are to be seen there.
+
+- **The first run on a Mac** (07-11-2026: Sebas's Mac, 1.0.5: "there is none beside it; the window that asks for
+  one does not open", and nothing more). The .app downloaded and opened where it was unpacked runs from a copy macOS
+  makes of it (App Translocation), alone in that copy's folder; the same with the .app alone moved to Applications.
+  find_assets gave first_run the folder beside the .app as its base, so the window looked for its letters there and
+  found no font.bmp. Now first_run takes the .app's Resources (SDL_GetBasePath) as its base, its letters there
+  (outrunners-port's), and the ROM set there, beside the .app or in ~/Library/Application Support/TMNT. app_folder
+  (first_run.c now, its raw NUL byte gone) gives the folder the player put a translocated .app in, from Security's
+  SecTranslocateIsTranslocatedURL and SecTranslocateCreateOriginalPathForURL (dlsym, macOS 10.12 on), so tmnt.zip
+  beside the .app is found there too. Checked: first_run.c built by zig cc for aarch64-macos and x86_64-macos (a
+  stand-in CoreFoundation.h), Windows' first run from tmnt.zip beside the executable. Not yet on a Mac.
