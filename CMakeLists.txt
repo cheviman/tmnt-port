@@ -5,7 +5,7 @@
 # Modified:    04-11-2026
 # Author:      Sebastian Toyos
 cmake_minimum_required(VERSION 3.20)
-project(tmnt VERSION 1.0.0 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
+project(tmnt VERSION 1.0.1 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

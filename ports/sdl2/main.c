@@ -1519,9 +1519,11 @@ int main(int argc, char **argv)
 		load_settings();
 		controls_open(controls_path);
 		scale = console_settings.window_scale;
+#ifdef TMNT_HANDHELD
+		console_settings.full_screen = true;    /* (a device's screen, whole: apply_settings never makes it a window) */
+#endif
 #ifdef TMNT_SCREEN_WIDE
 		console_settings.wide = WIDE_16_9;    /* (a device's screen: 16:9, its picture fixed) */
-		console_settings.full_screen = true;
 #endif
 	}
 #endif
@@ -1582,6 +1584,11 @@ int main(int argc, char **argv)
 #elif defined(TMNT_HANDHELD_KEYS)
 	(void)scale;
 	window = SDL_CreateWindow(TITLE, 0, 0, 640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);    /* (the handheld's, whole) */
+#elif defined(__ANDROID__)
+	(void)scale;
+	/* (the phone's whole screen: full screen is SDL's immersive mode, the system's bars hidden. A window would leave
+	   them over the picture, Android 15 drawing the app under them: a player's OnePlus 12, the score cut) */
+	window = SDL_CreateWindow(TITLE, 0, 0, 1280, 720, SDL_WINDOW_FULLSCREEN_DESKTOP);
 #else
 	window = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		view_width() * scale, TMNT_VIDEO_HEIGHT * scale, SDL_WINDOW_RESIZABLE);
