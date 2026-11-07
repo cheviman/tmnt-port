@@ -103,9 +103,9 @@ enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_FPS, VID
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
 #ifdef TMNT_SYSTEM_EXIT
-static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "LAN", "OPTIONS" };
+static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "MULTIPLAYER", "OPTIONS" };
 #else
-static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "LAN", "OPTIONS", "EXIT" };
+static const char *const menu_items[MENU_ITEMS] = { "ARCADE", "SPLINTER WAY", "MULTIPLAYER", "OPTIONS", "EXIT" };
 #endif
 static const char *const way_items[WAY_ITEMS] = { "NORMAL", "BOSS RUSH", "RONIN", "BACK" };    /* (RONIN: modes.c) */
 /* LEVEL SELECT: the areas by number (the game's 0-9 shown 1-10) and by what they are (the scenarios' names) */
@@ -1215,7 +1215,7 @@ static void lan_overlay(void)
 {
 	const char *problem = console_lan_problem();
 
-	page_box("LAN", LAN_ITEMS + 2);
+	page_box("MULTIPLAYER", LAN_ITEMS + 2);    /* (the LAN game: MULTIPLAYER, Sebas) */
 	option_line(lan_items, LAN_HOST, NULL);
 	option_line(lan_items, LAN_JOIN, NULL);
 	option_line(lan_items, LAN_NAME, own_name());

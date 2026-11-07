@@ -56,7 +56,7 @@ The menu under the title's logo:
 - ARCADE: the arcade game, its lives the cabinet's switches'.
 - SPLINTER WAY: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next: each area
   crossed to its boss on its own) and RONIN (one player alone against the enemies of four).
-- LAN: a game of up to four computers on the same network, one player each. HOST makes a room, JOIN
+- MULTIPLAYER: a game of up to four computers on the same network, one player each. HOST makes a room, JOIN
   finds the rooms and joins one, NAME is the name the room shows. The host's START begins the game on
   every computer, with the host's switches and picture. The first time, your system may ask whether
   TMNT may use the network: allow it on private networks.
@@ -65,7 +65,7 @@ The menu under the title's logo:
 - EXIT.
 Choose a turtle, and the game starts with it. In a game, START brings in another player (or the same
 one again, a continue) on a turtle free; Escape, or START of a player in the game, pauses it (CONTINUE,
-RESTART, QUIT GAME). In a LAN game
+RESTART, QUIT GAME). In a MULTIPLAYER game
 there is no pause: Escape leaves the game, which goes on for the others.
 
   Move (player 1)            the arrow keys
@@ -105,7 +105,7 @@ it takes.
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
-sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's LAN game, its rooms and
+sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER, its rooms and
 datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound and the controls, inside
 the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).

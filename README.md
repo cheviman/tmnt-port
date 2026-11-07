@@ -12,7 +12,7 @@ This repository contains no game data: you bring your own ROM set (MAME's `tmnt`
 takes its assets out of it.
 
 <p align="center">
-  <img src="docs/screenshots/console_title_menu.png" width="32%" alt="TMNT's menu under the title, in 16:9: ARCADE, SPLINTER WAY, LAN, OPTIONS, EXIT">
+  <img src="docs/screenshots/console_title_menu.png" width="32%" alt="TMNT's menu under the title, in 16:9: ARCADE, SPLINTER WAY, MULTIPLAYER, OPTIONS, EXIT">
   <img src="docs/screenshots/console_four_turtles_wide.png" width="32%" alt="Four players on the street in 16:9, the Foot coming in from the right">
   <img src="docs/screenshots/console_options.png" width="32%" alt="OPTIONS: controls, difficulty, lives, demo sound, region, video, volume, sound test">
   <br>
@@ -42,7 +42,7 @@ what each tool needs.
 - **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four.
 - **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next) and RONIN (one turtle
   against the enemies of a four-player game).
-- **LAN**: up to four computers on the local network in one game (below).
+- **MULTIPLAYER**: up to four computers on the local network in one game (below).
 - **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
   (window, full screen, sharp, smooth, bilinear or CRT pixels, WIDE 16:9 or 20:9, FPS), volume, sound test.
 - **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
@@ -60,11 +60,11 @@ what each tool needs.
 - **Android**: a stick where your left thumb lands, ATTACK and JUMP at the right, START (COIN in TMNT Arcade);
   a controller hides them. Back pauses.
 
-## LAN
+## MULTIPLAYER
 
 Up to four computers play one game on the same local network, a turtle each:
 
-1. LAN > NAME: your name, as the rooms show it.
+1. MULTIPLAYER > NAME: your name, as the rooms show it.
 2. One computer picks HOST.
 3. The others pick JOIN, and the room.
 4. The host's START begins the game on all of them, with the host's settings.
@@ -107,7 +107,7 @@ MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s RE
   code.
 - `runtime/src/video.c`, `sound_chips.c` and `ym2151.c` follow the behaviour of MAME's `tmnt.cpp`, `k052109.cpp`,
   `k051960.cpp`, `k007232.cpp` and `upd7759.cpp` and of ymfm's OPM (all BSD-3-Clause).
-- LAN's rooms and datagrams are [arcade-lan](https://github.com/cheviman/arcade-lan) (`lan/`, a submodule),
+- MULTIPLAYER's rooms and datagrams are [arcade-lan](https://github.com/cheviman/arcade-lan) (`lan/`, a submodule),
   BSD 3-Clause, whose terms are in `lan/LICENSE`.
 - The menus write with Kenney Mini and CONTROLS shows Kenney's Input Prompts (www.kenney.nl), CC0. The window
   port links SDL2 (zlib License); the packages carry it inside the executables, with its terms and the ones above

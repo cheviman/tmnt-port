@@ -538,7 +538,7 @@ void console_overlay(console_picture *frame)
 		/* (a LAN game's start: the board's boot, its RAM and ROM checks, under black) */
 		draw_fill(frame, PICTURE_FIRST(frame), 0, PICTURE_END(frame) - PICTURE_FIRST(frame), TMNT_VIDEO_HEIGHT,
 			0x000000u);
-		draw_game_letters_centred(frame, 108, 1, GAME_LETTERS_OWN, "LAN GAME");
+		draw_game_letters_centred(frame, 108, 1, GAME_LETTERS_OWN, "MULTIPLAYER GAME");
 	}
 	if (console_lan_waiting())
 	{
