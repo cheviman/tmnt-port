@@ -30,6 +30,11 @@ void touch_event(const SDL_Event *event);
 uint8_t touch_controls(void);
 bool touch_start(void);
 
+/* The controls' places on a screen of 'width' x 'height' with the picture at 'picture': over it, or, on a screen
+   taller than the picture by a fifth or more (an open Fold's, a tablet's) while they are shown, in the room under it,
+   the picture moved to the top (its y set to 0) */
+void touch_layout(int width, int height, SDL_Rect *picture);
+
 /* The controls over a screen of 'width' x 'height', before it is presented (nothing while they are hidden) */
 void touch_draw(SDL_Renderer *renderer, int width, int height);
 

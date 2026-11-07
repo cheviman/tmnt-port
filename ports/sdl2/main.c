@@ -435,6 +435,9 @@ static void present(void)
 	frame.h = (int)(TMNT_VIDEO_HEIGHT * scale);
 	frame.x = (out_width - frame.w) / 2;
 	frame.y = (out_height - frame.h) / 2;
+#ifdef TMNT_TOUCH
+	touch_layout(out_width, out_height, &frame);    /* (a tall screen: the picture at the top, the controls under it) */
+#endif
 	shown = frame;
 	shown.w = (int)(source.w * scale);
 	shown.x = (out_width - shown.w) / 2;

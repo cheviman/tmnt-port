@@ -105,3 +105,11 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   outrunners-port's) writes PORTS from them and the player's ROM set, the pack identical to the first run's. The CI's
   anbernic job and its files in every package beside TMNT Anbernic; arcade-lan's license in the packages too. Not yet
   run on a handheld.
+
+- **The touch controls' size** (07-11-2026: Sebas, on an open Fold "se va de tamaño"): ports/sdl2/touch.c's unit was a
+  tenth of the screen's height. Now (touch_layout, outrunners-port's rule): over the picture, a tenth of the area's
+  smaller side (its height, or its width over 1.8: a phone's as before), at most 0.35 inch on the screen
+  (SDL_GetDisplayDPI); on a screen taller than the picture by a fifth or more, the picture at the top and the
+  controls along the middle of the room under it, START between the stick and the buttons, the unit the room's
+  height over 4. Seen only as a drawing of the same formulas over the game's frames (local/touch_layout_mock.png),
+  not yet on a Fold.
