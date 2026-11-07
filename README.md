@@ -114,6 +114,7 @@ MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s RE
   (`ports/sdl2/controllerdb`, zlib License), built into the games on the computers and Android.
 - The menus write with Kenney Mini and CONTROLS shows Kenney's Input Prompts (www.kenney.nl), CC0. The window
   port links SDL2 (zlib License); the packages carry it inside the executables, with its terms and the ones above
-  in `licenses/`. The icon is the project's own drawing (`tools/make_icon.py`).
+  in `licenses/`. The icon is Raphael's face from a friend's mural (`ports/sdl2/icon/raphael_mural.png`; every
+  size made by `tools/make_icon.py`), nothing of the game's.
 - *Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project is not
   affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.

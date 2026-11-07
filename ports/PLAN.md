@@ -122,3 +122,11 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   for the player to send (Android: Android/data/<the app>/files/tmnt.log). Checked: the Linux build in WSL with SDL's
   dummy video, "Game controllers: 453 mappings of SDL_GameControllerDB" (745 for Linux, the rest SDL's own updated).
   Not yet on the Shield.
+
+- **A Fold opened mid-game** (07-11-2026: Sebas, the picture in half the open screen): Android's WIDE was chosen once
+  at the start. Now main.c's follow_screen (outrunners-port's) chooses it again whenever the renderer's size changes:
+  20:9, 16:9 from 16:9 on and on a tablet's screen (its short side 4 inches or more, by the display's DPI: the open
+  Fold, the picture at the top and the touch controls under it), 16:10 from 3:2 on, else none; not during a LAN game
+  (the host's WIDE). touch.c reads the density again with the new size. Built for Android, not yet seen on a Fold.
+- **The icon** (07-11-2026: Sebas): Raphael's face from a friend's mural, ports/sdl2/icon/raphael_mural.png, of which
+  tools/make_icon.py makes every size (the computers', the Android launcher's, the Switch's); the drawn manhole gone.

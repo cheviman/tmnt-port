@@ -420,6 +420,51 @@ static bool frame_behind(void)
 		> next_frame + SDL_GetPerformanceFrequency() * FRAME_RATE_DENOMINATOR / FRAME_RATE_NUMERATOR;
 }
 
+#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+/* WIDE as the phone's screen is (Android's VIDEO has no WIDE), chosen again whenever the screen changes: a Fold
+   opened or closed mid-game (Sebas: the picture stayed as it was, in half the screen), as outrunners-port's
+   follow_screen. 20:9 where the screen is twice as wide as high or more (most phones), 16:9 from 16:9 on and on a
+   tablet's screen (its short side TABLET_SIDE_INCHES or more: an open Fold's, the picture at the top and the touch
+   controls under it), 16:10 from 3:2 on, else the board's 320 (a handheld's 4:3) */
+#define TABLET_SIDE_INCHES 4.0f
+
+static int shape_width, shape_height;    /* the screen WIDE was last chosen for */
+
+static bool tablet_screen(int width, int height)
+{
+	float horizontal = 0.0f, vertical = 0.0f;
+	const int display = window ? SDL_GetWindowDisplayIndex(window) : 0;
+
+	if (SDL_GetDisplayDPI(display, NULL, &horizontal, &vertical) != 0 || horizontal <= 0.0f || vertical <= 0.0f)
+		return false;
+	return SDL_min(width / horizontal, height / vertical) >= TABLET_SIDE_INCHES;
+}
+
+static int wide_for_screen(int width, int height)
+{
+	const int long_side = SDL_max(width, height), short_side = SDL_min(width, height);
+
+	if (long_side * 9 >= short_side * 20)
+		return WIDE_20_9;
+	if (long_side * 9 >= short_side * 16 || tablet_screen(width, height))
+		return WIDE_16_9;
+	return long_side * 2 >= short_side * 3 ? WIDE_16_10 : WIDE_OFF;
+}
+
+/* The screen at a frame, as the renderer has it: WIDE chosen again where its size changed (the log says so) */
+static void follow_screen(int width, int height)
+{
+	if (width <= 0 || height <= 0 || (width == shape_width && height == shape_height))
+		return;
+	if (console_lan_playing())
+		return;    /* (a LAN game's WIDE is the host's on every device: the screen's again once it is over) */
+	shape_width = width;
+	shape_height = height;
+	console_settings.wide = wide_for_screen(width, height);
+	fprintf(stderr, "Screen %dx%d: WIDE %s\n", width, height, console_wide_names[console_settings.wide]);
+}
+#endif
+
 static void present(void)
 {
 	const int kind = pixels_kind();
@@ -430,6 +475,9 @@ static void present(void)
 	SDL_Rect frame, shown;
 
 	SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
+#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+	follow_screen(out_width, out_height);    /* (a Fold opened or closed: its WIDE, from the next frame) */
+#endif
 	scale = SDL_min((double)out_width / view, (double)out_height / TMNT_VIDEO_HEIGHT);
 	frame.w = (int)(view * scale);
 	frame.h = (int)(TMNT_VIDEO_HEIGHT * scale);
@@ -1737,20 +1785,13 @@ int main(int argc, char **argv)
 #endif
 #if defined(__ANDROID__) && defined(TMNT_CONSOLE)
 	{
-		/* WIDE as the phone's screen is: 20:9 (most phones), 16:9, 16:10 (a tablet's, down to 3:2), or the board's 320
-		   on a screen squarer than that (a handheld's 4:3) */
+		/* WIDE as the phone's screen is at the start (follow_screen: again as it changes) */
 		int out_width = 0, out_height = 0;
 
 		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
-		if (out_width < out_height)
-		{
-			const int turned = out_width;    /* (the screen still upright as the game starts) */
-
-			out_width = out_height;
-			out_height = turned;
-		}
-		console_settings.wide = out_height <= 0 ? WIDE_16_9 : out_width * 9 >= out_height * 20 ? WIDE_20_9
-			: out_width * 9 >= out_height * 16 ? WIDE_16_9 : out_width * 2 >= out_height * 3 ? WIDE_16_10 : WIDE_OFF;
+		if (out_height <= 0)
+			console_settings.wide = WIDE_16_9;
+		follow_screen(out_width, out_height);
 	}
 #endif
 	SDL_RaiseWindow(window);    /* (the keyboard's: after the first run's window closed, another may have had it) */

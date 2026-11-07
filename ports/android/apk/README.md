@@ -20,7 +20,7 @@ not found, or what is wrong with it):
 - **ROM set**: `tmnt.zip` beside the tool;
 - **Launcher icon**: a square PNG or JPEG of yours, at most 2048 x 2048, which the launcher shows whole, its
   shape cutting the corners: `icon.jpg` beside the tool (taken by itself, by TMNT NSP too) or one dropped
-  on the window; else the game's own (the project's, ports/sdl2/icon/tmnt.png);
+  on the window; else the game's own (the project's: Raphael from a friend's mural, ports/sdl2/icon);
 - **The game's Android build**: `tmnt-base.apk` in the folder `android` beside the tool (TMNT Arcade's,
   `tmnt-arcade-base.apk`, beside it);
 - **Signing key**: yours, kept from before, or made with the first APK (below);

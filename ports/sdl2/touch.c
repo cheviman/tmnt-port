@@ -107,6 +107,14 @@ void touch_layout(int width, int height, SDL_Rect *picture)
 	if (width == touch.width && height == touch.height && under == touch.under && area.y == touch.area.y
 		&& area.h == touch.area.h)
 		return;
+	if (width != touch.width || height != touch.height)
+	{
+		float dpi = 0.0f;
+
+		/* (another screen, a Fold opened or closed: its own density) */
+		if (SDL_GetDisplayDPI(0, &dpi, NULL, NULL) == 0 && dpi > 0.0f)
+			touch.most_unit = dpi * MOST_UNIT_INCHES;
+	}
 	touch.width = width;
 	touch.height = height;
 	touch.under = under;

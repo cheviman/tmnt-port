@@ -72,9 +72,10 @@ player's.
 - **SDL2 inside.** `TMNT_STATIC_SDL2` builds SDL2 2.32.10 from its source (CMake's FetchContent, from GitHub) into
   the executable, and the C runtime with it: it needs no library beside it, nor Visual C++'s redistributable.
   Without it (the default) the build is the one above, SDL2's library beside the executable.
-- **The icon** is the project's own drawing, nothing of the game's art (`tools/make_icon.py` writes
-  `ports/sdl2/icon/`: a manhole's lid lit from below): a resource of the executable, which Explorer and the window
-  show. A picture of your own takes its place in your builds: `local/icon_pc.png` (`local/` is never committed) or
+- **The icon** is Raphael's face from a friend's mural (Sebas), nothing of the game's art:
+  `ports/sdl2/icon/raphael_mural.png`, of which `tools/make_icon.py` makes every size (`ports/sdl2/icon/` for the
+  computers, the Android launcher's in `ports/android/res`, the Switch's `ports/switch/icon.jpg`); on Windows a
+  resource of the executable, which Explorer and the window show. A picture of your own takes its place in your builds: `local/icon_pc.png` (`local/` is never committed) or
   `-DTMNT_PC_ICON=PICTURE`.
 - **Made locally** in a build folder of its own, without the reference tools, its executables in
   `build/release/bin` (the usual build's in `build/bin` stay as they are):

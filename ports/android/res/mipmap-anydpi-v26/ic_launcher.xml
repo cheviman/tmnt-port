@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The launcher's icon from Android 8 on: its two layers (drawn from ports/sdl2/icon/tmnt.png), shaped by the launcher -->
+<!-- The launcher's icon from Android 8 on: Raphael's face from a friend's mural (ic_launcher_art, tools/make_icon.py)
+     whole in the 72 dp of the 108 the launcher shows, its shape cutting the corners; a picture of the player's own
+     takes its place (ic_launcher_own.xml, the same, as TMNT APK and android.cmake put it) -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-	<background android:drawable="@mipmap/ic_launcher_background" />
-	<foreground android:drawable="@mipmap/ic_launcher_foreground" />
+	<background>
+		<inset android:drawable="@mipmap/ic_launcher_art" android:inset="18dp" />
+	</background>
+	<foreground android:drawable="@android:color/transparent" />
 </adaptive-icon>
