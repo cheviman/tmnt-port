@@ -174,6 +174,16 @@ enum
 	WIDE_KINDS
 };
 
+/* OPTIONS > VIDEO > PRESS START: the line under the box of a player who can come in, in a game (a player's request: it
+   blinks all through the play) */
+enum
+{
+	PRESS_START_BLINK,  /* the game's own */
+	PRESS_START_ON,     /* still */
+	PRESS_START_OFF,    /* none (the continue's countdown keeps it: its call to come back) */
+	PRESS_START_KINDS
+};
+
 #define CONSOLE_REGIONS 4    /* the program's version byte (06009F): 0-3 */
 #define CONSOLE_NAME_LENGTH 10
 #define CONSOLE_DEFAULT_NAME "PLAYER"
@@ -184,6 +194,9 @@ typedef struct
 	bool full_screen;
 	int pixels;            /* PIXELS_* */
 	int wide;              /* WIDE_* */
+	bool integer_scale;    /* OPTIONS > VIDEO > INTEGER SCALE: the picture a whole number of times its pixels (a
+	                          player's request: square pixels all the same size), black around it */
+	int press_start;       /* PRESS_START_* */
 	int volume;            /* 0-10: 5 is the game's own */
 	bool fps;              /* OPTIONS > FPS: the frames a second at the picture's top right, and in the window's title */
 	bool vsync;            /* OPTIONS > VIDEO > VSYNC: each frame shown at the screen's refresh (a computer's) */
@@ -210,6 +223,7 @@ void console_wide_frame(void);
 /* The names the settings file gives the pixels' kinds and WIDE's */
 extern const char *const console_pixel_names[PIXELS_KINDS];
 extern const char *const console_wide_names[WIDE_KINDS];
+extern const char *const console_press_start_names[PRESS_START_KINDS];
 
 /* For checks (tmnt_console_headless --arcade-start): the arcade's own attract mode and controls (a script's coins
    and players' buttons straight onto the board, player N's on slot N), so the arcade's scenarios run as they are

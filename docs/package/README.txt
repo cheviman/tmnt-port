@@ -11,7 +11,8 @@ Two games come in it, the same program:
   brings a player in), Splinter Way's modes and the game over the local network.
 
 They are TMNT Arcade.exe and TMNT.exe on Windows, TMNT Arcade.app and TMNT.app on macOS, and TMNT Arcade
-and TMNT on Linux.
+and TMNT on Linux. On macOS each comes in a package of its own: tmnt-macos-universal.zip has TMNT (and
+the tools for the devices), tmnt-arcade-macos-universal.zip TMNT Arcade.
 
 What you need
 -------------
@@ -45,7 +46,9 @@ attack button bring a turtle in: player 1 is Leonardo, 2 Michelangelo, 3 Donatel
   Quit                       Escape
 
 Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves,
-A attacks, B jumps, Back puts a coin in.
+A attacks, B jumps, Back puts a coin in. A controller the games do not know, or know wrong, takes its
+line (SDL_GameControllerDB's format) in gamecontrollerdb.txt, in the folder of the assets: the games
+read it when they start, and its line goes over their own.
 
 From a command line, TMNT Arcade with --service starts the game in its test mode, as the cabinet's
 switch does.
@@ -61,7 +64,8 @@ The menu under the title's logo:
   every computer, with the host's switches and picture. The first time, your system may ask whether
   TMNT may use the network: allow it on private networks.
 - OPTIONS: the cabinet's switches, the region, the controls of each player, the picture (its size, the
-  pixels, WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9; VSYNC, each frame at the screen's refresh), the
+  pixels, INTEGER SCALE: the pixels all the same size; WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9;
+  VSYNC, each frame at the screen's refresh; PRESS START under the boxes blinking, still or off), the
   volume, a sound test; kept in tmnt.ini.
 - EXIT.
 Choose a turtle, and the game starts with it. In a game, START brings in another player on a turtle
@@ -81,33 +85,10 @@ Game controllers: the same, Start is START, Back pauses (Start too, in the game)
 
 The devices
 -----------
-Each device's games come in this package without assets; a tool beside them makes yours, on this
-computer, with your ROM set. What it makes is yours alone: never share it.
-
-Nintendo Switch       TMNT NSP (the folder switch beside it): TMNT.nsp and TMNT Arcade.nsp, with your
-                      console's keys (prod.keys). Install them with an installer (DBI, Tinfoil,
-                      Goldleaf) on a console with Atmosphere. Each controller is a player, up to four;
-                      HOME leaves the game. On TMNT Arcade, minus puts a coin in.
-Android               TMNT APK (the folder android beside it): TMNT.apk and TMNT Arcade.apk, signed with
-                      a key of yours kept in your user folder (keep it: only an APK with the same key
-                      installs over the last one). Copy them to the phone and open them there. The touch
-                      screen has a stick where your left thumb lands, ATTACK and JUMP at the right, and
-                      START (COIN on TMNT Arcade); a game controller hides them. Back, or START in the
-                      game, pauses TMNT; OPTIONS > VIDEO has the pixels and FPS.
-                      On a TV with Android TV or Google TV (the Chromecast with Google TV too) they are
-                      in the TV's apps, with a banner (a 16:9 picture of yours, dropped on TMNT APK's
-                      window, takes its place). A game controller is a player; the TV's remote too,
-                      after them: in TMNT its pad moves, OK attacks (and brings in a player who is not
-                      playing), back jumps, home pauses.
-Anbernic H700         TMNT Anbernic (the folder anbernic beside it): the folder PORTS, beside the tool or
-handhelds             straight into the Roms folder of your handheld's card (choose it as the output
-                      folder): the other ports there stay as they are. TMNT and TMNT Arcade show up in
-                      the firmware's PORTS. A attacks, B jumps, SELECT puts a coin in on TMNT Arcade;
-                      MENU leaves the game.
-
-Start a tool with a double click and drop your files on its window (tmnt.zip, prod.keys, a square
-picture of yours for the icon, a 16:9 one for the TV's banner), or run it from a command line: an option it does not know shows the ones
-it takes.
+The Nintendo Switch, Android (phones, tablets, TVs) and Anbernic's H700 handhelds have packages of their
+own in the release: tmnt-switch.zip, tmnt-android.zip and tmnt-anbernic.zip. Each has the device's games
+without assets, ready to take them out of your tmnt.zip on the device, and the tool that makes your own
+of them on a computer with your ROM set (for Windows, macOS and Linux); its README says how.
 
 Licenses
 --------

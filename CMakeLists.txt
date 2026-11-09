@@ -329,7 +329,8 @@ elseif(TMNT_WINDOW_PROGRAM)
 			elseif(APPLE)
 				target_sources(tmnt_console PRIVATE ports/sdl2/icon/tmnt.icns)
 				set_target_properties(tmnt_console PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
-				target_link_libraries(tmnt_console PRIVATE "-framework CoreFoundation")
+				# (main.c's mac_full_screen: the window's NSWindow asked by Objective-C's runtime, libobjc)
+				target_link_libraries(tmnt_console PRIVATE "-framework CoreFoundation" objc)
 			else()
 				add_custom_command(TARGET tmnt_console POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
@@ -389,42 +390,13 @@ elseif(TMNT_WINDOW_PROGRAM)
 
 		# The Windows package (tmnt_package): what a player downloads, build/package/tmnt-windows-x64.zip, a folder
 		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL2 and the C runtime inside them), and the
-		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the package's README.txt (docs/package), the project's LICENSE.txt, and
-		# licenses/ with the terms of what is in it or what it follows: MAME's and ymfm's (the board's video and
-		# sound), arcade-lan's (TMNT's LAN game), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the player's on its
-		# first run
+		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the
+		# package's README.txt (docs/package), the project's LICENSE.txt, and licenses/ with the terms of what is in
+		# it or what it follows: MAME's and ymfm's (the board's video and sound), arcade-lan's (TMNT's LAN game),
+		# SDL2's, SDL_GameControllerDB's and Kenney's. The two games alone (Sebas, 09-11-2026: the devices in
+		# packages of their own, with their makers: the CI's devices job, ports/pack_devices.py). Nothing of the ROM
+		# set: the game takes its assets out of the player's on its first run
 		if(WIN32 AND TMNT_STATIC_SDL2 AND TARGET tmnt_console)
-			# (the devices' games beside their makers, where this build has them: the folder switch, the Switch
-			# build's pieces, which TMNT NSP makes the player's .nsps of; the CI's switch job puts it in build/bin)
-			# (its four pieces of each game alone: an .nro beside them, one this computer made with its own assets,
-			# never goes in a package)
-			set(TMNT_PACKED_DEVICES "")
-			if(EXISTS ${TMNT_BIN_DIR}/switch/tmnt/main AND EXISTS ${TMNT_BIN_DIR}/switch/tmnt-arcade/main)
-				foreach(game tmnt tmnt-arcade)
-					list(APPEND TMNT_PACKED_DEVICES
-						COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/switch/${game}
-						COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/switch/${game}/main
-							${TMNT_BIN_DIR}/switch/${game}/main.npdm ${TMNT_BIN_DIR}/switch/${game}/control.nacp
-							${TMNT_BIN_DIR}/switch/${game}/icon.jpg ${CMAKE_SOURCE_DIR}/build/package/tmnt/switch/${game})
-				endforeach()
-			endif()
-			# (Android's: the games' base APKs alone, which TMNT APK makes the player's APKs of; this computer's
-			# -debug.apk carry its own assets and never go in a package)
-			if(EXISTS ${TMNT_BIN_DIR}/android/tmnt-base.apk AND EXISTS ${TMNT_BIN_DIR}/android/tmnt-arcade-base.apk)
-				list(APPEND TMNT_PACKED_DEVICES
-					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/android
-					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/android/tmnt-base.apk
-						${TMNT_BIN_DIR}/android/tmnt-arcade-base.apk ${CMAKE_SOURCE_DIR}/build/package/tmnt/android)
-			endif()
-			# (the Anbernic's: its launchers and its folder tmnt, without an assets pack, which TMNT Anbernic writes)
-			if(EXISTS ${TMNT_BIN_DIR}/anbernic/tmnt/TMNT)
-				list(APPEND TMNT_PACKED_DEVICES
-					COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic/tmnt
-					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/anbernic/TMNT.sh "${TMNT_BIN_DIR}/anbernic/TMNT Arcade.sh"
-						${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic
-					COMMAND ${CMAKE_COMMAND} -E copy ${TMNT_BIN_DIR}/anbernic/tmnt/TMNT "${TMNT_BIN_DIR}/anbernic/tmnt/TMNT Arcade"
-						${TMNT_BIN_DIR}/anbernic/tmnt/input_prompts.bmp ${CMAKE_SOURCE_DIR}/build/package/tmnt/anbernic/tmnt)
-			endif()
 			set(TMNT_PACKAGE_DIR ${CMAKE_SOURCE_DIR}/build/package)
 			set(TMNT_PACKAGE_NAME tmnt-windows-x64)
 			set(TMNT_PACKED ${TMNT_PACKAGE_DIR}/tmnt)
@@ -437,11 +409,9 @@ elseif(TMNT_WINDOW_PROGRAM)
 			add_custom_target(tmnt_package
 				COMMAND ${CMAKE_COMMAND} -E rm -rf ${TMNT_PACKED} ${TMNT_PACKAGE_DIR}/${TMNT_PACKAGE_NAME}.zip
 				COMMAND ${CMAKE_COMMAND} -E make_directory ${TMNT_PACKED}/licenses
-				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console> $<TARGET_FILE:tmnt_nsp>
-					$<TARGET_FILE:tmnt_apk_maker> $<TARGET_FILE:tmnt_anbernic_maker>
+				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console>
 					${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp
 					${TMNT_PACKED}
-				${TMNT_PACKED_DEVICES}
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/docs/package/README.txt ${TMNT_PACKED}/README.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/LICENSE ${TMNT_PACKED}/LICENSE.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/docs/package/licenses/MAME.txt
@@ -458,7 +428,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 					${TMNT_PACKED}/licenses/Kenney-Input-Prompts.txt
 				COMMAND ${CMAKE_COMMAND} -E tar cf ${TMNT_PACKAGE_NAME}.zip --format=zip tmnt
 				WORKING_DIRECTORY ${TMNT_PACKAGE_DIR}
-				DEPENDS tmnt tmnt_console tmnt_nsp tmnt_apk_maker tmnt_anbernic_maker
+				DEPENDS tmnt tmnt_console
 				COMMENT "Packing TMNT Arcade and TMNT: build/package/${TMNT_PACKAGE_NAME}.zip"
 				VERBATIM)
 		endif()

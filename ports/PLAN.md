@@ -117,11 +117,23 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
 - **Game controllers' mappings** (07-11-2026: a player's Nvidia Shield, its PS4 and Xbox controllers moving no
   turtle and their A and B pausing): SDL_GameControllerDB (ports/sdl2/controllerdb, zlib, its commit in its README),
   this platform's lines built into the games on the computers and Android (embed.cmake: a byte array, MSVC taking no
-  string longer than 64 KB; CMakeLists.txt's tmnt_controller_db), given to SDL after SDL_Init. The log says what SDL
-  finds of each joystick (name, GUID, game controller or not, its mapping) and the first 48 keys and buttons pressed,
-  for the player to send (Android: Android/data/<the app>/files/tmnt.log). Checked: the Linux build in WSL with SDL's
-  dummy video, "Game controllers: 453 mappings of SDL_GameControllerDB" (745 for Linux, the rest SDL's own updated).
-  Not yet on the Shield.
+  string longer than 64 KB; CMakeLists.txt's tmnt_controller_db). The log says what SDL finds of each joystick (name,
+  GUID, game controller or not, its mapping) and the first 48 keys and buttons pressed, for the player to send
+  (Android: Android/data/<the app>/files/tmnt.log). 1.0.3 gave the mappings to SDL after SDL_Init
+  (SDL_GameControllerAddMappingsFromRW), which in SDL 2.32 makes no game controller of a joystick already plugged in:
+  SDL_PrivateAddMappingForGUID only remaps the controllers open, and SDL_GameControllerInit sends
+  SDL_CONTROLLERDEVICEADDED only for the joysticks with a mapping then (the Shield's case: its controllers on before
+  the game). Now (segasonic-port 1.4.0's way, main.c's add_mappings) one text, the built-in lines, the Anbernic's
+  buttons and last the player's gamecontrollerdb.txt (its lines for this platform or for none, in the folder of what
+  the game keeps or else beside the executable), is SDL_HINT_GAMECONTROLLERCONFIG before SDL_Init, which SDL reads
+  before it looks for joysticks; a later line goes over an earlier one for the same GUID. Checked with SDL's dummy
+  video: Windows "Game controllers: 885 mappings", 886 with a gamecontrollerdb.txt of one Windows line and one Linux
+  line; Linux (WSL) 753, and 754 with that file beside the executable. Not yet on the Shield. An
+  SDL_GAMECONTROLLERCONFIG in the environment (Steam sets one for the games it starts) went over the hint, SDL_GetHint
+  taking it over a hint of normal priority: 304 mappings on Windows, the built-in lines and the file left out. Now its
+  lines go into the text after the Anbernic's and before the file's, and the hint is SDL_HINT_OVERRIDE (C's getenv
+  and SDL_SetHintWithPriority, which the Anbernic's stub has): 885, 886 with one line there, 887 with the file too
+  (segasonic-port the same).
 
 - **A Fold opened mid-game** (07-11-2026: Sebas, the picture in half the open screen): Android's WIDE was chosen once
   at the start. Now main.c's follow_screen (outrunners-port's) chooses it again whenever the renderer's size changes:
@@ -167,3 +179,48 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   SecTranslocateIsTranslocatedURL and SecTranslocateCreateOriginalPathForURL (dlsym, macOS 10.12 on), so tmnt.zip
   beside the .app is found there too. Checked: first_run.c built by zig cc for aarch64-macos and x86_64-macos (a
   stand-in CoreFoundation.h), Windows' first run from tmnt.zip beside the executable. Not yet on a Mac.
+
+- **macOS's two packages** (09-11-2026, issue 7: Quiver Launcher, which installs games from GitHub's releases, took
+  the macOS package's first .app, TMNT Arcade, and left TMNT out). The workflow's macOS job packs TMNT Arcade.app
+  apart, with the README and the licenses: tmnt-macos-universal.zip has TMNT and the devices' tools,
+  tmnt-arcade-macos-universal.zip TMNT Arcade; the release carries four packages. The other platforms as they were.
+  Checked: the workflow's YAML read back (the artifact's two paths, the release's four files); the job itself runs at
+  the next push.
+
+- **Direct3D 11 on Windows** (09-11-2026, Sebas: "pone por default que use dx11", after a player asked whether the game
+  was made with DX9): SDL 2's first renderer on Windows is Direct3D 9. main.c gives SDL_HINT_RENDER_DRIVER
+  "direct3d11" before SDL starts (SDL tries the others where it cannot start; SDL_RENDER_DRIVER in the environment
+  still chooses) and SDL_HINT_RENDER_BATCHING (a renderer named by the hint has it off); the log says "Renderer:". The
+  picture is the same (the board's video is drawn by the CPU); Direct3D 11's swap chain is DXGI's flip model
+  (SDL_render_d3d11.c: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL), and Alt+Tab or the full screen lose none of its textures, as
+  Direct3D 9's device did. Checked: TMNT and TMNT Arcade log direct3d11, and opengl with SDL_RENDER_DRIVER=opengl.
+
+- **The devices' packages, without assets** (09-11-2026, Sebas: "hay 3 packs, win, linux, mac", "todos por
+  separado sin assets"; as outrunners-port's of the same day, 5fd807b and 3687f84). The computers' packages hold the
+  two games alone (tmnt_package, the CI's Pack steps); each computer's build leaves a kit (tmnt-OS-kit.tar.gz: TMNT
+  NSP, TMNT APK, TMNT Anbernic, font.bmp, the licenses), and the job devices packs ports/pack_devices.py's
+  tmnt-switch.zip, tmnt-android.zip and tmnt-anbernic.zip: each the device's games without assets (switch/, android/,
+  anbernic/), the tool for Windows, macOS and Linux beside them ("TMNT NSP.exe", "TMNT NSP (macOS)", "TMNT NSP
+  (Linux)"), font.bmp, the licenses and its README (docs/package/README-*.txt), the programs as Unix entries with
+  their permissions; never a .nro, -debug.apk, .idsig or .assets of a computer's own. TMNT's own on top: the games
+  also take the assets out of the player's tmnt.zip on the device (main.c's device_folder and device_assets,
+  tmnt_extract linked into the three): sdmc:/switch/tmnt/ (both games), PORTS/tmnt/ (beside the executables),
+  Android/data/<the app>/files/ (each app its own); tmnt.assets there, or the folder assets of this version, come
+  first, and a pack the makers put in (the Switch's romfs, the APK, beside the handheld's executables) before them
+  all. So the packages carry them ready too: the Switch's .nro without a pack in sd/switch/tmnt/ (switch.cmake makes
+  them in build/bin/switch-nro where the build has no pack, the CI's case), Android's base APKs signed with the
+  project's key in ready/ (the android job's Sign step, with the repository's secrets ANDROID_KEYSTORE, base64, and
+  ANDROID_KEYSTORE_PASSWORD; without them the package has the tool's way alone; the key in local/android-release,
+  ignored, its README says how to give it to GitHub), and anbernic/, which is the card's Roms/PORTS as it is. No ROM
+  set on the device: the game says where to put it (the Switch's SDL has no message box: libnx's console till +; not
+  the error applet, a fatal error out of an application from 10.0.0). Checked: a Linux handheld build in WSL
+  (-DTMNT_HANDHELD, SDL's dummy video): no ROM set, the message with the folder; tmnt.zip there, the assets out in 4 s
+  and the game on; started again and TMNT Arcade, from them. The Switch built with devkitPro without a pack
+  (build/switch-release): TMNT.nro and TMNT Arcade.nro, 8 MB each. Anbernic with Zig (glibc 2.35, libSDL2-2.0.so.0 as
+  before). Android: both base APKs signed with the new key, apksigner verify (v2, v3), no pack in them
+  (assets/font.bmp alone), both ABIs. ports/pack_devices.py run here with the Windows tools and stand-ins for the
+  others' (the three zips, the programs 755, this computer's -debug.apk and .idsig left out). rom_in_executables: the
+  APKs, Anbernic's and the computers' 0; the .nro 3 + 3 + 28 stretches, which the Switch's ELF of 07-11 had already,
+  before the extractor: 32 bytes of one 4-byte word over and over (02000000..., 0101 0000...), tables of the
+  Switch's libraries that trivial() does not count as trivial (a byte or a 2-byte step, not a 4-byte period). The
+  workflow itself runs at the next push; not tried on the devices themselves.

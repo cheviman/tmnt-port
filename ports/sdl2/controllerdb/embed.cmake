@@ -7,8 +7,8 @@
 #
 # Usage: cmake -DDB=gamecontrollerdb.txt -DPLATFORM=Windows -DOUT=controller_db.c -P embed.cmake
 # PLATFORM is SDL's name of the platform, as the mappings' "platform:" field says it (Windows, Mac OS X, Linux,
-# Android). The array is the mappings' lines, a line each, and a 0 after them; main.c gives it to
-# SDL_GameControllerAddMappingsFromRW. Bytes, not a string: MSVC takes no string literal longer than 64 KB.
+# Android). The array is the mappings' lines, a line each, and a 0 after them: main.c gives it to SDL as a hint
+# before SDL starts. Bytes, not a string: MSVC takes no string literal longer than 64 KB.
 
 file(STRINGS "${DB}" lines REGEX "platform:${PLATFORM},")
 list(LENGTH lines count)

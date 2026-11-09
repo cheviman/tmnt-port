@@ -5,7 +5,7 @@
  *                 enemies coming in and going out past its sides
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    05-11-2026
+ *    Modified:    09-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -19,8 +19,10 @@
  *    The game writes into the K051960 only the pieces of its objects that show on its 320 columns (draw_sprites:
  *    the piece's left before 0x1A0, the screen's right edge, and past its size's own left, so a pixel shows): with
  *    WIDE the console's version writes those that show on the wider screen too, the same pieces in the same order
- *    otherwise, at most the 128 the sprite RAM holds. Its work on the objects (their animations stepped on) and what
- *    it leaves in the registers the game carries (screen_x_high) are the game's own.
+ *    otherwise, at most the 128 the sprite RAM holds; but in the sides not those of a sprite bank the game has lent
+ *    to another object's palette, their object left behind past the board's left edge (lent_banks_frame: the parked
+ *    cars' barrel in Bebop's colours). Its work on the objects (their animations stepped on) and what it leaves in the
+ *    registers the game carries (screen_x_high) are the game's own.
  */
 #include "console_internal.h"
 
@@ -31,9 +33,11 @@
 #include <string.h>
 
 #define SPRITE_ENTRIES_END  (SPRITE_RAM + 0x400u)    /* the sprite RAM's 128 entries of 8 bytes */
-#define SCREEN_RIGHT        0x1A0                    /* the K051960's x of the screen's right edge */
+#define SCREEN_LEFT         0x60                     /* the K051960's x of the screen's left edge */
+#define SCREEN_RIGHT        0x1A0                    /* (and of its right edge) */
 #define SCENE_PLAY          4u                       /* the game's scenes WIDE shows: the play and the area's exit */
 #define SCENE_EXIT          5u
+#define SCENE_CONTINUE      7u                       /* (and the continue's countdown, over the play) */
 #define LAYERS_DX           6                        /* a map's pixel on the screen: its x less the layer's x, plus 6
                                                         (the K052109's -90 and the program's scroll, x - 0x60) */
 #define BLOCK_PIXELS        16                       /* a map's row: map_width bytes, 2 a block of 32 pixels */
@@ -42,6 +46,7 @@
                                                         screen, kept in the middle of the wider picture whatever its
                                                         sides (a player's report, on Reddit: the boxes did not stay
                                                         in the middle at an area's start, its sides all at the right) */
+#define MESSAGE_ROWS        16                       /* (and in a play the line under them: PRESS START, GAME OVER) */
 #define LEAST(a, b)         ((a) < (b) ? (a) : (b))
 #define MOST(a, b)          ((a) > (b) ? (a) : (b))
 
@@ -120,8 +125,10 @@ static bool menu_page_wide(void)
 	return game_state == GAME_STATE_ATTRACT && console.page != PAGE_PRESENTATION && console.page != PAGE_GAME;
 }
 
-/* In a game's play, and in the menus: the story screens, the continue, the ending and the ranking keep the board's
-   320 (their pictures were never drawn wider), and the presentation, on black. In a game the picture has its columns
+/* In a game's play, and in the menus: the story screens, the ending and the ranking keep the board's 320 (their
+   pictures were never drawn wider), and the presentation, on black. The continue's countdown and its GAME OVER keep the
+   play's (they are drawn over it, the play going on under them: a player's report, the picture back to 4:3 as his
+   last life went). In a game the picture has its columns
    more at both sides, but where a side has no map past the board's screen (an area's start at its left, its end at
    its right), the picture shows as much of it as there is and the rest at the other side (Sebas: "recorta de la
    izquierda y corre"): the game is the same, only what the picture shows of it moves, back to the middle as the
@@ -247,8 +254,8 @@ static void wide_sides_target(int *left, int *right)
 	wide_hidden = 0;
 	if (game_state != GAME_STATE_GAME || scene < SCENE_PLAY)
 		area_started = false;    /* (an area's set-up, its title, a story: its layers to come, at its play's entry) */
-	if (console.page != PAGE_GAME || game_state != GAME_STATE_GAME || (scene != SCENE_PLAY && scene != SCENE_EXIT)
-		|| !area_started)
+	if (console.page != PAGE_GAME || game_state != GAME_STATE_GAME
+		|| (scene != SCENE_PLAY && scene != SCENE_EXIT && scene != SCENE_CONTINUE) || !area_started)
 		return;    /* (the board's 320 until the area has drawn its layers: Sebas, "no arranca bien del borde") */
 	lift_bar_left = lift_bar_right = 0;
 	if (exit_picture())
@@ -497,11 +504,86 @@ void console_wide_turtle_room(int *left, int *right)
 static void rebuild_layers(int left, int right);
 static void read_picture_place(void);
 
+/* The sprite banks the game lends: in a play it loads a palette of its own into one now and then
+   (palette_request_palette, a request of one palette for one bank: a boss's as he comes, Bebop's into bank 14 at the
+   parked cars, Rocksteady's into 10, Stockman's into 12), a bank the area's scenery may have drawn with until then:
+   the game lends it when the arcade's screen no longer shows them. At the parked cars' arena the second DANGER barrel
+   (its pieces' own bank 14) is past the board's left edge but for a strip, the scroll held through Bebop and
+   Rocksteady's fight; WIDE's left side showed it whole, in Bebop's pink and red (issue #3). An object whose place is
+   past the board's left edge (the scroll has left it behind: the arcade's screen does not show it again) when a bank
+   it drew with is lent has its pieces with that bank drawn only where they lie mostly on the board's 320, as the
+   arcade's; not in WIDE's sides. The one the bank is lent to keeps it: Bebop had not drawn with it (he flashes with it
+   when weak), and Stockman, who had, waits for his fight past the board's right edge */
+#define OBJECTS             50
+#define PALETTE_ONE_BANK    0x0400u    /* (a palette request's kind: its type bits 0x3F00; its low byte the bank's group */
+#define PALETTE_TYPE_BITS   0x3F00u    /* and number, 0x30 to 0x3F the sprites' 16) */
+#define SPRITE_BANKS        0x30u
+#define BANK_GROUP_BITS     0xF0u
+#define BANK_BITS           0x0Fu
+#define REQUEST_BYTES       6u
+#define PALETTE_REQUESTS    40         /* (the game's queue of them, a ring) */
+static uint16_t banks_drawn[OBJECTS];        /* (each object's banks, in the frames before this one) */
+static uint16_t banks_drawn_now[OBJECTS];    /* (in this one) */
+static uint16_t banks_lent[OBJECTS];         /* (lent since it drew with them, the scroll past it) */
+static uint32_t palette_queue_seen;          /* (the game's palette_queue_write at the last frame's end) */
+
+/* At a frame's end: the palette requests the game queued in it (each is there until the next frames' VBLANKs run
+   them, a bank a frame), and the objects gone (their slots taken again by others) */
+static void lent_banks_frame(void)
+{
+	uint32_t request = palette_queue_seen;
+
+	for (int requests = 0; requests < PALETTE_REQUESTS && request != palette_queue_write
+		&& request >= PALETTE_REQUEST_ADDRESS(0) && request < PALETTE_REQUEST_ADDRESS(PALETTE_REQUESTS); requests++)
+	{
+		const uint16_t kind = PALETTE_REQUEST(request)->kind;
+
+		if ((kind & PALETTE_TYPE_BITS) == PALETTE_ONE_BANK && (kind & BANK_GROUP_BITS) == SPRITE_BANKS)
+			for (int slot = 0; slot < OBJECTS; slot++)
+				if ((int16_t)OBJECT(OBJECT_ADDRESS(slot))->screen_x < SCREEN_LEFT)
+					banks_lent[slot] |= banks_drawn[slot] & (uint16_t)(1u << (kind & BANK_BITS));
+		request += REQUEST_BYTES;
+		if (request >= PALETTE_REQUEST_ADDRESS(PALETTE_REQUESTS))
+			request = PALETTE_REQUEST_ADDRESS(0);
+	}
+	palette_queue_seen = palette_queue_write;
+	for (int slot = 0; slot < OBJECTS; slot++)
+	{
+		if (OBJECT(OBJECT_ADDRESS(slot))->flags == 0u)
+			banks_drawn[slot] = banks_drawn_now[slot] = banks_lent[slot] = 0;
+		banks_drawn[slot] |= banks_drawn_now[slot];
+		banks_drawn_now[slot] = 0;
+	}
+}
+
+/* Whether a piece of 'object' with 'colour' (the K051960's: its bank the low bits) has its bank lent (it is counted as
+   drawn), and whether a piece at 'left', 'width' pixels wide, lies mostly on the board's 320: one with a bank lent is
+   drawn only there (the barrel's one piece of 32 showed 10 of its pixels on the board, 6 of them in the columns the
+   bezel hid, the rest in WIDE's left side) */
+static bool piece_bank_lent(uint32_t object, uint8_t colour)
+{
+	const unsigned slot = (unsigned)((object - OBJECT_ADDRESS(0)) / 0x50u);
+	const uint16_t bank = (uint16_t)(1u << (colour & BANK_BITS));
+
+	if (object < OBJECT_ADDRESS(0) || slot >= OBJECTS)
+		return false;
+	banks_drawn_now[slot] |= bank;
+	return (banks_lent[slot] & bank) != 0;
+}
+
+static bool mostly_on_board(uint16_t left, int16_t width)
+{
+	const int middle = (int16_t)left + width / 2;
+
+	return middle >= SCREEN_LEFT && middle < SCREEN_RIGHT;
+}
+
 void console_wide_frame(void)
 {
 	static const uint32_t records[2] = { LAYER_A, LAYER_B };
 	int left, right;
 
+	lent_banks_frame();
 	for (int layer = 0; layer < 2 && area_started; layer++)
 	{
 		const int x = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu);
@@ -517,7 +599,11 @@ void console_wide_frame(void)
 	console_wide_sides(&left, &right);
 	rebuild_layers(left, right);
 	tmnt_video_set_wide(left, right);
-	tmnt_video_set_fixed_band((right - left) / 2, BOXES_ROWS);    /* (the boxes in the picture's middle) */
+	/* the boxes in the picture's middle, and in a play the line under them; the continue's whole fixed layer, its
+	   CONTINUE and its count over the play too (an exit's picture: the boxes alone, its texts its own) */
+	tmnt_video_set_fixed_band((right - left) / 2, exit_picture() ? BOXES_ROWS
+		: console.page == PAGE_GAME && game_state == GAME_STATE_GAME && scene == SCENE_CONTINUE ? TMNT_VIDEO_HEIGHT
+		: BOXES_ROWS + MESSAGE_ROWS);
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const int width = LAYER(records[layer])->map_width * BLOCK_PIXELS;
@@ -647,9 +733,11 @@ uint32_t draw_sprites(uint32_t object)
 						if ((flips & 0x40u) != 0u)
 							bottom |= 0x200u;
 						colour = OBJECT(object)->colour;
-						write_sprite(&sprite_place, SPRITE(sprite)->size_code, SPRITE(sprite)->code,
-							(int8_t)colour < 0 || SPRITE(sprite)->colour == 0xFu ? SPRITE(sprite)->colour
-								: (uint8_t)(colour | (SPRITE(sprite)->colour & 0x90u)), x, bottom);
+						colour = (int8_t)colour < 0 || SPRITE(sprite)->colour == 0xFu ? SPRITE(sprite)->colour
+							: (uint8_t)(colour | (SPRITE(sprite)->colour & 0x90u));
+						if (!piece_bank_lent(object, colour) || mostly_on_board(left, SPRITE_SIZE(size)->width))
+							write_sprite(&sprite_place, SPRITE(sprite)->size_code, SPRITE(sprite)->code, colour, x,
+								bottom);
 					}
 				}
 				t3 = count - 1u;
@@ -1230,6 +1318,10 @@ void wide_power_on(void)
 {
 	layer_maps = 0;
 	looping_maps = 0;
+	memset(banks_drawn, 0, sizeof(banks_drawn));
+	memset(banks_drawn_now, 0, sizeof(banks_drawn_now));
+	memset(banks_lent, 0, sizeof(banks_lent));
+	palette_queue_seen = 0;
 	area_started = false;
 	wide_hidden = 0;
 	picture_place = PICTURE_MIDDLE;

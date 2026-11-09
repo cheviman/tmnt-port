@@ -4,7 +4,7 @@
  *                 functions the window port calls, by name only
  *    Version:     0.1.1
  *    Created:     06-11-2026
- *    Modified:    06-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -126,6 +126,11 @@ void SDL_GameControllerMappingForGUID(void)
 
 void SDL_GameControllerName(void);
 void SDL_GameControllerName(void)
+{
+}
+
+void SDL_GameControllerNumMappings(void);
+void SDL_GameControllerNumMappings(void)
 {
 }
 
@@ -516,6 +521,11 @@ void SDL_SetColorKey(void)
 
 void SDL_SetHint(void);
 void SDL_SetHint(void)
+{
+}
+
+void SDL_SetHintWithPriority(void);
+void SDL_SetHintWithPriority(void)
 {
 }
 

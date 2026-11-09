@@ -38,7 +38,9 @@ set(TMNT_ANBERNIC_OUT ${TMNT_BIN_DIR}/anbernic)    # (PORTS's files, beside TMNT
 function(tmnt_anbernic_game target name program)
 	add_executable(${target} ports/sdl2/main.c ${ARGN})
 	target_include_directories(${target} PRIVATE ${TMNT_SDL2_INCLUDE})
-	target_link_libraries(${target} PRIVATE ${program} SDL2_device m)
+	# (tmnt_extract: the assets out of the player's tmnt.zip in PORTS/tmnt/ at the first start, for the release's
+	# package, which carries no pack: main.c's device_assets)
+	target_link_libraries(${target} PRIVATE ${program} tmnt_extract SDL2_device m)
 	target_compile_definitions(${target} PRIVATE TMNT_HANDHELD TMNT_HANDHELD_KEYS)
 	set_target_properties(${target} PROPERTIES OUTPUT_NAME ${name} RUNTIME_OUTPUT_DIRECTORY ${TMNT_ANBERNIC_OUT}/tmnt
 		SKIP_BUILD_RPATH ON)    # (no path of this computer's in it: the handheld's loader finds its SDL2)

@@ -1,16 +1,19 @@
 # Name:        build.yml
 # Description: builds the game on clean machines with no ROM set (Windows with MSVC, Linux, macOS for Apple silicon
-#              and Intel), SDL2 and the C runtime inside the executables, and packs what a player runs: TMNT Arcade
-#              and TMNT, the console version, which take their assets out of the player's ROM set on their first
-#              run, with their README and the licenses (as outrunners-port's). On a tag v*, the release with the
-#              three packages and docs/releases/<tag>.md as its notes. The Switch's pieces (its job, devkitPro's
-#              image) go in every package beside TMNT NSP, which makes the player's .nsps of them; Android's base
-#              APKs (its job, the runner's SDK and NDK) beside TMNT APK, which makes the player's APKs; Anbernic's
-#              PORTS files without the assets (its job, Zig) beside TMNT Anbernic, which makes the player's PORTS
-#              (ports/PLAN.md). It runs on main, its pull requests and its tags, and by hand on any branch
-# Version:     0.3.0
+#              and Intel), SDL2 and the C runtime inside the executables, and packs what a player runs: the
+#              computers' packages, TMNT Arcade and TMNT (the console version) alone, which take their assets out of
+#              the player's ROM set on their first run, with their README and the licenses (on macOS TMNT Arcade in a
+#              package of its own); and a package for each device (as outrunners-port's: the job devices,
+#              ports/pack_devices.py), its games without assets beside the tool that makes the player's of them for
+#              Windows, macOS and Linux (TMNT NSP, TMNT APK, TMNT Anbernic, from the computers' kits): the Switch's
+#              .nsp pieces (its job, devkitPro's image) and its .nro, Android's base APKs (its job, the runner's SDK
+#              and NDK) and those signed with the project's key, Anbernic's PORTS (its job, Zig); TMNT's device games
+#              also take the assets out of the player's tmnt.zip on the device. On a tag v*, the release with the
+#              packages and docs/releases/<tag>.md as its notes. It runs on main, its pull requests and its tags, and
+#              by hand on any branch (ports/PLAN.md)
+# Version:     0.4.0
 # Created:     04-11-2026
-# Modified:    06-11-2026
+# Modified:    09-11-2026
 # Author:      Sebastian Toyos
 name: build
 
@@ -36,28 +39,11 @@ jobs:
             os: windows-2022
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    needs: [switch, android, anbernic]    # (their games go in the package, beside the tools that make the player's of them)
     steps:
       # (tools/core, the shared core, holds ymfm's license, which the package carries; lan/, arcade-lan, TMNT's LAN)
       - uses: actions/checkout@v7
         with:
           submodules: true
-
-      # the Switch's pieces in build/bin/switch before CMake looks for them (the Windows package takes them)
-      - uses: actions/download-artifact@v8
-        with:
-          name: tmnt-switch
-          path: build/bin/switch
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: tmnt-android
-          path: build/bin/android
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: tmnt-anbernic
-          path: build/bin/anbernic
 
       # SDL2 is built from its source (TMNT_STATIC_SDL2): on Linux it needs the headers of what it talks to (it
       # loads the libraries themselves when the game runs). The reference tools, built on MAME's code, are
@@ -89,13 +75,13 @@ jobs:
       - name: Build
         run: cmake --build build/cmake --config Release --parallel
 
-      # what a player runs (no headless runs, no build leftovers), as the build packs it locally on Windows
-      # (tmnt_package, CMakeLists.txt): the folder tmnt with TMNT Arcade and TMNT (the .apps on macOS, signed ad hoc:
-      # with no certificate macOS offers to open them anyway, where a bundle signed in part is "damaged"), their
-      # pictures beside them on Linux, the package's README.txt, the project's LICENSE.txt and licenses/ (MAME's and
-      # ymfm's: the board's video and sound follow their behavior and tables; arcade-lan's, TMNT's LAN; SDL2's, zlib; Kenney's, CC0: the first
-      # run's and the menus' letters, the controls' pictures). Linux's in a tar of our own: the artifacts' zip loses
-      # the executables' permissions
+      # what a player runs (no headless runs, no build leftovers, no devices' tools), as the build packs it locally
+      # on Windows (tmnt_package, CMakeLists.txt): the folder tmnt with TMNT Arcade and TMNT (the .apps on macOS,
+      # signed ad hoc: with no certificate macOS offers to open them anyway, where a bundle signed in part is
+      # "damaged"), their pictures beside them on Linux, the package's README.txt, the project's LICENSE.txt and
+      # licenses/ (MAME's and ymfm's: the board's video and sound follow their behavior and tables; arcade-lan's,
+      # TMNT's LAN; SDL2's and SDL_GameControllerDB's, zlib; Kenney's, CC0: the first run's and the menus' letters,
+      # the controls' pictures). Linux's in a tar of our own: the artifacts' zip loses the executables' permissions
       - name: Pack (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -111,6 +97,7 @@ jobs:
           for file in build/bin/*; do
             case "$(basename "$file")" in
               *headless*|*assets_check*|kref*|oracle*|*.a|assets|*.ini) ;;
+              "TMNT NSP"*|"TMNT APK"*|"TMNT Anbernic"*|switch|switch-nro|android|anbernic) ;;
               *) cp -R "$file" dist/tmnt/ ;;
             esac
           done
@@ -128,21 +115,57 @@ jobs:
               codesign --force --deep --sign - "$app"
               codesign --verify --deep --strict --verbose=2 "$app"
             done
+            # TMNT Arcade in a package of its own, with the README and the licenses: a launcher that installs a
+            # release's macOS package took its first .app, TMNT Arcade, and left TMNT out (issue 7)
+            mkdir -p dist/tmnt-arcade
+            mv "dist/tmnt/TMNT Arcade.app" dist/tmnt-arcade/
+            cp -R dist/tmnt/licenses dist/tmnt/LICENSE.txt dist/tmnt/README.txt dist/tmnt-arcade/
+            ls -la dist/tmnt-arcade
           fi
           ls -la dist/tmnt dist/tmnt/licenses
           cd dist
           case "$RUNNER_OS" in
             Linux) tar czf tmnt-${{ matrix.name }}.tar.gz tmnt ;;
-            macOS) ditto -c -k --keepParent tmnt tmnt-${{ matrix.name }}.zip ;;
+            macOS)
+              ditto -c -k --keepParent tmnt tmnt-${{ matrix.name }}.zip
+              ditto -c -k --keepParent tmnt-arcade tmnt-arcade-${{ matrix.name }}.zip
+              ;;
           esac
+
+      # this computer's kit for the devices' packages (the job devices): the devices' tools (TMNT NSP, TMNT APK,
+      # TMNT Anbernic: plain programs, the .exe on Windows), font.bmp (their letters: on macOS the build leaves it
+      # inside the .apps alone), the project's LICENSE.txt and the licenses (the games' own and the tools'), in a
+      # tar, which keeps the programs' permissions
+      - name: Kit
+        shell: bash
+        run: |
+          mkdir -p dist/kit/licenses
+          for tool in "TMNT NSP" "TMNT APK" "TMNT Anbernic"; do
+            if [ -f "build/bin/$tool.exe" ]; then cp "build/bin/$tool.exe" dist/kit/; else cp "build/bin/$tool" dist/kit/; fi
+          done
+          cp ports/sdl2/font/font.bmp dist/kit/
+          cp LICENSE dist/kit/LICENSE.txt
+          cp docs/package/licenses/MAME.txt dist/kit/licenses/MAME.txt
+          cp tools/core/konami/reference/ymfm/LICENSE dist/kit/licenses/ymfm.txt
+          cp lan/LICENSE dist/kit/licenses/arcade-lan.txt
+          cp build/cmake/_deps/sdl2-src/LICENSE.txt dist/kit/licenses/SDL2.txt
+          cp ports/sdl2/controllerdb/LICENSE dist/kit/licenses/SDL_GameControllerDB.txt
+          cp ports/sdl2/font/License.txt dist/kit/licenses/Kenney-Mini.txt
+          cp ports/sdl2/prompts/License.txt dist/kit/licenses/Kenney-Input-Prompts.txt
+          ls -la dist/kit dist/kit/licenses
+          cd dist && tar czf tmnt-${{ matrix.name }}-kit.tar.gz kit
 
       - uses: actions/upload-artifact@v7
         with:
           name: tmnt-${{ matrix.name }}
-          path: dist/tmnt-${{ matrix.name }}.*
+          path: |
+            dist/tmnt-${{ matrix.name }}.*
+            dist/tmnt-arcade-${{ matrix.name }}.*
+            dist/tmnt-${{ matrix.name }}-kit.tar.gz
 
   # The Nintendo Switch: TMNT's and TMNT Arcade's .nsp pieces (main, main.npdm, control.nacp, icon.jpg each), with
-  # devkitPro's toolchain in its own image (no .nro: that one carries a player's assets)
+  # devkitPro's toolchain in its own image, and their .nro without an assets pack (build/bin/switch-nro), which take
+  # the assets out of the player's tmnt.zip in sdmc:/switch/tmnt/ at their first start
   switch:
     name: switch
     runs-on: ubuntu-24.04
@@ -163,8 +186,16 @@ jobs:
           name: tmnt-switch
           path: build/bin/switch/
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-switch-nro
+          path: build/bin/switch-nro/*.nro
+
   # Android: TMNT's and TMNT Arcade's base APKs, without an assets pack or a signature (build/bin/android/*-base.apk),
-  # with the NDK and the SDK's tools of the runner's Android SDK and its Java 17 (ports/android/android.cmake)
+  # with the NDK and the SDK's tools of the runner's Android SDK and its Java 17 (ports/android/android.cmake); and
+  # the same signed with the project's key, the same at every release so that a new one installs over the last (the
+  # repository's secrets ANDROID_KEYSTORE, the keystore in base64, and ANDROID_KEYSTORE_PASSWORD; without them none),
+  # which take the assets out of the player's tmnt.zip in the app's folder at their first start
   android:
     name: android
     runs-on: ubuntu-24.04
@@ -196,8 +227,37 @@ jobs:
           name: tmnt-android
           path: build/bin/android/*-base.apk
 
+      - name: Sign
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "No ANDROID_KEYSTORE secret: no signed APKs (the Android package has the tool's way alone)"
+            exit 0
+          fi
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          apksigner="$ANDROID_HOME/build-tools/35.0.1/apksigner"
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          ready=build/bin/android-ready
+          mkdir -p $ready
+          "$apksigner" sign --ks "$RUNNER_TEMP/release.keystore" --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias tmnt --key-pass env:KEYSTORE_PASSWORD --out $ready/TMNT.apk build/bin/android/tmnt-base.apk
+          "$apksigner" sign --ks "$RUNNER_TEMP/release.keystore" --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias tmnt --key-pass env:KEYSTORE_PASSWORD --out "$ready/TMNT Arcade.apk" \
+            build/bin/android/tmnt-arcade-base.apk
+          rm -f "$RUNNER_TEMP/release.keystore" $ready/*.idsig
+          "$apksigner" verify --verbose $ready/TMNT.apk "$ready/TMNT Arcade.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-android-ready
+          path: build/bin/android-ready/*.apk
+          if-no-files-found: ignore
+
   # Anbernic's H700 handhelds: PORTS's files without the assets (build/bin/anbernic), built with Zig for the stock
-  # firmware's glibc and against its SDL2 (SDL's headers from its source; ports/anbernic/anbernic.cmake)
+  # firmware's glibc and against its SDL2 (SDL's headers from its source; ports/anbernic/anbernic.cmake); as they
+  # are, the card's Roms/PORTS, whose games take the assets out of the player's tmnt.zip in PORTS/tmnt/
   anbernic:
     name: anbernic
     runs-on: ubuntu-24.04
@@ -212,11 +272,14 @@ jobs:
           sudo apt-get install -y ninja-build
           mkdir -p build/downloads/zig build/downloads/sdl2-source
           curl -fsSL https://ziglang.org/download/0.17.0/zig-x86_64-linux-0.17.0.tar.xz | tar xJ -C build/downloads/zig
-          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz             | tar xz -C build/downloads/sdl2-source
+          curl -fsSL https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz \
+            | tar xz -C build/downloads/sdl2-source
 
       - name: Configure
         run: |
-          cmake -S . -B build/anbernic -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF             -DCMAKE_TOOLCHAIN_FILE=ports/anbernic/zig_aarch64.cmake -DTMNT_ANBERNIC=ON             -DTMNT_SDL2_INCLUDE="$PWD/build/downloads/sdl2-source/SDL2-2.32.10/include"
+          cmake -S . -B build/anbernic -G Ninja -DCMAKE_BUILD_TYPE=Release -DTMNT_REFERENCE_TOOLS=OFF \
+            -DCMAKE_TOOLCHAIN_FILE=ports/anbernic/zig_aarch64.cmake -DTMNT_ANBERNIC=ON \
+            -DTMNT_SDL2_INCLUDE="$PWD/build/downloads/sdl2-source/SDL2-2.32.10/include"
 
       - name: Build
         run: cmake --build build/anbernic --target tmnt_anbernic_games --parallel
@@ -226,10 +289,77 @@ jobs:
           name: tmnt-anbernic
           path: build/bin/anbernic/
 
-  # A tag v*: the release, the three packages and its notes (docs/releases/<tag>.md, written before the tag)
+  # The devices' packages (ports/pack_devices.py): tmnt-switch.zip, tmnt-android.zip and tmnt-anbernic.zip, each the
+  # device's games beside its tool for Windows, macOS and Linux (the computers' kits), font.bmp, the licenses and its
+  # README (docs/package/README-*.txt); and ready for the device: the Switch's .nro in sd/, Android's signed APKs in
+  # ready/ (when the repository has the key), Anbernic's folder as the card's PORTS
+  devices:
+    name: devices
+    runs-on: ubuntu-24.04
+    needs: [build, switch, android, anbernic]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-switch
+          path: devices/switch
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-switch-nro
+          path: devices/switch-nro
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-android
+          path: devices/android
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true    # (none without the project's key)
+        with:
+          name: tmnt-android-ready
+          path: devices/android-ready
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-anbernic
+          path: devices/anbernic
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-windows-x64
+          path: computers/windows-x64
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-macos-universal
+          path: computers/macos-universal
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tmnt-linux-x64
+          path: computers/linux-x64
+
+      - name: Pack
+        run: |
+          for computer in windows-x64 macos-universal linux-x64; do
+            mkdir -p "kits/$computer"
+            tar xzf "computers/$computer/tmnt-$computer-kit.tar.gz" -C "kits/$computer"
+          done
+          python3 ports/pack_devices.py --kits kits --switch devices/switch --switch-nro devices/switch-nro \
+            --android devices/android --android-ready devices/android-ready --anbernic devices/anbernic --out dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tmnt-devices
+          path: dist/tmnt-*.zip
+
+  # A tag v*: the release, the computers' four packages and the devices' three, and its notes
+  # (docs/releases/<tag>.md, written before the tag)
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build]
+    needs: [build, devices]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -249,4 +379,5 @@ jobs:
           ls -la dist
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "TMNT $GITHUB_REF_NAME" \
             --notes-file "docs/releases/$GITHUB_REF_NAME.md" \
-            dist/tmnt-windows-x64.zip dist/tmnt-linux-x64.tar.gz dist/tmnt-macos-universal.zip
+            dist/tmnt-windows-x64.zip dist/tmnt-linux-x64.tar.gz dist/tmnt-macos-universal.zip \
+            dist/tmnt-arcade-macos-universal.zip dist/tmnt-switch.zip dist/tmnt-android.zip dist/tmnt-anbernic.zip

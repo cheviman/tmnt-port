@@ -55,7 +55,9 @@ FetchContent_MakeAvailable(SDL2)
 # A game's libmain.so: 'target', the window port's main.c and the sources after 'program' besides, on 'program'
 function(tmnt_android_library target program)
 	add_library(${target} SHARED ports/sdl2/main.c ports/sdl2/letters.c ports/sdl2/touch.c ${ARGN})
-	target_link_libraries(${target} PRIVATE ${program} tmnt_controller_db SDL2::SDL2)
+	# (tmnt_extract: the assets out of the player's tmnt.zip in the app's folder, for a release's APK, which carries
+	# no pack: main.c's device_assets)
+	target_link_libraries(${target} PRIVATE ${program} tmnt_extract tmnt_controller_db SDL2::SDL2)
 	target_compile_definitions(${target} PRIVATE TMNT_HANDHELD TMNT_SYSTEM_EXIT TMNT_TOUCH)
 	target_include_directories(${target} PRIVATE ports/sdl2)
 	set_target_properties(${target} PROPERTIES OUTPUT_NAME main LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${target})

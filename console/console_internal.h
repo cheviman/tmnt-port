@@ -78,6 +78,7 @@ typedef struct
 	bool level_select;         /* the game being started or played is LEVEL SELECT's: */
 	int level_area;            /* its area (0-9, the game's), */
 	bool infinite_lives;       /* its lives kept up, */
+	bool infinite_health;      /* its turtles' health kept full (Sebas: "que no pueda tener dano ninguna tortuga"), */
 	bool original_turtles;     /* every turtle in a red bandana (guideline 18), */
 	bool same_turtle;          /* every player the turtle the first one picks (guideline 8), */
 	bool ronin;                /* Splinter Way's RONIN (guideline 7): one player, the enemies of four (modes.c) */

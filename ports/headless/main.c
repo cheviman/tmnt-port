@@ -56,7 +56,8 @@ __declspec(dllimport) void __stdcall Sleep(unsigned long milliseconds);
 
 #define USAGE "Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
 	" [--script FILE] [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]" \
-	" [--video-dump FRAME ... --video-dir DIR] (tmnt_console_headless: [--actions FILE] [--wide 1|2])\n"
+	" [--video-dump FRAME ... --video-dir DIR] (tmnt_console_headless: [--actions FILE] [--wide 1|2]" \
+	" [--press-start blink|on|off])\n"
 #define MAX_VIDEO_DUMPS 64
 
 static uint64_t frames_wanted = 600;
@@ -473,6 +474,14 @@ int main(int argc, char **argv)
 			console_settings.wide = atoi(argv[++index]);    /* (OPTIONS > VIDEO > WIDE: 1 16:9, 2 20:9, 3 16:10) */
 			if (console_settings.wide < 0 || console_settings.wide >= WIDE_KINDS)
 				console_settings.wide = 0;
+		}
+		else if (strcmp(argv[index], "--press-start") == 0 && index + 1 < argc)
+		{
+			const char *kind = argv[++index];    /* (OPTIONS > VIDEO > PRESS START: blink, on, off) */
+
+			for (int named = 0; named < PRESS_START_KINDS; named++)
+				if (strcmp(kind, console_press_start_names[named]) == 0)
+					console_settings.press_start = named;
 		}
 		else if (strcmp(argv[index], "--actions") == 0 && index + 1 < argc)
 		{

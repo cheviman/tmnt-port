@@ -4,7 +4,7 @@
  *                 wider screen's sides added to their limits
  *    Version:     0.1.0
  *    Created:     05-11-2026
- *    Modified:    05-11-2026
+ *    Modified:    09-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -17,8 +17,10 @@
  *    those limits moved by the sides' columns, as far as the scroll's segment goes (console_wide_turtle_room: in a
  *    room the scroll holds, Krang's, the arcade's limits): at the left the floor map's ring keeps the columns the scroll has
  *    passed, and at the right the console writes the floor of the columns it draws past the game's (wide.c), so a
- *    turtle there reads its walls and holes as on the board. Without WIDE (or out of a game's play) the game's own run; but
- *    turtle_run_all, whose Raphael's states are the turtle's (TURTLE_KIND: everyone the same turtle, same_turtle.c).
+ *    turtle there reads its walls and holes as on the board; at the left no nearer the screen's x 0 than 0x30, where a
+ *    turtle's x, the game's unsigned, would go under 0 (TURTLE_LEFT_MOST). Without WIDE (or out of a game's play) the
+ *    game's own run; but turtle_run_all, whose Raphael's states are the turtle's (TURTLE_KIND: everyone the same turtle,
+ *    same_turtle.c).
  */
 #include "console_internal.h"
 
@@ -27,6 +29,15 @@
 /* WIDE's room for the turtles now, in their x's units (a pixel 0x100): false when there is none */
 static uint32_t turtle_left, turtle_right;
 
+/* At the left a turtle stops 48 pixels from the picture's edge (0x90 on the board's), and no nearer the screen's x 0
+   than that: 0x30, 16:9's limit with all its 96 columns at the left (TURTLE_LEFT_MOST columns of room). A turtle's x
+   is the game's, unsigned: 20:9's picture all at the left (its 176 columns there, a boss's room at the scroll's end)
+   put the limit at 0x90 - 0xB0, under 0: x 0xFFFFE000, past every limit at the right (turtle_run_all set it there and
+   back at the right edge every other frame), and turtle_exit_sewer_walk, walking left to 0x90, walked for ever: area
+   3's exit never ended (issue #3). There the picture's first 80 columns are not walked; from 0x30 a knock's push (16
+   pixels, before the limit takes it back) and the scroll's leave x over 0 */
+#define TURTLE_LEFT_MOST    0x60
+
 static bool turtle_limits(void)
 {
 	int left, right;
@@ -34,6 +45,8 @@ static bool turtle_limits(void)
 	console_wide_turtle_room(&left, &right);
 	if (console.page != PAGE_GAME)
 		left = right = 0;
+	if (left > TURTLE_LEFT_MOST)
+		left = TURTLE_LEFT_MOST;
 	turtle_left = (uint32_t)left << 8;
 	turtle_right = (uint32_t)right << 8;
 	return turtle_left || turtle_right;

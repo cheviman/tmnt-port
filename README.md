@@ -24,20 +24,23 @@ takes its assets out of it.
 ## Playing it
 
 Download the package for Windows, Linux or macOS from the
-[releases](https://github.com/cheviman/tmnt-port/releases). Keep `tmnt.zip` beside the game, or drop it on its
-window when it asks: the first time, it takes the assets out of it.
+[releases](https://github.com/cheviman/tmnt-port/releases) (on macOS TMNT Arcade comes in a package of its own,
+`tmnt-arcade-macos-universal.zip`). Keep `tmnt.zip` beside the game, or drop it on its window when it asks: the
+first time, it takes the assets out of it.
 
-The package also has the tools that make the game for your devices, with your ROM set:
+Each device has a package of its own, its games without assets, ready to take them out of your `tmnt.zip` on the
+device, beside the tool that makes your own of them on a computer (for Windows, macOS and Linux):
 
-- **Nintendo Switch**: TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp`, for a console with Atmosphere.
-- **Android**: TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk`, signed with a key of yours
-  ([ports/android/apk](ports/android/apk/README.md)): phones, tablets, and TVs with Android TV or Google TV (the
-  Chromecast with Google TV too: its Android is 32-bit, and the APKs have both kinds), in the TV's apps with a
-  banner.
-- **Anbernic's H700 handhelds** (RG40XX H...): TMNT Anbernic makes the folder for PORTS.
+- **Nintendo Switch** (`tmnt-switch.zip`): `TMNT.nro` and `TMNT Arcade.nro` for the Homebrew Menu, with `tmnt.zip`
+  in `/switch/tmnt/` on the SD card; or TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp` for the HOME menu.
+- **Android** (`tmnt-android.zip`): `TMNT.apk` and `TMNT Arcade.apk`, with `tmnt.zip` in the app's folder; or TMNT
+  APK makes them with the assets inside, signed with a key of yours ([ports/android/apk](ports/android/apk/README.md)).
+  Phones, tablets, and TVs with Android TV or Google TV (the Chromecast with Google TV too: its Android is 32-bit, and
+  the APKs have both kinds), in the TV's apps with a banner.
+- **Anbernic's H700 handhelds** (`tmnt-anbernic.zip`, RG40XX H...): the folder for PORTS, with `tmnt.zip` in
+  `PORTS/tmnt/`; or TMNT Anbernic makes it with the assets inside.
 
-What a tool makes has the game's data in it: it is yours alone, never share it. The package's `README.txt` has
-what each tool needs.
+What a tool makes has the game's data in it: it is yours alone, never share it. Each package's `README.txt` says how.
 
 ## The console version
 
@@ -47,7 +50,8 @@ what each tool needs.
   against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).
 - **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
-  (window, full screen, sharp, smooth, bilinear or CRT pixels, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS), volume, sound test.
+  (window, full screen, sharp, smooth, bilinear or CRT pixels, integer scale, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS,
+  PRESS START blinking, still or off), volume, sound test.
 - **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
 - And the Konami code on the menu.
 
@@ -57,7 +61,11 @@ what each tool needs.
   goes back in the menus). F11 or Alt+Enter is the full screen, F3 the next kind of pixels. OPTIONS > CONTROLS
   changes each player's keys and buttons.
 - **Game controller**: the pad or the left stick moves, A attacks, B jumps, Start is START; Back or Start pauses.
-  Each controller is a player, in the order they are plugged in (a TV's remote after them).
+  Each controller is a player, in the order they are plugged in (a TV's remote after them). One the game does not
+  know, or knows wrong, takes its line of [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)'s
+  format in `gamecontrollerdb.txt`, beside the game on Windows (in `~/.local/share/TMNT` on Linux,
+  `~/Library/Application Support/TMNT` on macOS): the game reads it when it starts, and its line goes over the
+  game's own.
 - **TMNT Arcade**: 5 to 8 put a coin in each slot (a controller's Back, its player's), 9 is the service switch,
   and a coin and the attack bring a turtle in.
 - **Android**: a stick where your left thumb lands, ATTACK and JUMP at the right, START (COIN in TMNT Arcade);

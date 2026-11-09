@@ -52,6 +52,7 @@ console_settings_t console_settings = { .window_scale = 3, .pixels = PIXELS_SHAR
 
 const char *const console_pixel_names[PIXELS_KINDS] = { "sharp", "smooth", "bilinear", "crt" };
 const char *const console_wide_names[WIDE_KINDS] = { "off", "16:9", "20:9", "16:10" };
+const char *const console_press_start_names[PRESS_START_KINDS] = { "blink", "on", "off" };
 
 /* Each slot's join: its frames since START (-1: none), and whether a coin goes in first */
 static struct
@@ -459,6 +460,8 @@ static void red_bandanas(bool choice)
 
 #define SCENE_CHOOSE_TURTLES    1u
 #define SCENE_AREA_SETUP        2u
+#define FULL_HEALTH_BARS        0x0Au    /* a turtle's health, full (turtle_refill_health, turtle_join) */
+#define FULL_HEALTH             3u
 
 static void level_select_frame(void)
 {
@@ -478,6 +481,20 @@ static void level_select_frame(void)
 			PLAYER(PLAYER_ADDRESS(slot))->lives = SPLINTER_WAY_LIVES;
 			players_credited |= (uint8_t)(1u << slot);
 		}
+	/* HEALTH INFINITE: each turtle in play with its health full before every frame, as turtle_refill_health leaves it.
+	   A hit takes a bar at most, and a knock-out waits for its reaction's end with no bars (turtle_hit's last steps):
+	   by then they are full again, Shredder's ray's too (it leaves none). The hits' reactions are the game's */
+	for (int slot = 0; slot < CONSOLE_PLAYERS && console.infinite_health && console.level_select; slot++)
+	{
+		const uint32_t turtle = OBJECT_ADDRESS(slot);
+
+		if ((players_in_play & (1u << slot)) != 0u && OBJECT(turtle)->flags != 0u
+			&& (OBJECT(turtle)->health_bars != FULL_HEALTH_BARS || OBJECT(turtle)->health != FULL_HEALTH))
+		{
+			OBJECT(turtle)->health_bars = FULL_HEALTH_BARS;
+			OBJECT(turtle)->health = FULL_HEALTH;
+		}
+	}
 }
 
 /* ---- the game's functions in the console's versions ---- */
@@ -593,15 +610,42 @@ void draw_best_players(void)
 		original_draw_best_players();
 }
 
+#define PRESS_START_TEXT    2u     /* positioned_texts' PRESS START under a box (message_press_start: 3 its blink's
+                                      other half, the line clear and the box's head kept; 8 with hide_press_start) */
+#define PRESS_START_HIDDEN  8u
+
+/* PRESS START still (OPTIONS > VIDEO > PRESS START ON), or never ('shown' false: OFF): message_press_start's, but
+   one half of its blink */
+static void press_start_still(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number,
+	bool shown)
+{
+	const uint16_t text = (uint16_t)((hide_press_start != 0u ? PRESS_START_HIDDEN : PRESS_START_TEXT) + (shown ? 0u : 1u));
+	uint32_t colour = *p_colour;
+
+	if ((PLAYER(player)->message & 2u) == 0u || (frame_count & 0xFu) == 0u)
+	{
+		PLAYER(player)->message = 2u;
+		colour = print_text_at(colour, text, player_message);
+	}
+	*p_colour = (*p_colour & 0xFFFF0000u) | (colour & 0xFFFFu);
+	*p_text_number = text;
+}
+
 /* The line under a box with no lives: the game's PRESS START (message_press_start, blinking) where the
-   cabinet's says INSERT COIN(S); cleared when no START brings the turtle in (Splinter Way's continues used) */
+   cabinet's says INSERT COIN(S); cleared when no START brings the turtle in (Splinter Way's continues used). In a
+   game's play as OPTIONS > VIDEO > PRESS START says (a LAN game's, the game's own: the devices' boards the same) */
 void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_colour, uint32_t *p_text_number)
 {
 	const int slot = (int)((player - PLAYER_ADDRESS(0)) / 8u) & 3;
+	const int kind = console.page != PAGE_GAME || scene == SCENE_CONTINUE || console_lan_playing()
+		? PRESS_START_BLINK : console_settings.press_start;
 
 	if (console.page != PAGE_GAME || start_open(slot))
 	{
-		message_press_start(player_message, player, p_colour, p_text_number);
+		if (kind == PRESS_START_BLINK)
+			message_press_start(player_message, player, p_colour, p_text_number);
+		else
+			press_start_still(player_message, player, p_colour, p_text_number, kind == PRESS_START_ON);
 		return;
 	}
 	*p_text_number = BLANK_LINE;
@@ -724,11 +768,12 @@ void console_describe(char *text, size_t size)
 	static const char *const pages[] = { "presentation", "menu", "splinter way", "level select", "options", "video",
 		"sound test", "controls", "lan", "lan name", "lan rooms", "lan room", "choice", "starting", "game" };
 
-	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u, difficulty %u%s%s%s%s",
+	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u, difficulty %u%s%s%s%s%s",
 		pages[console.page],
 		console.mode == MODE_SPLINTER_WAY ? "splinter way" : "arcade", console.turtle, console_slot_of[0],
 		console_slot_of[1], console_slot_of[2], console_slot_of[3], console_coins_put[0], console_coins_put[1],
 		console_coins_put[2], console_coins_put[3], (unsigned)lives_per_credit, (unsigned)area, (unsigned)difficulty,
 		console.level_select ? (console.infinite_lives ? ", level select, infinite lives" : ", level select") : "",
+		console.level_select && console.infinite_health ? ", infinite health" : "",
 		console.level_select && console.original_turtles ? ", original turtles" : "", console_same_turtle >= 0 ? ", same turtle" : "", console.ronin ? ", ronin" : console.boss_rush ? (console.rush_crossing ? ", boss rush, crossing" : ", boss rush") : "");
 }

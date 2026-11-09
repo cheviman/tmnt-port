@@ -4,7 +4,7 @@
  *                 the same game and board the headless runs check
  *    Version:     0.1.3
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    07-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -69,6 +69,11 @@
 #endif
 
 #include <SDL.h>
+#if defined(__APPLE__) && defined(TMNT_CONSOLE)
+#include <SDL_syswm.h>
+#include <objc/message.h>  /* (mac_full_screen: the window's NSWindow) */
+#include <objc/runtime.h>
+#endif
 
 #ifdef __SWITCH__
 #include <switch.h>        /* romfsInit: the game's own files, its .nsp's or .nro's */
@@ -90,6 +95,7 @@
 #ifdef __SWITCH__
 #define SWITCH_FOLDER       "sdmc:/switch/" FILE_NAME    /* the game's folder on the SD card: its settings, its log */
 #endif
+#define MAPPINGS_FILE       "gamecontrollerdb.txt"    /* more game controllers for SDL (SDL_GameControllerDB's) */
 #ifdef TMNT_CONSOLE
 #define TITLE               "TMNT"
 #define SETTINGS_FILE       "tmnt.ini"
@@ -479,6 +485,10 @@ static void present(void)
 	follow_screen(out_width, out_height);    /* (a Fold opened or closed: its WIDE, from the next frame) */
 #endif
 	scale = SDL_min((double)out_width / view, (double)out_height / TMNT_VIDEO_HEIGHT);
+#ifdef TMNT_CONSOLE
+	if (console_settings.integer_scale && scale >= 1.0)
+		scale = floor(scale);    /* (OPTIONS > VIDEO > INTEGER SCALE: every pixel of the game's the same size) */
+#endif
 	frame.w = (int)(view * scale);
 	frame.h = (int)(TMNT_VIDEO_HEIGHT * scale);
 	frame.x = (out_width - frame.w) / 2;
@@ -605,10 +615,43 @@ static void show_frame(void)
 	present();
 }
 
+#if defined(__APPLE__) && defined(TMNT_CONSOLE)
+/* macOS's own full screen (the window's green button, Control+Command+F, View > Enter Full Screen): a Space of the
+   window's own, which SDL 2 does not count as full screen (SDL_GetWindowFlags says a window). The NSWindow's
+   styleMask has NSWindowStyleMaskFullScreen there */
+#define MAC_STYLE_FULL_SCREEN (1ul << 14)
+
+static bool mac_full_screen(void)
+{
+	SDL_SysWMinfo info;
+	unsigned long style;
+
+	SDL_VERSION(&info.version);
+	if (!window || !SDL_GetWindowWMInfo(window, &info) || info.subsystem != SDL_SYSWM_COCOA || !info.info.cocoa.window)
+		return false;
+	style = ((unsigned long (*)(id, SEL))objc_msgSend)((id)info.info.cocoa.window, sel_registerName("styleMask"));
+	return (style & MAC_STYLE_FULL_SCREEN) != 0;
+}
+
+/* macOS's own full screen taken as SDL's (SDL_SetWindowFullscreen finds the window already in its Space: no change
+   seen), so that SDL can take it out of it */
+static void adopt_mac_full_screen(void)
+{
+	if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != SDL_WINDOW_FULLSCREEN_DESKTOP
+		&& mac_full_screen())
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+}
+#else
+#define mac_full_screen() false
+#define adopt_mac_full_screen()
+#endif
+
 static void toggle_full_screen(void)
 {
-	const bool full = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0;
+	bool full;
 
+	adopt_mac_full_screen();    /* (F11 in macOS's own full screen: out of it) */
+	full = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != SDL_WINDOW_FULLSCREEN_DESKTOP;
 	SDL_SetWindowFullscreen(window, full ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #ifdef TMNT_CONSOLE
 	console_settings.full_screen = full;
@@ -730,19 +773,6 @@ static const char *const device_mappings[] = {
 	"leftx:a0,lefty:a1,rightx:a2,righty:a3,leftstick:b9,rightstick:b12,platform:Linux,",
 };
 
-/* The mappings as a hint before SDL starts: the game controllers it finds then are opened as such */
-static void add_device_mappings(void)
-{
-	static char mappings[2048];
-
-	mappings[0] = '\0';
-	for (size_t mapping = 0; mapping < SDL_arraysize(device_mappings); mapping++)
-	{
-		SDL_strlcat(mappings, device_mappings[mapping], sizeof(mappings));
-		SDL_strlcat(mappings, "\n", sizeof(mappings));
-	}
-	SDL_SetHint(SDL_HINT_GAMECONTROLLERCONFIG, mappings);
-}
 #endif
 
 #ifdef TMNT_CONTROLLER_DB
@@ -750,6 +780,104 @@ static void add_device_mappings(void)
 extern const unsigned char tmnt_controller_db[];
 extern const size_t tmnt_controller_db_size;
 #endif
+
+/* Text added at the end of a growing one (malloc's: the Anbernic's SDL 2.0.12 is linked by name only) */
+static void add_text(char **text, size_t *length, const char *more, size_t count)
+{
+	char *grown = (char *)realloc(*text, *length + count + 1);
+
+	if (!grown)
+		return;
+	memcpy(grown + *length, more, count);
+	*length += count;
+	grown[*length] = '\0';
+	*text = grown;
+}
+
+#ifndef TMNT_HANDHELD
+static char *saves_folder(void);
+
+/* gamecontrollerdb.txt, in the folder of what the game keeps or else beside the executable: the mappings of the
+   game controllers SDL does not know (or knows wrong), a line each as SDL_GameControllerDB has them; its lines for
+   this platform (or for none) at the end of 'text', without carriage returns */
+static void add_mappings_file(char **text, size_t *length)
+{
+	char path[1024];
+	char *folders[2];
+	const char *platform = SDL_GetPlatform();
+
+	folders[0] = saves_folder();
+	folders[1] = SDL_GetBasePath();
+	for (int folder = 0; folder < 2; folder++)
+	{
+		FILE *file;
+		char line[2048];
+		int lines = 0;
+
+		if (!folders[folder])
+			continue;
+		snprintf(path, sizeof(path), "%s" MAPPINGS_FILE, folders[folder]);
+		if ((file = fopen(path, "r")) == NULL)
+			continue;
+		while (fgets(line, sizeof(line), file))
+		{
+			char *end = line + strlen(line), *field = strstr(line, "platform:");
+
+			while (end > line && (end[-1] == '\n' || end[-1] == '\r'))
+				*--end = '\0';
+			if (line[0] == '\0' || line[0] == '#'
+				|| (field && (strncmp(field + 9, platform, strlen(platform)) != 0 || field[9 + strlen(platform)] != ',')))
+				continue;
+			add_text(text, length, line, strlen(line));
+			add_text(text, length, "\n", 1);
+			lines++;
+		}
+		fclose(file);
+		fprintf(stderr, "Game controllers: %s, %d mappings for %s\n", path, lines, platform);
+		break;
+	}
+	SDL_free(folders[0]);
+	SDL_free(folders[1]);
+}
+#endif
+
+/* The game controllers' mappings, a hint before SDL starts (SDL_HINT_GAMECONTROLLERCONFIG, which SDL reads before
+   it looks for joysticks: a mapping added after SDL_Init leaves a joystick already plugged in a joystick, which the
+   game does not take, as SDL 2.32's SDL_PrivateAddMappingForGUID does). SDL_GameControllerDB's for this platform
+   built in (a player's report: an Nvidia Shield's PS4 and Xbox controllers, plugged in before the game started), the
+   Anbernic's own buttons, the environment's SDL_GAMECONTROLLERCONFIG (Steam's, in the games it starts), and last the
+   player's gamecontrollerdb.txt, so that its lines go over the others for the same controller. The hint overrides
+   the environment's, which SDL_GetHint takes over a hint of normal priority: the built-in lines and the file left
+   out */
+static void add_mappings(void)
+{
+	char *text = NULL;
+	size_t length = 0;
+	const char *environment = getenv(SDL_HINT_GAMECONTROLLERCONFIG);    /* (C's: the Anbernic's SDL by name only) */
+
+#ifdef TMNT_CONTROLLER_DB
+	add_text(&text, &length, (const char *)tmnt_controller_db, tmnt_controller_db_size);
+#endif
+#ifdef TMNT_HANDHELD_KEYS
+	for (size_t mapping = 0; mapping < SDL_arraysize(device_mappings); mapping++)
+	{
+		add_text(&text, &length, device_mappings[mapping], strlen(device_mappings[mapping]));
+		add_text(&text, &length, "\n", 1);
+	}
+#endif
+	if (environment && environment[0])
+	{
+		add_text(&text, &length, environment, strlen(environment));
+		add_text(&text, &length, "\n", 1);
+		fprintf(stderr, "Game controllers: the environment's " SDL_HINT_GAMECONTROLLERCONFIG " too\n");
+	}
+#ifndef TMNT_HANDHELD
+	add_mappings_file(&text, &length);
+#endif
+	if (text)
+		SDL_SetHintWithPriority(SDL_HINT_GAMECONTROLLERCONFIG, text, SDL_HINT_OVERRIDE);
+	free(text);
+}
 
 /* What SDL finds of each joystick, in the log (a player's report: on an Nvidia Shield the controllers' buttons did
    what they should not): its name, its GUID, whether it is a game controller and its mapping; and the first presses
@@ -1046,9 +1174,9 @@ static void lan_controls(void)
 
 /* ---- the pause ---- */
 
-/* The pause's actions from the events since the last look: the arrows, Enter, Escape or Backspace (Android's back), a
-   game controller's pad, A, B, Start and Back; WINDOW_CLOSED when the window was closed. The touch screen's fingers
-   go to its controls (touch_pressed) */
+/* The pause's actions from the events since the last look: the arrows, Enter, Escape or Backspace (Android's back) and
+   a game controller's Back; WINDOW_CLOSED when the window was closed. The players' own controls are players_pressed's;
+   the touch screen's fingers go to its controls */
 #define PAUSE_BACK  ACTION_BIT(ACTION_BACK)
 #define WINDOW_CLOSED (1u << 31)
 
@@ -1086,16 +1214,8 @@ static uint32_t pause_events(void)
 				}
 				break;
 			case SDL_CONTROLLERBUTTONDOWN:
-				switch (event.cbutton.button)
-				{
-					case SDL_CONTROLLER_BUTTON_DPAD_UP: pressed |= ACTION_BIT(ACTION_UP); break;
-					case SDL_CONTROLLER_BUTTON_DPAD_DOWN: pressed |= ACTION_BIT(ACTION_DOWN); break;
-					case SDL_CONTROLLER_BUTTON_A: pressed |= ACTION_BIT(ACTION_ACCEPT); break;
-					case SDL_CONTROLLER_BUTTON_B: case SDL_CONTROLLER_BUTTON_START: case SDL_CONTROLLER_BUTTON_BACK:
-						pressed |= PAUSE_BACK;
-						break;
-					default: break;
-				}
+				if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK)
+					pressed |= PAUSE_BACK;    /* (the button that pauses, as Escape) */
 				break;
 			default:
 				break;
@@ -1104,44 +1224,47 @@ static uint32_t pause_events(void)
 	return pressed;
 }
 
-#ifdef TMNT_TOUCH
-/* The pause's actions from the touch screen's controls newly held: the stick's up and down, ATTACK the line chosen,
-   JUMP and START go on ('held' and 'start_held': what they held at the last look) */
-static uint32_t touch_pressed(uint8_t *held, bool *start_held)
+/* The pause's actions from every player's controls newly pressed, as the menus take them (console_controls): up and
+   down, ATTACK the line chosen, JUMP or START go on. Their keys and buttons as CONTROLS binds them, the left stick, the
+   touch screen's (a player's report: with ATTACK on a controller's X, the menus took X and the pause A). 'held': what
+   each player held at the last look */
+static uint32_t players_pressed(uint8_t held[PLAYERS])
 {
-	const uint8_t now = touch_controls(), fresh = (uint8_t)(now & ~*held);
-	const bool start = touch_start();
+	uint8_t players[PLAYERS], starts;
 	uint32_t pressed = 0;
 
-	pressed |= (fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u;
-	pressed |= (fresh & TMNT_DOWN) ? ACTION_BIT(ACTION_DOWN) : 0u;
-	pressed |= (fresh & TMNT_ATTACK) ? ACTION_BIT(ACTION_ACCEPT) : 0u;
-	pressed |= ((fresh & TMNT_JUMP) || (start && !*start_held)) ? PAUSE_BACK : 0u;
-	*held = now;
-	*start_held = start;
-	return pressed;
-}
-#endif
+	read_players(players, &starts);
+	for (int player = 0; player < PLAYERS; player++)
+	{
+		const uint8_t fresh = (uint8_t)(players[player] & ~held[player]);
 
-/* The game stopped, its sound too, the picture in grey under PAUSE (as outrunners-port's): Escape, Backspace or a
-   game controller's B, Start or Back goes on, as CONTINUE does (the touch screen's JUMP or START, Android's back);
-   RESTART starts the same game again (console_restart_game), QUIT GAME ends it, back to the menu
-   (console_quit_game). What was held over it is no new press after it */
+		pressed |= (fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u;
+		pressed |= (fresh & TMNT_DOWN) ? ACTION_BIT(ACTION_DOWN) : 0u;
+		pressed |= (fresh & TMNT_ATTACK) ? ACTION_BIT(ACTION_ACCEPT) : 0u;
+		pressed |= (fresh & TMNT_JUMP) ? PAUSE_BACK : 0u;
+		held[player] = players[player];
+	}
+	return pressed | (starts ? PAUSE_BACK : 0u);
+}
+
+/* The game stopped, its sound too, the picture in grey under PAUSE (as outrunners-port's): Escape, Backspace, a game
+   controller's Back or a player's JUMP or START goes on, as CONTINUE does (Android's back too); RESTART starts the
+   same game again (console_restart_game), QUIT GAME ends it, back to the menu (console_quit_game). It keeps the
+   frames' pace (wait_for_frame): with VSYNC a picture a frame behind it is not shown (frame_behind), and a pause
+   that slept on its own showed its first picture only (players' reports: the line chosen never moved). What was held
+   over it is no new press after it */
 static void run_pause(void)
 {
 	static uint32_t frozen_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
 	static uint32_t shown_pixels[TMNT_VIDEO_MAX_WIDTH * TMNT_VIDEO_HEIGHT];
 	console_picture shown = { shown_pixels, TMNT_VIDEO_MAX_WIDTH, 0, 0 };
 	int choice = CONSOLE_PAUSE_CONTINUE;
-	uint8_t players[PLAYERS], starts;
-#ifdef TMNT_TOUCH
-	uint8_t touch_held = touch_controls();    /* (what the fingers held as the pause came: no new press) */
-	bool touch_start_held = touch_start();
-#endif
+	uint8_t players[PLAYERS], starts, held[PLAYERS];
 
 	pause_requested = false;
 	if (audio)
 		SDL_PauseAudioDevice(audio, 1);
+	read_players(held, &starts);    /* (what was held as the pause came, the START that paused too: no new press) */
 	memcpy(frozen_pixels, picture.pixels, sizeof(frozen_pixels));    /* (WIDE's whole frame: Sebas) */
 	shown.left = picture.left;
 	shown.right = picture.right;
@@ -1149,9 +1272,7 @@ static void run_pause(void)
 	{
 		uint32_t pressed = pause_events();
 
-#ifdef TMNT_TOUCH
-		pressed |= touch_pressed(&touch_held, &touch_start_held);
-#endif
+		pressed |= players_pressed(held);
 		if (pressed & WINDOW_CLOSED)
 			return;
 		if (pressed & ACTION_BIT(ACTION_UP))
@@ -1172,7 +1293,7 @@ static void run_pause(void)
 		console_pause_overlay(&shown, choice);
 		upload_picture(&shown);
 		present();    /* (the line chosen, a window resized or put full screen meanwhile) */
-		SDL_Delay(16);
+		wait_for_frame();
 	}
 	read_players(players, &starts);
 	console_controls_held(players);
@@ -1251,10 +1372,12 @@ static void save_settings(void)
 
 	if (script || !settings_path[0] || console_lan_playing() || (output = fopen(settings_path, "w")) == NULL)
 		return;    /* (a LAN game's: the host's settings, not this device's) */
-	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\nwide=%s\nvsync=%d\nvolume=%d\nfps=%d\nregion=%d\n"
-		"dsw1=%02X\ndsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale, settings->full_screen,
-		console_pixel_names[settings->pixels], console_wide_names[settings->wide], settings->vsync, settings->volume,
-		settings->fps, settings->region, settings->dsw[0], settings->dsw[1], settings->dsw[2], settings->name);
+	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\ninteger_scale=%d\nwide=%s\nvsync=%d\nvolume=%d\n"
+		"fps=%d\npress_start=%s\nregion=%d\ndsw1=%02X\ndsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale,
+		settings->full_screen, console_pixel_names[settings->pixels], settings->integer_scale,
+		console_wide_names[settings->wide], settings->vsync, settings->volume, settings->fps,
+		console_press_start_names[settings->press_start], settings->region, settings->dsw[0], settings->dsw[1],
+		settings->dsw[2], settings->name);
 	fclose(output);
 }
 
@@ -1284,6 +1407,14 @@ static void load_settings(void)
 			settings->fps = number != 0;
 		else if (sscanf(line, "vsync=%d", &number) == 1)
 			settings->vsync = number != 0;
+		else if (sscanf(line, "integer_scale=%d", &number) == 1)
+			settings->integer_scale = number != 0;
+		else if (sscanf(line, "press_start=%31s", text) == 1)
+		{
+			for (int kind = 0; kind < PRESS_START_KINDS; kind++)
+				if (strcmp(text, console_press_start_names[kind]) == 0)
+					settings->press_start = kind;
+		}
 		else if (strncmp(line, "name=", 5) == 0)
 		{
 			/* (LAN > NAME's letters only, as many as it holds) */
@@ -1327,23 +1458,28 @@ static void apply_vsync(void)
 }
 
 /* The window as the settings say: full screen or not, and out of it the picture times window_scale; done again
-   only when they change (OPTIONS > VIDEO, F11), so a window sized by hand keeps its size otherwise */
+   only when they change (OPTIONS > VIDEO, F11), so a window sized by hand keeps its size otherwise. In macOS's own
+   full screen, which the settings do not know, a size or WIDE changed leaves it full screen: the window made that
+   size there was the picture at the screen's top left (a player's report on a Mac) */
 static void apply_settings(void)
 {
 	static int applied_scale = -1, applied_full = -1, applied_wide = -1;
+	const bool full_changed = applied_full != (int)console_settings.full_screen;
 
 	apply_vsync();
 
-	if (applied_scale == console_settings.window_scale && applied_full == (int)console_settings.full_screen
-		&& applied_wide == console_settings.wide)
+	if (applied_scale == console_settings.window_scale && !full_changed && applied_wide == console_settings.wide)
 		return;
+	applied_scale = console_settings.window_scale;
+	applied_full = (int)console_settings.full_screen;
+	applied_wide = console_settings.wide;
+	if (mac_full_screen() && !full_changed)
+		return;    /* (the picture fills the screen at any size) */
+	adopt_mac_full_screen();    /* (FULL SCREEN changed there: SDL's own from here, OFF out of it) */
 	SDL_SetWindowFullscreen(window, console_settings.full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 	if (!console_settings.full_screen)
 		SDL_SetWindowSize(window, view_width() * console_settings.window_scale,
 			TMNT_VIDEO_HEIGHT * console_settings.window_scale);
-	applied_scale = console_settings.window_scale;
-	applied_full = (int)console_settings.full_screen;
-	applied_wide = console_settings.wide;
 }
 #endif
 
@@ -1495,8 +1631,10 @@ static bool assets_of_another_version(const char *folder)
 static void fail(const char *message);
 
 #ifdef __ANDROID__
-/* Android's pack, in the APK's assets (stored there, android.cmake): no file, so read whole through SDL's files and
-   loaded from its bytes. NULL, or what is wrong */
+static const char no_pack_in_apk[] = "";    /* (load_android_pack: the APK carries no pack, a release's) */
+
+/* Android's pack, in the APK's assets (stored there, android.cmake: TMNT APK's): no file, so read whole through SDL's
+   files and loaded from its bytes. NULL, no_pack_in_apk, or what is wrong */
 static const char *load_android_pack(void)
 {
 	SDL_RWops *packed = SDL_RWFromFile(GAME_PACK_FILE, "rb");
@@ -1506,7 +1644,7 @@ static const char *load_android_pack(void)
 	const char *problem;
 
 	if (!packed)
-		return "The game's assets (" GAME_PACK_FILE ") are not in this APK: make it again with TMNT APK and your ROM set";
+		return no_pack_in_apk;
 	while (bytes && got < (size_t)size)
 	{
 		/* (its bytes as the asset manager hands them: maybe fewer than asked for at a time) */
@@ -1524,21 +1662,96 @@ static const char *load_android_pack(void)
 #endif
 
 #ifdef TMNT_HANDHELD
-#ifndef __ANDROID__    /* (Android's pack: load_android_pack) */
-/* A device's assets: the pack its package carries (in its romfs on the Switch); none, and the game says so */
-static bool find_assets(char *found, size_t size)
+#define ROM_SET_FILE    "tmnt.zip"       /* (first_run.c's: the ROM set, or its folder rom with its files) */
+#define ROM_SET_FOLDER  "rom"
+#define ROM_SET_PROBE   "963-x23.j17"
+
+/* A device's own folder, where the player puts the ROM set (or a pack) and the game takes the assets out of it: the
+   Switch's sdmc:/switch/tmnt/ (TMNT's and TMNT Arcade's both), the handheld's PORTS/tmnt/ (beside both
+   executables), Android's app folder on its storage (Android/data/<the app>/files/, where its log is). The caller
+   frees it (SDL_free) */
+static char *device_folder(void)
 {
 #ifdef __SWITCH__
-	snprintf(found, size, "romfs:/" GAME_PACK_FILE);
-#else
-	char *base = SDL_GetBasePath();
+	return SDL_strdup("sdmc:/switch/tmnt/");
+#elif defined(__ANDROID__)
+	const char *storage = SDL_AndroidGetExternalStoragePath();
+	const size_t length = storage ? strlen(storage) + 2 : 1;
+	char *folder = SDL_malloc(length);
 
-	snprintf(found, size, "%s" GAME_PACK_FILE, base ? base : "");
-	SDL_free(base);
+	if (folder)
+		snprintf(folder, length, "%s%s", storage ? storage : "", storage ? "/" : "");
+	return folder;
+#else
+	return SDL_GetBasePath();
 #endif
-	if (!exists(found))
-		fail("The game's assets (" GAME_PACK_FILE ") are not in this package: make it again with its maker and your "
-			"ROM set");
+}
+
+/* The assets in the device's folder, for the packages of the releases, which carry none (Sebas: "todos por separado
+   sin assets"): the pack tmnt.assets there, or the folder assets the game took out before (of this version), or else
+   taken out now of the ROM set there (tmnt.zip, or the folder rom with the set's files or its .zip) into the folder
+   assets, as a computer's first run does, with no window. false, and what is wrong in 'problem', when there is none */
+static bool device_assets(char *found, size_t size, char *problem, size_t problem_size)
+{
+	char *folder = device_folder();
+	const char *place = folder ? folder : "";
+	char source[1100], probe[1200];
+	const char *failed;
+	bool ready = false;
+
+	snprintf(found, size, "%s" GAME_PACK_FILE, place);
+	if (exists(found))
+		ready = true;
+	if (!ready)
+	{
+		snprintf(found, size, "%sassets", place);
+		snprintf(probe, sizeof(probe), "%s/data/layout.txt", found);
+		ready = exists(probe) && !assets_of_another_version(found);
+	}
+	if (!ready)
+	{
+		snprintf(source, sizeof(source), "%s" ROM_SET_FILE, place);
+		if (!exists(source))
+		{
+			snprintf(source, sizeof(source), "%s" ROM_SET_FOLDER, place);
+			snprintf(probe, sizeof(probe), "%s/" ROM_SET_FILE, source);
+			if (!exists(probe))
+			{
+				snprintf(probe, sizeof(probe), "%s/" ROM_SET_PROBE, source);
+				if (!exists(probe))
+					source[0] = '\0';
+			}
+		}
+		if (!source[0])
+			snprintf(problem, problem_size, "No ROM set: put " ROM_SET_FILE " (MAME's tmnt set) in %s, and start the game "
+				"again. The first start takes the game's assets out of it (some seconds).", place);
+		else
+		{
+			fprintf(stderr, "The assets out of %s into %s\n", source, found);
+			if ((failed = game_assets_extract(source, found)) == NULL)
+				ready = true;
+			else
+				snprintf(problem, problem_size, "The assets cannot be taken out of %s: %s", source, failed);
+		}
+	}
+	SDL_free(folder);
+	return ready;
+}
+
+#ifndef __ANDROID__    /* (Android's pack: load_android_pack) */
+/* A device's assets: the pack its package carries (in its romfs on the Switch, beside the executables on the
+   handheld: the makers' packages), else device_assets'; none, and the game says what to do */
+static bool find_assets(char *found, size_t size)
+{
+	char problem[1200];
+
+#ifdef __SWITCH__
+	snprintf(found, size, "romfs:/" GAME_PACK_FILE);
+	if (exists(found))
+		return true;
+#endif
+	if (!device_assets(found, size, problem, sizeof(problem)))
+		fail(problem);
 	return true;
 }
 #endif
@@ -1608,7 +1821,28 @@ static FILE *open_output(const char *path)
 static void fail(const char *message)
 {
 	fprintf(stderr, "%s\n", message);
+#ifdef __SWITCH__
+	{
+		/* (the Switch's SDL has no message box: libnx's text console, before any window, till + is pressed. Not the
+		   system's error dialog: from 10.0.0 it is a fatal error out of an application, as an .nro from the album) */
+		PadState pad;
+
+		consoleInit(NULL);
+		padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+		padInitializeDefault(&pad);
+		printf("%s\n\n%s\n\nPress + to leave.\n", TITLE, message);
+		while (appletMainLoop())
+		{
+			padUpdate(&pad);
+			if (padGetButtonsDown(&pad) & HidNpadButton_Plus)
+				break;
+			consoleUpdate(NULL);
+		}
+		consoleExit(NULL);
+	}
+#else
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, TITLE, message, NULL);
+#endif
 	exit(1);
 }
 
@@ -1666,18 +1900,21 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
-#ifdef TMNT_HANDHELD_KEYS
-	add_device_mappings();
+#ifdef _WIN32
+	/* Direct3D 11 for the picture on Windows (SDL 2's first is Direct3D 9: Sebas, "pone por default que use dx11"):
+	   its swap chain is DXGI's flip model, the frames' pace steadier in a window with VSYNC, and Alt+Tab or the full
+	   screen lose none of its textures. SDL takes the others where it cannot start, and SDL_RENDER_DRIVER in the
+	   environment still chooses; a renderer named by the hint has SDL's batching off unless it is asked for */
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+	SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
 #endif
+	add_mappings();
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0)
 	{
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
 		fail(message);
 	}
-#ifdef TMNT_CONTROLLER_DB
-	fprintf(stderr, "Game controllers: %d mappings of SDL_GameControllerDB\n",
-		SDL_GameControllerAddMappingsFromRW(SDL_RWFromConstMem(tmnt_controller_db, (int)tmnt_controller_db_size), 1));
-#endif
+	fprintf(stderr, "Game controllers: %d mappings\n", SDL_GameControllerNumMappings());
 #ifdef TMNT_CONSOLE
 	{
 		char *saves = saves_folder();
@@ -1699,10 +1936,16 @@ int main(int argc, char **argv)
 	}
 #endif
 #ifdef __ANDROID__
-	(void)assets_path;
 	{
 		const char *problem = load_android_pack();
 
+		if (problem == no_pack_in_apk)
+		{
+			/* (a release's APK: the assets in the app's folder, or out of the ROM set the player put there) */
+			if (!device_assets(assets_path, sizeof(assets_path), message, sizeof(message)))
+				fail(message);
+			problem = game_load(assets_path);
+		}
 		if (problem)
 			fail(problem);
 	}
@@ -1767,6 +2010,14 @@ int main(int argc, char **argv)
 	renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE) : NULL;
 	if (!renderer)
 		renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE) : NULL;
+#ifdef _WIN32
+	{
+		SDL_RendererInfo info;
+
+		if (renderer && SDL_GetRendererInfo(renderer, &info) == 0)
+			fprintf(stderr, "Renderer: %s\n", info.name);    /* (the log says which one came: a player's question) */
+	}
+#endif
 #ifdef TMNT_CONSOLE
 	texture = renderer ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING,
 		TMNT_VIDEO_MAX_WIDTH, TMNT_VIDEO_HEIGHT) : NULL;    /* (WIDE's frames at its left) */

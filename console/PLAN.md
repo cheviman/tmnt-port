@@ -527,3 +527,72 @@ are outrunners-port's: Winsock, POSIX, libnx).
   The console's own state, from the players' controls and STARTs: the same on every device of a LAN game. Not in
   RONIN, BOSS RUSH, nor with everyone the same turtle. Tried in the headless: one player, one life (poked), the
   continue at 19, START, right twice, attack: Donatello in on 3UP, his coins 2.
+
+## The players' issues on GitHub (09-11-2026: cheviman/tmnt-port issues 2 to 12)
+
+- **The pause stood still** (issues 2 and 9, on Windows and a Mac: the line chosen never moved, though RESTART and
+  QUIT worked): run_pause slept 16 ms a turn (SDL_Delay) and never moved the frames' pace (next_frame), so with VSYNC
+  on, from 1.0.2, its pictures were a frame behind it after the second and frame_behind left them unshown. It keeps
+  the pace now (wait_for_frame), as the LAN's wait does.
+- **The pause by each player's controls** (issue 4: with ATTACK on a controller's X, the menus took X and the pause A;
+  issue 9: the stick moved nothing): the pause reads the players' controls as the menus do (read_players: the keys
+  and buttons CONTROLS gives them, the left stick, the touch screen's), up and down, ATTACK the line, JUMP or START go
+  on; the arrows, Enter, Escape and a controller's Back as before.
+- **WIDE through the continue** (issue 10: the picture back to 4:3 as the last life went): the continue's countdown
+  and its GAME OVER are drawn over the play, which goes on under them; WIDE keeps the play's sides there (scene 7),
+  and the fixed layer's whole band in the picture's middle, CONTINUE and its count with the boxes. In a play the
+  band is the boxes and the line under them (BOXES_ROWS + MESSAGE_ROWS: PRESS START and GAME OVER were 48 columns off
+  the boxes at an area's start); an exit's picture keeps the boxes alone. Checked with the headless in 16:9 (Splinter
+  Way's script, frames 8700 to 35200).
+- **OPTIONS > VIDEO > INTEGER SCALE** (issue 12): the picture a whole number of times the game's pixels (WIDE's view
+  too), black around it; OFF by default, kept in tmnt.ini (integer_scale). On the devices too.
+- **OPTIONS > VIDEO > PRESS START: BLINK, ON, OFF** (issue 11: the line under the boxes blinking all through the
+  play): message_insert_coin's PRESS START as the game's (BLINK), still (one half of the game's blink, every 16
+  frames) or never (the other half: the line clear, the boxes' heads kept; BLANK_LINE took the heads too). The
+  continue's countdown and a LAN game keep the game's own (a LAN game's devices compare their states' hashes,
+  which hold the fixed layer). tmnt.ini keeps it by name (press_start); the headless takes --press-start.
+- **macOS's own full screen** (issue 8: a window size changed while full screen, the picture at the screen's top
+  left): the window's green button, Control+Command+F, puts the window in a Space of its own, which SDL 2 does not
+  count as full screen; apply_settings then made the window that size there. main.c's mac_full_screen asks the
+  NSWindow (its styleMask's NSWindowStyleMaskFullScreen, by Objective-C's runtime: libobjc in the link): a size or
+  WIDE changed there leaves it full screen, and FULL SCREEN or F11 there takes it as SDL's own first
+  (adopt_mac_full_screen: SDL_SetWindowFullscreen finds the window already in its Space), so that OFF takes it out.
+  Checked by compiling main.c for aarch64-macos and x86_64-macos with Zig (-Wall -Wextra, no warnings); not tried on
+  a Mac.
+- **KONAMI CODE's HEALTH INFINITE** (09-11-2026, Sebas: "agreguemos al konami code el de vida infinita, que no pueda
+  tener daño ninguna tortuga"): < HEALTH INFINITE | NORMAL > under LIVES (NORMAL at first). console.c's
+  level_select_frame keeps each turtle in play with its health full before every frame (bars 0x0A, health 3, as
+  turtle_refill_health): a hit takes a bar at most, and a knock-out waits for its reaction's end with no bars, by when
+  they are full again (Shredder's ray's too, which leaves none). The hits' reactions are the game's. The page's seven
+  lines 11 rows apart (LEVEL_STEP), BACK over "(C) KONAMI 1989". tests/console/konami_code.txt one down more. Checked
+  with the headless, an idle Leonardo in area 1, LIVES NORMAL: HEALTH NORMAL back at the menu by frame 6000 (5 lives
+  and the continues gone), INFINITE still on his first coin at frame 11900, his bar full.
+- **BOSS RUSH, issue 3** (09-11-2026, an agent's work, checked here by its diff): the crossing pressed attack every 16
+  frames, and Raphael's and Donatello's longer attacks chained, so they hardly walked: held at each area's start
+  (Donatello at the street's hydrant) till RUSH_STUCK_FRAMES gave the players the area to play ("it takes you to
+  halfway through the second stage", the soldiers "on the first boss" too). Now every 48 frames and only when the
+  turtle is not attacking; the Technodrome's broken freeze nozzles' stubs, solid, off the screen (Leonardo, walking
+  more, held at one). The crossing's frames no longer count as play without a knock-out (time_without_knockout kept
+  as it was when the crossing began): counted, they took one player's difficulty to 4 by the Technodrome and on to
+  7, the bosses' health and attacks with it ("the difficulty must be on the hardest setting"). The highway's and the
+  skateboards' crossing, over at once, show the next boss's card (AREA 8, ROCK SOLDIER), not AREA 6 with no name.
+  tests/console/boss_rush_raphael.txt: Rocksteady's fight by frame 1600. Area 7's "door that does not electrocute":
+  the skateboards' road has none; the Technodrome's electric bars (kinds 4C, 4D) are the arcade's, untouched (the
+  area8 scenario, identical to MAME). Not done: no continues in BOSS RUSH (Sebas to decide).
+- **WIDE 20:9, a turtle's x under 0** (issue 3, another agent's work, checked here by its diff): wide_turtles.c's
+  turtle_limits put the left limit at 0x9000 less WIDE's left side; at a boss's room, the scroll at its end, 20:9's
+  picture goes all to the left (176 columns) and 0x9000 - 0xB000, unsigned, is 0xFFFFE000: turtle_run_all set a turtle
+  standing at the right edge there and back every other frame, and turtle_exit_sewer_walk, walking left to 0x9000,
+  never got there (area 3's exit hung: "you lose control, they walk to the bottom left"). The turtles' left side is
+  96 columns at most now (TURTLE_LEFT_MOST: 16:9's), the limit 0x3000 or more; in 20:9 with the picture all at the
+  left its first 80 columns are not walked. Checked with the headless: BOSS RUSH areas 1 to 9 in 20:9, 16:9 and
+  16:10, no x under 0 (Raphael's area 3 exit ends); knocked against the left edge by Bebop and Rocksteady, a turtle
+  stops at 0x3000; 4:3's hashes identical over 30000 frames.
+- **WIDE, a sprite bank the game lends** (issue 3: the parked cars' second DANGER barrel in Bebop's pink and red):
+  as Bebop comes the game loads his palette into sprite bank 14 (Rocksteady's into 10), the barrel's own bank, the
+  barrel past the board's left edge but for a strip the bezel hid (the scroll held through the fight). wide.c's
+  lent_banks_frame reads the game's palette requests at each frame's end: an object past the board's left edge that
+  had drawn with a bank lent then has its pieces with that bank drawn only where they lie mostly on the board's 320
+  (draw_sprites). The barrel leaves WIDE's side as the bosses come; Stockman, who draws with bank 12 before he takes
+  it, waits past the right edge and keeps it. In all of BOSS RUSH in 20:9 and 16:9 the barrel is the one object it
+  takes.

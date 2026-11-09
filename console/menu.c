@@ -35,6 +35,7 @@
 #define SIGNATURE_COLOUR    0xFFFFFFu
 #define MENU_Y              122          /* the menu, under the logo (where the title's copyright lines were) */
 #define ITEM_STEP           12
+#define LEVEL_STEP          11           /* (KONAMI CODE's page: seven lines between the logo and the copyright) */
 #define KONAMI_LINES_TOP    192          /* the coin's screen's Konami logo and (C) KONAMI 1989, to its bottom */
 #define SIGNATURE           "@cheviman"  /* the port's author, under the title's (C) KONAMI 1989 (Sebas) */
 #define SIGNATURE_Y         210          /* under "(C) KONAMI 1989", which console.c puts at 200-207 */
@@ -91,15 +92,17 @@ enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_ITEMS, MENU_
 enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_EXIT, MENU_ITEMS };
 #endif
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
-enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
+enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_HEALTH, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
 #ifdef TMNT_HANDHELD
 enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO, OPTION_VOLUME, OPTION_SOUND_TEST,
 	OPTION_BACK, OPTION_ITEMS, OPTION_CONTROLS = 100 };
-enum { VIDEO_PIXELS, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100, VIDEO_FULL_SCREEN, VIDEO_WIDE, VIDEO_VSYNC };
+enum { VIDEO_PIXELS, VIDEO_INTEGER_SCALE, VIDEO_PRESS_START, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100,
+	VIDEO_FULL_SCREEN, VIDEO_WIDE, VIDEO_VSYNC };
 #else
 enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
-enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_WIDE, VIDEO_VSYNC, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS };
+enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_INTEGER_SCALE, VIDEO_WIDE, VIDEO_VSYNC, VIDEO_FPS,
+	VIDEO_PRESS_START, VIDEO_BACK, VIDEO_ITEMS };
 #endif
 enum { SOUND_MUSIC, SOUND_EFFECT, SOUND_VOICE, SOUND_STOP, SOUND_BACK, SOUND_ITEMS };
 
@@ -119,12 +122,12 @@ static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET"
 #ifdef TMNT_HANDHELD
 static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION", "VIDEO",
 	"VOLUME", "SOUND TEST", "BACK" };
-static const char *const video_items[VIDEO_ITEMS] = { "PIXELS", "FPS", "BACK" };
+static const char *const video_items[VIDEO_ITEMS] = { "PIXELS", "INTEGER SCALE", "PRESS START", "FPS", "BACK" };
 #else
 static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
 	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
-static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "WIDE", "VSYNC", "FPS",
-	"BACK" };
+static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "INTEGER SCALE", "WIDE",
+	"VSYNC", "FPS", "PRESS START", "BACK" };
 #endif
 #ifndef TMNT_HANDHELD
 static const char *const wide_kinds[WIDE_KINDS] = { "OFF", "16:9", "20:9", "16:10" };
@@ -158,6 +161,7 @@ static const struct
 /* the DIP switch's four (the test mode says DIFFICULT and VERY DIFFICULT: Sebas, "es hard y very hard") */
 static const char *const difficulties[4] = { "EASY", "NORMAL", "HARD", "VERY HARD" };
 static const char *const filters[PIXELS_KINDS] = { "SHARP", "SMOOTH", "BILINEAR", "CRT" };
+static const char *const press_start_kinds[PRESS_START_KINDS] = { "BLINK", "ON", "OFF" };
 /* the version byte's values, by what the title shows with them (console/PLAN.md): TEENAGE MUTANT NINJA TURTLES
    (the World and US sets'), HERO (the UK's), NINJA with its Japanese subtitle under TURTLES (the Japanese set's,
    the banner a little higher), and HERO with the subtitle (no set's) */
@@ -509,10 +513,9 @@ static bool konami_code_entered(uint32_t pressed)
 	return true;
 }
 
-/* The Konami code's level select: LEFT and RIGHT choose the area and the
-   lives, START or attack on START
+/* The Konami code's level select: LEFT and RIGHT choose the area, the lives and the health, START or attack on START
    opens the turtle choice; Splinter Way's game (5 lives a coin, 3 continues), started in that area, its lives kept
-   up when they are infinite */
+   up when they are infinite, its turtles' health full when it is */
 static void level_select_page(uint32_t pressed)
 {
 	const int by = change(pressed) ? change(pressed) : (picked(pressed) ? 1 : 0);
@@ -536,6 +539,8 @@ static void level_select_page(uint32_t pressed)
 		console.level_area = step(console.level_area, by, 0, AREAS - 1);
 	else if (console.choice == LEVEL_LIVES)
 		console.infinite_lives = !console.infinite_lives;
+	else if (console.choice == LEVEL_HEALTH)
+		console.infinite_health = !console.infinite_health;    /* (no turtle takes damage: console.c) */
 	else if (console.choice == LEVEL_ORIGINAL)
 		console.original_turtles = !console.original_turtles;    /* (guideline 18: tried here meanwhile) */
 	else if (console.choice == LEVEL_SAME)
@@ -644,6 +649,12 @@ static void video_page(uint32_t pressed)
 			break;
 		case VIDEO_PIXELS:
 			settings->pixels = step(settings->pixels, by, 0, PIXELS_KINDS - 1);
+			break;
+		case VIDEO_INTEGER_SCALE:
+			settings->integer_scale = !settings->integer_scale;
+			break;
+		case VIDEO_PRESS_START:
+			settings->press_start = step(settings->press_start, by, 0, PRESS_START_KINDS - 1);
 			break;
 		case VIDEO_WIDE:
 		{
@@ -1134,12 +1145,17 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 static console_picture *target;    /* the frame being drawn over */
 
 /* The menus write with the game's own letters (Sebas: the white and light blue ones; draw.c): an item in the game's
-   colours, the one chosen in yellow */
-static void list(const char *const *items, int count, int y)
+   colours, the one chosen in yellow, 'step' rows apart */
+static void list_by(const char *const *items, int count, int y, int step)
 {
 	for (int index = 0; index < count; index++)
-		draw_game_letters_centred(target, y + index * ITEM_STEP, 1,
+		draw_game_letters_centred(target, y + index * step, 1,
 			index == console.choice ? CHOSEN_COLOUR : GAME_LETTERS_OWN, items[index]);
+}
+
+static void list(const char *const *items, int count, int y)
+{
+	list_by(items, count, y, ITEM_STEP);
 }
 
 /* A page of OPTIONS': its heading twice the letters' size over its 'lines', the picture darkened behind them */
@@ -1202,11 +1218,13 @@ static void video_overlay(void)
 	(void)value;
 #endif
 	option_line(video_items, VIDEO_PIXELS, filters[console_settings.pixels]);
+	option_line(video_items, VIDEO_INTEGER_SCALE, console_settings.integer_scale ? "ON" : "OFF");
 #ifndef TMNT_HANDHELD
 	option_line(video_items, VIDEO_WIDE, wide_kinds[console_settings.wide]);
 	option_line(video_items, VIDEO_VSYNC, console_settings.vsync ? "ON" : "OFF");
 #endif
 	option_line(video_items, VIDEO_FPS, console_settings.fps ? "ON" : "OFF");
+	option_line(video_items, VIDEO_PRESS_START, press_start_kinds[console_settings.press_start]);
 	option_line(video_items, VIDEO_BACK, NULL);
 }
 
@@ -1357,14 +1375,15 @@ static void level_select_overlay(void)
 	snprintf(lines[LEVEL_AREA], sizeof(lines[0]), "< AREA %d %s >", console.level_area + 1,
 		area_names[console.level_area]);
 	snprintf(lines[LEVEL_LIVES], sizeof(lines[0]), "< LIVES %s >", console.infinite_lives ? "INFINITE" : "NORMAL");
+	snprintf(lines[LEVEL_HEALTH], sizeof(lines[0]), "< HEALTH %s >", console.infinite_health ? "INFINITE" : "NORMAL");
 	snprintf(lines[LEVEL_ORIGINAL], sizeof(lines[0]), "< ORIGINAL TURTLES %s >", console.original_turtles ? "ON" : "OFF");
 	snprintf(lines[LEVEL_SAME], sizeof(lines[0]), "< SAME TURTLE %s >", console.same_turtle ? "ON" : "OFF");
 	snprintf(lines[LEVEL_START], sizeof(lines[0]), "START");
 	snprintf(lines[LEVEL_BACK], sizeof(lines[0]), "BACK");
 	{
-		const char *items[LEVEL_ITEMS] = { lines[0], lines[1], lines[2], lines[3], lines[4], lines[5] };
+		const char *items[LEVEL_ITEMS] = { lines[0], lines[1], lines[2], lines[3], lines[4], lines[5], lines[6] };
 
-		list(items, LEVEL_ITEMS, MENU_Y);
+		list_by(items, LEVEL_ITEMS, MENU_Y, LEVEL_STEP);    /* (its seven lines over "(C) KONAMI 1989") */
 	}
 }
 

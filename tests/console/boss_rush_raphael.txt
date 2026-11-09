@@ -1,0 +1,11 @@
+# tmnt_console_headless --actions: SPLINTER WAY > BOSS RUSH, Raphael (right three times on the turtle choice): each
+# area crossed to its boss. With --script tests/console/skip_intro.txt, Rocksteady's fight by frame 1600 (his attacks
+# pressed every 16 frames, Raphael crossed nothing and the apartment was his from its start: issue #3)
+520 down
+530 accept
+560 down
+570 accept
+700 right
+710 right
+720 right
+760 accept
