@@ -28,13 +28,15 @@ Download the package for Windows, Linux or macOS from the
 `tmnt-arcade-macos-universal.zip`). Keep `tmnt.zip` beside the game, or drop it on its window when it asks: the
 first time, it takes the assets out of it.
 
-Each device has a package of its own, its games without assets, ready to take them out of your `tmnt.zip` on the
-device, beside the tool that makes your own of them on a computer (for Windows, macOS and Linux):
+Each device has a package of its own, its games without assets (Android's, when the release signs them), ready to
+take them out of your `tmnt.zip` on the device, beside the tool that makes your own of them on a computer (for
+Windows, macOS and Linux):
 
 - **Nintendo Switch** (`tmnt-switch.zip`): `TMNT.nro` and `TMNT Arcade.nro` for the Homebrew Menu, with `tmnt.zip`
   in `/switch/tmnt/` on the SD card; or TMNT NSP makes `TMNT.nsp` and `TMNT Arcade.nsp` for the HOME menu.
-- **Android** (`tmnt-android.zip`): `TMNT.apk` and `TMNT Arcade.apk`, with `tmnt.zip` in the app's folder; or TMNT
-  APK makes them with the assets inside, signed with a key of yours ([ports/android/apk](ports/android/apk/README.md)).
+- **Android** (`tmnt-android.zip`): TMNT APK makes `TMNT.apk` and `TMNT Arcade.apk` with the assets inside, signed
+  with a key of yours ([ports/android/apk](ports/android/apk/README.md)); a release signed with the project's key also
+  has them in `ready/`, without assets, with `tmnt.zip` in the app's folder.
   Phones, tablets, and TVs with Android TV or Google TV (the Chromecast with Google TV too: its Android is 32-bit, and
   the APKs have both kinds), in the TV's apps with a banner.
 - **Anbernic's H700 handhelds** (`tmnt-anbernic.zip`, RG40XX H...): the folder for PORTS, with `tmnt.zip` in

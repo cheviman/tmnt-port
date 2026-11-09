@@ -87,8 +87,9 @@ The devices
 -----------
 The Nintendo Switch, Android (phones, tablets, TVs) and Anbernic's H700 handhelds have packages of their
 own in the release: tmnt-switch.zip, tmnt-android.zip and tmnt-anbernic.zip. Each has the device's games
-without assets, ready to take them out of your tmnt.zip on the device, and the tool that makes your own
-of them on a computer with your ROM set (for Windows, macOS and Linux); its README says how.
+without assets (Android's, when the release signs them), ready to take them out of your tmnt.zip on the
+device, and the tool that makes your own of them on a computer with your ROM set (for Windows, macOS and
+Linux); its README says how.
 
 Licenses
 --------

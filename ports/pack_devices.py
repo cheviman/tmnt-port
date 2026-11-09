@@ -4,7 +4,7 @@
                  computers' packages, "todos por separado sin assets"): tmnt-switch.zip, tmnt-android.zip and
                  tmnt-anbernic.zip, each the device's games without assets beside the tool that makes the
                  player's games of them, for Windows, macOS and Linux (as outrunners-port's)
-    Version:     0.1.0
+    Version:     0.2.0
     Created:     09-11-2026
     Modified:    09-11-2026
     Author:      Sebastian Toyos
@@ -21,7 +21,8 @@
     TMNT's games also take their assets out of the player's tmnt.zip on the device itself (ports/sdl2/main.c's
     device_assets), so a package carries them ready as well, beside the tool's way: the Switch's .nro in
     sd/switch/tmnt/ (--switch-nro), Android's APKs signed with the project's key in ready/ (--android-ready,
-    when the CI has the key), and Anbernic's folder anbernic/, which is the card's Roms/PORTS as it is.
+    when the CI has the key), and Anbernic's folder anbernic/, which is the card's Roms/PORTS as it is. A README's
+    line marked {ready} is there only with the signed APKs, one marked {no-ready} only without them.
 
     python3 ports/pack_devices.py --kits DIR --switch DIR --switch-nro DIR --android DIR [--android-ready DIR]
         --anbernic DIR --out DIR
@@ -80,6 +81,24 @@ def add_folder(archive, source, name, programs=(), suffix=None, leave=(".nro", "
             add(archive, path, inside, PROGRAM if file in programs else FILE)
 
 
+def add_readme(archive, source, name, kept):
+    """The device's README into the zip: a line marked {mark} only when 'mark' is in 'kept' (the extras' folders
+    in the package: "ready"), {no-mark} only when it is not, both without their mark"""
+    lines = []
+    with open(source, encoding="utf-8", newline="") as text:
+        for line in text.read().splitlines(keepends=True):
+            if line.startswith("{"):
+                mark, line = line[1:].split("}", 1)
+                if (mark[3:] in kept) if mark.startswith("no-") else (mark not in kept):
+                    continue
+            lines.append(line)
+    info = zipfile.ZipInfo.from_file(source, name)
+    info.create_system = 3
+    info.external_attr = (stat.S_IFREG | FILE) << 16
+    info.compress_type = zipfile.ZIP_DEFLATED
+    archive.writestr(info, "".join(lines).encode("utf-8"), compresslevel=9)
+
+
 def need(path):
     if not os.path.exists(path):
         sys.exit("pack_devices: missing " + path)
@@ -97,7 +116,8 @@ def pack(device, tool, readme, game, extras, kits, out):
     target = os.path.join(out, top + ".zip")
     shared = os.path.join(kits, "linux-x64", "kit")    # (font.bmp and the licenses: the same in every kit)
     with zipfile.ZipFile(target, "w") as archive:
-        add(archive, need(os.path.join(DOCS, readme)), top + "/README.txt", FILE)
+        kept = {inside for _, inside, _ in extras}
+        add_readme(archive, need(os.path.join(DOCS, readme)), top + "/README.txt", kept)
         add(archive, need(os.path.join(shared, "LICENSE.txt")), top + "/LICENSE.txt", FILE)
         add_folder(archive, need(os.path.join(shared, "licenses")), top + "/licenses")
         add(archive, need(os.path.join(shared, "font.bmp")), top + "/font.bmp", FILE)

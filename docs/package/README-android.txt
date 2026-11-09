@@ -4,26 +4,28 @@ TMNT Arcade and TMNT for Android
 Konami's Teenage Mutant Ninja Turtles (1989), the arcade game for four players, as a native game:
 decompiled to C and checked frame by frame against MAME, github.com/cheviman/tmnt-port. TMNT Arcade is
 the arcade game as it is; TMNT, the console version (menus of its own, no coins, Splinter Way's modes,
-the game over the local network). This is Android's package: the games without their assets, ready to
-install, and the tool that makes your own APKs of them on your computer. Nothing of the game comes in this
-package: the games take their graphics and sounds out of your own ROM set.
+the game over the local network). This is Android's package:
+{ready}the games without their assets, ready to install, and the tool that makes your own APKs of them on
+{ready}your computer.
+{no-ready}the tool that makes your own APKs of the games on your computer.
+Nothing of the game comes in this package: the games take their graphics and sounds out of your own ROM set.
 
 What you need
 -------------
 - tmnt.zip, MAME's ROM set of Teenage Mutant Ninja Turtles (World 4 Players, version X), as MAME has it;
 - a phone, tablet or TV with Android 7 or later.
 
-The APKs in ready/
-------------------
-Install ready/TMNT.apk and ready/TMNT Arcade.apk on the device (open them there; Android asks once to allow
-apps from that source). Open a game once: it says it has no ROM set and makes its folder on the device's
-storage, Android/data/io.github.cheviman.tmnt/files (TMNT Arcade's:
-Android/data/io.github.cheviman.tmnt.arcade/files). Copy tmnt.zip into that folder, from a computer with the
-device on USB (file transfer: most phones' own file managers do not open Android/data), and open the game
-again: the first start takes the assets out of tmnt.zip there (some seconds). Each game its own copy. These
-APKs are signed with the project's key: a new release installs over them, but not over an APK you made with
-the tool (another key: uninstall that one first).
-
+{ready}The APKs in ready/
+{ready}------------------
+{ready}Install ready/TMNT.apk and ready/TMNT Arcade.apk on the device (open them there; Android asks once to allow
+{ready}apps from that source). Open a game once: it says it has no ROM set and makes its folder on the device's
+{ready}storage, Android/data/io.github.cheviman.tmnt/files (TMNT Arcade's:
+{ready}Android/data/io.github.cheviman.tmnt.arcade/files). Copy tmnt.zip into that folder, from a computer with the
+{ready}device on USB (file transfer: most phones' own file managers do not open Android/data), and open the game
+{ready}again: the first start takes the assets out of tmnt.zip there (some seconds). Each game its own copy. These
+{ready}APKs are signed with the project's key: a new release installs over them, but not over an APK you made with
+{ready}the tool (another key: uninstall that one first).
+{ready}
 Your own APKs, with the tool
 ----------------------------
 Start the tool for your computer, with a double click:
@@ -38,7 +40,8 @@ for a TV's banner if you want them. It writes TMNT.apk and TMNT Arcade.apk with 
 with a key of yours kept in your user folder (keep it: only an APK with the same key installs over the
 last one). Copy them to the device and open them there.
 
-What either way makes from your ROM set is yours alone: never share it.
+{ready}What either way makes from your ROM set is yours alone: never share it.
+{no-ready}What the tool makes from your ROM set is yours alone: never share it.
 
 Playing
 -------
@@ -46,7 +49,9 @@ The touch screen has a stick where your left thumb lands, ATTACK and JUMP at the
 TMNT Arcade); a game controller hides them, and each controller is a player. Back, or START in the game,
 pauses TMNT; OPTIONS > VIDEO has the pixels, INTEGER SCALE, PRESS START and FPS. On a TV with Android TV or
 Google TV the games are in the TV's apps; its remote is a player after the game controllers (in TMNT its pad
-moves, OK attacks, back jumps, home pauses). Each game writes its log, tmnt.log, in its folder.
+moves, OK attacks, back jumps, home pauses). Each game writes its log, tmnt.log, in its folder on the device's
+storage, Android/data/io.github.cheviman.tmnt/files (TMNT Arcade's:
+Android/data/io.github.cheviman.tmnt.arcade/files).
 
 Licenses
 --------

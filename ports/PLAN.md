@@ -210,7 +210,8 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   all. So the packages carry them ready too: the Switch's .nro without a pack in sd/switch/tmnt/ (switch.cmake makes
   them in build/bin/switch-nro where the build has no pack, the CI's case), Android's base APKs signed with the
   project's key in ready/ (the android job's Sign step, with the repository's secrets ANDROID_KEYSTORE, base64, and
-  ANDROID_KEYSTORE_PASSWORD; without them the package has the tool's way alone; the key in local/android-release,
+  ANDROID_KEYSTORE_PASSWORD; without them the package has the tool's way alone, and its README leaves out the lines
+  marked {ready}, those marked {no-ready} in their place; the key in local/android-release,
   ignored, its README says how to give it to GitHub), and anbernic/, which is the card's Roms/PORTS as it is. No ROM
   set on the device: the game says where to put it (the Switch's SDL has no message box: libnx's console till +; not
   the error applet, a fatal error out of an application from 10.0.0). Checked: a Linux handheld build in WSL
