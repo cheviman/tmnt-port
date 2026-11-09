@@ -1,0 +1,44 @@
+# tmnt_console_headless --actions: SPLINTER WAY > BOSS RUSH, Leonardo, idle; START every 200 frames from 2000 to 8800:
+# BOSS RUSH has no continues (issue 5), so once his 5 lives are gone (by 7500) START no longer brings him back:
+# coins 1 to the end, the countdown runs out, GAME OVER and the menu by 9000 (with the 3 continues of before, a
+# second coin at 7500 and the game on). With --script tests/console/skip_intro.txt --frames 9500: idle after the intro
+520 down
+530 accept
+560 down
+570 accept
+760 accept
+2000 start 1
+2200 start 1
+2400 start 1
+2600 start 1
+2800 start 1
+3000 start 1
+3200 start 1
+3400 start 1
+3600 start 1
+3800 start 1
+4000 start 1
+4200 start 1
+4400 start 1
+4600 start 1
+4800 start 1
+5000 start 1
+5200 start 1
+5400 start 1
+5600 start 1
+5800 start 1
+6000 start 1
+6200 start 1
+6400 start 1
+6600 start 1
+6800 start 1
+7000 start 1
+7200 start 1
+7400 start 1
+7600 start 1
+7800 start 1
+8000 start 1
+8200 start 1
+8400 start 1
+8600 start 1
+8800 start 1

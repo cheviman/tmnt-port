@@ -9,9 +9,11 @@
 #              .nsp pieces (its job, devkitPro's image) and its .nro, Android's base APKs (its job, the runner's SDK
 #              and NDK) and those signed with the project's key, Anbernic's PORTS (its job, Zig); TMNT's device games
 #              also take the assets out of the player's tmnt.zip on the device. On a tag v*, the release with the
-#              packages and docs/releases/<tag>.md as its notes. It runs on main, its pull requests and its tags, and
-#              by hand on any branch (ports/PLAN.md)
-# Version:     0.4.0
+#              packages and docs/releases/<tag>.md as its notes. On a push to the branch testing, the pre-release
+#              testing (its tag testing-build): the next release's changes for the players to try, made again at
+#              each push, never the latest release, TMNT's OPTIONS showing V<version>-TEST<the run's number>. It runs
+#              on main, testing, main's pull requests and the tags, and by hand on any branch (ports/PLAN.md)
+# Version:     0.5.0
 # Created:     04-11-2026
 # Modified:    09-11-2026
 # Author:      Sebastian Toyos
@@ -19,11 +21,15 @@ name: build
 
 on:
   push:
-    branches: [main]
+    branches: [main, testing]
     tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# TMNT's version in OPTIONS (CMakeLists.txt): the testing branch's builds say which run made them
+env:
+  TMNT_VERSION_SUFFIX: ${{ github.ref == 'refs/heads/testing' && format('-TEST{0}', github.run_number) || '' }}
 
 jobs:
   build:
@@ -379,5 +385,39 @@ jobs:
           ls -la dist
           gh release create "$GITHUB_REF_NAME" --verify-tag --title "TMNT $GITHUB_REF_NAME" \
             --notes-file "docs/releases/$GITHUB_REF_NAME.md" \
+            dist/tmnt-windows-x64.zip dist/tmnt-linux-x64.tar.gz dist/tmnt-macos-universal.zip \
+            dist/tmnt-arcade-macos-universal.zip dist/tmnt-switch.zip dist/tmnt-android.zip dist/tmnt-anbernic.zip
+
+  # A push to the branch testing: the pre-release testing, the next release's changes for the players to try, the
+  # same seven packages; made again at each push (the last one deleted, its tag testing-build with it, and made on
+  # this commit), never the latest release, so that what follows the latest (a launcher, the page's link) never
+  # takes it. Its notes: docs/releases/testing.md and the commit
+  testing:
+    if: github.ref == 'refs/heads/testing'
+    needs: [build, devices]
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: testing-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: tmnt-*
+          path: dist
+          merge-multiple: true
+
+      - name: Pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          version=$(sed -n 's/^project(tmnt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)$TMNT_VERSION_SUFFIX
+          { cat docs/releases/testing.md; echo; echo "This one: V$version in TMNT's OPTIONS, from $GITHUB_SHA."; } > notes.md
+          gh release delete testing-build --cleanup-tag --yes || true
+          gh release create testing-build --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "TMNT testing (V$version)" --notes-file notes.md \
             dist/tmnt-windows-x64.zip dist/tmnt-linux-x64.tar.gz dist/tmnt-macos-universal.zip \
             dist/tmnt-arcade-macos-universal.zip dist/tmnt-switch.zip dist/tmnt-android.zip dist/tmnt-anbernic.zip

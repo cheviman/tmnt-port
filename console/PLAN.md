@@ -579,6 +579,13 @@ are outrunners-port's: Winsock, POSIX, libnx).
   tests/console/boss_rush_raphael.txt: Rocksteady's fight by frame 1600. Area 7's "door that does not electrocute":
   the skateboards' road has none; the Technodrome's electric bars (kinds 4C, 4D) are the arcade's, untouched (the
   area8 scenario, identical to MAME). Not done: no continues in BOSS RUSH (Sebas to decide).
+- **BOSS RUSH without continues** (issue 5, 09-11-2026, Sebas: "Without continues", first in the testing
+  pre-release): "Having 5 continues makes it far too easy" (the reporter, who reached Shredder; his "electric door
+  doesn't electrocute you" is the crossing's health kept full, RUSH_HEALTH_BARS, while the game walks the turtles).
+  start_open: a slot's START brings its turtle in while its coins are at most BOSS_RUSH_CONTINUES (0) in BOSS RUSH,
+  SPLINTER_WAY_CONTINUES (3) in NORMAL and RONIN. tests/console/boss_rush_no_continues.txt: an idle Leonardo, START
+  every 200 frames; his 5 lives gone by 7500, his coins 1 to the end, the menu by 9000 (before: a second coin at 7500
+  and the game on). splinter_way.txt: NORMAL's 4 coins by 30000, as before.
 - **WIDE 20:9, a turtle's x under 0** (issue 3, another agent's work, checked here by its diff): wide_turtles.c's
   turtle_limits put the left limit at 0x9000 less WIDE's left side; at a boss's room, the scroll at its end, 20:9's
   picture goes all to the left (176 columns) and 0x9000 - 0xB000, unsigned, is 0xFFFFE000: turtle_run_all set a turtle

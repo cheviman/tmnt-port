@@ -132,7 +132,9 @@ if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 	add_library(tmnt_console_game STATIC runtime/src/game_program.c runtime/src/tasks.c runtime/src/board_game.c
 		runtime/src/game.c runtime/src/assets_pack.c ${TMNT_DECOMPILED} ${TMNT_CONSOLE_SOURCES})
 	target_include_directories(tmnt_console_game PUBLIC runtime/include ${TMNT_DECOMPILED_DIR} console)
-	target_compile_definitions(tmnt_console_game PUBLIC TMNT_CONSOLE TMNT_VERSION="${PROJECT_VERSION}")
+	# (TMNT's OPTIONS shows it: the CI's testing branch adds -TEST<its run>, TMNT_VERSION_SUFFIX in the environment)
+	target_compile_definitions(tmnt_console_game PUBLIC TMNT_CONSOLE
+		TMNT_VERSION="${PROJECT_VERSION}$ENV{TMNT_VERSION_SUFFIX}")
 	target_link_libraries(tmnt_console_game PUBLIC tmnt_runtime tmnt_sound)
 	# The LAN game (guideline 20): arcade-lan, a repository of its own (lan/, or ARCADE_LAN_DIR where it is): without
 	# it the menu has no LAN
