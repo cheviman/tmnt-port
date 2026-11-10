@@ -113,6 +113,12 @@ Both games land in `build/bin/`, and take their assets out of `tmnt.zip` the fir
 in `console/PLAN.md`. The decompilation itself (its status, the tools, the assets' formats, the checks against
 MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s README.
 
+## Supporting it
+
+The games are free, and stay free. If you want to support the decompilations and the ports, and to have a say in
+what comes next, there is [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts): entirely optional,
+nothing is locked behind it. If anyone asks you to pay for these games, it is not this project.
+
 ## Legal
 
 - This project is licensed under the BSD 3-Clause License; see `LICENSE`.
