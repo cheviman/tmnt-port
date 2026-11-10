@@ -603,3 +603,12 @@ are outrunners-port's: Winsock, POSIX, libnx).
   (draw_sprites). The barrel leaves WIDE's side as the bosses come; Stockman, who draws with bank 12 before he takes
   it, waits past the right edge and keeps it. In all of BOSS RUSH in 20:9 and 16:9 the barrel is the one object it
   takes.
+- **WIDE, the highway's cars** (issue 14: "after a car passes you ... the front & back of the car is visible on both
+  sides in widescreen"): the Foot's car is no object but a picture in layer A (draw_screen_picture), its map's pixels
+  320 to 511, the 192 of the K052109's ring the arcade never shows; it drives across as layer A's x goes from 511 to
+  0 (drive_foot_car), and once past the game leaves x at 511 again, the car kept in the ring at the screen's -185 to 6
+  until the next one is drawn. WIDE's sides showed it there, its front at the left and its back at the right (the
+  ring's other turn), and its back at the right as it came. wide.c's highway_car_window: on the highway layer A is
+  drawn where the car is while it drives and on the board's 320, once it is past on the board after it. Checked with
+  the headless (level select, AREA 6, Leonardo walking and attacking): the cars come in at the left side and go
+  out at the right in 16:9 and 20:9, nothing of them stays; the scenarios identical.
