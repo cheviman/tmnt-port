@@ -119,9 +119,10 @@ MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s RE
 
 ## Supporting it
 
-The games are free, and stay free. If you want to support the decompilations and the ports, and to have a say in
-what comes next, there is [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts): entirely optional,
-nothing is locked behind it. If anyone asks you to pay for these games, it is not this project.
+The games are free, and stay free. If you want to support the decompilations and the ports, there is
+[Patreon](https://www.patreon.com/ChevimanPorts), where supporters also have a say in what comes next, and
+[GitHub Sponsors](https://github.com/sponsors/cheviman): entirely optional, nothing is locked behind either. If
+anyone asks you to pay for these games, it is not this project.
 
 ## Legal
 
