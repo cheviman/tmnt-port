@@ -44,12 +44,16 @@ Windows, macOS and Linux):
 
 What a tool makes has the game's data in it: it is yours alone, never share it. Each package's `README.txt` says how.
 
+The pre-release **testing**, in the releases too, has the next release's changes for the players to try before it comes
+out: made again at each change from the branch `testing`, TMNT's OPTIONS showing which (`V1.0.6-TEST12`). It may
+not work yet; what you find goes in the issues.
+
 ## The console version
 
 - **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four, and on a
   continue lets him pick his turtle again.
-- **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next) and RONIN (one turtle
-  against the enemies of a four-player game).
+- **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next, 5 lives and no
+  continues) and RONIN (one turtle against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).
 - **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
   (window, full screen, sharp, smooth, bilinear or CRT pixels, integer scale, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS,

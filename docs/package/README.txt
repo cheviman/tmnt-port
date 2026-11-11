@@ -58,7 +58,8 @@ Playing TMNT
 The menu under the title's logo:
 - ARCADE: the arcade game, its lives the cabinet's switches'.
 - SPLINTER WAY: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next: each area
-  crossed to its boss on its own) and RONIN (one player alone against the enemies of four).
+  crossed to its boss on its own; 5 lives and no continues) and RONIN (one player alone against the enemies
+  of four).
 - MULTIPLAYER: a game of up to four computers on the same network, one player each. HOST makes a room, JOIN
   finds the rooms and joins one, NAME is the name the room shows. The host's START begins the game on
   every computer, with the host's switches and picture. The first time, your system may ask whether

@@ -58,6 +58,7 @@ enum
 
 #define SPLINTER_WAY_LIVES      0x05u    /* BCD, as lives_per_credit */
 #define SPLINTER_WAY_CONTINUES  3
+#define BOSS_RUSH_CONTINUES     0        /* BOSS RUSH's: its 5 lives alone (issue 5: "far too easy") */
 
 typedef struct
 {

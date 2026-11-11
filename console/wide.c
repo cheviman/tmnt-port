@@ -5,7 +5,7 @@
  *                 enemies coming in and going out past its sides
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    09-11-2026
+ *    Modified:    10-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -578,6 +578,38 @@ static bool mostly_on_board(uint16_t left, int16_t width)
 	return middle >= SCREEN_LEFT && middle < SCREEN_RIGHT;
 }
 
+/* The highway's cars full of Foot soldiers (update_layers_highway): each one the picture draw_screen_picture draws
+   into layer A, its map's pixels 320 to 511, the 192 of the K052109's ring of 512 that the arcade's screen never
+   shows, then drives across by layer A's x going down from 511 (drive_foot_car), and when it is past the screen's
+   right edge the game leaves its x at 511 again: the car stays in the ring, at the screen's -185 to 6 (the board's
+   first 6 columns the bezel hid), until the next car is drawn over it. WIDE's sides showed it there, its front at the
+   left and its back at the right (the ring's other turn, 512 on), and its back at the right as it came (issue #14:
+   "it's like it's stuck on both sides"). On the highway layer A is drawn only where the car is as it drives and on
+   the board's 320, and once it is past, on the board after its place */
+#define HIGHWAY_STAGE       5u
+#define CAR_FIRST_PIXEL     320    /* (the car's picture: its map's first pixel, and its width) */
+#define CAR_PIXELS          192
+
+static bool highway_car_window(int x, int *first, int *last)
+{
+	const int car = CAR_FIRST_PIXEL + LAYERS_DX - x;    /* (the screen's x of the car's left, from -185 to 326) */
+
+	if (stage != HIGHWAY_STAGE || console.page != PAGE_GAME || menu_page_wide() || exit_picture()
+		|| (scene != SCENE_PLAY && scene != SCENE_CONTINUE) || layers_step == 0u)    /* (no car yet) */
+		return false;
+	if (layers_step == 1u || layers_step == 3u || layers_step == 5u)    /* (driving: drive_foot_car's steps) */
+	{
+		*first = LEAST(car, 0);
+		*last = MOST(car + CAR_PIXELS - 1, TMNT_VIDEO_WIDTH - 1);
+	}
+	else
+	{
+		*first = MOST(car + CAR_PIXELS, 0);
+		*last = TMNT_VIDEO_WIDTH - 1;
+	}
+	return true;
+}
+
 void console_wide_frame(void)
 {
 	static const uint32_t records[2] = { LAYER_A, LAYER_B };
@@ -609,9 +641,13 @@ void console_wide_frame(void)
 		const int width = LAYER(records[layer])->map_width * BLOCK_PIXELS;
 		const int x = (int)((LAYER(records[layer])->x >> 8) & 0xFFFFu);
 
+		int first, last;
+
 		if (width > RING_PIXELS && layer_has_map(layer) && !(looping_maps & (1u << layer))
 			&& !menu_page_wide() && !exit_picture())    /* (the menus' screens: the attract's, no area's map) */
 			tmnt_video_set_layer_window(1 + layer, LAYERS_DX - x, width + LAYERS_DX - x - 1);
+		else if (layer == 0 && highway_car_window(x, &first, &last))
+			tmnt_video_set_layer_window(1, first, last);
 		else
 			tmnt_video_set_layer_window(1 + layer, -0x10000, 0x10000);
 	}

@@ -133,14 +133,15 @@ void console_set_mode_lives(int mode)
 /* ---- the players and the slots ---- */
 
 /* Whether a START on 'slot' would bring its turtle in: always, but in Splinter Way once its continues are
-   used (the first coin and 3 more) */
+   used (the first coin and 3 more; BOSS RUSH the first coin alone) */
 static bool start_open(int slot)
 {
 	if (console.ronin && console.page == PAGE_GAME && console_slot_of[console.chooser] != slot)
 		return false;    /* (RONIN: its one player alone, the other boxes' lines cleared) */
 	if (PLAYER(PLAYER_ADDRESS(slot))->lives != 0u)
 		return true;
-	return console.mode != MODE_SPLINTER_WAY || console_coins_put[slot] <= SPLINTER_WAY_CONTINUES;
+	return console.mode != MODE_SPLINTER_WAY
+		|| console_coins_put[slot] <= (console.boss_rush ? BOSS_RUSH_CONTINUES : SPLINTER_WAY_CONTINUES);
 }
 
 void console_join(int slot)

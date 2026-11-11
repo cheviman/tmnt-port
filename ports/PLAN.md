@@ -225,3 +225,12 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   before the extractor: 32 bytes of one 4-byte word over and over (02000000..., 0101 0000...), tables of the
   Switch's libraries that trivial() does not count as trivial (a byte or a 2-byte step, not a 4-byte period). The
   workflow itself runs at the next push; not tried on the devices themselves.
+- **The testing pre-release** (09-11-2026, Sebas: "hagamos una rama de testing", "un release de testing"): the
+  branch testing holds the next release's changes; each push to it builds as main does, and the workflow's job
+  testing deletes the pre-release testing-build (its tag with it) and makes it again on that commit, the same seven
+  packages, --prerelease and --latest=false (what follows the latest release, a launcher or the page's link, never
+  takes it), docs/releases/testing.md and the commit as its notes. The tag is not named testing, which would make
+  the branch's name ambiguous in git. TMNT's OPTIONS says which build: TMNT_VERSION_SUFFIX (-TEST<the run's number>,
+  the workflow's env on testing, empty elsewhere) after PROJECT_VERSION in TMNT_VERSION (CMakeLists.txt); the
+  Android versionCode, the Switch's and macOS's versions stay PROJECT_VERSION's. The way: changes to testing,
+  pushed, the players try them; then testing merged into main and a release's tag, as before.
