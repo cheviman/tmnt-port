@@ -94,25 +94,31 @@ that asks about the game should let it reach the private network. The rooms and 
 
 ## Building it
 
-Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer (on Windows its
-development package for Visual C++ unpacked in `build/downloads/sdl2/`; elsewhere the system's, `libsdl2-dev` on
-Debian and Ubuntu; or `-DTMNT_STATIC_SDL2=ON` to build it from its source). Clone it with its submodules and build
-it:
+Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer. The simplest SDL2 is the
+releases' own: `-DTMNT_STATIC_SDL2=ON` builds it from its source into the games (CMake fetches it). Otherwise the
+system's (`libsdl2-dev` on Debian and Ubuntu), or on Windows its development package for Visual C++ unpacked in
+`build/downloads/sdl2/`, so that `build/downloads/sdl2/SDL2-2.x.y/cmake` is there. Clone it with its submodules and
+build it:
 
 ```bash
 git clone --recursive https://github.com/cheviman/tmnt-port
 ```
 
 ```bash
-cmake -S . -B build/cmake
+cmake -S . -B build/cmake -DTMNT_STATIC_SDL2=ON
 ```
 
 ```bash
 cmake --build build/cmake --config Release
 ```
 
-Both games land in `build/bin/`, and take their assets out of `tmnt.zip` the first time (beside them, or in
-`rom/`). How the port runs the game, its first run, the packages and the console version's checks are in
+The games are `TMNT Arcade` (the arcade game) and `TMNT` (the console version), in `build/bin/`: they take their
+assets out of `tmnt.zip` the first time (beside them, or in `rom/`), and on Windows
+`cmake --build build/cmake --config Release --target tmnt_package` packs them as the releases do, in
+`build/package/tmnt-windows-x64.zip`. Without SDL2 they are not built (CMake warns: `No SDL2`), and what is left in
+`build/bin/` is the development tools: `tmnt_game_headless` and `tmnt_console_headless` run the game with no window
+for the checks and close; `kref`, `oracle_m68k`, `oracle_m68k_step` and `tmnt_assets_check` are the checks
+against the original (`-DTMNT_REFERENCE_TOOLS=OFF` leaves them out: playing does not need them). How the port runs the game, its first run, the packages and the console version's checks are in
 [docs/port.md](docs/port.md); each device's build in `ports/PLAN.md`; the console version's plan and what is done
 in `console/PLAN.md`. The decompilation itself (its status, the tools, the assets' formats, the checks against
 MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s README.

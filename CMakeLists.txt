@@ -435,7 +435,13 @@ elseif(TMNT_WINDOW_PROGRAM)
 				VERBATIM)
 		endif()
 	else()
-		message(STATUS "No SDL2: the window port (TMNT Arcade) is not built")
+		# (a warning, not a status line: a player's report, the five executables a build with no SDL2 leaves were
+		# taken for the games)
+		message(WARNING "No SDL2: the games (TMNT Arcade and TMNT) are not built, only the development tools "
+			"(tmnt_game_headless and tmnt_console_headless run the game with no window for the checks, and close). "
+			"-DTMNT_STATIC_SDL2=ON builds SDL2 from its source into the games, as the releases do; or SDL2 from the "
+			"system, on Windows its development package for Visual C++ unpacked in build/downloads/sdl2 "
+			"(build/downloads/sdl2/SDL2-2.x.y/cmake)")
 	endif()
 endif()
 
