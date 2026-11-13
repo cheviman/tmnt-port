@@ -13,6 +13,8 @@ Players) beside the game, and it takes its assets out of it the first time it st
   the pizza boxes, the highway's tires and barriers, the doors, manholes, turrets and spiked poles no longer show up
   from nothing in the picture's right side: they are already there when the side comes to them. The motorbikes, the
   helicopters, the rocket soldiers and the skateboards' soldiers come in from past the picture's edge.
+- **WIDE, the bosses** (a video review): Rocksteady, Bebop, Shredder and Baxter Stockman fight in the picture's
+  sides too, where the turtles go, no longer only in the arcade's 4:3 part of it.
 
 The game is free, and stays free. To support the decompilations and the ports, and have a say in what comes
 next: [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts). Entirely optional.

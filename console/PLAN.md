@@ -642,3 +642,17 @@ are outrunners-port's: Winsock, POSIX, libnx).
   panned left, sides 169 and 7) can leave layer B's leftmost column not its map's and stripes at the picture's
   edge, by how the play went (the build before it, the same run with the attacks 21, 27 or 29 frames apart: 5538,
   8104, 2482 frames; 23, 31, 33: none). Still to do.
+- **WIDE, the bosses in the sides** (a video review: "on the boss pattern here, clearly still kind of adhering to a
+  4x3 area"; Sebas: "investigar a ver si le mejoramos la logica para usar toda la pantalla"): console/wide_bosses.c,
+  the game's own C with its screen limits moved by the turtles' room (console_wide_turtle_room, at the left no more
+  than wide_turtles.c's 0x60; signed, the game's screen x unsigned): enemy_keep_on_screen, the walls Rocksteady,
+  Bebop and Shredder stop or turn at (0x80 and 0x170); enemy_pincer_charge_take_edge, the screen's middle (0x100)
+  the picture's; enemy_on_screen, where an enemy attacks (0x70 to 0x190), for those three only (let the Foot soldiers
+  attack from the sides too, they came at the turtle all at once and the play was harder than the arcade's);
+  stockman_keep_in_area, the left end of Baxter Stockman's flight (the area's x 0x3C0); missile_fly, where the
+  Technodrome's rock soldier's missile blows up (0x60, 0x180). The rock soldiers walk after a turtle with no limit
+  across, Krang's room has none. In a boss's room the scroll is held at its section's end, so the room is at the
+  left (16:9 96 columns, 20:9 up to 0x60 of its 176). Measured from the level select, Leonardo walking and going back
+  (each boss's leftmost screen x; the board's left edge 0x60 = 96): Rocksteady and Bebop 127-128 in 4:3, 32-37 in
+  16:9 and 20:9 (areas 3 and 4); Shredder 145, 98, 64 (area 8); Stockman 194 in 4:3, 119 in 20:9 (where his flight
+  took him); seen drawn whole on the floor in the side. 4:3's hashes identical; the arcade's scenarios identical.

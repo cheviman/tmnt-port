@@ -392,7 +392,7 @@ void stockman_steer(uint32_t object)
 }
 
 /* he is kept within his part of the sewer */
-void stockman_keep_in_area(uint32_t object)
+void CONSOLE_ORIGINAL(stockman_keep_in_area)(uint32_t object)
 {
 	if (OBJECT(object)->x >= 0x47000u)
 		OBJECT(object)->x = 0x47000u;

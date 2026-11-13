@@ -34,3 +34,8 @@ turtle_hit
 update_difficulty        # RONIN: the difficulty of four players (console/modes.c)
 area_setup_done          # BOSS RUSH: Krang's room waits on its set-up while his name shows (console/modes.c)
 draw_player_boxes        # RONIN: its player's box alone (console/modes.c)
+enemy_keep_on_screen     # WIDE: the bosses' walls past the turtles' room in the sides (console/wide_bosses.c)
+enemy_on_screen          # (where an enemy attacks)
+enemy_pincer_charge_take_edge    # (the picture's middle)
+stockman_keep_in_area    # (Baxter Stockman's flight)
+missile_fly              # (the Technodrome's rock soldier's missile)
