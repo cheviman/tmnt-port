@@ -100,5 +100,9 @@ datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound 
 the games), SDL_GameControllerDB's (zlib: the game controllers' mappings, inside the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).
 
+The games are free, and stay free. To support the decompilations and the ports, and have a say in what
+comes next: patreon.com/ChevimanPorts. Entirely optional; if anyone asks you to pay for these games, it
+is not this project.
+
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
 is not affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.
