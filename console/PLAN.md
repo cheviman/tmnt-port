@@ -612,3 +612,33 @@ are outrunners-port's: Winsock, POSIX, libnx).
   drawn where the car is while it drives and on the board's 320, once it is past on the board after it. Checked with
   the headless (level select, AREA 6, Leonardo walking and attacking): the cars come in at the left side and go
   out at the right in 16:9 and 20:9, nothing of them stays; the scenarios identical.
+- **WIDE, what the spawn lists put in past the right side** (a video review: "one of those traffic cones just popped
+  into existence", area 4): the game puts what a record brings its kind's margin past the board's right edge, out of
+  sight on the board but in sight in WIDE's right side, where it showed up from nothing. Two ways, by kind (wide.c):
+  - Put in early, at its place on the map (moved, it would not stand where the map has it): what stands where it is
+    put and waits for the screen or a turtle to come to it, its x on the screen and not a time starting it, never a
+    boss. The scenery (20 hydrant, 22 parking meter, 26 pizza, 28 oil drum, 35 parked car, 3E fire, 59 and 5B the
+    signs, 5A cones, 61 barrier, 62 tires), the doors and what waits in them (12 kicked door, 13 elevator, 14 manhole,
+    1C the bosses' roll-up door, 45 Technodrome door, 4F Mouser wall, 6A tire soldier, 4B the soldier with his back
+    turned), 2B turrets, 2F nozzles, 52 spiked poles. put_scenery_early puts it in when the spawn scroll comes
+    within the wider side of its record, looking up to 64 records past the game's next one, if the screen's height
+    shows it then (the street's scroll goes up and down too: off it, the game takes it off at once), not in an
+    area's last section (its scroll held at its end: nothing past it the game would put in), and one of group 0, the
+    Foot soldiers' group too, only while 4 of its objects are free. The game passes that record when it comes to it
+    (scenery_passed: its spawn scroll stepped, the next record taken), WIDE on or off by then; but if the object went
+    while it still waited where it was put (its first routine, never hit: off the screen as the camera went back left
+    or the right side narrowed), the record is free again, put in early once more or by the game; gone after it was
+    hit or had started (a meter sent flying, a door kicked down), the game passes it as it would.
+  - Moved past the wider side, as the Foot soldiers that walk in: the enemies that come in by themselves from where
+    they are put (17 ripple, 23 rat, 25 skateboarder, 43 helicopter, 53 Roadkill Rodney, coming up through the floor
+    at once, 56 rocket soldier, 69 skateboards' soldier, 71 motorbike).
+  `--wide-check` also says each object the spawn lists put in that the wider screen shows, drawn, at the frame's end
+  (console_wide_spawn_check; not in an area's first 32 frames, whose records come one a frame as the picture comes,
+  on the board too). Each area from the level select (Leonardo walking, attacking and jumping, HEALTH INFINITE, 25000
+  frames) in 16:9 and 20:9: in sight before, 4 to 28 objects an area; now only the Technodrome's balls (kind 6E,
+  put in at the left: 10), the building site's boss (1E) and area 4's bosses coming out of their door; the columns
+  not their map's as before but area 4's boss room (below); 4:3's hashes identical (BOSS RUSH 30000 frames, areas 0,
+  4 and 5's runs 25000). Seen on the way, and there before this change: area 4's boss room in 20:9 (the picture
+  panned left, sides 169 and 7) can leave layer B's leftmost column not its map's and stripes at the picture's
+  edge, by how the play went (the build before it, the same run with the attacks 21, 27 or 29 frames apart: 5538,
+  8104, 2482 frames; 23, 31, 33: none). Still to do.

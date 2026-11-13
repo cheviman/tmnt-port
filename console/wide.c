@@ -5,7 +5,7 @@
  *                 enemies coming in and going out past its sides
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    10-11-2026
+ *    Modified:    13-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -1240,8 +1240,247 @@ void console_wide_menus(void)
 #define LAST_FOOT_SOLDIER       0x0Du    /* kinds 00-0D: the Foot soldiers (object_routine_tables), which with a
                                             parameter of 0 walk in from where they are put; with another, one of
                                             enemy_ways_in (out of a door, a window, from above) */
+#define OFF_SCREEN_FLAG         0x20u    /* an object's flag: off the screen (update_object_screen_place) */
+#define SKATE_AREA              6u      /* the highway on skateboards: spawn_enemies' own way there
+                                            (hold_scroll_for_enemies), and no scenery in its list */
 
-/* The game's spawn_enemies (objects/spawns.c): the enemy it put in, moved past the wider screen's side */
+/* ---- the scenery past the wider screen's right side ----
+
+   What the spawn lists put on the map has its place there: the game puts it its kind's margin past the screen's right
+   edge when the spawn scroll comes to its record, out of sight on the board's 320 but in sight in WIDE's right side,
+   where it showed up from nothing (a video review: "one of those traffic cones just popped into existence", area 4).
+   Moved past the wider side it would no longer stand where the map has it (as the doors' soldiers did, 05-11), so
+   with WIDE the console puts it in earlier: when the spawn scroll comes within the wider side of its record, at the
+   same place, its kind's margin past the wider screen's edge. The game, coming to that record, passes it as it passes
+   one it puts in (its spawn scroll stepped, the next record taken), WIDE on or off by then. The kinds are those that
+   stand where they are put and wait for the screen or a turtle to come to them (their x on the screen, not a time,
+   starts them), never a boss; and one of group 0, the Foot soldiers' group too, is put in early only while
+   SPAWN_GROUP_KEPT of its objects are free (the soldiers the game puts in meanwhile not kept waiting for one); the
+   scenery's groups, 1 and 2, with any free (their objects live longer with WIDE, past the wider sides: with some
+   kept free, the parked cars' cones came where the game puts them in 20:9) */
+
+#define SPAWN_GROUP_KEPT        4     /* group 0's objects free when one of its records is put in early */
+#define SCENERY_AHEAD           64    /* the records looked at past the game's next one */
+#define SCENERY_PUT             16    /* the records put in early that the game has not passed yet */
+
+static uint32_t scenery_put[SCENERY_PUT];
+static uint32_t scenery_object[SCENERY_PUT];    /* (the object each was put into) */
+static bool scenery_gone[SCENERY_PUT];    /* (that object seen free since, taken away) */
+static bool scenery_waiting[SCENERY_PUT];    /* (that object last seen still waiting where it was put: its first
+                                                routine after its start, never hit) */
+static int scenery_count;
+static uint32_t scenery_list_next;    /* (spawn_next as last seen: lower again, a spawn list started over) */
+#define SPAWNS_NOTED            8     /* (console_wide_spawn_check: the objects put in since it last looked) */
+#define SIGHT_SLACK             8     /* (the scroll's last steps past a record: the game's own, as on the board) */
+#define LIST_START_FRAMES       32
+
+static uint32_t spawns_noted[SPAWNS_NOTED];
+static int spawns_noted_count;
+static int spawns_side_left, spawns_side_right;
+static int spawn_list_frames;    /* (the frames since the area's spawn list started: its first records all come at
+                                    once, one a frame, as the picture comes, on the board too) */
+static uint8_t spawn_list_area;
+
+static bool scenery_kind(uint8_t kind)
+{
+	switch (kind)
+	{
+	case 0x12:    /* area 0's kicked door (kicked_door_wait: at the screen's x 0x100) */
+	case 0x13:    /* area 0's elevator (elevator_wait_on_screen: at its stop's x) */
+	case 0x14:    /* a manhole a Foot soldier comes up out of (manhole_soldier_wait: at its trigger's x) */
+	case 0x1C:    /* area 4's roll-up door for the bosses (boss_shutter_wait: at layer B's x 0x3F000) */
+	case 0x20:    /* a fire hydrant */
+	case 0x22:    /* a parking meter */
+	case 0x26:    /* a pizza box */
+	case 0x28:    /* an oil drum */
+	case 0x2B:    /* a turret on its column */
+	case 0x2F:    /* the Technodrome's nozzles (nozzle_row_watch: a turtle within 0x40) */
+	case 0x35:    /* the parked car (its picture drawn into a layer, kept at the object's place) */
+	case 0x3E:    /* flames on the floor */
+	case 0x45:    /* a Technodrome door (technodrome_door_wait: at the screen's x 0x140) */
+	case 0x4B:    /* area 7's soldier with his back turned (waiting_soldier_wait: at the screen's x 0x140) */
+	case 0x4F:    /* a wall with Mousers behind it (mouser_hole_wait: at the screen's x 0x100) */
+	case 0x52:    /* the sewer's spiked poles (spiked_pole_wait: the poles' phase, the screen's x 0x160) */
+	case 0x59:    /* the speed limit sign */
+	case 0x5A:    /* a traffic cone */
+	case 0x5B:    /* the ONE WAY sign */
+	case 0x61:    /* a road barrier */
+	case 0x62:    /* a tire stack */
+	case 0x6A:    /* a tire with a Foot soldier in it (tire_soldier_wait: at its trigger's x) */
+		return true;
+	}
+	return false;
+}
+
+/* The enemies that come in by themselves from where they are put: moved past the wider screen's side (the Foot
+   soldiers that walk in; the others whose way in starts where they are put, on their own) */
+static bool comes_in_kind(uint8_t kind, uint8_t parameter)
+{
+	if (kind <= LAST_FOOT_SOLDIER)
+		return parameter == 0u;
+	switch (kind)
+	{
+	case 0x17:    /* a ripple on the sewer's water, swimming */
+	case 0x23:    /* a sewer rat, which drops in and runs */
+	case 0x25:    /* the woman on a skateboard, gliding across */
+	case 0x43:    /* a helicopter of the skateboards */
+	case 0x53:    /* a Roadkill Rodney, coming up through the floor at once */
+	case 0x56:    /* the Foot soldier with a rocket, walking in */
+	case 0x69:    /* a soldier of the skateboards */
+	case 0x71:    /* a Foot soldier on a motorbike */
+		return true;
+	}
+	return false;
+}
+
+/* The objects of a spawn record's group that are free (take_free_object's group) */
+static int free_in_group(uint32_t record)
+{
+	const uint32_t group_offset = (uint32_t)(SPAWN_RECORD(record)->flags & 0x30u) >> 2;
+	uint32_t object = TABLE32(object_groups, group_offset);
+	int free = 0;
+
+	for (int count = (int)object_group_counts[group_offset >> 2] + 1; count > 0; count--, object += 0x50u)
+		if (OBJECT(object)->flags == 0u)
+			free++;
+	return free;
+}
+
+/* spawn_x as the game's spawn_enemies steps it this frame, before it looks at its next record */
+static uint32_t spawn_x_stepped(void)
+{
+	uint16_t x_step = SPAWN_SPEED(spawn_speeds)->x;
+
+	if ((int8_t)SPAWN_DIRECTION(spawn_directions)->x >= 0)
+		x_step = (uint16_t)(0u - x_step);
+	return spawn_x + (uint32_t)(int32_t)(int16_t)x_step;
+}
+
+/* For checks: an object the spawn lists put in, looked at at the frame's end (console_wide_spawn_check) */
+static void note_spawn(uint32_t object, int side_left, int side_right)
+{
+	if (spawn_list_frames < LIST_START_FRAMES)
+		return;
+	if (spawns_noted_count < SPAWNS_NOTED)
+		spawns_noted[spawns_noted_count++] = object;
+	spawns_side_left = side_left;
+	spawns_side_right = side_right;
+}
+
+/* The records the console put in early: passed, and the spawn list started over (an area again). One whose object
+   has gone while it still waited where it was put (off the screen past the right side: the camera back left, where
+   the area lets the scroll go back, or the right side narrowed), its record free to be put in again as the side
+   comes to it; one gone after it was hit or had started (a cone sent flying, a door kicked down), kept, so that the
+   game passes its record as it would */
+static void scenery_forget(uint32_t next)
+{
+	int kept = 0;
+
+	if (next < scenery_list_next)
+		scenery_count = 0;
+	scenery_list_next = next;
+	for (int index = 0; index < scenery_count; index++)
+	{
+		const uint32_t object = scenery_object[index];
+		bool gone = scenery_gone[index], waiting = scenery_waiting[index];
+
+		if (scenery_put[index] < next)
+			continue;
+		if (!gone && OBJECT(object)->flags == 0u)
+		{
+			if (waiting)
+				continue;
+			gone = true;
+		}
+		else if (!gone)
+			waiting = waiting && OBJECT(object)->routine <= 1u && OBJECT(object)->hit_routine == 0u;
+		scenery_object[kept] = object;
+		scenery_gone[kept] = gone;
+		scenery_waiting[kept] = waiting;
+		scenery_put[kept++] = scenery_put[index];
+	}
+	scenery_count = kept;
+}
+
+static bool scenery_was_put(uint32_t record)
+{
+	for (int index = 0; index < scenery_count; index++)
+		if (scenery_put[index] == record)
+			return true;
+	return false;
+}
+
+/* The game's frame for a record the console put in early: its spawn scroll stepped (spawn_enemies' own steps) and
+   its next record taken, nothing put in */
+static bool scenery_passed(uint32_t record)
+{
+	uint16_t y_step = 0;
+
+	if (area == SKATE_AREA || SPAWN_RECORD(record)->x == 0xFFFFu || !scenery_was_put(record)
+		|| (int16_t)(spawn_x_stepped() >> 8) < (int16_t)SPAWN_RECORD(record)->x)
+		return false;
+	spawn_x = spawn_x_stepped();
+	y_step = SPAWN_SPEED(spawn_speeds)->y;
+	if ((int8_t)SPAWN_DIRECTION(spawn_directions)->y < 0)
+		y_step = (uint16_t)(0u - y_step);
+	spawn_y += (uint32_t)(int32_t)(int16_t)y_step;
+	spawn_next = record + 8u;
+	scenery_list_next = spawn_next;
+	return true;
+}
+
+/* The scenery whose record the spawn scroll comes within the wider side of, put in as the game puts it in */
+static void put_scenery_early(int side_left, int side_right)
+{
+	const int scroll = (int16_t)(spawn_x_stepped() >> 8);
+	uint32_t record = spawn_next;
+
+	if (area == SKATE_AREA || last_segment != 0u)
+		return;    /* (the area's last section: its scroll held at its end, nothing past it the game would put in) */
+	for (int ahead = 0; ahead <= SCENERY_AHEAD && SPAWN_RECORD(record)->x != 0xFFFFu; ahead++, record += 8u)
+	{
+		const struct spawn_record spawn = *SPAWN_RECORD(record);    /* (a copy: the records' copies turn over) */
+		uint32_t object = 0, is_free = 0;
+		int screen_y = 0;
+
+		if ((int16_t)spawn.x > scroll + side_right || (spawn.flags & SPAWN_ON_LEFT) != 0u
+			|| !scenery_kind((uint8_t)(spawn.kind_and_parameter >> 8u)) || scenery_was_put(record)
+			|| (record == spawn_next && scroll >= (int16_t)spawn.x)    /* (the game's own this frame) */
+			|| difficulty < (spawn.flags & 0xFu) || scenery_count == SCENERY_PUT
+			|| free_in_group(record) < ((spawn.flags & 0x30u) == 0u ? SPAWN_GROUP_KEPT : 1))
+			continue;
+		screen_y = (int)(int16_t)(((int32_t)(((uint32_t)spawn.y << 8) - (spawn_y & ~0xFFu)) >> 8) + 0x100);
+		if (screen_y >= 0x120 || screen_y + (int)SCREEN_MARGIN(spawn_offset(record))->y < -0x20)
+			continue;    /* (off the screen's height now, where the scroll goes up or down too: the game would take it
+			                off at once, update_object_screen_place) */
+		object_loop_slot = spawn_offset(record);
+		take_free_object(record, &object, &is_free);
+		if (!is_free)
+			continue;
+		OBJECT(object)->flags = 1u;
+		OBJECT(object)->contacts = 0u;
+		OBJECT(object)->kind = (uint8_t)(spawn.kind_and_parameter >> 8u);
+		OBJECT(object)->parameter = (uint8_t)spawn.kind_and_parameter;
+		OBJECT(object)->routine = 0u;
+		OBJECT(object)->state = 0u;
+		OBJECT(object)->hit_routine = 0u;
+		OBJECT(object)->colour = 0xFFu;
+		OBJECT(object)->animation_delay = 0u;
+		OBJECT(object)->throw = 0u;
+		OBJECT(object)->height_whole = spawn.height;
+		OBJECT(object)->height &= 0xFF00u;
+		OBJECT(object)->x = (uint32_t)(uint16_t)(spawn.x + SCREEN_MARGIN(object_loop_slot)->x) << 8;
+		OBJECT(object)->y = (uint32_t)spawn.y << 8;
+		scenery_object[scenery_count] = object;
+		scenery_gone[scenery_count] = false;
+		scenery_waiting[scenery_count] = true;
+		scenery_put[scenery_count++] = record;
+		note_spawn(object, side_left, side_right);
+	}
+}
+
+/* The game's spawn_enemies (objects/spawns.c): the enemy it put in, moved past the wider screen's side; the scenery
+   put in before it */
 void spawn_enemies(void)
 {
 	uint32_t record = 0, object = 0, is_free = 0;
@@ -1249,23 +1488,63 @@ void spawn_enemies(void)
 
 	boss_rush_spawns();    /* (BOSS RUSH's crossing: the Foot soldiers passed, modes.c) */
 	record = spawn_next;
+	if (area != spawn_list_area || record < scenery_list_next)
+		spawn_list_frames = 0;
+	else if (spawn_list_frames < LIST_START_FRAMES)
+		spawn_list_frames++;
+	spawn_list_area = area;
 	console_wide_sides(&side_left, &side_right);
+	scenery_forget(record);
+	if (scenery_passed(record))
+		return;
 	if ((!side_left && !side_right) || SPAWN_RECORD(record)->x == 0xFFFFu)
 	{
 		original_spawn_enemies();
 		return;
 	}
+	put_scenery_early(side_left, side_right);
 	take_free_object(record, &object, &is_free);    /* (the object the game takes, if it puts one in) */
 	original_spawn_enemies();
 	if (spawn_next != record + 8u || !is_free || OBJECT(object)->flags != 1u
 		|| OBJECT(object)->kind != (uint8_t)(SPAWN_RECORD(record)->kind_and_parameter >> 8u))
 		return;
-	if (OBJECT(object)->kind > LAST_FOOT_SOLDIER || OBJECT(object)->parameter != 0u)
-		return;    /* (a door, a window, the scenery, a soldier coming out of one: their places are the map's) */
-	if ((SPAWN_RECORD(record)->flags & SPAWN_ON_LEFT) != 0u)
-		OBJECT(object)->x -= (uint32_t)side_left << 8;
-	else
-		OBJECT(object)->x += (uint32_t)side_right << 8;
+	if (comes_in_kind(OBJECT(object)->kind, OBJECT(object)->parameter))
+	{
+		if ((SPAWN_RECORD(record)->flags & SPAWN_ON_LEFT) != 0u)
+			OBJECT(object)->x -= (uint32_t)side_left << 8;
+		else
+			OBJECT(object)->x += (uint32_t)side_right << 8;
+	}    /* (a door, a window, the scenery, a soldier coming out of one, a boss: their places are the map's) */
+	note_spawn(object, side_left, side_right);
+}
+
+/* For checks (tmnt_console_headless --wide-check): the objects the spawn lists put in this frame that the wider
+   screen shows at its end, drawn (their kind's margin, which keeps them out of the board's sight, short of the wider
+   screen's edge); 0 when none */
+int console_wide_spawn_check(char *text, size_t size)
+{
+	int count = 0;
+	size_t used = 0;
+
+	text[0] = 0;
+	for (int index = 0; index < spawns_noted_count; index++)
+	{
+		const uint32_t object = spawns_noted[index];
+		const int screen_x = (int)(int16_t)OBJECT(object)->screen_x;
+		const int margin = (int)SCREEN_MARGIN(spawn_offsets_ADDRESS + ((uint32_t)(OBJECT(object)->kind & 0x7Fu) << 2))->x;
+
+		if ((int8_t)OBJECT(object)->flags >= 0 || (OBJECT(object)->flags & OFF_SCREEN_FLAG) != 0u)
+			continue;    /* (not drawn yet: a door that opens later, a soldier waiting in it) */
+		if (screen_x - margin >= 0x1A0 + spawns_side_right - SIGHT_SLACK
+			|| screen_x + margin <= 0x60 - spawns_side_left + SIGHT_SLACK)
+			continue;
+		count++;
+		if (used + 48 < size)
+			used += (size_t)snprintf(text + used, size - used, "kind %02X at x %d (sides %d %d) ", OBJECT(object)->kind,
+				screen_x - 0x60, spawns_side_left, spawns_side_right);
+	}
+	spawns_noted_count = 0;
+	return count;
 }
 
 /* The game's update_object_screen_place (engine/sprites.c), off the screen past the wider screen's sides */
@@ -1369,6 +1648,12 @@ void wide_power_on(void)
 	rebuild_had_sides = false;
 	checking = -1;
 	checked = 0;
+	scenery_count = 0;
+	scenery_list_next = 0;
+	spawns_noted_count = 0;
+	spawns_side_left = spawns_side_right = 0;
+	spawn_list_frames = 0;
+	spawn_list_area = 0;
 	for (int layer = 0; layer < 2; layer++)
 	{
 		drawn_first[layer] = drawn_last[layer] = drawn_y[layer] = 0;

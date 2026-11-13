@@ -3,7 +3,7 @@
  *    Description: what the console version (TMNT) tells the ports, and what they hand it
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    04-11-2026
+ *    Modified:    13-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -233,6 +233,11 @@ void console_arcade_test(void);
 /* For checks (tmnt_console_headless --wide-check): WIDE's sides' columns whose tiles are not their map's, described
    in 'text'; their count, 0 when none */
 int console_wide_check(char *text, size_t size);
+
+/* For checks (tmnt_console_headless --wide-check): the objects the spawn lists put in where WIDE's sides show them
+   since the last frame (out of sight on the board's 320, they showed up from nothing there), described in 'text';
+   their count, 0 when none */
+int console_wide_spawn_check(char *text, size_t size);
 
 /* For scripted checks: where the console stands, a line of text (the page, the mode, the slots) */
 void console_describe(char *text, size_t size);

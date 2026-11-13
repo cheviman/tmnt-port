@@ -4,7 +4,7 @@
  *                 of every frame in the formats tools/core/konami/reference/kref writes
  *    Version:     0.1.2
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    13-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -377,6 +377,8 @@ static void on_frame_done(void)
 
 		if (console_wide_check(text, sizeof(text)))
 			printf("frame %" PRIu64 ": WIDE's sides not their map's: %s\n", tmnt_board.frame, text);
+		if (console_wide_spawn_check(text, sizeof(text)))
+			printf("frame %" PRIu64 ": put in in WIDE's sides' sight: %s\n", tmnt_board.frame, text);
 	}
 #endif
 	game_end_frame();
