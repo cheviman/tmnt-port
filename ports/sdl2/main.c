@@ -650,6 +650,9 @@ static void toggle_full_screen(void)
 {
 	bool full;
 
+#ifdef __SWITCH__
+	return;    /* (a keyboard's F11 on the Switch: its screen is the window already, apply_settings) */
+#endif
 	adopt_mac_full_screen();    /* (F11 in macOS's own full screen: out of it) */
 	full = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != SDL_WINDOW_FULLSCREEN_DESKTOP;
 	SDL_SetWindowFullscreen(window, full ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
@@ -1473,6 +1476,11 @@ static void apply_settings(void)
 	applied_scale = console_settings.window_scale;
 	applied_full = (int)console_settings.full_screen;
 	applied_wide = console_settings.wide;
+#ifdef __SWITCH__
+	return;    /* (the window is the Switch's 1280 x 720 screen already. Full screen would make it SDL's desktop mode,
+	              which devkitPro's SDL has 1920 x 1080 always (SWITCH_VideoInit): the picture drawn for 1080p and
+	              shown in part on the 720p screen, the players' issue 19. Docked, the system scales the 720p up) */
+#endif
 	if (mac_full_screen() && !full_changed)
 		return;    /* (the picture fills the screen at any size) */
 	adopt_mac_full_screen();    /* (FULL SCREEN changed there: SDL's own from here, OFF out of it) */

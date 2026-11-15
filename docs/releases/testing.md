@@ -15,6 +15,9 @@ Players) beside the game, and it takes its assets out of it the first time it st
   helicopters, the rocket soldiers and the skateboards' soldiers come in from past the picture's edge.
 - **WIDE, the bosses** (a video review): Rocksteady, Bebop, Shredder and Baxter Stockman fight in the picture's
   sides too, where the turtles go, no longer only in the arcade's 4:3 part of it.
+- **The Switch's picture** (issue 19): it fits the screen, docked and handheld, with the TV at 1080p or 720p. TMNT
+  no longer goes full screen there: the Switch's SDL made that a 1920 x 1080 picture, of which the 720p screen
+  showed a part.
 
 The game is free, and stays free. To support the decompilations and the ports, and have a say in what comes
 next: [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts). Entirely optional.
