@@ -27,23 +27,24 @@
 /* The controls' names in controls.ini */
 static const char *const control_names[CONTROLS] = {
 	[CONTROL_UP] = "up", [CONTROL_DOWN] = "down", [CONTROL_LEFT] = "left", [CONTROL_RIGHT] = "right",
-	[CONTROL_ATTACK] = "attack", [CONTROL_JUMP] = "jump", [CONTROL_START] = "start",
+	[CONTROL_ATTACK] = "attack", [CONTROL_JUMP] = "jump", [CONTROL_SPECIAL] = "special", [CONTROL_START] = "start",
 };
 
 /* MAME's keys for the four players: player 1 the arrows, Z or Left Ctrl attack, X or Left Alt jump, Enter or 1;
    player 2 R F D G, A, S, 2; player 3 I K J L, Right Ctrl, Right Shift, 3; player 4 the keypad's 8 2 4 6, 0 and its
-   point, 4 */
+   point, 4. SPECIAL (attack and jump at once) beside them: C for player 1, Q for player 2 */
 static const SDL_Scancode default_keys[CONTROL_PLAYERS][CONTROLS][CONTROL_KEYS] = {
 	{
 		[CONTROL_UP] = { SDL_SCANCODE_UP }, [CONTROL_DOWN] = { SDL_SCANCODE_DOWN },
 		[CONTROL_LEFT] = { SDL_SCANCODE_LEFT }, [CONTROL_RIGHT] = { SDL_SCANCODE_RIGHT },
 		[CONTROL_ATTACK] = { SDL_SCANCODE_Z, SDL_SCANCODE_LCTRL }, [CONTROL_JUMP] = { SDL_SCANCODE_X, SDL_SCANCODE_LALT },
-		[CONTROL_START] = { SDL_SCANCODE_RETURN, SDL_SCANCODE_1 },
+		[CONTROL_SPECIAL] = { SDL_SCANCODE_C }, [CONTROL_START] = { SDL_SCANCODE_RETURN, SDL_SCANCODE_1 },
 	},
 	{
 		[CONTROL_UP] = { SDL_SCANCODE_R }, [CONTROL_DOWN] = { SDL_SCANCODE_F },
 		[CONTROL_LEFT] = { SDL_SCANCODE_D }, [CONTROL_RIGHT] = { SDL_SCANCODE_G },
-		[CONTROL_ATTACK] = { SDL_SCANCODE_A }, [CONTROL_JUMP] = { SDL_SCANCODE_S }, [CONTROL_START] = { SDL_SCANCODE_2 },
+		[CONTROL_ATTACK] = { SDL_SCANCODE_A }, [CONTROL_JUMP] = { SDL_SCANCODE_S }, [CONTROL_SPECIAL] = { SDL_SCANCODE_Q },
+		[CONTROL_START] = { SDL_SCANCODE_2 },
 	},
 	{
 		[CONTROL_UP] = { SDL_SCANCODE_I }, [CONTROL_DOWN] = { SDL_SCANCODE_K },
@@ -62,13 +63,13 @@ static const SDL_Scancode default_keys[CONTROL_PLAYERS][CONTROLS][CONTROL_KEYS] 
 /* (a control with one button: none is SDL_CONTROLLER_BUTTON_INVALID, not 0, which is A) */
 #define ONE_BUTTON(first)  { first, NO_BUTTON, NO_BUTTON }
 
-/* Every player's game controller: the pad moves (as the stick does), A attacks, B jumps, Start */
+/* Every player's game controller: the pad moves (as the stick does), A attacks, B jumps, X both at once, Start */
 static const SDL_GameControllerButton default_buttons[CONTROLS][CONTROL_BUTTONS] = {
 	[CONTROL_UP] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_UP), [CONTROL_DOWN] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_DOWN),
 	[CONTROL_LEFT] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_LEFT),
 	[CONTROL_RIGHT] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_RIGHT),
 	[CONTROL_ATTACK] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_A), [CONTROL_JUMP] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_B),
-	[CONTROL_START] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_START),
+	[CONTROL_SPECIAL] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_X), [CONTROL_START] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_START),
 };
 
 control_binding control_bindings[CONTROL_PLAYERS][CONTROLS];
@@ -150,8 +151,9 @@ static SDL_GameControllerButton named_button(const char *name)
 	return SDL_GameControllerGetButtonFromString(name);
 }
 
-/* One line "name = Key, Key | button, button": the player's control it names takes those, in place of its own */
-static void read_line(int player, char *line)
+/* One line "name = Key, Key | button, button": the player's control it names takes those, in place of its own (the
+   control, or -1 when the line names none) */
+static int read_line(int player, char *line)
 {
 	char *equals = strchr(line, '='), *bar, *part, *next;
 	const char *name;
@@ -159,13 +161,13 @@ static void read_line(int player, char *line)
 	int control, slot;
 
 	if (line[0] == ';' || line[0] == '#' || !equals)
-		return;
+		return -1;
 	*equals = 0;
 	name = trimmed(line);
 	for (control = 0; control < CONTROLS && strcmp(control_names[control], name) != 0; control++)
 		;
 	if (control == CONTROLS)
-		return;
+		return -1;
 	binding = &control_bindings[player][control];
 	bar = strchr(equals + 1, '|');
 	if (bar)
@@ -190,6 +192,30 @@ static void read_line(int player, char *line)
 		if (*trimmed(part))
 			binding->buttons[slot++] = named_button(trimmed(part));
 	}
+	return control;
+}
+
+/* A file from before SPECIAL (or one without its line): its defaults, but none of the keys and buttons the player's
+   other controls have there (a pad's X bound to attack keeps attacking alone) */
+static void special_defaults_free(int player)
+{
+	control_binding *special = &control_bindings[player][CONTROL_SPECIAL];
+
+	for (int other = 0; other < CONTROLS; other++)
+	{
+		const control_binding *binding = &control_bindings[player][other];
+
+		if (other == CONTROL_SPECIAL)
+			continue;
+		for (int slot = 0; slot < CONTROL_KEYS; slot++)
+			for (int key = 0; key < CONTROL_KEYS; key++)
+				if (special->keys[slot] != NO_KEY && special->keys[slot] == binding->keys[key])
+					special->keys[slot] = NO_KEY;
+		for (int slot = 0; slot < CONTROL_BUTTONS; slot++)
+			for (int button = 0; button < CONTROL_BUTTONS; button++)
+				if (special->buttons[slot] != NO_BUTTON && special->buttons[slot] == binding->buttons[button])
+					special->buttons[slot] = NO_BUTTON;
+	}
 }
 
 void controls_open(const char *path)
@@ -197,6 +223,7 @@ void controls_open(const char *path)
 	FILE *file;
 	char line[LINE_SIZE];
 	int player = 0, number = 0;
+	bool special_read[CONTROL_PLAYERS] = { false };
 
 	for (int each = 0; each < CONTROL_PLAYERS; each++)
 		set_defaults(each);
@@ -214,10 +241,13 @@ void controls_open(const char *path)
 			continue;
 		if (sscanf(trimmed(line), "[player %d]", &number) == 1)
 			player = number >= 1 && number <= CONTROL_PLAYERS ? number - 1 : -1;
-		else if (player >= 0)
-			read_line(player, line);
+		else if (player >= 0 && read_line(player, line) == CONTROL_SPECIAL)
+			special_read[player] = true;
 	}
 	fclose(file);
+	for (int each = 0; each < CONTROL_PLAYERS; each++)
+		if (!special_read[each])
+			special_defaults_free(each);
 }
 
 void controls_save(void)

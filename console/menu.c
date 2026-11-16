@@ -67,6 +67,11 @@ static const int wide_crops[WIDE_KINDS] = { 0, 9, 0, 13 };
 #define SONG_START_FRAMES   30           /* the song's command reaching the sound board, its channels taken */
 #define COIN_SCREEN_SONG    0x6Fu        /* the coin's screen's, which coin_screen_draw starts: the turtle choice's */
 #define TITLE_TIME          0xF0u        /* the title's wait, kept from running out (title_wait) */
+#define ATTRACT_OPENING     2u           /* the attract's story (attract_opening), its first step after the presentation */
+#define ATTRACT_DEMO        4u           /* a demo's play (attract_demo) */
+#define ATTRACT_END         8u           /* the screen cleared and the video set back, the attract from its start again
+                                            (attract_end) */
+#define MENU_IDLE_FRAMES    (30 * 60)    /* the menu with nothing pressed this long (30 s): the attract mode */
 #define BEST_PLAYERS_TIME   0xFFu        /* BEST 10 PLAYERS' (best_players_scroll) */
 #define PICTURES_SLOTS      3u           /* draw_turtle_pictures: slots 3 to 0 */
 #define PICTURE_DIMMED      72           /* of 256: the pictures of the turtles not chosen */
@@ -94,12 +99,12 @@ enum { MENU_ARCADE, MENU_SPLINTER_WAY, MENU_LAN, MENU_OPTIONS, MENU_EXIT, MENU_I
 enum { WAY_NORMAL, WAY_BOSS_RUSH, WAY_RONIN, WAY_BACK, WAY_ITEMS };
 enum { LEVEL_AREA, LEVEL_LIVES, LEVEL_HEALTH, LEVEL_ORIGINAL, LEVEL_SAME, LEVEL_START, LEVEL_BACK, LEVEL_ITEMS };
 #ifdef TMNT_HANDHELD
-enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO, OPTION_VOLUME, OPTION_SOUND_TEST,
-	OPTION_BACK, OPTION_ITEMS, OPTION_CONTROLS = 100 };
+enum { OPTION_DIFFICULTY, OPTION_LIVES, OPTION_COINS, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO, OPTION_VOLUME,
+	OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS, OPTION_CONTROLS = 100 };
 enum { VIDEO_PIXELS, VIDEO_INTEGER_SCALE, VIDEO_PRESS_START, VIDEO_FPS, VIDEO_BACK, VIDEO_ITEMS, VIDEO_WINDOW = 100,
 	VIDEO_FULL_SCREEN, VIDEO_WIDE, VIDEO_VSYNC };
 #else
-enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
+enum { OPTION_CONTROLS, OPTION_DIFFICULTY, OPTION_LIVES, OPTION_COINS, OPTION_DEMO_SOUND, OPTION_REGION, OPTION_VIDEO,
 	OPTION_VOLUME, OPTION_SOUND_TEST, OPTION_BACK, OPTION_ITEMS };
 enum { VIDEO_WINDOW, VIDEO_FULL_SCREEN, VIDEO_PIXELS, VIDEO_INTEGER_SCALE, VIDEO_WIDE, VIDEO_VSYNC, VIDEO_FPS,
 	VIDEO_PRESS_START, VIDEO_BACK, VIDEO_ITEMS };
@@ -118,14 +123,14 @@ static const char *const area_names[AREAS] = { "BUILDING", "APARTMENT", "STREET"
 	"SKATEBOARDS", "BUILDING SITE", "TECHNODROME", "KRANG" };
 /* OPTIONS as outrunners-port's (CONTROLS, VIDEO, VOLUME, SOUND TEST, FPS: Sebas), with the DIP switches by the test
    mode's DIP SW SELECT names (test_mode_texts), but its PLAYERS, the lives a credit gives (1, 2, 3 or 5), as LIVES;
-   no coins at home, so no COIN1 (Sebas) */
+   no coins at home, so no COIN1 (Sebas): COINS, off by default, the ARCADE game with them (players' issue 17) */
 #ifdef TMNT_HANDHELD
-static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION", "VIDEO",
-	"VOLUME", "SOUND TEST", "BACK" };
+static const char *const option_items[OPTION_ITEMS] = { "DIFFICULTY", "LIVES", "COINS", "DEMO SOUND", "REGION",
+	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
 static const char *const video_items[VIDEO_ITEMS] = { "PIXELS", "INTEGER SCALE", "PRESS START", "FPS", "BACK" };
 #else
-static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "DEMO SOUND", "REGION",
-	"VIDEO", "VOLUME", "SOUND TEST", "BACK" };
+static const char *const option_items[OPTION_ITEMS] = { "CONTROLS", "DIFFICULTY", "LIVES", "COINS", "DEMO SOUND",
+	"REGION", "VIDEO", "VOLUME", "SOUND TEST", "BACK" };
 static const char *const video_items[VIDEO_ITEMS] = { "WINDOW", "FULL SCREEN", "PIXELS", "INTEGER SCALE", "WIDE",
 	"VSYNC", "FPS", "PRESS START", "BACK" };
 #endif
@@ -174,7 +179,7 @@ static int sound_song, sound_effect, sound_voice;    /* SOUND TEST's: a song (so
 /* CONTROLS: PLAYER on top, the controls in two columns (each its name, and under it the pictures of its keys and
    button, the port's), DEFAULTS and BACK side by side at the bottom; as outrunners-port's */
 enum { CONTROLS_PLAYER, CONTROLS_FIRST, CONTROLS_DEFAULTS = CONTROLS_FIRST + CONTROLS, CONTROLS_BACK };
-#define CONTROLS_COLUMN_ROWS  4      /* UP, DOWN, LEFT, RIGHT; then ATTACK, JUMP, START */
+#define CONTROLS_COLUMN_ROWS  4      /* UP, DOWN, LEFT, RIGHT; then ATTACK, JUMP, SPECIAL, START */
 #define CONTROLS_HEADING_Y    18
 #define CONTROLS_PLAYER_Y     44
 #define CONTROLS_CELL_Y       64     /* the first row of controls: their names */
@@ -183,7 +188,8 @@ enum { CONTROLS_PLAYER, CONTROLS_FIRST, CONTROLS_DEFAULTS = CONTROLS_FIRST + CON
 #define CONTROLS_BOTTOM_Y     194    /* DEFAULTS and BACK, or PRESS A KEY OR BUTTON */
 #define CONTROLS_SETTLE       2      /* frames the menus take no action after a key or button is bound (it is held) */
 static const int controls_column_x[2] = { 40, 176 };
-static const char *const control_names[CONTROLS] = { "UP", "DOWN", "LEFT", "RIGHT", "ATTACK", "JUMP", "START" };
+static const char *const control_names[CONTROLS] = { "UP", "DOWN", "LEFT", "RIGHT", "ATTACK", "JUMP", "SPECIAL",
+	"START" };
 static int controls_player;        /* whose controls are shown */
 static int controls_waiting = -1;  /* the control waiting for its key or button, or -1 */
 static bool controls_defaults;     /* DEFAULTS picked, for the port */
@@ -228,6 +234,66 @@ static void open_page(int page, int choice)
 	console.page = page;
 	console.choice = choice;
 	console.page_frames = 0;
+}
+
+/* ---- the attract mode (players' issue 20: "have the attract mode play when you open the console version") ---- */
+
+void console_attract_open(bool after_presentation)
+{
+	console.page = PAGE_ATTRACT;
+	console.page_frames = 0;
+	console.idle_frames = 0;
+	console.attract_leaving = false;
+	version = (uint8_t)console_settings.region;    /* (the story's and the title's texts by the region, as the menu's) */
+	if (song)
+	{
+		song = 0u;
+		queue_sound(0u);    /* (the menus' song stopped: the attract's steps play their own) */
+	}
+	if (after_presentation)
+		show_step(ATTRACT_OPENING);    /* (from the menu: on from its title, no longer held there) */
+}
+
+/* A key or button in the attract mode: the menu. Over the title, the best players or the coin's screen (the menus'
+   own steps) at once; over the story, a demo or the profiles, once the attract's end has cleared their screen and set
+   the video back (attract_end, as between its rounds), a demo's settings put back first (end_demo) */
+static void attract_leave(void)
+{
+	if (game_step == ATTRACT_TITLE || game_step == ATTRACT_BEST_PLAYERS || game_step == ATTRACT_COIN_SCREEN
+		|| game_step == 0u)
+	{
+		hold_steps();    /* (the step's time kept from running out in this frame's step) */
+		open_page(PAGE_MENU, 0);
+		return;
+	}
+	if (game_step == ATTRACT_DEMO && scene != 0u)
+		end_demo();
+	console.attract_leaving = true;
+	game_step = ATTRACT_END;
+	scene = 0u;
+	scene_step = 0u;
+	scene_substep = 0u;
+	scene_subsubstep = 0u;
+}
+
+void console_attract_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS])
+{
+	bool touched = pressed != 0u;
+
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+		touched |= player_pressed[player] != 0u;
+	console.page_frames++;
+	if (console.attract_leaving)
+	{
+		if (game_step == 0u)    /* (attract_end_restart: the screen cleared, the attract at its start) */
+		{
+			console.attract_leaving = false;
+			open_page(PAGE_MENU, 0);
+		}
+		return;
+	}
+	if (touched)
+		attract_leave();
 }
 
 static int step(int value, int by, int low, int high)
@@ -609,6 +675,10 @@ static void options_page(uint32_t pressed)
 			set_bits(&settings->dsw[1], 0x03, 0, step(lives_setting(), by, 0, 3));
 			settings_touched = true;
 			break;
+		case OPTION_COINS:
+			settings->coins = !settings->coins;
+			settings->changed = true;
+			break;
 		case OPTION_DEMO_SOUND:
 			settings->dsw[1] ^= 0x80;
 			settings_touched = true;
@@ -949,7 +1019,8 @@ static void choice_page(const uint32_t player_pressed[CONSOLE_PLAYERS])
 
 			*turtle = other >= 0 ? other : *turtle;
 		}
-		if (shown && picked(pressed) && free_turtle(player, *turtle, 1) == *turtle)
+		if (shown && (console_coins_on() ? console.player_coined[player] : picked(pressed))
+			&& free_turtle(player, *turtle, 1) == *turtle)    /* (COINS: his coin picks it, its credit) */
 		{
 			*chosen = true;
 			for (int other = 0; other < CONSOLE_PLAYERS; other++)
@@ -1008,6 +1079,21 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 
 	console.page_frames++;
 	lan_blink++;
+	if (page == PAGE_MENU && !console_lan_playing())
+	{
+		bool touched = pressed != 0u;
+
+		for (int player = 0; player < CONSOLE_PLAYERS; player++)
+			touched |= player_pressed[player] != 0u;
+		console.idle_frames = touched ? 0 : console.idle_frames + 1;
+		if (console.idle_frames >= MENU_IDLE_FRAMES && logo_in())
+		{
+			console_attract_open(false);
+			return;
+		}
+	}
+	else
+		console.idle_frames = 0;
 	if (page >= PAGE_LAN && page <= PAGE_LAN_ROOM)
 		console_lan_update();    /* (the rooms' datagrams, the game's start) */
 	if (page != PAGE_MENU)
@@ -1194,6 +1280,7 @@ static void options_overlay(void)
 	option_line(option_items, OPTION_DIFFICULTY, difficulties[difficulty_switch()]);
 	snprintf(value, sizeof(value), "%d", lives_settings[lives_setting()]);
 	option_line(option_items, OPTION_LIVES, value);
+	option_line(option_items, OPTION_COINS, console_settings.coins ? "ON" : "OFF");
 	option_line(option_items, OPTION_DEMO_SOUND, demo_sound_on() ? "ON" : "OFF");
 	option_line(option_items, OPTION_REGION, regions[console_settings.region]);
 	option_line(option_items, OPTION_VIDEO, NULL);
@@ -1475,7 +1562,8 @@ static void choice_overlay(void)
 		drawn[turtle]++;
 	}
 	if (console.page == PAGE_CHOICE && in < CONSOLE_PLAYERS && !console.ronin && (console.page_frames & 32) == 0)
-		draw_game_letters_centred(target, CHOICE_JOIN_Y, 1, GAME_LETTERS_OWN, "PRESS START TO JOIN");
+		draw_game_letters_centred(target, CHOICE_JOIN_Y, 1, GAME_LETTERS_OWN,
+			console_coins_on() ? "INSERT COIN TO PLAY" : "PRESS START TO JOIN");    /* (COINS: a coin picks) */
 }
 
 /* The pause's picture: the frame it stopped at in grey, PAUSE and its lines over it in the game's letters (as

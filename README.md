@@ -45,28 +45,33 @@ Windows, macOS and Linux):
 What a tool makes has the game's data in it: it is yours alone, never share it. Each package's `README.txt` says how.
 
 The pre-release **testing**, in the releases too, has the next release's changes for the players to try before it comes
-out: made again at each change from the branch `testing`, TMNT's OPTIONS showing which (`V1.0.6-TEST12`). It may
+out: made again at each change from the branch `testing`, TMNT's OPTIONS showing which (`V1.0.7-TEST1`). It may
 not work yet; what you find goes in the issues.
 
 ## The console version
 
 - **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four, and on a
-  continue lets him pick his turtle again.
+  continue lets him pick his turtle again. With OPTIONS > COINS, with them, as the cabinet: keys 5 to 8 or a
+  controller's Back put a player's coin in.
 - **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next, 5 lives and no
   continues) and RONIN (one turtle against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).
-- **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
+- **OPTIONS**: controls for four players, difficulty, lives, coins, demo sound, region (the NINJA or HERO title), video
   (window, full screen, sharp, smooth, bilinear or CRT pixels, integer scale, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS,
   PRESS START blinking, still or off), volume, sound test.
 - **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
+- **The attract mode**: the arcade's own (its story, the demos, the profiles) after the presentation, and after
+  30 seconds on the menu with nothing pressed; any key or button opens the menu.
 - And the Konami code on the menu.
 
 ## Controls
 
-- **Keyboard**: the arrows move, Z or left Ctrl attacks, X or left Alt jumps, Enter is START; Escape pauses (and
+- **Keyboard**: the arrows move, Z or left Ctrl attacks, X or left Alt jumps, C does both at once (the special
+  attack), Enter is START; Escape pauses (and
   goes back in the menus). F11 or Alt+Enter is the full screen, F3 the next kind of pixels. OPTIONS > CONTROLS
   changes each player's keys and buttons.
-- **Game controller**: the pad or the left stick moves, A attacks, B jumps, Start is START; Back or Start pauses.
+- **Game controller**: the pad or the left stick moves, A attacks, B jumps, X does both at once, Start is START;
+  Back or Start pauses.
   Each controller is a player, in the order they are plugged in (a TV's remote after them). One the game does not
   know, or knows wrong, takes its line of [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)'s
   format in `gamecontrollerdb.txt`, beside the game on Windows (in `~/.local/share/TMNT` on Linux,
@@ -94,25 +99,31 @@ that asks about the game should let it reach the private network. The rooms and 
 
 ## Building it
 
-Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer (on Windows its
-development package for Visual C++ unpacked in `build/downloads/sdl2/`; elsewhere the system's, `libsdl2-dev` on
-Debian and Ubuntu; or `-DTMNT_STATIC_SDL2=ON` to build it from its source). Clone it with its submodules and build
-it:
+Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer. The simplest SDL2 is the
+releases' own: `-DTMNT_STATIC_SDL2=ON` builds it from its source into the games (CMake fetches it). Otherwise the
+system's (`libsdl2-dev` on Debian and Ubuntu), or on Windows its development package for Visual C++ unpacked in
+`build/downloads/sdl2/`, so that `build/downloads/sdl2/SDL2-2.x.y/cmake` is there. Clone it with its submodules and
+build it:
 
 ```bash
 git clone --recursive https://github.com/cheviman/tmnt-port
 ```
 
 ```bash
-cmake -S . -B build/cmake
+cmake -S . -B build/cmake -DTMNT_STATIC_SDL2=ON
 ```
 
 ```bash
 cmake --build build/cmake --config Release
 ```
 
-Both games land in `build/bin/`, and take their assets out of `tmnt.zip` the first time (beside them, or in
-`rom/`). How the port runs the game, its first run, the packages and the console version's checks are in
+The games are `TMNT Arcade` (the arcade game) and `TMNT` (the console version), in `build/bin/`: they take their
+assets out of `tmnt.zip` the first time (beside them, or in `rom/`), and on Windows
+`cmake --build build/cmake --config Release --target tmnt_package` packs them as the releases do, in
+`build/package/tmnt-windows-x64.zip`. Without SDL2 they are not built (CMake warns: `No SDL2`), and what is left in
+`build/bin/` is the development tools: `tmnt_game_headless` and `tmnt_console_headless` run the game with no window
+for the checks and close; `kref`, `oracle_m68k`, `oracle_m68k_step` and `tmnt_assets_check` are the checks
+against the original (`-DTMNT_REFERENCE_TOOLS=OFF` leaves them out: playing does not need them). How the port runs the game, its first run, the packages and the console version's checks are in
 [docs/port.md](docs/port.md); each device's build in `ports/PLAN.md`; the console version's plan and what is done
 in `console/PLAN.md`. The decompilation itself (its status, the tools, the assets' formats, the checks against
 MAME) is [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp)'s README.

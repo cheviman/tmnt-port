@@ -1723,7 +1723,7 @@ void missile_start(uint32_t object)
 }
 
 /* the missile flies until it meets a wall or reaches the screen's sides, and explodes */
-void missile_fly(uint32_t object)
+void CONSOLE_ORIGINAL(missile_fly)(uint32_t object)
 {
 	uint8_t sound = 0;
 	uint32_t animation = 0, floor_cell_place = 0, x_speed = 0;

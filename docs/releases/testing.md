@@ -6,9 +6,10 @@ Players) beside the game, and it takes its assets out of it the first time it st
 
 **To try**
 
-- **BOSS RUSH without continues** (issue 5): its 5 lives and no more. When a turtle has none left, START no longer
-  brings it back: the countdown runs out, and with no one playing, GAME OVER. NORMAL keeps its 3 continues.
-- **WIDE, the highway's cars** (issue 14): once a car has driven past, nothing of it stays at the picture's sides.
+Nothing yet: this one is 1.0.7 as it was released. The next changes come here as they are made.
+
+The game is free, and stays free. To support the decompilations and the ports, and have a say in what comes
+next: [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts). Entirely optional.
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's; this project is not
 affiliated with or endorsed by either, nor by Nintendo, Google, Apple or Anbernic.

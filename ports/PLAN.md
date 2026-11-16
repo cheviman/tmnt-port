@@ -68,8 +68,10 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   TMNT_SCREEN_WIDE and TMNT_SYSTEM_EXIT, its .nsp's pieces in build/bin/switch/tmnt and tmnt-arcade (main, main.npdm
   from ports/switch/npdm.json.in, control.nacp, icon.jpg drawn from the project's icon) and, where the build has the
   pack, an .nro of each. On a device main.c reads the pack (romfs:/tmnt.assets) and never runs the first run; its
-  settings and log in sdmc:/switch/tmnt (tmnt-arcade); its window the Switch's 1280 x 720, TMNT's WIDE 16:9; TMNT's
-  menus with no EXIT (HOME), CONTROLS nor VIDEO. Built here with devkitPro (its MSYS2's aarch64-none-elf-cmake, with
+  settings and log in sdmc:/switch/tmnt (tmnt-arcade); its window the Switch's 1280 x 720, never full screen
+  (devkitPro's SDL has its desktop mode 1920 x 1080 always, SWITCH_VideoInit: the picture was drawn for 1080p and the
+  720p screen showed a part of it, issue 19), TMNT's WIDE 16:9; TMNT's menus with no EXIT (HOME), CONTROLS nor VIDEO.
+  Built here with devkitPro (its MSYS2's aarch64-none-elf-cmake, with
   CMAKE_DEPENDS_USE_COMPILER=FALSE: its gcc writes D:/ paths that make cannot read again). TMNT NSP
   (ports/switch/nsp, outrunners-port's, the game's own extraction and pack: rom_pack.c) makes both .nsps, TMNT
   Arcade.nsp beside TMNT.nsp; tried with keys made up: tools/check_nsp.py finds every hash holding, the program and

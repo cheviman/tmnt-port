@@ -4,7 +4,7 @@
  *                 of every frame in the formats tools/core/konami/reference/kref writes
  *    Version:     0.1.2
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    13-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -126,6 +126,7 @@ static size_t action_count;
 #define ACTION_PAUSE    (1u << 29)
 #define ACTION_QUIT     (1u << 30)
 #define ACTION_RESTART  (1u << 31)
+#define ACTION_COIN     (1u << 28)    /* (a player's coin, with COINS: console_coin, the window's keys 5-8) */
 static bool pause_shown;
 static bool lan_given;     /* a LAN frame's controls on the board: its hash after the frame (--lan-hashes) */
 static FILE *lan_hashes;
@@ -152,10 +153,12 @@ static const char *load_actions(const char *path)
 		actions[action_count].frame = frame;
 		if (strcmp(name, "pause") == 0 || strcmp(name, "quit") == 0 || strcmp(name, "restart") == 0)
 			actions[action_count].action = name[0] == 'p' ? ACTION_PAUSE : (name[0] == 'q' ? ACTION_QUIT : ACTION_RESTART);
+		else if (strcmp(name, "coin") == 0)
+			actions[action_count].action = ACTION_COIN;
 		else if (action == ACTIONS)
 		{
 			fclose(input);
-			return "An action is not one of up, down, left, right, accept, back, start, pause, quit, restart.";
+			return "An action is not one of up, down, left, right, accept, back, start, pause, quit, restart, coin.";
 		}
 		else
 			actions[action_count].action = ACTION_BIT(action);
@@ -182,6 +185,11 @@ static void console_inputs(void)
 			if (actions[index].action == ACTION_PAUSE)
 			{
 				pause_shown = console_can_pause();
+				continue;
+			}
+			if (actions[index].action == ACTION_COIN)
+			{
+				console_coin(actions[index].player);
 				continue;
 			}
 			if (actions[index].action == ACTION_QUIT && console_lan_playing())
@@ -377,6 +385,8 @@ static void on_frame_done(void)
 
 		if (console_wide_check(text, sizeof(text)))
 			printf("frame %" PRIu64 ": WIDE's sides not their map's: %s\n", tmnt_board.frame, text);
+		if (console_wide_spawn_check(text, sizeof(text)))
+			printf("frame %" PRIu64 ": put in in WIDE's sides' sight: %s\n", tmnt_board.frame, text);
 	}
 #endif
 	game_end_frame();

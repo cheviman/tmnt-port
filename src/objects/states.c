@@ -1858,7 +1858,7 @@ uint32_t direction_facing_bits(uint8_t direction, uint32_t facing_bits)
 }
 
 /* the screen's left and right edges taken as walls for the enemy */
-void enemy_keep_on_screen(uint32_t object)
+void CONSOLE_ORIGINAL(enemy_keep_on_screen)(uint32_t object)
 {
 	if (OBJECT(object)->screen_x >= 0x170u)
 		OBJECT(object)->contacts |= 8u;
@@ -1867,7 +1867,7 @@ void enemy_keep_on_screen(uint32_t object)
 }
 
 /* whether the enemy is on the screen across */
-uint32_t enemy_on_screen(uint32_t object)
+uint32_t CONSOLE_ORIGINAL(enemy_on_screen)(uint32_t object)
 {
 	uint32_t zero = 0;
 
@@ -14310,7 +14310,7 @@ void enemy_bebop_pincer_charge_start(uint32_t object)
 }
 
 /* takes a free edge of the screen for the pincer charge and runs to it */
-void enemy_pincer_charge_take_edge(uint32_t object)
+void CONSOLE_ORIGINAL(enemy_pincer_charge_take_edge)(uint32_t object)
 {
 	uint8_t t1 = 0, t2 = 0;
 

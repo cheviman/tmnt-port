@@ -37,9 +37,9 @@ What either way makes from your ROM set is yours alone: never share it.
 
 Playing
 -------
-Each controller is a player, up to four: the stick or the d-pad moves, A attacks, B jumps, + is START (and
-pauses TMNT); on TMNT Arcade, minus puts a coin in. HOME leaves the game. Each game keeps its settings and
-its log on the SD card: switch/tmnt/ and switch/tmnt-arcade/.
+Each controller is a player, up to four: the stick or the d-pad moves, A attacks, B jumps, X does both at
+once (the special attack), + is START (and pauses TMNT); on TMNT Arcade, minus puts a coin in. HOME leaves
+the game. Each game keeps its settings and its log on the SD card: switch/tmnt/ and switch/tmnt-arcade/.
 
 Licenses
 --------

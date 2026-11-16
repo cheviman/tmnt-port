@@ -144,6 +144,52 @@ static bool start_open(int slot)
 		|| console_coins_put[slot] <= (console.boss_rush ? BOSS_RUSH_CONTINUES : SPLINTER_WAY_CONTINUES);
 }
 
+/* ---- COINS (players' issue 17) ---- */
+
+static bool coin_starts[CONSOLE_PLAYERS];    /* this frame's coins (console_coin): their players' START, with a credit */
+static int coin_frames[CONSOLE_PLAYERS] = { -1, -1, -1, -1 };    /* a playing turtle's coin going in: its lives more */
+
+bool console_coins_on(void)
+{
+	return console_settings.coins && console.mode == MODE_ARCADE && !console.level_select && !console_lan_playing();
+}
+
+void console_coin(int player)
+{
+	int slot;
+
+	if (!console_coins_on() || player < 0 || player >= CONSOLE_PLAYERS)
+		return;
+	slot = console_slot_of[player];
+	if (console.page == PAGE_GAME && slot >= 0 && (players_in_play & (1u << slot)) != 0u
+		&& PLAYER(PLAYER_ADDRESS(slot))->lives != 0u)
+	{
+		if (coin_frames[slot] < 0)
+			coin_frames[slot] = 0;    /* (his turtle playing: the coin's lives, as at the cabinet) */
+		return;
+	}
+	coin_starts[player] = true;
+	if (console.page == PAGE_CHOICE)
+		console.player_coined[player] = true;    /* (the turtle choice's pick: menu.c, run_attract lets it go) */
+}
+
+/* With COINS, a START brings no turtle in without its credits: that of a player out of the game whose turtle has no
+   lives, his coin's alone (coin_starts) */
+static uint8_t coin_gated_starts(uint8_t starts)
+{
+	for (int player = 0; player < CONSOLE_PLAYERS; player++)
+	{
+		const int slot = console_slot_of[player];
+
+		if (coin_starts[player])
+			starts |= (uint8_t)(1u << player);
+		else if (console_coins_on() && console.page == PAGE_GAME && (starts & (1u << player))
+			&& (slot < 0 || PLAYER(PLAYER_ADDRESS(slot))->lives == 0u))
+			starts &= (uint8_t)~(1u << player);
+	}
+	return starts;
+}
+
 void console_join(int slot)
 {
 	const bool coin = PLAYER(PLAYER_ADDRESS(slot))->lives == 0u;
@@ -289,11 +335,14 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 	}
 	uint8_t fresh_of[CONSOLE_PLAYERS];
 
+	starts = coin_gated_starts(starts);
 	for (int player = 0; player < CONSOLE_PLAYERS; player++)
 	{
 		const uint8_t buttons = TMNT_ATTACK | TMNT_JUMP;
-		const uint8_t fresh = (uint8_t)(pressed[player] & ~controls_last[player]);
+		uint8_t fresh = (uint8_t)(pressed[player] & ~controls_last[player]);
 
+		if ((fresh & buttons) == buttons)
+			fresh &= (uint8_t)~TMNT_JUMP;    /* (both at once, SPECIAL's: in the menus and the turtle change, a pick) */
 		fresh_of[player] = fresh;
 
 		if ((starts & (1u << player)) || (fresh & buttons))
@@ -346,6 +395,16 @@ void console_controls(const uint8_t pressed[CONSOLE_PLAYERS], uint8_t starts)
 		if (++joins[slot].frames >= JOIN_FRAMES)
 			joins[slot].frames = -1;
 	}
+	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
+	{
+		if (coin_frames[slot] < 0)
+			continue;
+		if (coin_frames[slot] < JOIN_COIN_FRAMES)
+			coins |= (uint8_t)(TMNT_COIN1 << slot);
+		if (++coin_frames[slot] >= JOIN_FRAMES)
+			coin_frames[slot] = -1;
+	}
+	memset(coin_starts, 0, sizeof(coin_starts));
 	for (int slot = 0; slot < CONSOLE_PLAYERS; slot++)
 		tmnt_board.players[slot] = (uint8_t)~slots[slot];
 	tmnt_board.coins = (uint8_t)~coins;
@@ -501,7 +560,9 @@ static void level_select_frame(void)
 /* ---- the game's functions in the console's versions ---- */
 
 /* The attract mode's frame: the presentation at power-on, then the menus over the attract's screens they hold;
-   the attract's own step and its start of a game after them (with no step while the presentation runs) */
+   the attract's own step and its start of a game after them (with no step while the presentation runs). Its own
+   attract mode, the menu closed, after the presentation untouched and after a while on the menu with nothing
+   pressed (menu.c's console_attract_open: players' issue 20) */
 void run_attract(void)
 {
 	uint32_t pressed = console.pressed;
@@ -546,8 +607,22 @@ void run_attract(void)
 		console.choice = 0;
 		pressed = 0;
 		memset(player_pressed, 0, sizeof(player_pressed));
+		if (!presentation_skipped())
+			console_attract_open(true);
+	}
+	if (console.page == PAGE_ATTRACT)
+	{
+		console_attract_frame(pressed, player_pressed);
+		original_run_attract();
+		if (game_state != GAME_STATE_ATTRACT)
+		{
+			free_play = 0u;
+			console.page = PAGE_GAME;
+		}
+		return;
 	}
 	menu_frame(pressed, player_pressed);
+	memset(console.player_coined, 0, sizeof(console.player_coined));
 	original_run_attract();
 	if (game_state != GAME_STATE_ATTRACT)
 	{
@@ -641,6 +716,12 @@ void message_insert_coin(uint8_t player_message, uint32_t player, uint32_t *p_co
 	const int kind = console.page != PAGE_GAME || scene == SCENE_CONTINUE || console_lan_playing()
 		? PRESS_START_BLINK : console_settings.press_start;
 
+	if (console_coins_on() && (console.page == PAGE_GAME || console.page == PAGE_CHOICE || console.page == PAGE_STARTING)
+		&& PLAYER(player)->lives == 0u)
+	{
+		original_message_insert_coin(player_message, player, p_colour, p_text_number);    /* (COINS: the cabinet's) */
+		return;
+	}
 	if (console.page != PAGE_GAME || start_open(slot))
 	{
 		if (kind == PRESS_START_BLINK)
@@ -766,8 +847,8 @@ void console_controls_held(const uint8_t pressed[CONSOLE_PLAYERS])
 
 void console_describe(char *text, size_t size)
 {
-	static const char *const pages[] = { "presentation", "menu", "splinter way", "level select", "options", "video",
-		"sound test", "controls", "lan", "lan name", "lan rooms", "lan room", "choice", "starting", "game" };
+	static const char *const pages[] = { "presentation", "attract", "menu", "splinter way", "level select", "options",
+		"video", "sound test", "controls", "lan", "lan name", "lan rooms", "lan room", "choice", "starting", "game" };
 
 	snprintf(text, size, "page %s, mode %s, turtle %d, slots %d %d %d %d, coins %d %d %d %d, lives %X, area %u, difficulty %u%s%s%s%s%s",
 		pages[console.page],

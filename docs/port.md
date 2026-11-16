@@ -97,9 +97,13 @@ player's.
 `TMNT` (`build/bin/TMNT.exe`, beside `TMNT Arcade`) is the same game made for playing at home: the program with
 the functions `console/replaced.txt` lists in the console's own versions (`console/*.c`; the decompiled C writes
 their definitions as `CONSOLE_ORIGINAL(name)`, so TMNT Arcade runs the program as it is). It starts with a Konami
-presentation of its own (the fixed layer's Konami logo, large, lit by the four turtles running across it), then a
-menu under the title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack
-in, and the boxes say PRESS START), SPLINTER WAY (NORMAL, 5 lives and 3 continues; BOSS RUSH; RONIN), LAN (up to
+presentation of its own (the fixed layer's Konami logo, large, lit by the four turtles running across it), then the
+arcade's own attract mode (its story, the title, the demos, the profiles, the best players: `menu.c`'s
+`console_attract_open`, again after 30 seconds on the menu with nothing pressed; a key or button during the
+presentation goes to the menu at once, one in the attract mode once its screen is cleared), and a menu under the
+title's logo: ARCADE (the arcade game with no coins: a player's START puts the coin and the attack in, and the boxes
+say PRESS START; with OPTIONS > COINS, the cabinet's coins: INSERT COIN, a player's coin his START with a credit,
+`console_coin`), SPLINTER WAY (NORMAL, 5 lives and 3 continues; BOSS RUSH; RONIN), LAN (up to
 four computers, `console/lan.c` over arcade-lan), OPTIONS (over BEST 10 PLAYERS' picture: CONTROLS, the cabinet's
 DIP switches by the test mode's names, the region, VIDEO with the window, the pixels, WIDE 16:9 and 20:9 and FPS,
 the volume, a sound test; kept in `tmnt.ini` beside the executable) and EXIT; the Konami code on the menu opens a
@@ -112,13 +116,15 @@ player in the game) pauses a game. `console/PLAN.md` has the plan, and what was 
 |---|---|
 | Move (player 1) | the arrow keys |
 | Attack (in the menus: pick), jump (back) | Z or left Ctrl; X or left Alt |
+| Both at once, the special attack (SPECIAL) | C; a controller's X |
 | START | Enter, a controller's Start |
 | Back in the menus | Escape |
 | Full screen; the next kind of pixels | F11 or Alt+Enter; F3 |
 
 `tmnt_console_headless` runs it with no window for scripted checks: the script's controls are the players',
 `--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`: with a
-PLAYER, that player's own stick, buttons or START; `pause`, `quit`, `restart` in a game), `--wide 1|2` WIDE
+PLAYER, that player's own stick, buttons or START; `pause`, `quit`, `restart` in a game; `coin [PLAYER]`, his coin
+with COINS), `--wide 1|2` WIDE
 (`--wide-check`: each frame, the columns of its sides that are not their map's), and
 `--video-dump FRAME ... --video-dir DIR` writes those frames with the console's picture over them
 (`tests/console/` has the menus' actions of a few runs):

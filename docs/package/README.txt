@@ -39,6 +39,7 @@ attack button bring a turtle in: player 1 is Leonardo, 2 Michelangelo, 3 Donatel
 
   Move (player 1)            the arrow keys
   Attack, jump               Z or left Ctrl; X or left Alt
+  Both at once (special)     C
   Coins 1-4                  5, 6, 7, 8
   Service                    9
   Full screen                F11 or Alt+Enter
@@ -46,7 +47,7 @@ attack button bring a turtle in: player 1 is Leonardo, 2 Michelangelo, 3 Donatel
   Quit                       Escape
 
 Game controllers are players 1 to 4 in the order they are plugged in: the pad or the left stick moves,
-A attacks, B jumps, Back puts a coin in. A controller the games do not know, or know wrong, takes its
+A attacks, B jumps, X does both at once, Back puts a coin in. A controller the games do not know, or know wrong, takes its
 line (SDL_GameControllerDB's format) in gamecontrollerdb.txt, in the folder of the assets: the games
 read it when they start, and its line goes over their own.
 
@@ -55,8 +56,12 @@ switch does.
 
 Playing TMNT
 ------------
+After the Konami presentation the arcade's attract mode plays (its story, the demos, the profiles), and
+again after 30 seconds on the menu with nothing pressed: any key or button opens the menu.
 The menu under the title's logo:
-- ARCADE: the arcade game, its lives the cabinet's switches'.
+- ARCADE: the arcade game, its lives the cabinet's switches'. With OPTIONS > COINS on, with coins as the
+  cabinet: keys 5, 6, 7, 8 (or a controller's Back) put in players 1-4's coins, and a coin picks a turtle,
+  brings a player in or continues; START alone needs credits.
 - SPLINTER WAY: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next: each area
   crossed to its boss on its own; 5 lives and no continues) and RONIN (one player alone against the enemies
   of four).
@@ -64,7 +69,7 @@ The menu under the title's logo:
   finds the rooms and joins one, NAME is the name the room shows. The host's START begins the game on
   every computer, with the host's switches and picture. The first time, your system may ask whether
   TMNT may use the network: allow it on private networks.
-- OPTIONS: the cabinet's switches, the region, the controls of each player, the picture (its size, the
+- OPTIONS: the cabinet's switches, COINS, the region, the controls of each player, the picture (its size, the
   pixels, INTEGER SCALE: the pixels all the same size; WIDE: 16:10 as the Steam Deck's screen, 16:9 or 20:9;
   VSYNC, each frame at the screen's refresh; PRESS START under the boxes blinking, still or off), the
   volume, a sound test; kept in tmnt.ini.
@@ -77,12 +82,14 @@ there is no pause: Escape leaves the game, which goes on for the others.
 
   Move (player 1)            the arrow keys
   Attack, jump               Z or left Ctrl; X or left Alt
+  Both at once (special)     C
   START                      Enter
   In the menus               the arrows move, attack picks, jump or Escape goes back
   Full screen                F11 or Alt+Enter
   The next kind of pixels    F3
 
-Game controllers: the same, Start is START, Back pauses (Start too, in the game).
+Game controllers: the same, X both at once, Start is START, Back pauses (Start too, in the game). OPTIONS >
+CONTROLS changes each player's keys and buttons, SPECIAL's among them.
 
 The devices
 -----------
@@ -99,6 +106,10 @@ sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULT
 datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound and the controls, inside
 the games), SDL_GameControllerDB's (zlib: the game controllers' mappings, inside the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).
+
+The games are free, and stay free. To support the decompilations and the ports, and have a say in what
+comes next: patreon.com/ChevimanPorts. Entirely optional; if anyone asks you to pay for these games, it
+is not this project.
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
 is not affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.

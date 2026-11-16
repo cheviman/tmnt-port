@@ -54,6 +54,7 @@ static struct
 	int part_frame;
 	int lit_to;                /* the logo is lit left of here */
 	int brightness;            /* 0-256 */
+	bool skipped;              /* cut short by a key or button */
 } show;
 
 static int logo_left(void)
@@ -129,6 +130,7 @@ bool presentation_frame(uint32_t pressed)
 	{
 		show.part = 3;    /* (skipped: the fade out at once) */
 		show.part_frame = 0;
+		show.skipped = true;
 	}
 	switch (show.part)
 	{
@@ -183,6 +185,11 @@ bool presentation_frame(uint32_t pressed)
 		draw_sprites(ignored);
 	}
 	return true;
+}
+
+bool presentation_skipped(void)
+{
+	return show.skipped;
 }
 
 void presentation_overlay(console_picture *frame)

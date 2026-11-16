@@ -3,7 +3,7 @@
  *    Description: what the console version (TMNT) tells the ports, and what they hand it
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    04-11-2026
+ *    Modified:    13-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -93,6 +93,13 @@ void console_lan_quit(void);
 /* The LAN frame whose controls are on the board (for checks: tmnt_console_headless --lan-hashes) */
 uint32_t console_lan_frame_number(void);
 
+/* OPTIONS > COINS (players' issue 17): the ARCADE game with coins, as the cabinet's, where it is on (not a LAN
+   game's: each device's coins are its own). The boxes say INSERT COIN, START brings in a turtle only with its
+   credits, and a player's coin (keys 5-8, a game controller's Back) is his START with a credit: the turtle choice's
+   pick, a turtle brought in or continued, or, his turtle playing, its lives more (console_coin) */
+bool console_coins_on(void);
+void console_coin(int player);
+
 /* True once the menu's EXIT was picked: the port closes the game */
 bool console_quit_requested(void);
 
@@ -140,6 +147,7 @@ enum
 	CONTROL_RIGHT,
 	CONTROL_ATTACK,
 	CONTROL_JUMP,
+	CONTROL_SPECIAL,    /* attack and jump at once, the turtles' special attack, on one key or button (players' issue 13) */
 	CONTROL_START,
 	CONTROLS
 };
@@ -201,6 +209,7 @@ typedef struct
 	bool fps;              /* OPTIONS > FPS: the frames a second at the picture's top right, and in the window's title */
 	bool vsync;            /* OPTIONS > VIDEO > VSYNC: each frame shown at the screen's refresh (a computer's) */
 	int region;            /* the version byte: 0 NINJA (the set's own), 1 HERO, 2 and 3 (console/PLAN.md) */
+	bool coins;            /* OPTIONS > COINS: the ARCADE game with coins (console_coins_on); off, free play */
 	uint8_t dsw[3];        /* the DIP switches as the board has them (active low), tmnt/machine.h */
 	char name[CONSOLE_NAME_LENGTH + 1];    /* LAN > NAME: this device's player's, as the rooms show it */
 	bool changed;
@@ -233,6 +242,11 @@ void console_arcade_test(void);
 /* For checks (tmnt_console_headless --wide-check): WIDE's sides' columns whose tiles are not their map's, described
    in 'text'; their count, 0 when none */
 int console_wide_check(char *text, size_t size);
+
+/* For checks (tmnt_console_headless --wide-check): the objects the spawn lists put in where WIDE's sides show them
+   since the last frame (out of sight on the board's 320, they showed up from nothing there), described in 'text';
+   their count, 0 when none */
+int console_wide_spawn_check(char *text, size_t size);
 
 /* For scripted checks: where the console stands, a line of text (the page, the mode, the slots) */
 void console_describe(char *text, size_t size);
