@@ -106,14 +106,34 @@ static void code_read(uint32_t address)
 
 /* ---- the program's data ---- */
 
+/* A byte of the board's bus past the program's ROM, as the 68000 reads it there (tmnt_read16: the chips, and 0 where
+   none answers, as MAME's map leaves those addresses). A pointer to the program's data that the game takes past its
+   pieces reads that, as on the board: the Technodrome's lift, a turtle pushing the scroll down as it lands, draws
+   its layer's next row from past the map's end, at 0B8130 (tmnt-port's issue 21: TMNT stopped there) */
+static uint8_t bus_byte(uint32_t address)
+{
+	const uint16_t word = tmnt_read16(address & 0xFFFFFEu, (address & 1u) ? 0x00FFu : 0xFF00u);
+
+	return (uint8_t)((address & 1u) ? word : word >> 8);
+}
+
 const uint8_t *data_at(uint32_t address)
 {
+	static uint8_t bus_bytes[4];    /* (a few: rom16 reads two in one expression) */
+	static unsigned next_bus_byte;
 	const uint8_t *data = assets_data_at(address & 0xFFFFFFu);
 
 	if (data)
 		return data;
 	if ((address & 0xFFFFFFu) >= TMNT_WORK_RAM && (address & 0xFFFFFFu) < TMNT_WORK_RAM + TMNT_WORK_RAM_SIZE)
 		return tmnt_work_ram_byte(address & 0xFFFFFFu);    /* (a pointer the program set to the work RAM) */
+	if ((address & 0xFFFFFFu) >= TMNT_PROGRAM_SIZE)
+	{
+		uint8_t *byte = &bus_bytes[next_bus_byte++ % 4u];
+
+		*byte = bus_byte(address & 0xFFFFFFu);
+		return byte;
+	}
 	show_trace();
 	fprintf(stderr, "68000 stopped: the program read data at %06X, where its assets have none (frame %llu)\n",
 		(unsigned)address & 0xFFFFFFu, (unsigned long long)tmnt_board.frame);
@@ -124,7 +144,8 @@ const uint8_t *data_at(uint32_t address)
    piece it is in; one across two pieces, from their bytes into one of a few copies (a record is read where the
    C names it: no pointer to one outlives its expression). A record the code reads only in part may run past the
    pieces: an animation frame of 10 bytes read as an attack_frame (18), whose attack box the code reads only once
-   its attack_depth says it has one. Those bytes are no data of the program's, and read 0 */
+   its attack_depth says it has one. Those bytes are no data of the program's, and read 0. One past the program's
+   ROM is the bus's (bus_byte) */
 #define RECORD_COPIES 32
 #define RECORD_MAX    64u
 
@@ -146,6 +167,13 @@ const void *data_record(uint32_t address, uint32_t size)
 		fprintf(stderr, "68000 stopped: the program read a record of %u bytes at %06X across its assets' pieces "
 			"(frame %llu)\n", (unsigned)size, (unsigned)address, (unsigned long long)tmnt_board.frame);
 		exit(3);
+	}
+	if (address >= TMNT_PROGRAM_SIZE)
+	{
+		copy = copies[next++ % RECORD_COPIES];
+		for (uint32_t at = 0; at < size; at++)
+			copy[size - 1u - at] = bus_byte((address + at) & 0xFFFFFFu);
+		return copy;
 	}
 	if (assets_data_at(address) == NULL)
 	{

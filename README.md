@@ -288,7 +288,9 @@ sounds/    title.wav (the title music's sample), pcm/ (the K007232's 12 samples)
 sound/music/  a Standard MIDI File a song (area_0.mid ... area_9.mid, boss, continue, staff_roll, ending...),
            and music.txt: the songs table's entries each plays
 data/      the 68000 program's data as text, a file a subject (animations, sprite lists, layers, palettes,
-           palette effects, texts, screens, enemies, scroll, demos, tables), a section a piece, every piece named
+           palette effects, texts, screens, enemies, scroll, demos, tables), a section a piece, every piece named;
+           code_read.txt the rest of the program's bytes, its code, which the game reads only through a pointer
+           taken past its data (as the board reads them: the Technodrome's lift draws its shaft from past the map)
 sound_data.txt   the sound program's data the same way: the driver's tables, voices, instruments, drums
 ```
 

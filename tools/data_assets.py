@@ -423,6 +423,24 @@ def name_pieces(pieces, image, analysis, taken):
     return pieces
 
 
+def program_bytes_pieces(image, pieces):
+    """The rest of the program's bytes, its code, in pieces of the code_read family: a pointer the game takes past
+    its data reads them as the board does. The Technodrome's lift, a turtle pushing the scroll as it lands, draws its
+    shaft's next row and column from past the map's ends: map entries out of other data, blocks out of the code
+    (04F2CC); the board draws those tiles out of sight and goes on (tmnt-port's issue 21), the game stopped there"""
+    covered = bytearray(len(image))
+    for _, _, kinds in pieces:
+        covered[kinds[0][0]:kinds[-1][1]] = bytes([1]) * (kinds[-1][1] - kinds[0][0])
+    found, first = [], None
+    for address in range(len(image) + 1):
+        if address < len(image) and not covered[address]:
+            first = address if first is None else first
+        elif first is not None:
+            found.append([f"program_{first:06X}", "code_read", [(first, address, "code read as data")]])
+            first = None
+    return found
+
+
 def extract(image, walk, analysis, folder):
     folder.mkdir(parents=True, exist_ok=True)
     import data_walk
@@ -441,6 +459,7 @@ def extract(image, walk, analysis, folder):
     # takes their names: the profile's PIECE_GROUPS_UNNAMED)
     pieces += [[name, "code_read", [(first, stop, "code read as data")]]
                for first, (stop, name) in sorted(CODE_READ_AS_DATA.items())]
+    pieces += program_bytes_pieces(image, pieces)
     for name, group, kinds in pieces:
         files[group].append(f"[{name}]")
         files[group] += ["  " + line for line in write_piece(image, kinds[0][0], kinds[-1][1], kinds, names)]
