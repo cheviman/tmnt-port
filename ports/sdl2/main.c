@@ -40,11 +40,12 @@
  *    button bring a turtle in; player 1 is Leonardo, 2 Michelangelo, 3 Donatello, 4 Raphael):
  *      arrows                         move (player 1)
  *      Z or left Ctrl                 attack         X or left Alt     jump
+ *      C                              attack and jump at once (the special attack)
  *      5, 6, 7, 8                     coins 1-4      9                 service 1
  *      Escape                         quit           F11 or Alt+Enter  full screen
  *      F3                             smooth or sharp pixels
  *    Game controllers, players 1 to 4 in the order they are plugged: the pad or the left stick moves, A
- *    attacks, B jumps, Back is the coin.
+ *    attacks, B jumps, X does both at once, Back is the coin.
  *    TMNT: no coins; Enter (player 1) and a controller's Start are START, which brings a player in; in the
  *    menus the arrows move, attack (Z, A) picks, jump (X, B) or Escape goes back; F3 the next kind of pixels.
  */
@@ -79,6 +80,9 @@
 #include <switch.h>        /* romfsInit: the game's own files, its .nsp's or .nro's */
 #include <sys/stat.h>
 #endif
+#if !defined(_WIN32) && !defined(TMNT_HANDHELD)
+#include <unistd.h>        /* (isatty: a computer's log, open_log) */
+#endif
 
 #include <inttypes.h>
 #include <math.h>
@@ -96,6 +100,7 @@
 #define SWITCH_FOLDER       "sdmc:/switch/" FILE_NAME    /* the game's folder on the SD card: its settings, its log */
 #endif
 #define MAPPINGS_FILE       "gamecontrollerdb.txt"    /* more game controllers for SDL (SDL_GameControllerDB's) */
+#define LOG_RUNS            3                         /* the runs whose logs are kept: .log, .1.log, .2.log (log_into) */
 #ifdef TMNT_CONSOLE
 #define TITLE               "TMNT"
 #define SETTINGS_FILE       "tmnt.ini"
@@ -974,13 +979,40 @@ static void controller_added(int which)
 		}
 }
 
+#ifndef TMNT_HANDHELD
+/* The mouse's pointer, hidden over the game once it has stood still for two seconds; moving it shows it again (a
+   player's suggestion, on a Mac: issue 8) */
+#define POINTER_SHOWN_MS  2000u
+static Uint32 pointer_moved;
+
+static void pointer_event(const SDL_Event *event)
+{
+	if (event->type != SDL_MOUSEMOTION && event->type != SDL_MOUSEBUTTONDOWN && event->type != SDL_MOUSEWHEEL)
+		return;
+	pointer_moved = SDL_GetTicks();
+	if (SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE)
+		SDL_ShowCursor(SDL_ENABLE);
+}
+
+static void pointer_frame(void)
+{
+	if (SDL_GetTicks() - pointer_moved >= POINTER_SHOWN_MS && SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE)
+		SDL_ShowCursor(SDL_DISABLE);
+}
+#else
+#define pointer_event(event)
+#define pointer_frame()
+#endif
+
 static void read_events(void)
 {
 	SDL_Event event;
 
+	pointer_frame();
 	while (SDL_PollEvent(&event))
 	{
 		log_press(&event);
+		pointer_event(&event);
 #ifdef TMNT_TOUCH
 		touch_event(&event);
 #endif
@@ -1051,7 +1083,7 @@ static void read_events(void)
 				if (console_controls_waiting() >= 0)
 					bind_button(event.cbutton.which, (SDL_GameControllerButton)event.cbutton.button);
 				else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && console_can_pause()
-					&& !remote_back(event.cbutton.which))
+					&& !remote_back(event.cbutton.which) && !console_coins_on())    /* (COINS: Back is the coin) */
 					pause_requested = true;    /* (a TV remote's: its home pauses, SDL_APP_WILLENTERBACKGROUND) */
 				break;
 			case SDL_CONTROLLERAXISMOTION:
@@ -1110,6 +1142,7 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 		pressed |= controls_holds(player, pad, CONTROL_DOWN) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, 1) ? TMNT_DOWN : 0;
 		pressed |= controls_holds(player, pad, CONTROL_ATTACK) ? TMNT_ATTACK : 0;
 		pressed |= controls_holds(player, pad, CONTROL_JUMP) ? TMNT_JUMP : 0;
+		pressed |= controls_holds(player, pad, CONTROL_SPECIAL) ? TMNT_ATTACK | TMNT_JUMP : 0;    /* (both at once) */
 #ifdef __ANDROID__
 		/* a TV's remote (the Chromecast with Google TV's, which has a pad, OK and back alone): its back is JUMP (the
 		   menus' back, the pause's CONTINUE), and its OK, ATTACK, the START of a player out of the game (in, or a
@@ -1130,12 +1163,32 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 	}
 }
 
+/* COINS (console_coins_on): each player's coin newly pressed, the cabinet's keys 5-8 (as TMNT Arcade's) or his game
+   controller's Back (not a TV remote's: its back is JUMP) */
+static void read_coins(void)
+{
+	static bool held[PLAYERS];
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+
+	for (int player = 0; player < PLAYERS; player++)
+	{
+		SDL_GameController *pad = controllers[player];
+		const bool coin = keys[SDL_SCANCODE_5 + player]
+			|| (pad && !is_remote(pad) && SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK));
+
+		if (coin && !held[player] && console_coins_on())
+			console_coin(player);
+		held[player] = coin;
+	}
+}
+
 static void read_controls(void)
 {
 	uint8_t players[PLAYERS], starts;
 
 	if (console_controls_defaults())
 		controls_defaults(console_controls_player());
+	read_coins();
 	read_players(players, &starts);
 	for (int player = 0; player < PLAYERS; player++)
 		if ((starts & (1u << player)) && console_start_pauses(player))
@@ -1188,8 +1241,10 @@ static uint32_t pause_events(void)
 	SDL_Event event;
 	uint32_t pressed = 0;
 
+	pointer_frame();
 	while (SDL_PollEvent(&event))
 	{
+		pointer_event(&event);
 #ifdef TMNT_TOUCH
 		touch_event(&event);
 #endif
@@ -1239,8 +1294,10 @@ static uint32_t players_pressed(uint8_t held[PLAYERS])
 	read_players(players, &starts);
 	for (int player = 0; player < PLAYERS; player++)
 	{
-		const uint8_t fresh = (uint8_t)(players[player] & ~held[player]);
+		uint8_t fresh = (uint8_t)(players[player] & ~held[player]);
 
+		if ((fresh & (TMNT_ATTACK | TMNT_JUMP)) == (TMNT_ATTACK | TMNT_JUMP))
+			fresh &= (uint8_t)~TMNT_JUMP;    /* (SPECIAL's both at once: the attack's, a pick) */
 		pressed |= (fresh & TMNT_UP) ? ACTION_BIT(ACTION_UP) : 0u;
 		pressed |= (fresh & TMNT_DOWN) ? ACTION_BIT(ACTION_DOWN) : 0u;
 		pressed |= (fresh & TMNT_ATTACK) ? ACTION_BIT(ACTION_ACCEPT) : 0u;
@@ -1328,6 +1385,7 @@ static void read_controls(void)
 		bool down = button(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, 1);
 		bool attack = button(pad, SDL_CONTROLLER_BUTTON_A);
 		bool jump = button(pad, SDL_CONTROLLER_BUTTON_B);
+		bool special = button(pad, SDL_CONTROLLER_BUTTON_X);    /* (attack and jump at once: the special attack) */
 		uint8_t pressed = 0;
 
 		if (keyboard)
@@ -1338,7 +1396,10 @@ static void read_controls(void)
 			down |= keys[SDL_SCANCODE_DOWN] != 0;
 			attack |= keys[SDL_SCANCODE_Z] || keys[SDL_SCANCODE_LCTRL];
 			jump |= keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_LALT];
+			special |= keys[SDL_SCANCODE_C] != 0;
 		}
+		attack |= special;
+		jump |= special;
 		pressed |= left ? TMNT_LEFT : 0;
 		pressed |= right ? TMNT_RIGHT : 0;
 		pressed |= up ? TMNT_UP : 0;
@@ -1376,11 +1437,11 @@ static void save_settings(void)
 	if (script || !settings_path[0] || console_lan_playing() || (output = fopen(settings_path, "w")) == NULL)
 		return;    /* (a LAN game's: the host's settings, not this device's) */
 	fprintf(output, "window_scale=%d\nfull_screen=%d\npixels=%s\ninteger_scale=%d\nwide=%s\nvsync=%d\nvolume=%d\n"
-		"fps=%d\npress_start=%s\nregion=%d\ndsw1=%02X\ndsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale,
+		"fps=%d\npress_start=%s\nregion=%d\ncoins=%d\ndsw1=%02X\ndsw2=%02X\ndsw3=%02X\nname=%s\n", settings->window_scale,
 		settings->full_screen, console_pixel_names[settings->pixels], settings->integer_scale,
 		console_wide_names[settings->wide], settings->vsync, settings->volume, settings->fps,
-		console_press_start_names[settings->press_start], settings->region, settings->dsw[0], settings->dsw[1],
-		settings->dsw[2], settings->name);
+		console_press_start_names[settings->press_start], settings->region, settings->coins, settings->dsw[0],
+		settings->dsw[1], settings->dsw[2], settings->name);
 	fclose(output);
 }
 
@@ -1408,6 +1469,8 @@ static void load_settings(void)
 			settings->dsw[number - 1] = (uint8_t)bits;
 		else if (sscanf(line, "fps=%d", &number) == 1)
 			settings->fps = number != 0;
+		else if (sscanf(line, "coins=%d", &number) == 1)
+			settings->coins = number != 0;
 		else if (sscanf(line, "vsync=%d", &number) == 1)
 			settings->vsync = number != 0;
 		else if (sscanf(line, "integer_scale=%d", &number) == 1)
@@ -1606,6 +1669,68 @@ static char *saves_folder(void)
 	return SDL_GetBasePath();    /* (a handheld's: the game's folder on its card) */
 #else
 	return SDL_GetPrefPath("", "TMNT");
+#endif
+}
+
+/* The log into FILE_NAME.log in 'folder' (with its separator), the last runs' moved before it to FILE_NAME.1.log and
+   FILE_NAME.2.log, the older ones dropped (simpsons-port's) */
+static void log_into(const char *folder)
+{
+	char path[1100], older[1100];
+
+	for (int run = LOG_RUNS - 1; run > 0; run--)
+	{
+		snprintf(older, sizeof(older), "%s" FILE_NAME ".%d.log", folder, run);
+		if (run > 1)
+			snprintf(path, sizeof(path), "%s" FILE_NAME ".%d.log", folder, run - 1);
+		else
+			snprintf(path, sizeof(path), "%s" FILE_NAME ".log", folder);
+		remove(older);
+		rename(path, older);
+	}
+	snprintf(path, sizeof(path), "%s" FILE_NAME ".log", folder);
+	if (freopen(path, "w", stderr))
+		setvbuf(stderr, NULL, _IONBF, 0);
+}
+
+/* The log: on Windows a game started with nowhere for its standard error to go (from Explorer, not a terminal), and on
+   Linux and macOS one whose standard error is not a terminal (a launcher's, the Finder's), writes it to FILE_NAME.log
+   in the folder of what the game keeps: what stopped a game reaches the player, who can send it (issue 21, TMNT gone
+   after the Technodrome's lift with nothing said); on the Switch, which has no console (and SDL no message boxes
+   there), always, in its folder on the SD card; on Android always, in the app's folder on the storage; on the
+   Anbernic, where its launcher sends it. Each keeps the last runs' too (log_into) */
+static void open_log(void)
+{
+#ifdef __SWITCH__
+	mkdir("sdmc:/switch", 0777);
+	mkdir(SWITCH_FOLDER, 0777);
+	log_into(SWITCH_FOLDER "/");
+#elif defined(__ANDROID__)
+	/* (Android's standard error goes nowhere: the log in the app's folder on the storage, Android/data/<the
+	   app>/files, where the player can read it) */
+	if (SDL_AndroidGetExternalStoragePath())
+	{
+		char folder[1100];
+
+		snprintf(folder, sizeof(folder), "%s/", SDL_AndroidGetExternalStoragePath());
+		log_into(folder);
+	}
+#elif defined(_WIN32)
+	if (_fileno(stderr) < 0)
+	{
+		char *saves = saves_folder();
+
+		log_into(saves ? saves : "");
+		SDL_free(saves);
+	}
+#elif !defined(TMNT_HANDHELD)
+	if (!isatty(fileno(stderr)))
+	{
+		char *saves = saves_folder();
+
+		log_into(saves ? saves : "");
+		SDL_free(saves);
+	}
 #endif
 }
 
@@ -1889,20 +2014,9 @@ int main(int argc, char **argv)
 	/* (the assets pack in the game's romfs; its settings and its log on the SD card: the Switch has no console, and
 	   SDL no message boxes there) */
 	romfsInit();
-	mkdir("sdmc:/switch", 0777);
-	mkdir(SWITCH_FOLDER, 0777);
-	freopen(SWITCH_FOLDER "/" FILE_NAME ".log", "w", stderr);
 #endif
+	open_log();    /* (what the game says, its failures among them: the log, where the platform has no console) */
 #ifdef __ANDROID__
-	/* (what the game says goes to its .log in the app's folder on the storage, Android/data/<the app>/files: stderr
-	   goes nowhere there) */
-	if (SDL_AndroidGetExternalStoragePath())
-	{
-		char log_path[1024];
-
-		snprintf(log_path, sizeof(log_path), "%s/" FILE_NAME ".log", SDL_AndroidGetExternalStoragePath());
-		freopen(log_path, "w", stderr);
-	}
 	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");    /* (back is the menus' back, never the end) */
 	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");          /* (fingers are the touch controls, not the mouse) */
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");

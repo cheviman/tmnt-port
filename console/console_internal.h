@@ -29,6 +29,9 @@
 enum
 {
 	PAGE_PRESENTATION,     /* the Konami presentation, at power-on */
+	PAGE_ATTRACT,          /* the game's own attract mode, as the cabinet plays it (its story, the title, its demos,
+	                          the turtles' profiles, the best players): after the presentation untouched, and after a
+	                          while on the menu with nothing pressed (players' issue 20); a key or button, the menu */
 	PAGE_MENU,             /* the title's logo and the menu: ARCADE, SPLINTER WAY, LAN, OPTIONS, EXIT */
 	PAGE_SPLINTER_WAY,     /* Splinter Way's modes: NORMAL, BOSS RUSH, RONIN, BACK */
 	PAGE_LEVEL_SELECT,     /* the Konami code's level select (guideline 8; the menu's KONAMI CODE while it is tried):
@@ -72,7 +75,11 @@ typedef struct
 	bool quit;
 	bool restarting;           /* the pause's RESTART: the same game again, its turtle picked at once */
 	int page_frames;           /* the game's frames on the page */
+	int idle_frames;           /* the frames on the menu with nothing pressed (the attract mode at MENU_IDLE_FRAMES) */
+	bool attract_leaving;      /* the attract mode closing for the menu: its screen being cleared (menu.c) */
 	int last_presser;          /* the last player who pressed a button or START (the one who confirms) */
+	bool player_coined[CONSOLE_PLAYERS];         /* each player's coin since the game's last frame (COINS: the turtle
+	                                                choice's pick, console_coin) */
 	uint32_t player_pressed[CONSOLE_PLAYERS];    /* each player's actions since the game's last frame, out of a
 	                                                game: his stick, buttons and START (the port's fixed keys go
 	                                                with player 1's) */
@@ -115,12 +122,17 @@ void console_set_mode_lives(int mode);
 /* The presentation (presentation.c): its frame in the attract mode, with the actions pressed: true while it
    lasts; its picture over the frame */
 bool presentation_frame(uint32_t pressed);
+bool presentation_skipped(void);    /* (a key or button cut it short: the menu after it, not the attract mode) */
 void presentation_overlay(console_picture *frame);
 
 /* The menus (menu.c): their frame in the attract mode (the page's own, then the attract's step), with the actions
    pressed (any player's) and each player's own; their picture */
 void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]);
 void menu_overlay(console_picture *frame);
+/* The attract mode (menu.c): opened, after the presentation (from the story) or from the menu (from its title); its
+   frame, before the attract's step, with the actions pressed: any of them opens the menu */
+void console_attract_open(bool after_presentation);
+void console_attract_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]);
 void turtle_change_overlay(console_picture *frame);    /* (a continue's turtle change, over the game: menu.c) */
 
 /* Splinter Way's modes (modes.c), at each frame before the game's: RONIN's other boxes kept clear; BOSS RUSH's

@@ -51,22 +51,27 @@ not work yet; what you find goes in the issues.
 ## The console version
 
 - **ARCADE**: the arcade's game with no coins: START brings a player in at any time, up to four, and on a
-  continue lets him pick his turtle again.
+  continue lets him pick his turtle again. With OPTIONS > COINS, with them, as the cabinet: keys 5 to 8 or a
+  controller's Back put a player's coin in.
 - **SPLINTER WAY**: NORMAL (5 lives and 3 continues), BOSS RUSH (from one boss to the next, 5 lives and no
   continues) and RONIN (one turtle against the enemies of a four-player game).
 - **MULTIPLAYER**: up to four computers on the local network in one game (below).
-- **OPTIONS**: controls for four players, difficulty, lives, demo sound, region (the NINJA or HERO title), video
+- **OPTIONS**: controls for four players, difficulty, lives, coins, demo sound, region (the NINJA or HERO title), video
   (window, full screen, sharp, smooth, bilinear or CRT pixels, integer scale, WIDE 16:10, 16:9 or 20:9, VSYNC, FPS,
   PRESS START blinking, still or off), volume, sound test.
 - **The pause** in a game: CONTINUE, RESTART, QUIT GAME.
+- **The attract mode**: the arcade's own (its story, the demos, the profiles) after the presentation, and after
+  30 seconds on the menu with nothing pressed; any key or button opens the menu.
 - And the Konami code on the menu.
 
 ## Controls
 
-- **Keyboard**: the arrows move, Z or left Ctrl attacks, X or left Alt jumps, Enter is START; Escape pauses (and
+- **Keyboard**: the arrows move, Z or left Ctrl attacks, X or left Alt jumps, C does both at once (the special
+  attack), Enter is START; Escape pauses (and
   goes back in the menus). F11 or Alt+Enter is the full screen, F3 the next kind of pixels. OPTIONS > CONTROLS
   changes each player's keys and buttons.
-- **Game controller**: the pad or the left stick moves, A attacks, B jumps, Start is START; Back or Start pauses.
+- **Game controller**: the pad or the left stick moves, A attacks, B jumps, X does both at once, Start is START;
+  Back or Start pauses.
   Each controller is a player, in the order they are plugged in (a TV's remote after them). One the game does not
   know, or knows wrong, takes its line of [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)'s
   format in `gamecontrollerdb.txt`, beside the game on Windows (in `~/.local/share/TMNT` on Linux,

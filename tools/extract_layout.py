@@ -192,8 +192,11 @@ def program_tables(image, walk, analysis):
                             | {symbol.name for symbol in analysis.symbols.values()} | set(tables.values()))
     out = [(name, group, True, [(first, stop, write_format(kind)) for first, stop, kind in kinds])
            for name, group, kinds in pieces]
-    out += [(name, "code_read", False, [(first, stop, write_format("code read as data"))])
-            for first, (stop, name) in sorted(data_assets.CODE_READ_AS_DATA.items())]
+    code_read = [[name, "code_read", [(first, stop, "code read as data")]]
+                 for first, (stop, name) in sorted(data_assets.CODE_READ_AS_DATA.items())]
+    code_read += data_assets.program_bytes_pieces(image, pieces + code_read)    # (the rest of the program: its code)
+    out += [(name, group, False, [(first, stop, write_format(kind)) for first, stop, kind in kinds])
+            for name, group, kinds in code_read]
     groups = []
     for _, group, _, _ in out:
         if group not in groups:

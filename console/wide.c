@@ -122,7 +122,8 @@ static int picture_place = PICTURE_MIDDLE;    /* (where it goes: read_picture_pl
 /* The menus' pages (Sebas: "el menu tmb tiene que tener wide"): their screens with the columns more at both sides */
 static bool menu_page_wide(void)
 {
-	return game_state == GAME_STATE_ATTRACT && console.page != PAGE_PRESENTATION && console.page != PAGE_GAME;
+	return game_state == GAME_STATE_ATTRACT && console.page != PAGE_PRESENTATION && console.page != PAGE_ATTRACT
+		&& console.page != PAGE_GAME;    /* (the attract mode's own screens: the board's 320, as the story's) */
 }
 
 /* In a game's play, and in the menus: the story screens, the ending and the ranking keep the board's 320 (their

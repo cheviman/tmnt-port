@@ -2,6 +2,7 @@
 # BOSS RUSH has no continues (issue 5), so once his 5 lives are gone (by 7500) START no longer brings him back:
 # coins 1 to the end, the countdown runs out, GAME OVER and the menu by 9000 (with the 3 continues of before, a
 # second coin at 7500 and the game on). With --script tests/console/skip_intro.txt --frames 9500: idle after the intro
+200 accept    # the presentation cut short: the menu at once, not the attract mode after it
 520 down
 530 accept
 560 down

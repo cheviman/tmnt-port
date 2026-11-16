@@ -2,6 +2,7 @@
 # accept: B and A) opens its level select; AREA 5 (the parked cars), infinite lives (as it starts), down past HEALTH,
 # ORIGINAL TURTLES and SAME TURTLE to START: Leonardo picked on the turtle choice and the game starts there. With --script
 # tests/console/skip_intro.txt
+200 accept    # the presentation cut short: the menu at once, not the attract mode after it
 500 up
 510 up
 520 down
