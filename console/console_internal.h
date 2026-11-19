@@ -119,6 +119,10 @@ void console_join(int slot);
 void console_apply_dip_switches(void);
 void console_set_mode_lives(int mode);
 
+/* The slips of the arcade game's own data put right in the data loaded, once, before the program runs
+   (corrections.c) */
+void console_correct_data(void);
+
 /* The presentation (presentation.c): its frame in the attract mode, with the actions pressed: true while it
    lasts; its picture over the frame */
 bool presentation_frame(uint32_t pressed);
