@@ -19,7 +19,8 @@ README.
   frame from the board's memories into a 320 x 224 picture; the YM2151, K007232, uPD7759 and the title music's
   sample are libraries that make the samples a platform plays.
 - **Platforms.** A port provides a window, input, audio output and the frame's pace, through the board's hooks
-  (`runtime/include/tmnt/machine.h`); `ports/sdl2/` is the first.
+  (`runtime/include/tmnt/machine.h`); `ports/sdl/` is the first, written for SDL 3 (what each
+  platform takes of it is in `ports/PLAN.md`).
 
 ## TMNT Arcade's options
 
@@ -58,7 +59,7 @@ A player of the port has no Python: with no assets, `TMNT Arcade` takes them out
   programs' data, as the assets give them), for the devices, which never take the assets out of a ROM set:
   `"TMNT Arcade" --write-pack tmnt.assets` makes it from the assets. It holds the version of the tables the game's
   C reads by name: a pack of another build says so instead of loading.
-- **The window** writes with Kenney Mini (CC0, `ports/sdl2/font/`, `font.bmp` beside the executable): none of the
+- **The window** writes with Kenney Mini (CC0, `ports/sdl/font/`, `font.bmp` beside the executable): none of the
   game's letters are there before its assets.
 
 ## The Windows package
@@ -66,14 +67,15 @@ A player of the port has no Python: with no assets, `TMNT Arcade` takes them out
 What a player downloads: `tmnt-windows-x64.zip`, a folder `tmnt` with `TMNT Arcade.exe`, `TMNT.exe` (the console
 version) and the `font.bmp` their first run and TMNT's menus write with, the package's `README.txt` (`docs/package/`: what the player needs, their own ROM set, how
 the first run takes it, the controls), `LICENSE.txt`, and `licenses/` with MAME's and ymfm's terms (the board's
-video and sound follow them), SDL2's and Kenney's. Nothing of the ROM set: the game takes its assets out of the
+video and sound follow them), SDL's and Kenney's. Nothing of the ROM set: the game takes its assets out of the
 player's.
 
-- **SDL2 inside.** `TMNT_STATIC_SDL2` builds SDL2 2.32.10 from its source (CMake's FetchContent, from GitHub) into
+- **SDL inside.** `TMNT_STATIC_SDL` builds SDL 3.4.20 from its source (CMake's FetchContent: its release's archive,
+  from GitHub, by its hash; `CMakeLists.txt`'s `TMNT_SDL_VERSION`, the one version every platform's build takes) into
   the executable, and the C runtime with it: it needs no library beside it, nor Visual C++'s redistributable.
-  Without it (the default) the build is the one above, SDL2's library beside the executable.
+  Without it (the default) the build is the one above, SDL's library beside the executable.
 - **The icon** is Raphael's face from a friend's mural (Sebas), nothing of the game's art:
-  `ports/sdl2/icon/raphael_mural.png`, of which `tools/make_icon.py` makes every size (`ports/sdl2/icon/` for the
+  `ports/sdl/icon/raphael_mural.png`, of which `tools/make_icon.py` makes every size (`ports/sdl/icon/` for the
   computers, the Android launcher's in `ports/android/res`, the Switch's `ports/switch/icon.jpg`); on Windows a
   resource of the executable, which Explorer and the window show. A picture of your own takes its place in your builds: `local/icon_pc.png` (`local/` is never committed) or
   `-DTMNT_PC_ICON=PICTURE`.
@@ -81,7 +83,7 @@ player's.
   `build/release/bin` (the usual build's in `build/bin` stay as they are):
 
   ```bash
-  cmake -S . -B build/release -DTMNT_STATIC_SDL2=ON -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_BIN_DIR=build/release/bin
+  cmake -S . -B build/release -DTMNT_STATIC_SDL=ON -DTMNT_REFERENCE_TOOLS=OFF -DTMNT_BIN_DIR=build/release/bin
   ```
 
   ```bash

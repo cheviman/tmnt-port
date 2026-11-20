@@ -4,9 +4,9 @@
                  computers' packages, "todos por separado sin assets"): tmnt-switch.zip, tmnt-android.zip and
                  tmnt-anbernic.zip, each the device's games without assets beside the tool that makes the
                  player's games of them, for Windows, macOS and Linux (as outrunners-port's)
-    Version:     0.2.0
+    Version:     0.3.0
     Created:     09-11-2026
-    Modified:    09-11-2026
+    Modified:    20-11-2026
     Author:      Sebastian Toyos
 
     license:BSD-3-Clause
@@ -18,14 +18,17 @@
     windows-x64, macos-universal and linux-x64. The zip keeps the programs' permissions (Unix entries), so
     that the macOS and Linux tools run as they are unpacked there.
 
-    TMNT's games also take their assets out of the player's tmnt.zip on the device itself (ports/sdl2/main.c's
+    TMNT's games also take their assets out of the player's tmnt.zip on the device itself (ports/sdl/main.c's
     device_assets), so a package carries them ready as well, beside the tool's way: the Switch's .nro in
     sd/switch/tmnt/ (--switch-nro), Android's APKs signed with the project's key in ready/ (--android-ready,
     when the CI has the key), and Anbernic's folder anbernic/, which is the card's Roms/PORTS as it is. A README's
     line marked {ready} is there only with the signed APKs, one marked {no-ready} only without them.
 
+    iOS has no tool: tmnt-ios.zip holds the two unsigned .ipa (--ios, the CI's ios job: ports/ios/ios.cmake), which
+    the player's sideloading tool signs as it installs them, with their README and the licenses (simpsons-port's).
+
     python3 ports/pack_devices.py --kits DIR --switch DIR --switch-nro DIR --android DIR [--android-ready DIR]
-        --anbernic DIR --out DIR
+        --anbernic DIR [--ios DIR] --out DIR
 """
 import argparse
 import os
@@ -138,6 +141,30 @@ def pack(device, tool, readme, game, extras, kits, out):
         print("   " + name)
 
 
+def pack_ios(ipas, kits, out):
+    """tmnt-ios.zip: the README, the licenses and ios/ with the two .ipa"""
+    top = "tmnt-ios"
+    target = os.path.join(out, top + ".zip")
+    shared = os.path.join(kits, "linux-x64", "kit")    # (the licenses: the same in every kit)
+    found = sorted(name for name in os.listdir(need(ipas)) if name.endswith(".ipa"))
+    if found != ["TMNT Arcade.ipa", "TMNT.ipa"]:
+        sys.exit("pack_devices: %s has %s, not TMNT.ipa and TMNT Arcade.ipa" % (ipas, found))
+    with zipfile.ZipFile(target, "w") as archive:
+        add_readme(archive, need(os.path.join(DOCS, "README-ios.txt")), top + "/README.txt", set())
+        add(archive, need(os.path.join(shared, "LICENSE.txt")), top + "/LICENSE.txt", FILE)
+        add_folder(archive, need(os.path.join(shared, "licenses")), top + "/licenses")
+        add_folder(archive, ipas, top + "/ios", suffix=".ipa")
+    with zipfile.ZipFile(target) as archive:
+        names = archive.namelist()
+    wrong = forbidden(names)
+    if wrong:
+        os.remove(target)
+        sys.exit("pack_devices: %s would carry %s" % (target, ", ".join(wrong)))
+    print("%s: %d files, %d bytes" % (target, len(names), os.path.getsize(target)))
+    for name in names:
+        print("   " + name)
+
+
 def main():
     parser = argparse.ArgumentParser(description="The devices' packages of a release")
     parser.add_argument("--kits", required=True, help="the computers' kits: windows-x64, macos-universal, linux-x64")
@@ -146,6 +173,7 @@ def main():
     parser.add_argument("--android", required=True, help="Android's games: tmnt-base.apk, tmnt-arcade-base.apk")
     parser.add_argument("--android-ready", help="Android's APKs signed with the project's key (none: not in it)")
     parser.add_argument("--anbernic", required=True, help="Anbernic's games: TMNT.sh, TMNT Arcade.sh and tmnt/")
+    parser.add_argument("--ios", help="iOS's games: TMNT.ipa and TMNT Arcade.ipa (none: no iOS package)")
     parser.add_argument("--out", required=True, help="where the zips go")
     arguments = parser.parse_args()
     os.makedirs(arguments.out, exist_ok=True)
@@ -158,6 +186,8 @@ def main():
         print("pack_devices: no signed APKs (the repository has no key): tmnt-android.zip with the tool's way alone")
     for device, tool, readme in DEVICES:
         pack(device, tool, readme, games[device], extras[device], arguments.kits, arguments.out)
+    if arguments.ios:
+        pack_ios(arguments.ios, arguments.kits, arguments.out)
 
 
 if __name__ == "__main__":

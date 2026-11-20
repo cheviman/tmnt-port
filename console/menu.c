@@ -44,7 +44,7 @@
 #define VERSION_Y           212
 #define VERSION_MARGIN      3            /* its right edge, to the window's */
 /* WIDE's columns the window leaves out at each side: 16:9's picture 416 columns, the window's the middle 398; 16:10's
-   384, the middle 358 (ports/sdl2's view_width; Sebas: "en options esta mal la version", cut at the right) */
+   384, the middle 358 (ports/sdl's view_width; Sebas: "en options esta mal la version", cut at the right) */
 static const int wide_crops[WIDE_KINDS] = { 0, 9, 0, 13 };
 #define PAGE_Y              28           /* OPTIONS' heading, and its pages' */
 #define LINE_Y              52           /* and its first line */

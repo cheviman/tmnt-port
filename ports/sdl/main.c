@@ -1,10 +1,10 @@
 /**
  *    Name:        main.c
- *    Description: the game in a window: SDL2 shows its screen, reads the controls and keeps the pace, around
+ *    Description: the game in a window: SDL shows its screen, reads the controls and keeps the pace, around
  *                 the same game and board the headless runs check
- *    Version:     0.1.3
+ *    Version:     0.2.0
  *    Created:     29-10-2026
- *    Modified:    07-11-2026
+ *    Modified:    19-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -69,9 +69,11 @@
 #include "touch.h"         /* (Android's touch screen: player 1's controls) */
 #endif
 
-#include <SDL.h>
-#if defined(__APPLE__) && defined(TMNT_CONSOLE)
-#include <SDL_syswm.h>
+#include "port_sdl.h"           /* SDL 3; or its names over a device's own SDL 2 (sdl2_layer.h) */
+#ifndef TMNT_SDL2_LAYER
+#include <SDL3/SDL_main.h> /* (the program's start as each platform has it: WinMain, Android's activity) */
+#endif
+#if defined(SDL_PLATFORM_MACOS) && defined(TMNT_CONSOLE)
 #include <objc/message.h>  /* (mac_full_screen: the window's NSWindow) */
 #include <objc/runtime.h>
 #endif
@@ -125,8 +127,8 @@
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
-static SDL_AudioDeviceID audio;
-static SDL_GameController *controllers[PLAYERS];
+static SDL_AudioStream *audio;     /* the sound's stream, on the default device (open_audio) */
+static SDL_Gamepad *controllers[PLAYERS];
 #ifndef TMNT_CONSOLE
 static bool smooth;                   /* F3: the picture as SDL softens it */
 #endif
@@ -166,7 +168,7 @@ static void make_crt_overlay(int width, int height)
 	crt_overlay = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 	crt_width = width;
 	crt_height = height;
-	if (!crt_overlay || SDL_LockTexture(crt_overlay, NULL, (void **)&pixels, &pitch) != 0)
+	if (!crt_overlay || !SDL_LockTexture(crt_overlay, NULL, (void **)&pixels, &pitch))
 		return;
 	for (int y = 0; y < height; y++)
 	{
@@ -243,7 +245,7 @@ static void count_fps(void)
 /* The frames a second at the top right of the picture 'shown', its letters the game's pixels, with a shadow */
 static void draw_fps(const SDL_Rect *shown)
 {
-	SDL_Rect cells[2][14 * 15];
+	SDL_FRect cells[2][14 * 15];
 	int count = 0;
 	char text[16];
 	const int pixel = SDL_max(1, shown->h / TMNT_VIDEO_HEIGHT);
@@ -261,10 +263,11 @@ static void draw_fps(const SDL_Rect *shown)
 			for (int column = 0; column < 3; column++)
 				if (rows[row] & (4 >> column))
 				{
-					cells[1][count] = (SDL_Rect){ x + column * pixel, shown->y + (4 + row) * pixel, pixel, pixel };
+					cells[1][count] = (SDL_FRect){ (float)(x + column * pixel), (float)(shown->y + (4 + row) * pixel),
+						(float)pixel, (float)pixel };
 					cells[0][count] = cells[1][count];
-					cells[0][count].x += pixel;
-					cells[0][count].y += pixel;
+					cells[0][count].x += (float)pixel;
+					cells[0][count].y += (float)pixel;
 					count++;
 				}
 	}
@@ -278,7 +281,7 @@ static void draw_fps(const SDL_Rect *shown)
 
 typedef struct
 {
-	int what;      /* an SDL_Scancode or an SDL_GameControllerButton */
+	int what;      /* an SDL_Scancode or an SDL_GamepadButton */
 	uint8_t row, column, tiles;    /* where in the sheet, and how many tiles wide */
 } prompt;
 
@@ -319,15 +322,15 @@ static const prompt key_prompts[] = {
 };
 
 static const prompt button_prompts[] = {
-	{ SDL_CONTROLLER_BUTTON_A, 0, 4, 1 }, { SDL_CONTROLLER_BUTTON_B, 0, 5, 1 },
-	{ SDL_CONTROLLER_BUTTON_X, 0, 6, 1 }, { SDL_CONTROLLER_BUTTON_Y, 0, 7, 1 },
-	{ SDL_CONTROLLER_BUTTON_DPAD_UP, 1, 1, 1 }, { SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 1, 2, 1 },
-	{ SDL_CONTROLLER_BUTTON_DPAD_DOWN, 1, 3, 1 }, { SDL_CONTROLLER_BUTTON_DPAD_LEFT, 1, 4, 1 },
-	{ SDL_CONTROLLER_BUTTON_BACK, 18, 4, 1 }, { SDL_CONTROLLER_BUTTON_START, 18, 5, 1 },
-	{ SDL_CONTROLLER_BUTTON_LEFTSHOULDER, 18, 7, 1 }, { SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 18, 8, 1 },
+	{ SDL_GAMEPAD_BUTTON_SOUTH, 0, 4, 1 }, { SDL_GAMEPAD_BUTTON_EAST, 0, 5, 1 },
+	{ SDL_GAMEPAD_BUTTON_WEST, 0, 6, 1 }, { SDL_GAMEPAD_BUTTON_NORTH, 0, 7, 1 },
+	{ SDL_GAMEPAD_BUTTON_DPAD_UP, 1, 1, 1 }, { SDL_GAMEPAD_BUTTON_DPAD_RIGHT, 1, 2, 1 },
+	{ SDL_GAMEPAD_BUTTON_DPAD_DOWN, 1, 3, 1 }, { SDL_GAMEPAD_BUTTON_DPAD_LEFT, 1, 4, 1 },
+	{ SDL_GAMEPAD_BUTTON_BACK, 18, 4, 1 }, { SDL_GAMEPAD_BUTTON_START, 18, 5, 1 },
+	{ SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, 18, 7, 1 }, { SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 18, 8, 1 },
 	{ CONTROL_LEFT_TRIGGER, 18, 9, 1 }, { CONTROL_RIGHT_TRIGGER, 18, 10, 1 },
-	{ SDL_CONTROLLER_BUTTON_LEFTSTICK, 12, 16, 1 }, { SDL_CONTROLLER_BUTTON_RIGHTSTICK, 14, 16, 1 },
-	{ SDL_CONTROLLER_BUTTON_GUIDE, 18, 2, 1 }, { SDL_CONTROLLER_BUTTON_MISC1, 18, 6, 1 },
+	{ SDL_GAMEPAD_BUTTON_LEFT_STICK, 12, 16, 1 }, { SDL_GAMEPAD_BUTTON_RIGHT_STICK, 14, 16, 1 },
+	{ SDL_GAMEPAD_BUTTON_GUIDE, 18, 2, 1 }, { SDL_GAMEPAD_BUTTON_MISC1, 18, 6, 1 },
 };
 
 #define PROMPT_SIZE  16
@@ -344,8 +347,8 @@ static void load_prompts(const char *base)
 	loaded = SDL_LoadBMP(path);
 	if (!loaded)
 		return;    /* (CONTROLS then shows the names alone) */
-	prompt_sheet = SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_ARGB8888, 0);
-	SDL_FreeSurface(loaded);
+	prompt_sheet = SDL_ConvertSurface(loaded, SDL_PIXELFORMAT_ARGB8888);
+	SDL_DestroySurface(loaded);
 }
 
 static const prompt *find_prompt(const prompt *list, size_t count, int what)
@@ -431,8 +434,56 @@ static bool frame_behind(void)
 		> next_frame + SDL_GetPerformanceFrequency() * FRAME_RATE_DENOMINATOR / FRAME_RATE_NUMERATOR;
 }
 
-#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
-/* WIDE as the phone's screen is (Android's VIDEO has no WIDE), chosen again whenever the screen changes: a Fold
+#ifdef SDL_PLATFORM_IOS
+/* ---- iOS and iPadOS (ports/ios, as simpsons-port's) ---- */
+
+static bool ios_background;    /* the app gone to the background (ios_app_events): nothing drawn there */
+
+/* The app's Documents folder, which the Files app shows as the app's own (Info.plist's UIFileSharingEnabled and
+   LSSupportsOpeningDocumentsInPlace): the device's folder, where the player puts the ROM set, and the folder of what
+   the game keeps and of its log. HOME is the app's own container on iOS. The caller frees it (SDL_free) */
+static char *ios_documents(void)
+{
+	const char *home = getenv("HOME");
+	const size_t length = (home ? strlen(home) : 0) + sizeof("/Documents/");
+	char *folder = SDL_malloc(length);
+
+	if (folder)
+		snprintf(folder, length, "%s/Documents/", home ? home : "");
+	return folder;
+}
+
+/* The app going to the background and coming back, as SDL sends them (an event watch: at once, before the frame's
+   events are read, as iOS may give the app no more time): from SDL_EVENT_WILL_ENTER_BACKGROUND to
+   SDL_EVENT_DID_ENTER_FOREGROUND nothing is drawn (present), an app's GPU work being refused there */
+static bool ios_app_events(void *data, SDL_Event *event)
+{
+	(void)data;
+	if (event->type == SDL_EVENT_WILL_ENTER_BACKGROUND)
+		ios_background = true;
+	else if (event->type == SDL_EVENT_DID_ENTER_FOREGROUND)
+		ios_background = false;
+	return true;
+}
+
+/* The width of each of the screen's sides the notch or the Dynamic Island takes in landscape (the window's safe area,
+   SDL's: the larger of its left and right), in the renderer's pixels for a screen 'out_width' of them wide: the
+   picture stays between them (present), and TMNT's WIDE is chosen for the width between them (follow_screen). 0
+   where none is known */
+static int ios_side_inset(int out_width)
+{
+	SDL_Rect safe;
+	int points = 0, points_high = 0;
+
+	if (!window || !SDL_GetWindowSize(window, &points, &points_high) || points <= 0
+		|| !SDL_GetWindowSafeArea(window, &safe))
+		return 0;
+	return (int)(SDL_max(safe.x, points - (safe.x + safe.w)) * (double)out_width / points + 0.5);
+}
+#endif
+
+#if (defined(__ANDROID__) || defined(SDL_PLATFORM_IOS)) && defined(TMNT_CONSOLE)
+/* WIDE as the phone's screen is (Android's VIDEO has no WIDE, nor iOS's), chosen again whenever the screen changes: a Fold
    opened or closed mid-game (Sebas: the picture stayed as it was, in half the screen), as outrunners-port's
    follow_screen. 20:9 where the screen is twice as wide as high or more (most phones), 16:9 from 16:9 on and on a
    tablet's screen (its short side TABLET_SIDE_INCHES or more: an open Fold's, the picture at the top and the touch
@@ -441,14 +492,21 @@ static bool frame_behind(void)
 
 static int shape_width, shape_height;    /* the screen WIDE was last chosen for */
 
+/* (the screen's dots an inch: Android's density, which is SDL 3's content scale of the display, times its 160) */
 static bool tablet_screen(int width, int height)
 {
-	float horizontal = 0.0f, vertical = 0.0f;
-	const int display = window ? SDL_GetWindowDisplayIndex(window) : 0;
+#ifdef SDL_PLATFORM_IOS
+	(void)width;
+	(void)height;
+	return SDL_IsTablet();    /* (an iPad) */
+#else
+	const float dots = 160.0f
+		* SDL_GetDisplayContentScale(window ? SDL_GetDisplayForWindow(window) : SDL_GetPrimaryDisplay());
 
-	if (SDL_GetDisplayDPI(display, NULL, &horizontal, &vertical) != 0 || horizontal <= 0.0f || vertical <= 0.0f)
+	if (dots <= 0.0f)
 		return false;
-	return SDL_min(width / horizontal, height / vertical) >= TABLET_SIDE_INCHES;
+	return SDL_min(width, height) / dots >= TABLET_SIDE_INCHES;
+#endif
 }
 
 static int wide_for_screen(int width, int height)
@@ -484,12 +542,29 @@ static void present(void)
 	int out_width = 0, out_height = 0;
 	double scale;
 	SDL_Rect frame, shown;
+	SDL_FRect from, to;    /* ('source' and 'shown' as SDL draws with them) */
 
-	SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
+#ifdef SDL_PLATFORM_IOS
+	if (ios_background)
+		return;    /* (the app in the background: iOS refuses its GPU work there) */
+#endif
+	SDL_GetRenderOutputSize(renderer, &out_width, &out_height);
 #if defined(__ANDROID__) && defined(TMNT_CONSOLE)
 	follow_screen(out_width, out_height);    /* (a Fold opened or closed: its WIDE, from the next frame) */
+#elif defined(SDL_PLATFORM_IOS) && defined(TMNT_CONSOLE)
+	/* (WIDE for the screen between the sides the notch or the Dynamic Island takes) */
+	follow_screen(out_width - 2 * ios_side_inset(out_width), out_height);
 #endif
 	scale = SDL_min((double)out_width / view, (double)out_height / TMNT_VIDEO_HEIGHT);
+#ifdef SDL_PLATFORM_IOS
+	{
+		/* (the picture between those sides: as wide as fits there) */
+		const int room = out_width - 2 * ios_side_inset(out_width);
+
+		if (room > 0)
+			scale = SDL_min(scale, (double)room / view);
+	}
+#endif
 #ifdef TMNT_CONSOLE
 	if (console_settings.integer_scale && scale >= 1.0)
 		scale = floor(scale);    /* (OPTIONS > VIDEO > INTEGER SCALE: every pixel of the game's the same size) */
@@ -504,13 +579,15 @@ static void present(void)
 	shown = frame;
 	shown.w = (int)(source.w * scale);
 	shown.x = (out_width - shown.w) / 2;
-	SDL_SetTextureScaleMode(texture, kind == 2 ? SDL_ScaleModeLinear : SDL_ScaleModeNearest);
+	SDL_RectToFRect(&source, &from);
+	SDL_RectToFRect(&shown, &to);
+	SDL_SetTextureScaleMode(texture, kind == 2 ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
 	if (kind == 1 || kind == 3)
 	{
 		const int times = SDL_max(1, (int)scale);
-		const SDL_Rect whole = { 0, 0, source.w * times, TMNT_VIDEO_HEIGHT * times };
+		const SDL_FRect whole = { 0.0f, 0.0f, (float)(source.w * times), (float)(TMNT_VIDEO_HEIGHT * times) };
 
 		if (!scaled || scaled_times != times || scaled_width != source.w)
 		{
@@ -520,28 +597,32 @@ static void present(void)
 				source.w * times, TMNT_VIDEO_HEIGHT * times);
 			scaled_width = source.w;
 			if (scaled)
-				SDL_SetTextureScaleMode(scaled, SDL_ScaleModeLinear);
+			{
+				SDL_SetTextureScaleMode(scaled, SDL_SCALEMODE_LINEAR);
+				/* (the picture as it is: SDL 3 blends a texture with an alpha channel unless told not to) */
+				SDL_SetTextureBlendMode(scaled, SDL_BLENDMODE_NONE);
+			}
 			scaled_times = times;
 		}
 		if (scaled)
 		{
 			SDL_SetRenderTarget(renderer, scaled);
-			SDL_RenderCopy(renderer, texture, &source, &whole);
+			SDL_RenderTexture(renderer, texture, &from, &whole);
 			SDL_SetRenderTarget(renderer, NULL);
 			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, scaled, &whole, &shown);
+			SDL_RenderTexture(renderer, scaled, &whole, &to);
 		}
 		else
-			SDL_RenderCopy(renderer, texture, &source, &shown);
+			SDL_RenderTexture(renderer, texture, &from, &to);
 		if (kind == 3)
 		{
 			make_crt_overlay(shown.w, shown.h);
 			if (crt_overlay)
-				SDL_RenderCopy(renderer, crt_overlay, NULL, &shown);
+				SDL_RenderTexture(renderer, crt_overlay, NULL, &to);
 		}
 	}
 	else
-		SDL_RenderCopy(renderer, texture, &source, &shown);
+		SDL_RenderTexture(renderer, texture, &from, &to);
 #ifdef TMNT_CONSOLE
 	count_fps();
 	draw_fps(&frame);
@@ -620,21 +701,21 @@ static void show_frame(void)
 	present();
 }
 
-#if defined(__APPLE__) && defined(TMNT_CONSOLE)
+#if defined(SDL_PLATFORM_MACOS) && defined(TMNT_CONSOLE)
 /* macOS's own full screen (the window's green button, Control+Command+F, View > Enter Full Screen): a Space of the
-   window's own, which SDL 2 does not count as full screen (SDL_GetWindowFlags says a window). The NSWindow's
-   styleMask has NSWindowStyleMaskFullScreen there */
+   window's own, which the settings do not know (SDL 2 did not count it as full screen; SDL 3 does, from its
+   windowDidEnterFullScreen on). The NSWindow's styleMask has NSWindowStyleMaskFullScreen there, whatever SDL says */
 #define MAC_STYLE_FULL_SCREEN (1ul << 14)
 
 static bool mac_full_screen(void)
 {
-	SDL_SysWMinfo info;
+	void *ns_window = window ? SDL_GetPointerProperty(SDL_GetWindowProperties(window),
+		SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL) : NULL;
 	unsigned long style;
 
-	SDL_VERSION(&info.version);
-	if (!window || !SDL_GetWindowWMInfo(window, &info) || info.subsystem != SDL_SYSWM_COCOA || !info.info.cocoa.window)
+	if (!ns_window)
 		return false;
-	style = ((unsigned long (*)(id, SEL))objc_msgSend)((id)info.info.cocoa.window, sel_registerName("styleMask"));
+	style = ((unsigned long (*)(id, SEL))objc_msgSend)((id)ns_window, sel_registerName("styleMask"));
 	return (style & MAC_STYLE_FULL_SCREEN) != 0;
 }
 
@@ -642,9 +723,8 @@ static bool mac_full_screen(void)
    seen), so that SDL can take it out of it */
 static void adopt_mac_full_screen(void)
 {
-	if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != SDL_WINDOW_FULLSCREEN_DESKTOP
-		&& mac_full_screen())
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) && mac_full_screen())
+		SDL_SetWindowFullscreen(window, true);
 }
 #else
 #define mac_full_screen() false
@@ -659,8 +739,8 @@ static void toggle_full_screen(void)
 	return;    /* (a keyboard's F11 on the Switch: its screen is the window already, apply_settings) */
 #endif
 	adopt_mac_full_screen();    /* (F11 in macOS's own full screen: out of it) */
-	full = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != SDL_WINDOW_FULLSCREEN_DESKTOP;
-	SDL_SetWindowFullscreen(window, full ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	full = !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
+	SDL_SetWindowFullscreen(window, full);    /* (the desktop's own mode: SDL 3's full screen with no mode chosen) */
 #ifdef TMNT_CONSOLE
 	console_settings.full_screen = full;
 	console_settings.changed = true;
@@ -679,20 +759,22 @@ static void toggle_smooth(void)
 
 /* ---- the sound ---- */
 
+/* The game's samples (16 bits, one channel, at the board's rate) into a stream on the default device, which SDL
+   converts to what the device plays; the device asked for 1024 samples at a time, as it was on SDL 2 */
 static void open_audio(void)
 {
-	SDL_AudioSpec wanted, got;
+	SDL_AudioSpec wanted;
 
-	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0)
+	if (!SDL_InitSubSystem(SDL_INIT_AUDIO))
 		return;
 	SDL_zero(wanted);
 	wanted.freq = (int)game_sound_rate();
-	wanted.format = AUDIO_S16SYS;
+	wanted.format = SDL_AUDIO_S16;
 	wanted.channels = 1;
-	wanted.samples = 1024;
-	audio = SDL_OpenAudioDevice(NULL, 0, &wanted, &got, 0);
+	SDL_SetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "1024");
+	audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &wanted, NULL, NULL);
 	if (audio)
-		SDL_PauseAudioDevice(audio, 0);
+		SDL_ResumeAudioStreamDevice(audio);    /* (a stream's device starts paused) */
 }
 
 /* the frame's samples, unless the queue is already many frames ahead (a slow start, a pause); in TMNT at
@@ -704,7 +786,7 @@ static void queue_sound(void)
 
 	if (!audio || !count || fast)
 		return;
-	if (SDL_GetQueuedAudioSize(audio) > QUEUE_FRAMES_MAX * count * sizeof(int16_t))
+	if ((size_t)SDL_GetAudioStreamQueued(audio) > QUEUE_FRAMES_MAX * count * sizeof(int16_t))
 		return;
 #ifdef TMNT_CONSOLE
 	if (console_settings.volume != 5)
@@ -718,18 +800,18 @@ static void queue_sound(void)
 
 			loud[index] = (int16_t)(value > 32767 ? 32767 : (value < -32768 ? -32768 : value));
 		}
-		SDL_QueueAudio(audio, loud, (Uint32)(taken * sizeof(int16_t)));
+		SDL_PutAudioStreamData(audio, loud, (int)(taken * sizeof(int16_t)));
 		return;
 	}
 #endif
-	SDL_QueueAudio(audio, samples, (Uint32)(count * sizeof(int16_t)));
+	SDL_PutAudioStreamData(audio, samples, (int)(count * sizeof(int16_t)));
 }
 
 /* ---- the controls ---- */
 
-static bool stick(SDL_GameController *pad, SDL_GameControllerAxis axis, int sign)
+static bool stick(SDL_Gamepad *pad, SDL_GamepadAxis axis, int sign)
 {
-	return pad && SDL_GameControllerGetAxis(pad, axis) * sign > STICK_DEAD_ZONE;
+	return pad && SDL_GetGamepadAxis(pad, axis) * sign > STICK_DEAD_ZONE;
 }
 
 #ifdef TMNT_CONSOLE
@@ -757,12 +839,12 @@ static void action_key(SDL_Keycode key)
 
 /* The button or trigger pressed on game controller 'which' for the control CONTROLS waits for, when it is the shown
    player's */
-static void bind_button(SDL_JoystickID which, SDL_GameControllerButton button)
+static void bind_button(SDL_JoystickID which, SDL_GamepadButton button)
 {
 	const int player = console_controls_player();
 
 	if (player < PLAYERS && controllers[player]
-		&& SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controllers[player])) == which)
+		&& SDL_GetJoystickID(SDL_GetGamepadJoystick(controllers[player])) == which)
 	{
 		controls_bind_button(player, console_controls_waiting(), button);
 		console_controls_bound();
@@ -784,7 +866,7 @@ static const char *const device_mappings[] = {
 #endif
 
 #ifdef TMNT_CONTROLLER_DB
-/* SDL_GameControllerDB's mappings for this platform (ports/sdl2/controllerdb, built in by CMakeLists.txt) */
+/* SDL_GameControllerDB's mappings for this platform (ports/sdl/controllerdb, built in by CMakeLists.txt) */
 extern const unsigned char tmnt_controller_db[];
 extern const size_t tmnt_controller_db_size;
 #endif
@@ -811,11 +893,12 @@ static char *saves_folder(void);
 static void add_mappings_file(char **text, size_t *length)
 {
 	char path[1024];
-	char *folders[2];
+	char *saves = saves_folder();
+	const char *folders[2];
 	const char *platform = SDL_GetPlatform();
 
-	folders[0] = saves_folder();
-	folders[1] = SDL_GetBasePath();
+	folders[0] = saves;
+	folders[1] = SDL_GetBasePath();    /* (SDL's own text: not freed) */
 	for (int folder = 0; folder < 2; folder++)
 	{
 		FILE *file;
@@ -844,14 +927,13 @@ static void add_mappings_file(char **text, size_t *length)
 		fprintf(stderr, "Game controllers: %s, %d mappings for %s\n", path, lines, platform);
 		break;
 	}
-	SDL_free(folders[0]);
-	SDL_free(folders[1]);
+	SDL_free(saves);
 }
 #endif
 
 /* The game controllers' mappings, a hint before SDL starts (SDL_HINT_GAMECONTROLLERCONFIG, which SDL reads before
    it looks for joysticks: a mapping added after SDL_Init leaves a joystick already plugged in a joystick, which the
-   game does not take, as SDL 2.32's SDL_PrivateAddMappingForGUID does). SDL_GameControllerDB's for this platform
+   game does not take, as SDL 2.32's SDL_PrivateAddMappingForGUID did). SDL_GameControllerDB's for this platform
    built in (a player's report: an Nvidia Shield's PS4 and Xbox controllers, plugged in before the game started), the
    Anbernic's own buttons, the environment's SDL_GAMECONTROLLERCONFIG (Steam's, in the games it starts), and last the
    player's gamecontrollerdb.txt, so that its lines go over the others for the same controller. The hint overrides
@@ -892,18 +974,18 @@ static void add_mappings(void)
    of keys and buttons, to tell a controller's button that comes as a key */
 #define INPUT_LOG_PRESSES   48
 
-static void log_joystick(int index)
+static void log_joystick(SDL_JoystickID which)
 {
 	char guid_text[33];
-	const SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID(index);
-	const char *name = SDL_JoystickNameForIndex(index);
+	const SDL_GUID guid = SDL_GetJoystickGUIDForID(which);
+	const char *name = SDL_GetJoystickNameForID(which);
 	char *mapping;
 
-	SDL_JoystickGetGUIDString(guid, guid_text, sizeof(guid_text));
-	mapping = SDL_GameControllerMappingForGUID(guid);
-	fprintf(stderr, "Joystick %d: %s, GUID %s, %s%s\n", index, name ? name : "(no name)", guid_text,
-		SDL_IsGameController(index) ? "a game controller: " : "no game controller (no mapping)",
-		SDL_IsGameController(index) && mapping ? mapping : "");
+	SDL_GUIDToString(guid, guid_text, sizeof(guid_text));
+	mapping = SDL_GetGamepadMappingForGUID(guid);
+	fprintf(stderr, "Joystick %d: %s, GUID %s, %s%s\n", (int)which, name ? name : "(no name)", guid_text,
+		SDL_IsGamepad(which) ? "a game controller: " : "no game controller (no mapping)",
+		SDL_IsGamepad(which) && mapping ? mapping : "");
 	SDL_free(mapping);
 }
 
@@ -913,12 +995,12 @@ static void log_press(const SDL_Event *event)
 
 	if (presses >= INPUT_LOG_PRESSES)
 		return;
-	if (event->type == SDL_KEYDOWN && !event->key.repeat)
-		fprintf(stderr, "Key %s (scancode %d)\n", SDL_GetKeyName(event->key.keysym.sym), (int)event->key.keysym.scancode);
-	else if (event->type == SDL_CONTROLLERBUTTONDOWN)
-		fprintf(stderr, "Game controller %d: %s\n", (int)event->cbutton.which,
-			SDL_GameControllerGetStringForButton((SDL_GameControllerButton)event->cbutton.button));
-	else if (event->type == SDL_JOYBUTTONDOWN)
+	if (event->type == SDL_EVENT_KEY_DOWN && !event->key.repeat)
+		fprintf(stderr, "Key %s (scancode %d)\n", SDL_GetKeyName(event->key.key), (int)event->key.scancode);
+	else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)
+		fprintf(stderr, "Game controller %d: %s\n", (int)event->gbutton.which,
+			SDL_GetGamepadStringForButton((SDL_GamepadButton)event->gbutton.button));
+	else if (event->type == SDL_EVENT_JOYSTICK_BUTTON_DOWN)
 		fprintf(stderr, "Joystick %d: button %d\n", (int)event->jbutton.which, (int)event->jbutton.button);
 	else
 		return;
@@ -929,16 +1011,16 @@ static void log_press(const SDL_Event *event)
 /* A TV's remote, which SDL takes for a game controller (the Shield's, Android TV's, Fire TV's: "... Remote"); on
    Android also one by its buttons, whatever its name: a pad, OK (A) and back (Back), but no B and no Start (the
    Chromecast with Google TV's) */
-static bool is_remote(SDL_GameController *pad)
+static bool is_remote(SDL_Gamepad *pad)
 {
-	const char *name = SDL_GameControllerName(pad);
+	const char *name = SDL_GetGamepadName(pad);
 
 	for (const char *at = name ? name : ""; *at; at++)
 		if (SDL_strncasecmp(at, "remote", 6) == 0)
 			return true;
 #ifdef __ANDROID__
-	if (!SDL_GameControllerHasButton(pad, SDL_CONTROLLER_BUTTON_B)
-		&& !SDL_GameControllerHasButton(pad, SDL_CONTROLLER_BUTTON_START))
+	if (!SDL_GamepadHasButton(pad, SDL_GAMEPAD_BUTTON_EAST)
+		&& !SDL_GamepadHasButton(pad, SDL_GAMEPAD_BUTTON_START))
 		return true;
 #endif
 	return false;
@@ -948,7 +1030,7 @@ static bool is_remote(SDL_GameController *pad)
 /* The game controller 'which' is a TV's remote: its Back is its player's JUMP, not the pause (read_players) */
 static bool remote_back(SDL_JoystickID which)
 {
-	SDL_GameController *pad = SDL_GameControllerFromInstanceID(which);
+	SDL_Gamepad *pad = SDL_GetGamepadFromID(which);
 
 	return pad && is_remote(pad);
 }
@@ -958,18 +1040,18 @@ static bool remote_back(SDL_JoystickID which)
 
 /* A game controller plugged in: the first player without one, but a game controller before a TV's remote (a
    player's report: the Shield's remote, found first, took player 1 from his Xbox controller) */
-static void controller_added(int which)
+static void controller_added(SDL_JoystickID which)
 {
 	for (int player = 0; player < PLAYERS; player++)
 		if (!controllers[player])
 		{
-			controllers[player] = SDL_GameControllerOpen(which);
+			controllers[player] = SDL_OpenGamepad(which);
 			if (!controllers[player] || is_remote(controllers[player]))
 				return;
 			for (int before = 0; before < player; before++)
 				if (is_remote(controllers[before]))
 				{
-					SDL_GameController *remote = controllers[before];
+					SDL_Gamepad *remote = controllers[before];
 
 					controllers[before] = controllers[player];
 					controllers[player] = remote;
@@ -983,21 +1065,21 @@ static void controller_added(int which)
 /* The mouse's pointer, hidden over the game once it has stood still for two seconds; moving it shows it again (a
    player's suggestion, on a Mac: issue 8) */
 #define POINTER_SHOWN_MS  2000u
-static Uint32 pointer_moved;
+static Uint64 pointer_moved;
 
 static void pointer_event(const SDL_Event *event)
 {
-	if (event->type != SDL_MOUSEMOTION && event->type != SDL_MOUSEBUTTONDOWN && event->type != SDL_MOUSEWHEEL)
+	if (event->type != SDL_EVENT_MOUSE_MOTION && event->type != SDL_EVENT_MOUSE_BUTTON_DOWN && event->type != SDL_EVENT_MOUSE_WHEEL)
 		return;
 	pointer_moved = SDL_GetTicks();
-	if (SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE)
-		SDL_ShowCursor(SDL_ENABLE);
+	if (!SDL_CursorVisible())
+		SDL_ShowCursor();
 }
 
 static void pointer_frame(void)
 {
-	if (SDL_GetTicks() - pointer_moved >= POINTER_SHOWN_MS && SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE)
-		SDL_ShowCursor(SDL_DISABLE);
+	if (SDL_GetTicks() - pointer_moved >= POINTER_SHOWN_MS && SDL_CursorVisible())
+		SDL_HideCursor();
 }
 #else
 #define pointer_event(event)
@@ -1018,11 +1100,11 @@ static void read_events(void)
 #endif
 		switch (event.type)
 		{
-			case SDL_QUIT:
+			case SDL_EVENT_QUIT:
 				program_stop();    /* (back to main: the game runs on a task's stack) */
 				return;
 #ifdef TMNT_HANDHELD_KEYS
-			case SDL_JOYBUTTONDOWN:
+			case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
 				if (event.jbutton.button == HANDHELD_MENU_BUTTON)
 				{
 					program_stop();    /* (MENU leaves the game, as the firmware's other games) */
@@ -1030,20 +1112,20 @@ static void read_events(void)
 				}
 				break;
 #endif
-#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
-			case SDL_APP_WILLENTERBACKGROUND:
+#if (defined(__ANDROID__) || defined(SDL_PLATFORM_IOS)) && defined(TMNT_CONSOLE)
+			case SDL_EVENT_WILL_ENTER_BACKGROUND:
 				if (console_can_pause())
-					pause_requested = true;    /* (Android may end the game there: a game waits, paused) */
+					pause_requested = true;    /* (Android or iOS may end the game there: a game waits, paused) */
 				break;
 #endif
-			case SDL_KEYDOWN:
+			case SDL_EVENT_KEY_DOWN:
 				if (event.key.repeat)
 					break;
 #if defined(TMNT_HANDHELD_KEYS) && defined(TMNT_CONSOLE)
-				if (event.key.keysym.sym == SDLK_VOLUMEUP || event.key.keysym.sym == SDLK_VOLUMEDOWN)
+				if (event.key.key == SDLK_VOLUMEUP || event.key.key == SDLK_VOLUMEDOWN)
 				{
 					/* (the handheld's volume keys: OPTIONS > VOLUME's, kept) */
-					const int volume = console_settings.volume + (event.key.keysym.sym == SDLK_VOLUMEUP ? 1 : -1);
+					const int volume = console_settings.volume + (event.key.key == SDLK_VOLUMEUP ? 1 : -1);
 
 					console_settings.volume = SDL_clamp(volume, 0, 10);
 					console_settings.changed = true;
@@ -1054,58 +1136,58 @@ static void read_events(void)
 				if (console_controls_waiting() >= 0)
 				{
 					/* CONTROLS waits for a key: this one (Escape leaves the control as it was) */
-					if (event.key.keysym.sym != SDLK_ESCAPE)
-						controls_bind_key(console_controls_player(), console_controls_waiting(), event.key.keysym.scancode);
+					if (event.key.key != SDLK_ESCAPE)
+						controls_bind_key(console_controls_player(), console_controls_waiting(), event.key.scancode);
 					console_controls_bound();
 					break;
 				}
-				if (!(event.key.keysym.mod & KMOD_ALT))    /* (Alt+Enter: the full screen alone) */
-					action_key(event.key.keysym.sym);
-				if ((event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_AC_BACK)
+				if (!(event.key.mod & SDL_KMOD_ALT))    /* (Alt+Enter: the full screen alone) */
+					action_key(event.key.key);
+				if ((event.key.key == SDLK_ESCAPE || event.key.key == SDLK_AC_BACK)
 					&& (console_can_pause() || console_lan_playing()))
 					pause_requested = true;    /* (a LAN game's: out of it, console_lan_quit; Android's back too) */
 #else
-				if (event.key.keysym.sym == SDLK_ESCAPE)
+				if (event.key.key == SDLK_ESCAPE)
 				{
 					program_stop();
 					return;
 				}
 #endif
-				if (event.key.keysym.sym == SDLK_F11
-					|| (event.key.keysym.sym == SDLK_RETURN && (event.key.keysym.mod & KMOD_ALT)))
+				if (event.key.key == SDLK_F11
+					|| (event.key.key == SDLK_RETURN && (event.key.mod & SDL_KMOD_ALT)))
 					toggle_full_screen();
-				if (event.key.keysym.sym == SDLK_F3)
+				if (event.key.key == SDLK_F3)
 					toggle_smooth();
 				break;
 #ifdef TMNT_CONSOLE
-			case SDL_CONTROLLERBUTTONDOWN:
+			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
 				/* ... or a button of the game controller plugged in for that player */
 				if (console_controls_waiting() >= 0)
-					bind_button(event.cbutton.which, (SDL_GameControllerButton)event.cbutton.button);
-				else if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK && console_can_pause()
-					&& !remote_back(event.cbutton.which) && !console_coins_on())    /* (COINS: Back is the coin) */
-					pause_requested = true;    /* (a TV remote's: its home pauses, SDL_APP_WILLENTERBACKGROUND) */
+					bind_button(event.gbutton.which, (SDL_GamepadButton)event.gbutton.button);
+				else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK && console_can_pause()
+					&& !remote_back(event.gbutton.which) && !console_coins_on())    /* (COINS: Back is the coin) */
+					pause_requested = true;    /* (a TV remote's: its home pauses, SDL_EVENT_WILL_ENTER_BACKGROUND) */
 				break;
-			case SDL_CONTROLLERAXISMOTION:
+			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 				/* ... or one of its triggers, pressed halfway */
-				if (console_controls_waiting() >= 0 && event.caxis.value >= TRIGGER_BOUND
-					&& (event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT))
-					bind_button(event.caxis.which, event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT
+				if (console_controls_waiting() >= 0 && event.gaxis.value >= TRIGGER_BOUND
+					&& (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER))
+					bind_button(event.gaxis.which, event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER
 						? CONTROL_LEFT_TRIGGER : CONTROL_RIGHT_TRIGGER);
 				break;
 #endif
-			case SDL_JOYDEVICEADDED:
+			case SDL_EVENT_JOYSTICK_ADDED:
 				log_joystick(event.jdevice.which);
 				break;
-			case SDL_CONTROLLERDEVICEADDED:
-				controller_added(event.cdevice.which);
+			case SDL_EVENT_GAMEPAD_ADDED:
+				controller_added(event.gdevice.which);
 				break;
-			case SDL_CONTROLLERDEVICEREMOVED:
+			case SDL_EVENT_GAMEPAD_REMOVED:
 				for (int player = 0; player < PLAYERS; player++)
 					if (controllers[player]
-						&& SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controllers[player])) == event.cdevice.which)
+						&& SDL_GetJoystickID(SDL_GetGamepadJoystick(controllers[player])) == event.gdevice.which)
 					{
-						SDL_GameControllerClose(controllers[player]);
+						SDL_CloseGamepad(controllers[player]);
 						controllers[player] = NULL;
 					}
 				break;
@@ -1125,7 +1207,7 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 	*starts = 0;
 	for (int player = 0; player < PLAYERS; player++)
 	{
-		SDL_GameController *pad = controllers[player];
+		SDL_Gamepad *pad = controllers[player];
 		bool start = controls_holds(player, pad, CONTROL_START);
 		uint8_t pressed = 0;
 
@@ -1136,10 +1218,10 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 			start = start || touch_start();
 		}
 #endif
-		pressed |= controls_holds(player, pad, CONTROL_LEFT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, -1) ? TMNT_LEFT : 0;
-		pressed |= controls_holds(player, pad, CONTROL_RIGHT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, 1) ? TMNT_RIGHT : 0;
-		pressed |= controls_holds(player, pad, CONTROL_UP) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, -1) ? TMNT_UP : 0;
-		pressed |= controls_holds(player, pad, CONTROL_DOWN) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, 1) ? TMNT_DOWN : 0;
+		pressed |= controls_holds(player, pad, CONTROL_LEFT) || stick(pad, SDL_GAMEPAD_AXIS_LEFTX, -1) ? TMNT_LEFT : 0;
+		pressed |= controls_holds(player, pad, CONTROL_RIGHT) || stick(pad, SDL_GAMEPAD_AXIS_LEFTX, 1) ? TMNT_RIGHT : 0;
+		pressed |= controls_holds(player, pad, CONTROL_UP) || stick(pad, SDL_GAMEPAD_AXIS_LEFTY, -1) ? TMNT_UP : 0;
+		pressed |= controls_holds(player, pad, CONTROL_DOWN) || stick(pad, SDL_GAMEPAD_AXIS_LEFTY, 1) ? TMNT_DOWN : 0;
 		pressed |= controls_holds(player, pad, CONTROL_ATTACK) ? TMNT_ATTACK : 0;
 		pressed |= controls_holds(player, pad, CONTROL_JUMP) ? TMNT_JUMP : 0;
 		pressed |= controls_holds(player, pad, CONTROL_SPECIAL) ? TMNT_ATTACK | TMNT_JUMP : 0;    /* (both at once) */
@@ -1149,9 +1231,9 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 		   continue) */
 		if (pad && is_remote(pad))
 		{
-			if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK))
+			if (SDL_GetGamepadButton(pad, SDL_GAMEPAD_BUTTON_BACK))
 				pressed |= TMNT_JUMP;
-			if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) && console_can_pause()
+			if (SDL_GetGamepadButton(pad, SDL_GAMEPAD_BUTTON_SOUTH) && console_can_pause()
 				&& !console_start_pauses(player))
 				start = true;
 		}
@@ -1168,13 +1250,13 @@ static void read_players(uint8_t players[PLAYERS], uint8_t *starts)
 static void read_coins(void)
 {
 	static bool held[PLAYERS];
-	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	const bool *keys = SDL_GetKeyboardState(NULL);
 
 	for (int player = 0; player < PLAYERS; player++)
 	{
-		SDL_GameController *pad = controllers[player];
+		SDL_Gamepad *pad = controllers[player];
 		const bool coin = keys[SDL_SCANCODE_5 + player]
-			|| (pad && !is_remote(pad) && SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK));
+			|| (pad && !is_remote(pad) && SDL_GetGamepadButton(pad, SDL_GAMEPAD_BUTTON_BACK));
 
 		if (coin && !held[player] && console_coins_on())
 			console_coin(player);
@@ -1250,18 +1332,18 @@ static uint32_t pause_events(void)
 #endif
 		switch (event.type)
 		{
-			case SDL_QUIT:
+			case SDL_EVENT_QUIT:
 				program_stop();
 				return WINDOW_CLOSED;
-			case SDL_KEYDOWN:
+			case SDL_EVENT_KEY_DOWN:
 				if (event.key.repeat)
 					break;
-				switch (event.key.keysym.sym)
+				switch (event.key.key)
 				{
 					case SDLK_UP: pressed |= ACTION_BIT(ACTION_UP); break;
 					case SDLK_DOWN: pressed |= ACTION_BIT(ACTION_DOWN); break;
 					case SDLK_RETURN: case SDLK_KP_ENTER:
-						if (event.key.keysym.mod & KMOD_ALT)
+						if (event.key.mod & SDL_KMOD_ALT)
 							toggle_full_screen();
 						else
 							pressed |= ACTION_BIT(ACTION_ACCEPT);
@@ -1271,8 +1353,8 @@ static uint32_t pause_events(void)
 					default: break;
 				}
 				break;
-			case SDL_CONTROLLERBUTTONDOWN:
-				if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK)
+			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+				if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)
 					pressed |= PAUSE_BACK;    /* (the button that pauses, as Escape) */
 				break;
 			default:
@@ -1323,7 +1405,7 @@ static void run_pause(void)
 
 	pause_requested = false;
 	if (audio)
-		SDL_PauseAudioDevice(audio, 1);
+		SDL_PauseAudioStreamDevice(audio);
 	read_players(held, &starts);    /* (what was held as the pause came, the START that paused too: no new press) */
 	memcpy(frozen_pixels, picture.pixels, sizeof(frozen_pixels));    /* (WIDE's whole frame: Sebas) */
 	shown.left = picture.left;
@@ -1359,33 +1441,33 @@ static void run_pause(void)
 	console_controls_held(players);
 	actions_pressed = 0;
 	if (audio)
-		SDL_PauseAudioDevice(audio, 0);
+		SDL_ResumeAudioStreamDevice(audio);
 	next_frame = 0;    /* (the pace from here) */
 }
 #else
-static bool button(SDL_GameController *pad, SDL_GameControllerButton which)
+static bool button(SDL_Gamepad *pad, SDL_GamepadButton which)
 {
-	return pad && SDL_GameControllerGetButton(pad, which) != 0;
+	return pad && SDL_GetGamepadButton(pad, which);
 }
 
 /* the controls into the board's inputs, which it reads in the next frame (active low: a cleared bit is a pressed
    button): player 1's keys and every player's game controller */
 static void read_controls(void)
 {
-	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	const bool *keys = SDL_GetKeyboardState(NULL);
 	uint8_t coins = 0xFF;
 
 	for (int player = 0; player < PLAYERS; player++)
 	{
-		SDL_GameController *pad = controllers[player];
+		SDL_Gamepad *pad = controllers[player];
 		const bool keyboard = player == 0;
-		bool left = button(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, -1);
-		bool right = button(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT) || stick(pad, SDL_CONTROLLER_AXIS_LEFTX, 1);
-		bool up = button(pad, SDL_CONTROLLER_BUTTON_DPAD_UP) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, -1);
-		bool down = button(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN) || stick(pad, SDL_CONTROLLER_AXIS_LEFTY, 1);
-		bool attack = button(pad, SDL_CONTROLLER_BUTTON_A);
-		bool jump = button(pad, SDL_CONTROLLER_BUTTON_B);
-		bool special = button(pad, SDL_CONTROLLER_BUTTON_X);    /* (attack and jump at once: the special attack) */
+		bool left = button(pad, SDL_GAMEPAD_BUTTON_DPAD_LEFT) || stick(pad, SDL_GAMEPAD_AXIS_LEFTX, -1);
+		bool right = button(pad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT) || stick(pad, SDL_GAMEPAD_AXIS_LEFTX, 1);
+		bool up = button(pad, SDL_GAMEPAD_BUTTON_DPAD_UP) || stick(pad, SDL_GAMEPAD_AXIS_LEFTY, -1);
+		bool down = button(pad, SDL_GAMEPAD_BUTTON_DPAD_DOWN) || stick(pad, SDL_GAMEPAD_AXIS_LEFTY, 1);
+		bool attack = button(pad, SDL_GAMEPAD_BUTTON_SOUTH);
+		bool jump = button(pad, SDL_GAMEPAD_BUTTON_EAST);
+		bool special = button(pad, SDL_GAMEPAD_BUTTON_WEST);    /* (attack and jump at once: the special attack) */
 		uint8_t pressed = 0;
 
 		if (keyboard)
@@ -1411,7 +1493,7 @@ static void read_controls(void)
 			pressed |= touch_controls();
 #endif
 		tmnt_board.players[player] = (uint8_t)~pressed;
-		if (keys[SDL_SCANCODE_5 + player] || button(pad, SDL_CONTROLLER_BUTTON_BACK))
+		if (keys[SDL_SCANCODE_5 + player] || button(pad, SDL_GAMEPAD_BUTTON_BACK))
 			coins &= (uint8_t)~(TMNT_COIN1 << player);
 #ifdef TMNT_TOUCH
 		if (player == 0 && touch_start())
@@ -1512,14 +1594,14 @@ static void load_settings(void)
 /* VSYNC (OPTIONS > VIDEO): the renderer shows each frame at the screen's refresh, unless the frames run as fast as
    they can (--fast). The game keeps its own pace, the board's 59.19 frames a second (wait_for_frame): a faster screen
    (120 Hz) shows a frame twice. A device's screen keeps the system's own refresh (and the Anbernic's SDL 2.0.12 has
-   no SDL_RenderSetVSync) */
+   no SDL_SetRenderVSync) */
 static void apply_vsync(void)
 {
 #ifndef TMNT_HANDHELD
 	const bool wanted = console_settings.vsync && !fast;
 
 	if (renderer && wanted != vsync_on)
-		vsync_on = SDL_RenderSetVSync(renderer, wanted ? 1 : 0) == 0 ? wanted : false;
+		vsync_on = SDL_SetRenderVSync(renderer, wanted ? 1 : 0) ? wanted : false;
 #endif
 }
 
@@ -1547,7 +1629,7 @@ static void apply_settings(void)
 	if (mac_full_screen() && !full_changed)
 		return;    /* (the picture fills the screen at any size) */
 	adopt_mac_full_screen();    /* (FULL SCREEN changed there: SDL's own from here, OFF out of it) */
-	SDL_SetWindowFullscreen(window, console_settings.full_screen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	SDL_SetWindowFullscreen(window, console_settings.full_screen);
 	if (!console_settings.full_screen)
 		SDL_SetWindowSize(window, view_width() * console_settings.window_scale,
 			TMNT_VIDEO_HEIGHT * console_settings.window_scale);
@@ -1659,14 +1741,23 @@ static void on_frame_done(void)
 /* Where the game keeps what it writes (the first run's assets): beside the executable on Windows; elsewhere the
    user's own folder for the game (SDL_GetPrefPath: ~/.local/share/TMNT, ~/Library/Application Support/TMNT), as
    the executable's may not be written. The caller frees it (SDL_free) */
+static char *base_folder(void)
+{
+	const char *base = SDL_GetBasePath();    /* (SDL's own text: a copy of it) */
+
+	return base ? SDL_strdup(base) : NULL;
+}
+
 static char *saves_folder(void)
 {
 #ifdef __SWITCH__
 	return SDL_strdup(SWITCH_FOLDER "/");
 #elif defined(__ANDROID__)
 	return SDL_GetPrefPath("", "TMNT");    /* (the app's own folder, its internal storage) */
+#elif defined(SDL_PLATFORM_IOS)
+	return ios_documents();    /* (the app's Documents, the Files app's: the player can see and keep them) */
 #elif defined(_WIN32) || defined(TMNT_HANDHELD)
-	return SDL_GetBasePath();    /* (a handheld's: the game's folder on its card) */
+	return base_folder();    /* (a handheld's: the game's folder on its card) */
 #else
 	return SDL_GetPrefPath("", "TMNT");
 #endif
@@ -1708,12 +1799,21 @@ static void open_log(void)
 #elif defined(__ANDROID__)
 	/* (Android's standard error goes nowhere: the log in the app's folder on the storage, Android/data/<the
 	   app>/files, where the player can read it) */
-	if (SDL_AndroidGetExternalStoragePath())
+	if (SDL_GetAndroidExternalStoragePath())
 	{
 		char folder[1100];
 
-		snprintf(folder, sizeof(folder), "%s/", SDL_AndroidGetExternalStoragePath());
+		snprintf(folder, sizeof(folder), "%s/", SDL_GetAndroidExternalStoragePath());
 		log_into(folder);
+	}
+#elif defined(SDL_PLATFORM_IOS)
+	{
+		/* (an app's standard error reaches no one: the log in its Documents, where the player puts the ROM set and the
+		   Files app shows it) */
+		char *documents = ios_documents();
+
+		log_into(documents ? documents : "");
+		SDL_free(documents);
 	}
 #elif defined(_WIN32)
 	if (_fileno(stderr) < 0)
@@ -1770,8 +1870,8 @@ static const char no_pack_in_apk[] = "";    /* (load_android_pack: the APK carri
    files and loaded from its bytes. NULL, no_pack_in_apk, or what is wrong */
 static const char *load_android_pack(void)
 {
-	SDL_RWops *packed = SDL_RWFromFile(GAME_PACK_FILE, "rb");
-	const Sint64 size = packed ? SDL_RWsize(packed) : -1;
+	SDL_IOStream *packed = SDL_IOFromFile(GAME_PACK_FILE, "rb");
+	const Sint64 size = packed ? SDL_GetIOSize(packed) : -1;
 	uint8_t *bytes = size > 0 ? malloc((size_t)size) : NULL;
 	size_t got = 0;
 	const char *problem;
@@ -1781,13 +1881,13 @@ static const char *load_android_pack(void)
 	while (bytes && got < (size_t)size)
 	{
 		/* (its bytes as the asset manager hands them: maybe fewer than asked for at a time) */
-		const size_t now = SDL_RWread(packed, bytes + got, 1, (size_t)size - got);
+		const size_t now = SDL_ReadIO(packed, bytes + got, (size_t)size - got);
 
 		if (now == 0)
 			break;
 		got += now;
 	}
-	SDL_RWclose(packed);
+	SDL_CloseIO(packed);
 	problem = !bytes || got != (size_t)size ? "The game's assets cannot be read" : assets_load_pack_bytes(bytes, got);
 	free(bytes);
 	return problem;
@@ -1801,22 +1901,24 @@ static const char *load_android_pack(void)
 
 /* A device's own folder, where the player puts the ROM set (or a pack) and the game takes the assets out of it: the
    Switch's sdmc:/switch/tmnt/ (TMNT's and TMNT Arcade's both), the handheld's PORTS/tmnt/ (beside both
-   executables), Android's app folder on its storage (Android/data/<the app>/files/, where its log is). The caller
-   frees it (SDL_free) */
+   executables), Android's app folder on its storage (Android/data/<the app>/files/, where its log is), iOS's app's
+   Documents (the Files app's, each game its own). The caller frees it (SDL_free) */
 static char *device_folder(void)
 {
 #ifdef __SWITCH__
 	return SDL_strdup("sdmc:/switch/tmnt/");
 #elif defined(__ANDROID__)
-	const char *storage = SDL_AndroidGetExternalStoragePath();
+	const char *storage = SDL_GetAndroidExternalStoragePath();
 	const size_t length = storage ? strlen(storage) + 2 : 1;
 	char *folder = SDL_malloc(length);
 
 	if (folder)
 		snprintf(folder, length, "%s%s", storage ? storage : "", storage ? "/" : "");
 	return folder;
+#elif defined(SDL_PLATFORM_IOS)
+	return ios_documents();
 #else
-	return SDL_GetBasePath();
+	return base_folder();
 #endif
 }
 
@@ -1856,8 +1958,16 @@ static bool device_assets(char *found, size_t size, char *problem, size_t proble
 			}
 		}
 		if (!source[0])
+#ifdef SDL_PLATFORM_IOS
+			/* (the app's Documents as the player finds it: in the Files app, or from a computer) */
+			snprintf(problem, problem_size, "No ROM set: put " ROM_SET_FILE " (MAME's tmnt set) in this game's folder, in "
+				"the Files app: On My iPhone (On My iPad) > " TITLE ". From a computer: Finder (or the Apple Devices app "
+				"on Windows), the device, Files, " TITLE ". Then start the game again: the first start takes the game's "
+				"assets out of it (some seconds).");
+#else
 			snprintf(problem, problem_size, "No ROM set: put " ROM_SET_FILE " (MAME's tmnt set) in %s, and start the game "
 				"again. The first start takes the game's assets out of it (some seconds).", place);
+#endif
 		else
 		{
 			fprintf(stderr, "The assets out of %s into %s\n", source, found);
@@ -1895,7 +2005,8 @@ static bool find_assets(char *found, size_t size)
    came */
 static bool find_assets(char *found, size_t size)
 {
-	char *base = SDL_GetBasePath(), *saves = saves_folder();
+	const char *base = SDL_GetBasePath();
+	char *saves = saves_folder();
 	char beside_app[1100];
 	const bool in_app = app_folder(base, beside_app, sizeof(beside_app)) != 0;
 	const char *places[4];
@@ -1933,7 +2044,6 @@ static bool find_assets(char *found, size_t size)
 			snprintf(found, size, "%sassets", saves ? saves : (base ? base : ""));
 		ready = first_run(TITLE, base, in_app ? beside_app : NULL, saves, found) != 0;    /* (the ROM set beside it) */
 	}
-	SDL_free(base);
 	SDL_free(saves);
 	return ready;
 }
@@ -2019,24 +2129,32 @@ int main(int argc, char **argv)
 #ifdef __ANDROID__
 	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");    /* (back is the menus' back, never the end) */
 	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");          /* (fingers are the touch controls, not the mouse) */
-	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
-#ifdef _WIN32
-	/* Direct3D 11 for the picture on Windows (SDL 2's first is Direct3D 9: Sebas, "pone por default que use dx11"):
-	   its swap chain is DXGI's flip model, the frames' pace steadier in a window with VSYNC, and Alt+Tab or the full
-	   screen lose none of its textures. SDL takes the others where it cannot start, and SDL_RENDER_DRIVER in the
-	   environment still chooses; a renderer named by the hint has SDL's batching off unless it is asked for */
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
-	SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
+#ifdef SDL_PLATFORM_IOS
+	SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");          /* (fingers are the touch controls, not the mouse) */
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+	SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");     /* (dimmed, and a first swipe from the bottom only shows it) */
+	SDL_SetHint(SDL_HINT_AUDIO_CATEGORY, "playback");       /* (AVAudioSession's playback: heard with the ringer off) */
 #endif
 	add_mappings();
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0)
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
 	{
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
 		fail(message);
 	}
-	fprintf(stderr, "Game controllers: %d mappings\n", SDL_GameControllerNumMappings());
+	{
+		int mappings = 0;
+
+		SDL_free(SDL_GetGamepadMappings(&mappings));
+		fprintf(stderr, "SDL %d.%d.%d\n", SDL_VERSIONNUM_MAJOR(SDL_GetVersion()),
+			SDL_VERSIONNUM_MINOR(SDL_GetVersion()), SDL_VERSIONNUM_MICRO(SDL_GetVersion()));
+		fprintf(stderr, "Game controllers: %d mappings\n", mappings);
+	}
+#ifdef SDL_PLATFORM_IOS
+	SDL_AddEventWatch(ios_app_events, NULL);    /* (the background, as it comes: nothing drawn there) */
+	SDL_DisableScreenSaver();                   /* (no dimming nor locking while a game controller plays) */
+#endif
 #ifdef TMNT_CONSOLE
 	{
 		char *saves = saves_folder();
@@ -2116,30 +2234,32 @@ int main(int argc, char **argv)
 
 #ifdef __SWITCH__
 	(void)scale;
-	window = SDL_CreateWindow(TITLE, 0, 0, 1280, 720, 0);    /* (the Switch's screen, whole) */
+	window = SDL_CreateWindow(TITLE, 1280, 720, 0);    /* (the Switch's screen, whole) */
 #elif defined(TMNT_HANDHELD_KEYS)
 	(void)scale;
-	window = SDL_CreateWindow(TITLE, 0, 0, 640, 480, SDL_WINDOW_FULLSCREEN_DESKTOP);    /* (the handheld's, whole) */
+	window = SDL_CreateWindow(TITLE, 640, 480, SDL_WINDOW_FULLSCREEN);    /* (the handheld's, whole) */
 #elif defined(__ANDROID__)
 	(void)scale;
 	/* (the phone's whole screen: full screen is SDL's immersive mode, the system's bars hidden. A window would leave
 	   them over the picture, Android 15 drawing the app under them: a player's OnePlus 12, the score cut) */
-	window = SDL_CreateWindow(TITLE, 0, 0, 1280, 720, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	window = SDL_CreateWindow(TITLE, 1280, 720, SDL_WINDOW_FULLSCREEN);
+#elif defined(SDL_PLATFORM_IOS)
+	(void)scale;
+	/* (the whole screen at its own pixels (HIGH_PIXEL_DENSITY: the touch controls' size by the screen's density,
+	   touch.c, in those pixels), the status bar hidden (BORDERLESS)) */
+	window = SDL_CreateWindow(TITLE, 1280, 720, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS
+		| SDL_WINDOW_HIGH_PIXEL_DENSITY);
 #else
-	window = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		view_width() * scale, TMNT_VIDEO_HEIGHT * scale, SDL_WINDOW_RESIZABLE);
+	window = SDL_CreateWindow(TITLE, view_width() * scale, TMNT_VIDEO_HEIGHT * scale, SDL_WINDOW_RESIZABLE);
 #endif
-	renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE) : NULL;
-	if (!renderer)
-		renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE) : NULL;
-#ifdef _WIN32
-	{
-		SDL_RendererInfo info;
-
-		if (renderer && SDL_GetRendererInfo(renderer, &info) == 0)
-			fprintf(stderr, "Renderer: %s\n", info.name);    /* (the log says which one came: a player's question) */
-	}
-#endif
+	/* The platform's first renderer that starts, SDL's own in software the last of them. On Windows that is Direct3D
+	   11 (Sebas, "pone por default que use dx11"): SDL 3's first there, where SDL 2's was Direct3D 9 and the game
+	   asked for this one by a hint. Its swap chain is DXGI's flip model, the frames' pace steadier in a window with
+	   VSYNC, and Alt+Tab or the full screen lose none of its textures. SDL_RENDER_DRIVER in the environment still
+	   chooses; the log says which one came */
+	renderer = window ? SDL_CreateRenderer(window, NULL) : NULL;
+	if (renderer)
+		fprintf(stderr, "Renderer: %s\n", SDL_GetRendererName(renderer));    /* (which one came: a player's question) */
 #ifdef TMNT_CONSOLE
 	texture = renderer ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING,
 		TMNT_VIDEO_MAX_WIDTH, TMNT_VIDEO_HEIGHT) : NULL;    /* (WIDE's frames at its left) */
@@ -2152,25 +2272,24 @@ int main(int argc, char **argv)
 		snprintf(message, sizeof(message), "The window cannot be opened: %s", SDL_GetError());
 		fail(message);
 	}
-	SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+	SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 #ifdef TMNT_TOUCH
 	{
 #ifdef __ANDROID__
-		char *base = SDL_strdup("");    /* (the APK's assets, which SDL's files read by a relative path) */
+		const char *base = "";    /* (the APK's assets, which SDL's files read by a relative path) */
 #else
-		char *base = SDL_GetBasePath();
+		const char *base = SDL_GetBasePath();
 #endif
 
 		touch_open(renderer, base ? base : "");
-		SDL_free(base);
 	}
 #endif
-#if defined(__ANDROID__) && defined(TMNT_CONSOLE)
+#if (defined(__ANDROID__) || defined(SDL_PLATFORM_IOS)) && defined(TMNT_CONSOLE)
 	{
 		/* WIDE as the phone's screen is at the start (follow_screen: again as it changes) */
 		int out_width = 0, out_height = 0;
 
-		SDL_GetRendererOutputSize(renderer, &out_width, &out_height);
+		SDL_GetRenderOutputSize(renderer, &out_width, &out_height);
 		if (out_height <= 0)
 			console_settings.wide = WIDE_16_9;
 		follow_screen(out_width, out_height);
@@ -2190,12 +2309,11 @@ int main(int argc, char **argv)
 #ifdef TMNT_CONSOLE
 	{
 		/* (the menus' letters beside the executable) */
-		char *base = SDL_GetBasePath();
+		const char *base = SDL_GetBasePath();
 
 		if (!console_attach(base))
 			fprintf(stderr, "%sfont.bmp cannot be read: the menus have no letters\n", base ? base : "");
 		load_prompts(base);
-		SDL_free(base);
 		apply_settings();
 	}
 #endif
@@ -2226,7 +2344,7 @@ int main(int argc, char **argv)
 		fclose(sound_hashes);
 	tmnt_script_free(script);
 	if (audio)
-		SDL_CloseAudioDevice(audio);
+		SDL_DestroyAudioStream(audio);    /* (its device with it) */
 	if (crt_overlay)
 		SDL_DestroyTexture(crt_overlay);
 	if (scaled)

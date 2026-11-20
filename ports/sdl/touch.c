@@ -16,7 +16,7 @@
  *    more (an open Fold's, a tablet's) the picture goes to the top and the controls into the room under it (as
  *    outrunners-port's). Their size is the area's smaller side's (its height, or its width over AREA_ASPECT), and
  *    never more than MOST_UNIT_INCHES a unit on the screen (Sebas: on a Fold they were huge). A game controller or a
- *    key hides them till a finger touches the screen again. The letters are font.bmp's (Kenney Mini, ports/sdl2/font).
+ *    key hides them till a finger touches the screen again. The letters are font.bmp's (Kenney Mini, ports/sdl/font).
  */
 #include "touch.h"
 
@@ -68,6 +68,21 @@ static struct
 	} fingers[FINGERS];
 } touch;
 
+/* The screen's dots an inch: Android's density (SDL 3's content scale of the display) times its 160; 0 unknown.
+   SDL 2's SDL_GetDisplayDPI is gone, and with it the screen's own measure: the density is the one Android lays its
+   own controls out by */
+static float screen_dots(void)
+{
+#ifdef SDL_PLATFORM_IOS
+	/* (iOS: the screen's points, 163 an inch on an iPhone and 132 on an iPad, times the pixels a point is) */
+	const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(SDL_GetPrimaryDisplay());
+
+	return (SDL_IsTablet() ? 132.0f : 163.0f) * (mode && mode->pixel_density > 0.0f ? mode->pixel_density : 1.0f);
+#else
+	return 160.0f * SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+#endif
+}
+
 /* Where the controls go in their area (touch_layout): over the picture, from the screen's sides and corners; under
    it, along the middle of the room, START (COIN) between the stick and the buttons */
 static void place(void)
@@ -109,11 +124,11 @@ void touch_layout(int width, int height, SDL_Rect *picture)
 		return;
 	if (width != touch.width || height != touch.height)
 	{
-		float dpi = 0.0f;
-
 		/* (another screen, a Fold opened or closed: its own density) */
-		if (SDL_GetDisplayDPI(0, &dpi, NULL, NULL) == 0 && dpi > 0.0f)
-			touch.most_unit = dpi * MOST_UNIT_INCHES;
+		const float dots = screen_dots();
+
+		if (dots > 0.0f)
+			touch.most_unit = dots * MOST_UNIT_INCHES;
 	}
 	touch.width = width;
 	touch.height = height;
@@ -143,21 +158,23 @@ static int under(float x, float y)
 
 void touch_open(SDL_Renderer *renderer, const char *base)
 {
-	float dpi = 0.0f;
+	const float dots = screen_dots();
+	int count = 0;
 
 	touch.have_font = letters_load(renderer, base, &touch.font) != 0;
-	touch.shown = SDL_GetNumTouchDevices() > 0;
-	if (SDL_GetDisplayDPI(0, &dpi, NULL, NULL) == 0 && dpi > 0.0f)
-		touch.most_unit = dpi * MOST_UNIT_INCHES;
+	SDL_free(SDL_GetTouchDevices(&count));    /* (SDL's list of the touch screens: how many) */
+	touch.shown = count > 0;
+	if (dots > 0.0f)
+		touch.most_unit = dots * MOST_UNIT_INCHES;
 }
 
 void touch_event(const SDL_Event *event)
 {
 	switch (event->type)
 	{
-		case SDL_FINGERDOWN:
-		case SDL_FINGERMOTION:
-		case SDL_FINGERUP:
+		case SDL_EVENT_FINGER_DOWN:
+		case SDL_EVENT_FINGER_MOTION:
+		case SDL_EVENT_FINGER_UP:
 		{
 			const float x = event->tfinger.x * (float)touch.width, y = event->tfinger.y * (float)touch.height;
 			int index = -1, free_one = -1;
@@ -165,12 +182,12 @@ void touch_event(const SDL_Event *event)
 			touch.shown = true;
 			for (int finger = 0; finger < FINGERS; finger++)
 			{
-				if (touch.fingers[finger].holds != HOLD_NOTHING && touch.fingers[finger].id == event->tfinger.fingerId)
+				if (touch.fingers[finger].holds != HOLD_NOTHING && touch.fingers[finger].id == event->tfinger.fingerID)
 					index = finger;
 				else if (touch.fingers[finger].holds == HOLD_NOTHING && free_one < 0)
 					free_one = finger;
 			}
-			if (event->type == SDL_FINGERUP)
+			if (event->type == SDL_EVENT_FINGER_UP)
 			{
 				if (index >= 0)
 					touch.fingers[index].holds = HOLD_NOTHING;
@@ -178,11 +195,11 @@ void touch_event(const SDL_Event *event)
 			}
 			if (index < 0)
 			{
-				if (event->type != SDL_FINGERDOWN || free_one < 0 || (touch.fingers[free_one].holds = under(x, y))
+				if (event->type != SDL_EVENT_FINGER_DOWN || free_one < 0 || (touch.fingers[free_one].holds = under(x, y))
 					== HOLD_NOTHING)
 					break;
 				index = free_one;
-				touch.fingers[index].id = event->tfinger.fingerId;
+				touch.fingers[index].id = event->tfinger.fingerID;
 				touch.fingers[index].x0 = x;
 				touch.fingers[index].y0 = y;
 			}
@@ -198,13 +215,13 @@ void touch_event(const SDL_Event *event)
 			}
 			break;
 		}
-		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_KEYDOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		case SDL_EVENT_KEY_DOWN:
 			touch.shown = false;
 			memset(touch.fingers, 0, sizeof(touch.fingers));
 			break;
-		case SDL_CONTROLLERAXISMOTION:
-			if (event->caxis.value > 16000 || event->caxis.value < -16000)
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+			if (event->gaxis.value > 16000 || event->gaxis.value < -16000)
 				touch.shown = false;
 			break;
 		default:
@@ -267,10 +284,11 @@ static void disc(SDL_Renderer *renderer, const circle *where, SDL_Color colour)
 		const int dx = (int)sqrtf((float)(radius * radius - dy * dy));
 
 		SDL_SetRenderDrawColor(renderer, colour.r, colour.g, colour.b, colour.a);
-		SDL_RenderDrawLine(renderer, (int)where->x - dx, (int)where->y + dy, (int)where->x + dx, (int)where->y + dy);
+		SDL_RenderLine(renderer, (float)((int)where->x - dx), (float)((int)where->y + dy), (float)((int)where->x + dx),
+			(float)((int)where->y + dy));
 		SDL_SetRenderDrawColor(renderer, colour.r, colour.g, colour.b, (Uint8)SDL_min(255, colour.a * 2));
-		SDL_RenderDrawPoint(renderer, (int)where->x - dx, (int)where->y + dy);
-		SDL_RenderDrawPoint(renderer, (int)where->x + dx, (int)where->y + dy);
+		SDL_RenderPoint(renderer, (float)((int)where->x - dx), (float)((int)where->y + dy));
+		SDL_RenderPoint(renderer, (float)((int)where->x + dx), (float)((int)where->y + dy));
 	}
 }
 
@@ -295,9 +313,9 @@ static void label(SDL_Renderer *renderer, const circle *where, const char *text,
 
 	if (!touch.have_font)
 		return;
-	SDL_RenderSetViewport(renderer, &area);
+	SDL_SetRenderViewport(renderer, &area);
 	letters_draw(renderer, &touch.font, text, 0, scale, white, width);
-	SDL_RenderSetViewport(renderer, NULL);
+	SDL_SetRenderViewport(renderer, NULL);
 }
 
 void touch_draw(SDL_Renderer *renderer, int width, int height)

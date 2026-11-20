@@ -11,10 +11,10 @@
  *    font.bmp (font/, with its license): a 16 x 16 cell a character from 20h, each as wide as its lit columns.
  *    As SegaSonic's and OutRunners' letters.c.
  */
-#ifndef TMNT_SDL2_LETTERS_H
-#define TMNT_SDL2_LETTERS_H
+#ifndef TMNT_PORT_LETTERS_H
+#define TMNT_PORT_LETTERS_H
 
-#include <SDL.h>
+#include "port_sdl.h"
 
 #define LETTERS_CELL 16
 

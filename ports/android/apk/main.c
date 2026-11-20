@@ -16,7 +16,7 @@
  *    game's Android build, a .png or .jpg the icon (the TV's banner if it is wider than tall), anything
  *    else the ROM set (tmnt.zip, or a folder of
  *    its files); started so, its console waits for Enter at the end. Started with nothing (a double
- *    click), it opens its window (window.c, when it is built with SDL2 and the computer can show one),
+ *    click), it opens its window (window.c, when it is built with SDL and the computer can show one),
  *    which shows the same inputs, takes files dropped on it and makes the same APK; else it makes the APK
  *    at once with the defaults, as with files dropped on it. With options it is a console program and
  *    nothing else.

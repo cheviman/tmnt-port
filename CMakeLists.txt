@@ -5,7 +5,7 @@
 # Modified:    04-11-2026
 # Author:      Sebastian Toyos
 cmake_minimum_required(VERSION 3.20)
-project(tmnt VERSION 1.0.7 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
+project(tmnt VERSION 1.1.0 LANGUAGES C CXX)    # (the port's release: TMNT's OPTIONS shows it)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -20,9 +20,20 @@ foreach(config IN ITEMS "" _DEBUG _RELEASE _RELWITHDEBINFO _MINSIZEREL)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY${config} ${TMNT_BIN_DIR})
 endforeach()
 
-# The packages a player downloads (.github/workflows/build.yml) carry SDL2 inside the window port, built from its
+# SDL: the window port is written for SDL 3, one version on every platform that has it (Sebas, 19-11-2026: "pasarlo a
+# sdl3 o el mas reciente que sirva con todo"; ports/PLAN.md says what each platform takes): its release's source
+# archive by its hash, the one already in build/downloads/sdl3-source where it is there
+set(TMNT_SDL_VERSION 3.4.20)
+set(TMNT_SDL_SHA256 f3bb06f55bed9557227a700af2ea62e49497ebdf58037732a731a5fb3ef8581f)
+set(TMNT_SDL_ARCHIVE SDL3-${TMNT_SDL_VERSION}.tar.gz)
+set(TMNT_SDL_URL
+	https://github.com/libsdl-org/SDL/releases/download/release-${TMNT_SDL_VERSION}/${TMNT_SDL_ARCHIVE})
+if(EXISTS ${CMAKE_SOURCE_DIR}/build/downloads/sdl3-source/${TMNT_SDL_ARCHIVE})
+	set(TMNT_SDL_URL ${CMAKE_SOURCE_DIR}/build/downloads/sdl3-source/${TMNT_SDL_ARCHIVE})
+endif()
+# The packages a player downloads (.github/workflows/build.yml) carry SDL inside the window port, built from its
 # own source: the package is the executable alone, no library beside it
-option(TMNT_STATIC_SDL2 "Build SDL2 from its source into the executables" OFF)
+option(TMNT_STATIC_SDL "Build SDL from its source into the executables" OFF)
 
 # The devices (ports/PLAN.md): the Nintendo Switch with devkitPro's toolchain (aarch64-none-elf-cmake). A device
 # builds the games alone, from the assets pack its package carries (no first run, no tools, no headless runs)
@@ -31,6 +42,9 @@ if(NINTENDO_SWITCH OR CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
 	set(TMNT_DEVICE ON)
 elseif(ANDROID)    # (the NDK's toolchain: ports/android/android.cmake)
 	set(TMNT_ANDROID ON)
+	set(TMNT_DEVICE ON)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")    # (Xcode's, through CMake's Xcode generator: ports/ios/ios.cmake)
+	set(TMNT_IOS ON)
 	set(TMNT_DEVICE ON)
 endif()
 # Anbernic's H700 handhelds on their stock firmware (with the toolchain ports/anbernic/zig_aarch64.cmake)
@@ -42,11 +56,11 @@ endif()
 if(MSVC)
 	add_compile_options(/W3 /utf-8)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-	# with TMNT_STATIC_SDL2 the C runtime goes inside the executables too: they need no Visual C++ redistributable
+	# with TMNT_STATIC_SDL the C runtime goes inside the executables too: they need no Visual C++ redistributable
 	# on the player's machine
-	if(TMNT_STATIC_SDL2)
+	if(TMNT_STATIC_SDL)
 		set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-		set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)    # (SDL2's targets too)
+		set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)    # (SDL's targets too)
 	endif()
 endif()
 
@@ -140,6 +154,11 @@ if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 	# it the menu has no LAN
 	set(ARCADE_LAN_DIR ${CMAKE_SOURCE_DIR}/lan CACHE PATH "arcade-lan's sources, for TMNT's LAN game")
 	if(EXISTS ${ARCADE_LAN_DIR}/CMakeLists.txt)
+		# (iOS refuses broadcasts to an app without Apple's multicast entitlement: the rooms there are found by the
+		# library's SEEKs and sweeps, ARCADE_LAN_NO_BROADCAST, in the arcade-lan that has it)
+		if(TMNT_IOS)
+			set(ARCADE_LAN_NO_BROADCAST ON CACHE BOOL "" FORCE)
+		endif()
 		add_subdirectory(${ARCADE_LAN_DIR} ${CMAKE_BINARY_DIR}/arcade_lan)
 		target_link_libraries(tmnt_console_game PUBLIC arcade_lan)
 		target_compile_definitions(tmnt_console_game PUBLIC TMNT_LAN)
@@ -154,7 +173,7 @@ if(TMNT_DECOMPILED AND TMNT_SOUND_PROGRAM)
 		add_executable(tmnt_console_headless ports/headless/main.c)
 		target_link_libraries(tmnt_console_headless PRIVATE tmnt_console_game)
 		add_custom_command(TARGET tmnt_console_headless POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/font/font.bmp
 				$<TARGET_FILE_DIR:tmnt_console_headless>)
 	endif()
 endif()
@@ -183,13 +202,15 @@ elseif(TMNT_SCAFFOLD)
 	message(STATUS "No generated program in build/generated (tools/recompile.py) or no sound program in src/sound: no scaffold")
 endif()
 
-# SDL_GameControllerDB (ports/sdl2/controllerdb, zlib License): the community's mappings of game controllers, this
+# SDL_GameControllerDB (ports/sdl/controllerdb, zlib License): the community's mappings of game controllers, this
 # platform's lines built into the window port's games on the computers and Android (a player's report: an Nvidia
 # Shield's PS4 and Xbox controllers); the Switch and the Anbernic keep their own controls. TMNT_CONTROLLER_DB to
 # whatever links it: main.c gives SDL the mappings as it starts
 if(TMNT_WINDOW_PROGRAM AND NOT TMNT_SWITCH AND NOT TMNT_ANBERNIC)
 	if(TMNT_ANDROID)
 		set(TMNT_CONTROLLER_PLATFORM "Android")
+	elseif(TMNT_IOS)
+		set(TMNT_CONTROLLER_PLATFORM "iOS")
 	elseif(APPLE)
 		set(TMNT_CONTROLLER_PLATFORM "Mac OS X")
 	elseif(WIN32)
@@ -199,11 +220,11 @@ if(TMNT_WINDOW_PROGRAM AND NOT TMNT_SWITCH AND NOT TMNT_ANBERNIC)
 	endif()
 	set(TMNT_CONTROLLER_DB_C ${CMAKE_BINARY_DIR}/controller_db.c)
 	add_custom_command(OUTPUT ${TMNT_CONTROLLER_DB_C}
-		COMMAND ${CMAKE_COMMAND} -DDB=${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/gamecontrollerdb.txt
+		COMMAND ${CMAKE_COMMAND} -DDB=${CMAKE_SOURCE_DIR}/ports/sdl/controllerdb/gamecontrollerdb.txt
 			"-DPLATFORM=${TMNT_CONTROLLER_PLATFORM}" -DOUT=${TMNT_CONTROLLER_DB_C}
-			-P ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/embed.cmake
-		DEPENDS ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/gamecontrollerdb.txt
-			${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/embed.cmake
+			-P ${CMAKE_SOURCE_DIR}/ports/sdl/controllerdb/embed.cmake
+		DEPENDS ${CMAKE_SOURCE_DIR}/ports/sdl/controllerdb/gamecontrollerdb.txt
+			${CMAKE_SOURCE_DIR}/ports/sdl/controllerdb/embed.cmake
 		COMMENT "SDL_GameControllerDB's mappings for ${TMNT_CONTROLLER_PLATFORM}"
 		VERBATIM)
 	add_library(tmnt_controller_db STATIC ${TMNT_CONTROLLER_DB_C})
@@ -211,63 +232,60 @@ if(TMNT_WINDOW_PROGRAM AND NOT TMNT_SWITCH AND NOT TMNT_ANBERNIC)
 	target_compile_definitions(tmnt_controller_db INTERFACE TMNT_CONTROLLER_DB)
 endif()
 
-# The game in a window (ports/sdl2): the decompiled game, or the scaffold where there is none yet. SDL2 from the
-# system, or on Windows the development package unpacked in build/downloads/sdl2, a library beside the executable;
-# or, with TMNT_STATIC_SDL2, SDL2 built from its own source into the executable
+# The game in a window (ports/sdl): the decompiled game, or the scaffold where there is none yet. SDL 3 from the
+# system, or on Windows its development package for Visual C++ unpacked in build/downloads/sdl3, a library beside
+# the executable; or, with TMNT_STATIC_SDL, SDL built from its own source into the executable
 if(TMNT_WINDOW_PROGRAM AND TMNT_SWITCH)
 	include(ports/switch/switch.cmake)
 elseif(TMNT_WINDOW_PROGRAM AND TMNT_ANDROID)
 	include(ports/android/android.cmake)
 elseif(TMNT_WINDOW_PROGRAM AND TMNT_ANBERNIC)
 	include(ports/anbernic/anbernic.cmake)
+elseif(TMNT_WINDOW_PROGRAM AND TMNT_IOS)
+	include(ports/ios/ios.cmake)
 elseif(TMNT_WINDOW_PROGRAM)
-	if(TMNT_STATIC_SDL2)
+	if(TMNT_STATIC_SDL)
 		include(FetchContent)
-		FetchContent_Declare(SDL2 GIT_REPOSITORY https://github.com/libsdl-org/SDL.git GIT_TAG release-2.32.10
-			GIT_SHALLOW TRUE)
+		FetchContent_Declare(SDL3 URL ${TMNT_SDL_URL} URL_HASH SHA256=${TMNT_SDL_SHA256})
 		set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 		set(SDL_STATIC ON CACHE BOOL "" FORCE)
-		set(SDL_TEST OFF CACHE BOOL "" FORCE)
-		set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "" FORCE)    # (MSVC: the C runtime inside, as the game's)
-		set(SDL_CCACHE OFF CACHE BOOL "" FORCE)    # (its block asks for CMake 3.4, which CMake warns is too old)
-		FetchContent_MakeAvailable(SDL2)
-		set(TMNT_SDL2 SDL2::SDL2-static)
-		set(SDL2_FOUND TRUE)
+		set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+		# (MSVC: the C runtime inside, as the game's, by CMAKE_MSVC_RUNTIME_LIBRARY above)
+		FetchContent_MakeAvailable(SDL3)
+		set(TMNT_SDL SDL3::SDL3-static)
+		set(SDL3_FOUND TRUE)
 	else()
-		set(TMNT_SDL2_UNPACKED "")
+		set(TMNT_SDL_UNPACKED "")
 		if(WIN32)
-			file(GLOB TMNT_SDL2_UNPACKED ${CMAKE_SOURCE_DIR}/build/downloads/sdl2/SDL2-*/cmake)
+			file(GLOB TMNT_SDL_UNPACKED ${CMAKE_SOURCE_DIR}/build/downloads/sdl3/SDL3-*/cmake)
 		endif()
-		find_package(SDL2 CONFIG QUIET HINTS ${TMNT_SDL2_UNPACKED})
-		set(TMNT_SDL2 SDL2::SDL2)
+		find_package(SDL3 CONFIG QUIET HINTS ${TMNT_SDL_UNPACKED})
+		set(TMNT_SDL SDL3::SDL3)
 	endif()
-	if(SDL2_FOUND)
-		if(TARGET SDL2::SDL2main)
-			list(APPEND TMNT_SDL2 SDL2::SDL2main)
-		endif()
+	if(SDL3_FOUND)
 		# the arcade game, "TMNT Arcade" its executable and its window. Its first run takes the assets out of the
-		# player's ROM set (ports/sdl2/first_run.c, tmnt_extract), its window written with Kenney Mini (CC0,
-		# ports/sdl2/font), a picture beside the executable
-		add_executable(tmnt WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c ports/sdl2/letters.c
-			ports/sdl2/font/font.bmp)
-		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract tmnt_controller_db ${TMNT_SDL2})
+		# player's ROM set (ports/sdl/first_run.c, tmnt_extract), its window written with Kenney Mini (CC0,
+		# ports/sdl/font), a picture beside the executable
+		add_executable(tmnt WIN32 MACOSX_BUNDLE ports/sdl/main.c ports/sdl/first_run.c ports/sdl/letters.c
+			ports/sdl/font/font.bmp)
+		target_link_libraries(tmnt PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract tmnt_controller_db ${TMNT_SDL})
 		set_target_properties(tmnt PROPERTIES OUTPUT_NAME "TMNT Arcade"
 			MACOSX_BUNDLE_BUNDLE_NAME "TMNT Arcade" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt-arcade
 			MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
 		# (its pictures beside it; in the .app's Resources on macOS, where SDL_GetBasePath finds them)
-		set_source_files_properties(ports/sdl2/font/font.bmp ports/sdl2/prompts/input_prompts.bmp
-			ports/sdl2/icon/tmnt.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+		set_source_files_properties(ports/sdl/font/font.bmp ports/sdl/prompts/input_prompts.bmp
+			ports/sdl/icon/tmnt.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 		if(NOT APPLE)
 			add_custom_command(TARGET tmnt POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/font/font.bmp
 					$<TARGET_FILE_DIR:tmnt>)
 		endif()
-		if(WIN32 AND NOT TMNT_STATIC_SDL2)
+		if(WIN32 AND NOT TMNT_STATIC_SDL)
 			add_custom_command(TARGET tmnt POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:tmnt>)
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> $<TARGET_FILE_DIR:tmnt>)
 		endif()
 
-		# the executable's icon on Windows (tools/make_icon.py, ports/sdl2/icon): a resource, which SDL gives the
+		# the executable's icon on Windows (tools/make_icon.py, ports/sdl/icon): a resource, which SDL gives the
 		# window too. A picture of the player's own in its place where this computer has one (TMNT_PC_ICON, else
 		# local/icon_pc.png: local/ holds the player's own pictures, never committed), made an .ico here. (The
 		# icon's .png goes beside the Linux executables, its .icns in the macOS .apps)
@@ -276,7 +294,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 		if(NOT TMNT_PC_PICTURE AND EXISTS ${CMAKE_SOURCE_DIR}/local/icon_pc.png)
 			set(TMNT_PC_PICTURE ${CMAKE_SOURCE_DIR}/local/icon_pc.png)
 		endif()
-		set(TMNT_ICON_RC ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.rc)
+		set(TMNT_ICON_RC ${CMAKE_SOURCE_DIR}/ports/sdl/icon/tmnt.rc)
 		if(WIN32 AND TMNT_PC_PICTURE AND Python3_FOUND)
 			# (made as CMake configures: again when the picture changes. A name of its own, so its compiled resource
 			# is not the project's icon's: going from one to the other links the other)
@@ -296,46 +314,46 @@ elseif(TMNT_WINDOW_PROGRAM)
 		if(WIN32)
 			target_sources(tmnt PRIVATE ${TMNT_ICON_RC})
 		elseif(APPLE)
-			target_sources(tmnt PRIVATE ports/sdl2/icon/tmnt.icns)
+			target_sources(tmnt PRIVATE ports/sdl/icon/tmnt.icns)
 			set_target_properties(tmnt PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
 			# (first_run.c's app_folder: the folder a translocated .app was put in, CoreFoundation's URLs)
 			target_link_libraries(tmnt PRIVATE "-framework CoreFoundation")
 		else()
 			add_custom_command(TARGET tmnt POST_BUILD    # (Linux: the window's icon, tmnt.png beside it)
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/icon/tmnt.png
 					$<TARGET_FILE_DIR:tmnt>)
 		endif()
 
 		# the console version beside it, "TMNT" its executable and its window (console/PLAN.md): the same window
 		# port with the console's menus, its settings in tmnt.ini and its controls in controls.ini beside it
-		# (ports/sdl2/controls.c), OPTIONS > CONTROLS drawing the keys and buttons with Kenney's Input Prompts Pixel
-		# (CC0, ports/sdl2/prompts), a picture beside the executable
+		# (ports/sdl/controls.c), OPTIONS > CONTROLS drawing the keys and buttons with Kenney's Input Prompts Pixel
+		# (CC0, ports/sdl/prompts), a picture beside the executable
 		if(TARGET tmnt_console_game)
-			add_executable(tmnt_console WIN32 MACOSX_BUNDLE ports/sdl2/main.c ports/sdl2/first_run.c
-				ports/sdl2/letters.c ports/sdl2/controls.c ports/sdl2/font/font.bmp ports/sdl2/prompts/input_prompts.bmp)
-			target_link_libraries(tmnt_console PRIVATE tmnt_console_game tmnt_extract tmnt_controller_db ${TMNT_SDL2})
+			add_executable(tmnt_console WIN32 MACOSX_BUNDLE ports/sdl/main.c ports/sdl/first_run.c
+				ports/sdl/letters.c ports/sdl/controls.c ports/sdl/font/font.bmp ports/sdl/prompts/input_prompts.bmp)
+			target_link_libraries(tmnt_console PRIVATE tmnt_console_game tmnt_extract tmnt_controller_db ${TMNT_SDL})
 			set_target_properties(tmnt_console PROPERTIES OUTPUT_NAME "TMNT"
 				MACOSX_BUNDLE_BUNDLE_NAME "TMNT" MACOSX_BUNDLE_GUI_IDENTIFIER io.github.cheviman.tmnt
 				MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
 			if(NOT APPLE)
 				add_custom_command(TARGET tmnt_console POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
-						${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp $<TARGET_FILE_DIR:tmnt_console>)
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/font/font.bmp
+						${CMAKE_SOURCE_DIR}/ports/sdl/prompts/input_prompts.bmp $<TARGET_FILE_DIR:tmnt_console>)
 			endif()
-			if(WIN32 AND NOT TMNT_STATIC_SDL2)
+			if(WIN32 AND NOT TMNT_STATIC_SDL)
 				add_custom_command(TARGET tmnt_console POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL2::SDL2> $<TARGET_FILE_DIR:tmnt_console>)
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> $<TARGET_FILE_DIR:tmnt_console>)
 			endif()
 			if(WIN32)
 				target_sources(tmnt_console PRIVATE ${TMNT_ICON_RC})
 			elseif(APPLE)
-				target_sources(tmnt_console PRIVATE ports/sdl2/icon/tmnt.icns)
+				target_sources(tmnt_console PRIVATE ports/sdl/icon/tmnt.icns)
 				set_target_properties(tmnt_console PROPERTIES MACOSX_BUNDLE_ICON_FILE tmnt.icns)
 				# (main.c's mac_full_screen: the window's NSWindow asked by Objective-C's runtime, libobjc)
 				target_link_libraries(tmnt_console PRIVATE "-framework CoreFoundation" objc)
 			else()
 				add_custom_command(TARGET tmnt_console POST_BUILD
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/icon/tmnt.png
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/icon/tmnt.png
 						$<TARGET_FILE_DIR:tmnt_console>)
 			endif()
 		endif()
@@ -343,21 +361,20 @@ elseif(TMNT_WINDOW_PROGRAM)
 		# TMNT NSP (ports/switch/nsp, outrunners-port's): on the player's computer, TMNT's and TMNT Arcade's .nsps out of
 		# the Switch builds' pieces (the folder switch beside it), the player's ROM set (its assets pack, as the first
 		# run makes it: the game's own extraction and pack) and the player's console keys. Its window when it is
-		# started with nothing (SDL2 without SDL2main: a console program), its letters (font.bmp) beside it; the
+		# started with nothing (SDL with a main of its own: a console program), its letters (font.bmp) beside it; the
 		# folder dialog COM's on Windows
 		add_executable(tmnt_nsp ports/switch/nsp/main.c ports/switch/nsp/make_nsp.c ports/switch/nsp/crypto.c
 			ports/switch/nsp/formats.c ports/switch/nsp/rom_pack.c ports/switch/nsp/window.c
-			ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
-		list(GET TMNT_SDL2 0 TMNT_SDL2_LIBRARY)
-		target_include_directories(tmnt_nsp PRIVATE ports/sdl2)
+			ports/switch/nsp/folder_dialog.c ports/sdl/letters.c)
+		target_include_directories(tmnt_nsp PRIVATE ports/sdl)
 		target_compile_definitions(tmnt_nsp PRIVATE TMNT_NSP_WINDOW)
-		target_link_libraries(tmnt_nsp PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		target_link_libraries(tmnt_nsp PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL})
 		set_target_properties(tmnt_nsp PROPERTIES OUTPUT_NAME "TMNT NSP")
 		if(WIN32)
 			target_link_libraries(tmnt_nsp PRIVATE ole32 shell32 uuid)
 		endif()
 		add_custom_command(TARGET tmnt_nsp POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/ports/sdl/font/font.bmp
 				$<TARGET_FILE_DIR:tmnt_nsp>)
 
 		# TMNT APK (ports/android/apk, outrunners-port's): on the player's computer, TMNT's and TMNT Arcade's APKs out of
@@ -366,11 +383,11 @@ elseif(TMNT_WINDOW_PROGRAM)
 		# once (v2's signature, no Java nor Android SDK on the player's computer). Its window as TMNT NSP's
 		add_executable(tmnt_apk_maker ports/android/apk/main.c ports/android/apk/make_apk.c ports/android/apk/zip.c
 			ports/android/apk/sign.c ports/android/apk/key.c ports/android/apk/ecdsa.c ports/switch/nsp/crypto.c
-			ports/switch/nsp/rom_pack.c ports/android/apk/window.c ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
-		target_include_directories(tmnt_apk_maker PRIVATE ports/switch/nsp ports/sdl2)
+			ports/switch/nsp/rom_pack.c ports/android/apk/window.c ports/switch/nsp/folder_dialog.c ports/sdl/letters.c)
+		target_include_directories(tmnt_apk_maker PRIVATE ports/switch/nsp ports/sdl)
 		target_compile_definitions(tmnt_apk_maker PRIVATE TMNT_APK_WINDOW
 			[[FOLDER_TITLE="The folder for TMNT.apk and TMNT Arcade.apk"]])
-		target_link_libraries(tmnt_apk_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		target_link_libraries(tmnt_apk_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL})
 		set_target_properties(tmnt_apk_maker PROPERTIES OUTPUT_NAME "TMNT APK")
 		if(WIN32)
 			target_link_libraries(tmnt_apk_maker PRIVATE bcrypt ole32 shell32 uuid)    # (BCryptGenRandom: the key)
@@ -380,25 +397,25 @@ elseif(TMNT_WINDOW_PROGRAM)
 		# Anbernic H700 handheld's card out of the games' Anbernic build (the folder anbernic beside it) and the assets
 		# pack of the player's ROM set (TMNT NSP's rom_pack.c). Its window as TMNT NSP's
 		add_executable(tmnt_anbernic_maker ports/anbernic/maker/main.c ports/anbernic/maker/make_ports.c
-			ports/switch/nsp/rom_pack.c ports/anbernic/maker/window.c ports/switch/nsp/folder_dialog.c ports/sdl2/letters.c)
-		target_include_directories(tmnt_anbernic_maker PRIVATE ports/switch/nsp ports/sdl2)
+			ports/switch/nsp/rom_pack.c ports/anbernic/maker/window.c ports/switch/nsp/folder_dialog.c ports/sdl/letters.c)
+		target_include_directories(tmnt_anbernic_maker PRIVATE ports/switch/nsp ports/sdl)
 		target_compile_definitions(tmnt_anbernic_maker PRIVATE TMNT_ANBERNIC_WINDOW
 			[[FOLDER_TITLE="The folder for PORTS (the card's Roms)"]])
-		target_link_libraries(tmnt_anbernic_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL2_LIBRARY})
+		target_link_libraries(tmnt_anbernic_maker PRIVATE ${TMNT_WINDOW_PROGRAM} tmnt_extract ${TMNT_SDL})
 		set_target_properties(tmnt_anbernic_maker PROPERTIES OUTPUT_NAME "TMNT Anbernic")
 		if(WIN32)
 			target_link_libraries(tmnt_anbernic_maker PRIVATE ole32 shell32 uuid)
 		endif()
 
 		# The Windows package (tmnt_package): what a player downloads, build/package/tmnt-windows-x64.zip, a folder
-		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL2 and the C runtime inside them), and the
+		# tmnt with TMNT Arcade.exe and TMNT.exe, the console version (SDL and the C runtime inside them), and the
 		# font.bmp they write with, the keys' and buttons' pictures of TMNT's CONTROLS (input_prompts.bmp), the
 		# package's README.txt (docs/package), the project's LICENSE.txt, and licenses/ with the terms of what is in
 		# it or what it follows: MAME's and ymfm's (the board's video and sound), arcade-lan's (TMNT's LAN game),
-		# SDL2's, SDL_GameControllerDB's and Kenney's. The two games alone (Sebas, 09-11-2026: the devices in
+		# SDL's, SDL_GameControllerDB's and Kenney's. The two games alone (Sebas, 09-11-2026: the devices in
 		# packages of their own, with their makers: the CI's devices job, ports/pack_devices.py). Nothing of the ROM
 		# set: the game takes its assets out of the player's on its first run
-		if(WIN32 AND TMNT_STATIC_SDL2 AND TARGET tmnt_console)
+		if(WIN32 AND TMNT_STATIC_SDL AND TARGET tmnt_console)
 			set(TMNT_PACKAGE_DIR ${CMAKE_SOURCE_DIR}/build/package)
 			set(TMNT_PACKAGE_NAME tmnt-windows-x64)
 			set(TMNT_PACKED ${TMNT_PACKAGE_DIR}/tmnt)
@@ -412,7 +429,7 @@ elseif(TMNT_WINDOW_PROGRAM)
 				COMMAND ${CMAKE_COMMAND} -E rm -rf ${TMNT_PACKED} ${TMNT_PACKAGE_DIR}/${TMNT_PACKAGE_NAME}.zip
 				COMMAND ${CMAKE_COMMAND} -E make_directory ${TMNT_PACKED}/licenses
 				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:tmnt> $<TARGET_FILE:tmnt_console>
-					${CMAKE_SOURCE_DIR}/ports/sdl2/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/input_prompts.bmp
+					${CMAKE_SOURCE_DIR}/ports/sdl/font/font.bmp ${CMAKE_SOURCE_DIR}/ports/sdl/prompts/input_prompts.bmp
 					${TMNT_PACKED}
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/docs/package/README.txt ${TMNT_PACKED}/README.txt
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/LICENSE ${TMNT_PACKED}/LICENSE.txt
@@ -421,12 +438,12 @@ elseif(TMNT_WINDOW_PROGRAM)
 				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/tools/core/konami/reference/ymfm/LICENSE
 					${TMNT_PACKED}/licenses/ymfm.txt
 				${TMNT_PACKED_LAN}
-				COMMAND ${CMAKE_COMMAND} -E copy ${sdl2_SOURCE_DIR}/LICENSE.txt ${TMNT_PACKED}/licenses/SDL2.txt
-				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/controllerdb/LICENSE
+				COMMAND ${CMAKE_COMMAND} -E copy ${sdl3_SOURCE_DIR}/LICENSE.txt ${TMNT_PACKED}/licenses/SDL3.txt
+				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl/controllerdb/LICENSE
 					${TMNT_PACKED}/licenses/SDL_GameControllerDB.txt
-				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/font/License.txt
+				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl/font/License.txt
 					${TMNT_PACKED}/licenses/Kenney-Mini.txt
-				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl2/prompts/License.txt
+				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/ports/sdl/prompts/License.txt
 					${TMNT_PACKED}/licenses/Kenney-Input-Prompts.txt
 				COMMAND ${CMAKE_COMMAND} -E tar cf ${TMNT_PACKAGE_NAME}.zip --format=zip tmnt
 				WORKING_DIRECTORY ${TMNT_PACKAGE_DIR}
@@ -435,13 +452,13 @@ elseif(TMNT_WINDOW_PROGRAM)
 				VERBATIM)
 		endif()
 	else()
-		# (a warning, not a status line: a player's report, the five executables a build with no SDL2 leaves were
+		# (a warning, not a status line: a player's report, the five executables a build with no SDL leaves were
 		# taken for the games)
-		message(WARNING "No SDL2: the games (TMNT Arcade and TMNT) are not built, only the development tools "
+		message(WARNING "No SDL 3: the games (TMNT Arcade and TMNT) are not built, only the development tools "
 			"(tmnt_game_headless and tmnt_console_headless run the game with no window for the checks, and close). "
-			"-DTMNT_STATIC_SDL2=ON builds SDL2 from its source into the games, as the releases do; or SDL2 from the "
-			"system, on Windows its development package for Visual C++ unpacked in build/downloads/sdl2 "
-			"(build/downloads/sdl2/SDL2-2.x.y/cmake)")
+			"-DTMNT_STATIC_SDL=ON builds SDL ${TMNT_SDL_VERSION} from its source into the games, as the releases do; "
+			"or SDL 3 from the system, on Windows its development package for Visual C++ unpacked in "
+			"build/downloads/sdl3 (build/downloads/sdl3/SDL3-3.x.y/cmake)")
 	endif()
 endif()
 

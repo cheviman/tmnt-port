@@ -8,8 +8,8 @@
  *
  *    license:BSD-3-Clause
  */
-#ifndef TMNT_SDL2_FIRST_RUN_H
-#define TMNT_SDL2_FIRST_RUN_H
+#ifndef TMNT_PORT_FIRST_RUN_H
+#define TMNT_PORT_FIRST_RUN_H
 
 #include <stddef.h>
 

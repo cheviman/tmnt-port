@@ -1,6 +1,6 @@
 """
 Name:        make_icon.py
-Description: makes the port's icons from the picture of Raphael on a friend's wall (ports/sdl2/icon/raphael_mural.png),
+Description: makes the port's icons from the picture of Raphael on a friend's wall (ports/sdl/icon/raphael_mural.png),
              and the TV's banner from the four turtles on it (turtles_mural.png)
 Version:     0.3.0
 Created:     04-11-2026
@@ -12,7 +12,7 @@ Usage: python tools/make_icon.py
 
 The icon is Raphael's face from a friend's mural (Sebas: "es un dibujo de un mural de una pared de un amigo"),
 nothing of the game's: the picture's square around the face, scaled to each icon the port has.
-- ports/sdl2/icon: tmnt.png (1024 x 1024, its corners rounded, the computers' windows and Linux's), tmnt.ico (16 to
+- ports/sdl/icon: tmnt.png (1024 x 1024, its corners rounded, the computers' windows and Linux's), tmnt.ico (16 to
   256, Windows' executables) and tmnt.icns (the macOS .apps);
 - ports/android/res: the launcher's icon, ic_launcher_art.png (288 x 288, the picture in the adaptive icon's 72 dp
   that the launcher shows, mipmap-anydpi-v26/ic_launcher.xml) and ic_launcher.png (192 x 192, the icon before
@@ -31,16 +31,17 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "ports" / "sdl2" / "icon" / "raphael_mural.png"
+SOURCE = ROOT / "ports" / "sdl" / "icon" / "raphael_mural.png"
 FACE = (10, 0, 170, 160)                 # the picture's square around the face (left, top, right, bottom)
-OUT = ROOT / "ports" / "sdl2" / "icon"
+OUT = ROOT / "ports" / "sdl" / "icon"
 ANDROID = ROOT / "ports" / "android" / "res" / "mipmap-xxxhdpi"
 SWITCH = ROOT / "ports" / "switch" / "icon.jpg"
-TURTLES = ROOT / "ports" / "sdl2" / "icon" / "turtles_mural.png"
+TURTLES = ROOT / "ports" / "sdl" / "icon" / "turtles_mural.png"
 TURTLES_BAND = (0, 196, 575, 519)        # the four faces' band, 16:9 (left, top, right, bottom)
 BANNER = ROOT / "ports" / "android" / "res" / "drawable-xhdpi" / "banner.png"
 BANNER_SIZE = (320, 180)                 # Android TV's banner, in xhdpi's pixels
 NAME = "tmnt"
+IOS = ROOT / "ports" / "ios" / "Assets.xcassets" / "AppIcon.appiconset" / "icon_1024.png"
 SIZE = 1024
 CORNER = 180                             # the computers' icon's rounded corners, in its pixels
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
@@ -70,6 +71,7 @@ def main():
     face(288).save(ANDROID / "ic_launcher_art.png")
     rounded(face(192), 192 * CORNER // SIZE).save(ANDROID / "ic_launcher.png")
     face(256).save(SWITCH, quality=95)
+    face(SIZE).save(IOS)    # (iOS's: the square whole and with no see-through, the system rounds its corners)
     banner()
     print(f"written: {NAME}.png, {NAME}.ico, {NAME}.icns in {OUT.relative_to(ROOT)}; ic_launcher_art.png and "
           f"ic_launcher.png in {ANDROID.relative_to(ROOT)}; {SWITCH.relative_to(ROOT)}; {BANNER.relative_to(ROOT)}")

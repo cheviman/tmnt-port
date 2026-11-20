@@ -746,6 +746,7 @@ bool console_attach(const char *folder)
 	console_settings.dsw[2] |= 0x01u;    /* (the screen the right way up: OPTIONS has no SCREEN, Sebas) */
 	tmnt_board.dsw[2] = console_settings.dsw[2] | TMNT_DSW3_SERVICE;    /* (the test mode's switch off) */
 	console_settings.dsw[2] = tmnt_board.dsw[2];
+	console_correct_data();
 	return draw_load_font(folder);
 }
 

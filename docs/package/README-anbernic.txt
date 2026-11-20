@@ -49,7 +49,7 @@ The games keep their settings and their logs (tmnt.log, tmnt-arcade.log) in Roms
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
-sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER), SDL2's and
+sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER), SDL's and
 SDL_GameControllerDB's (zlib; the handheld's games take the firmware's SDL2) and Kenney's (CC0: the
 letters, the controls' pictures).
 
