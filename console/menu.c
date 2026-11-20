@@ -1048,6 +1048,13 @@ static bool music_playing(void)
 	return false;
 }
 
+/* Whether the game's demo sounds are heard: queue_sound lets them through with the test mode's switch, in a game, or
+   with DEMO SOUND on as the game's own copy of the switch has it (demo_sounds) */
+static bool demo_sounds_heard(void)
+{
+	return (dip_switches_3 & 4u) != 0u || game_on != 0u || demo_sounds != 0u;
+}
+
 /* The title's logo coming in (the banner dropping, TURTLES sliding in): while it does, the menu takes no action
    (Sebas: "no tendria que moverse nada mientras se esta animando"), and a press of attack, START or jump puts the logo
    in its place at once (the title's own steps run on to their end), as the arcade's START skips nothing: the menu's
@@ -1215,7 +1222,17 @@ void menu_frame(uint32_t pressed, const uint32_t player_pressed[CONSOLE_PLAYERS]
 	if (console.page == PAGE_SOUND_TEST)
 		;    /* (its own sounds: the menus' song again after it, if another sounded) */
 	else if (console.page == PAGE_CHOICE)
+	{
+		/* (the coin's screen sends the title music's stop and its song with queue_sound, as the demo's sounds, which
+		   DEMO SOUND off leaves out; the turtle choice is a menu, its song whatever DEMO SOUND says: then the menus
+		   send both, as the coin's screen would) */
+		if (song != COIN_SCREEN_SONG && !demo_sounds_heard())
+		{
+			queue_sound_command(TITLE_MUSIC_STOP);
+			queue_sound_command(COIN_SCREEN_SONG);
+		}
 		song = COIN_SCREEN_SONG;
+	}
 	else if (console.page == PAGE_STARTING)
 		song = 0u;
 	else if (song != MENU_SONG || (++song_frames > SONG_START_FRAMES && !music_playing()))

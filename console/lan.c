@@ -266,9 +266,8 @@ static void end_game(const char *problem)
 	memcpy(console_settings.dsw, lan.own_dsw, sizeof(lan.own_dsw));
 	console_settings.region = lan.own_region;
 	console_settings.wide = lan.own_wide;
-	tmnt_board.dsw[0] = console_settings.dsw[0];
-	tmnt_board.dsw[1] = console_settings.dsw[1];
-	tmnt_board.dsw[2] = console_settings.dsw[2];
+	console_apply_dip_switches();    /* (onto the board and into the game's copies, which the boot took from the
+	                                    host's: DEMO SOUND, the lives, the difficulty, the coins) */
 	if (problem)
 		lan.problem = problem;
 	console_back_to_lan_page();
