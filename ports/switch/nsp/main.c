@@ -15,7 +15,7 @@
  *    beside it. Files dropped on the tool are taken by what they are: a .keys (or .txt) the keys, a .jpg the
  *    icon, anything else the ROM set (tmnt.zip, or a folder of its files); started so, its console waits for
  *    Enter at the end. Started with nothing (a double click), it opens its window (window.c, when it is
- *    built with SDL2 and the computer can show one), which shows the same inputs, takes files dropped on it
+ *    built with SDL and the computer can show one), which shows the same inputs, takes files dropped on it
  *    and makes the same .nsp; else it makes the .nsp at once with the defaults, as with files dropped on it.
  *    With options it is a console program and nothing else.
  */

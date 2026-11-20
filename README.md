@@ -1,7 +1,7 @@
 # Teenage Mutant Ninja Turtles — port
 
-Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* as a native game for computers, the Nintendo Switch,
-Android and Anbernic's handhelds, built on its decompilation,
+Konami's 1989 arcade game *Teenage Mutant Ninja Turtles* as a native game for computers, the Raspberry Pi, the Nintendo
+Switch, Android, iPhone and iPad, and Anbernic's handhelds, built on its decompilation,
 [tmntarcade-decomp](https://github.com/cheviman/tmntarcade-decomp): the game's programs in C, checked frame by
 frame against MAME in state, picture and sound. Two games come out of it:
 
@@ -25,7 +25,8 @@ takes its assets out of it.
 
 Download the package for Windows, Linux or macOS from the
 [releases](https://github.com/cheviman/tmnt-port/releases) (on macOS TMNT Arcade comes in a package of its own,
-`tmnt-arcade-macos-universal.zip`). Keep `tmnt.zip` beside the game, or drop it on its window when it asks: the
+`tmnt-arcade-macos-universal.zip`; a Raspberry Pi 3 or later, with the 64-bit Raspberry Pi OS, takes
+`tmnt-raspberrypi-arm64.tar.gz`). Keep `tmnt.zip` beside the game, or drop it on its window when it asks: the
 first time, it takes the assets out of it.
 
 Each device has a package of its own, its games without assets (Android's, when the release signs them), ready to
@@ -99,10 +100,11 @@ that asks about the game should let it reach the private network. The rooms and 
 
 ## Building it
 
-Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL2 2.30 or newer. The simplest SDL2 is the
-releases' own: `-DTMNT_STATIC_SDL2=ON` builds it from its source into the games (CMake fetches it). Otherwise the
-system's (`libsdl2-dev` on Debian and Ubuntu), or on Windows its development package for Visual C++ unpacked in
-`build/downloads/sdl2/`, so that `build/downloads/sdl2/SDL2-2.x.y/cmake` is there. Clone it with its submodules and
+Python 3.10 or newer, CMake 3.20 or newer, a C11 / C++17 compiler and SDL 3 (3.4 or newer). The simplest SDL is the
+releases' own: `-DTMNT_STATIC_SDL=ON` builds SDL 3.4.20 from its source into the games (CMake fetches it; on Linux
+it needs the headers of what SDL talks to, the list in `.github/workflows/build.yml`). Otherwise the system's
+(`libsdl3-dev` where the system has it), or on Windows its development package for Visual C++ unpacked in
+`build/downloads/sdl3/`, so that `build/downloads/sdl3/SDL3-3.x.y/cmake` is there. Clone it with its submodules and
 build it:
 
 ```bash
@@ -110,7 +112,7 @@ git clone --recursive https://github.com/cheviman/tmnt-port
 ```
 
 ```bash
-cmake -S . -B build/cmake -DTMNT_STATIC_SDL2=ON
+cmake -S . -B build/cmake -DTMNT_STATIC_SDL=ON
 ```
 
 ```bash
@@ -120,7 +122,7 @@ cmake --build build/cmake --config Release
 The games are `TMNT Arcade` (the arcade game) and `TMNT` (the console version), in `build/bin/`: they take their
 assets out of `tmnt.zip` the first time (beside them, or in `rom/`), and on Windows
 `cmake --build build/cmake --config Release --target tmnt_package` packs them as the releases do, in
-`build/package/tmnt-windows-x64.zip`. Without SDL2 they are not built (CMake warns: `No SDL2`), and what is left in
+`build/package/tmnt-windows-x64.zip`. Without SDL 3 they are not built (CMake warns: `No SDL 3`), and what is left in
 `build/bin/` is the development tools: `tmnt_game_headless` and `tmnt_console_headless` run the game with no window
 for the checks and close; `kref`, `oracle_m68k`, `oracle_m68k_step` and `tmnt_assets_check` are the checks
 against the original (`-DTMNT_REFERENCE_TOOLS=OFF` leaves them out: playing does not need them). How the port runs the game, its first run, the packages and the console version's checks are in
@@ -147,10 +149,10 @@ anyone asks you to pay for these games, it is not this project.
 - MULTIPLAYER's rooms and datagrams are [arcade-lan](https://github.com/cheviman/arcade-lan) (`lan/`, a submodule),
   BSD 3-Clause, whose terms are in `lan/LICENSE`.
 - The game controllers' mappings are [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)'s
-  (`ports/sdl2/controllerdb`, zlib License), built into the games on the computers and Android.
+  (`ports/sdl/controllerdb`, zlib License), built into the games on the computers and Android.
 - The menus write with Kenney Mini and CONTROLS shows Kenney's Input Prompts (www.kenney.nl), CC0. The window
-  port links SDL2 (zlib License); the packages carry it inside the executables, with its terms and the ones above
-  in `licenses/`. The icon is Raphael's face from a friend's mural (`ports/sdl2/icon/raphael_mural.png`; every
+  port links SDL 3 (zlib License); the packages carry it inside the executables, with its terms and the ones above
+  in `licenses/`. The icon is Raphael's face from a friend's mural (`ports/sdl/icon/raphael_mural.png`; every
   size made by `tools/make_icon.py`), nothing of the game's.
 - *Teenage Mutant Ninja Turtles* is a trademark of its owner, and the arcade game is Konami's. This project is not
   affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.

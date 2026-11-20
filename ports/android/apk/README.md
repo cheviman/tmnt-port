@@ -20,11 +20,11 @@ not found, or what is wrong with it):
 - **ROM set**: `tmnt.zip` beside the tool;
 - **Launcher icon**: a square PNG or JPEG of yours, at most 2048 x 2048, which the launcher shows whole, its
   shape cutting the corners: `icon.jpg` beside the tool (taken by itself, by TMNT NSP too) or one dropped
-  on the window; else the game's own (the project's: Raphael from a friend's mural, ports/sdl2/icon);
+  on the window; else the game's own (the project's: Raphael from a friend's mural, ports/sdl/icon);
 - **TV banner**: a PNG or JPEG of yours wider than tall, at most 2048 wide, which Android TV and Google TV show as
   16:9 in their apps (the Chromecast with Google TV's): `banner.jpg` beside the tool or one dropped on the window
   (a dropped picture wider than tall is the banner, else the icon); else the game's own (the four turtles from a
-  friend's mural, ports/sdl2/icon/turtles_mural.png);
+  friend's mural, ports/sdl/icon/turtles_mural.png);
 - **The game's Android build**: `tmnt-base.apk` in the folder `android` beside the tool (TMNT Arcade's,
   `tmnt-arcade-base.apk`, beside it);
 - **Signing key**: yours, kept from before, or made with the first APK (below);
@@ -42,7 +42,7 @@ its console. With options, from a command line, it is a console program and noth
 TMNT APK --rom tmnt.zip --icon my_icon.png --banner my_banner.jpg --base android/tmnt-base.apk --out TMNT.apk
 ```
 
-When it cannot show its window (no display, no `font.bmp` beside it, a build without SDL2), the tool started
+When it cannot show its window (no display, no `font.bmp` beside it, a build without SDL), the tool started
 with nothing makes the APK at once with the defaults, in its console.
 
 Copy `TMNT.apk` to the phone and open it there (Android asks once to allow installing from that app),
@@ -102,8 +102,8 @@ byte for byte, on any computer.
 cmake --build build/cmake --config Release --target tmnt_apk_maker
 ```
 
-Its window is built where the game's is, with SDL2 (with `font.bmp`, and on Windows `SDL2.dll` unless SDL2 is
-built in); without SDL2 the tool is its command line alone. It lands in `build/bin/`, beside
+Its window is built where the game's is, with SDL 3 (with `font.bmp`, and on Windows `SDL3.dll` unless SDL is
+built in); without SDL the tool is its command line alone. It lands in `build/bin/`, beside
 `build/bin/android/`, so from the repository it makes the APK at once:
 
 ```bash
@@ -121,7 +121,7 @@ and `zipalign -c -p 4 TMNT.apk`.
 | `sign.c` | APK Signature Scheme v2: the digests, the signed data, the APK Signing Block |
 | `key.c` | the player's key: made once, kept as PKCS #8 with a self-signed X.509 certificate, read back |
 | `ecdsa.c` | ECDSA on P-256 with SHA-256 (RFC 6979's nonce) and HMAC-SHA256; SHA-256 is TMNT NSP's (`ports/switch/nsp/crypto.c`) |
-| `window.c` | the window (SDL2, with Kenney Mini's letters, `ports/sdl2/letters.c`, and TMNT NSP's folder dialog, `ports/switch/nsp/folder_dialog.c`) |
+| `window.c` | the window (SDL 3, with Kenney Mini's letters, `ports/sdl/letters.c`, and TMNT NSP's folder dialog, `ports/switch/nsp/folder_dialog.c`) |
 
 Nothing of the game, the ROM set, the key or the player's own icon is in this repository: the APK is made on
 the player's computer, from the player's files. TMNT is a trademark of SEGA; this project is

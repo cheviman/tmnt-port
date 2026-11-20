@@ -11,7 +11,7 @@ Two games come in it, the same program:
   brings a player in), Splinter Way's modes and the game over the local network.
 
 They are TMNT Arcade.exe and TMNT.exe on Windows, TMNT Arcade.app and TMNT.app on macOS, and TMNT Arcade
-and TMNT on Linux. On macOS each comes in a package of its own: tmnt-macos-universal.zip has TMNT (and
+and TMNT on Linux and on a Raspberry Pi. On macOS each comes in a package of its own: tmnt-macos-universal.zip has TMNT (and
 the tools for the devices), tmnt-arcade-macos-universal.zip TMNT Arcade.
 
 What you need
@@ -29,8 +29,12 @@ set again. The assets come from your ROM set, so they are yours alone: never sha
 
 macOS: the .apps are not signed with a certificate. The first time, open one with a right click and
 Open (on macOS 15 and later: System Settings, Privacy & Security, Open Anyway).
-Linux: start ./TMNT or "./TMNT Arcade" from the folder; the games need SDL2's usual libraries of a
-desktop (X11 or Wayland, ALSA or PulseAudio), which they load themselves.
+Linux: start ./TMNT or "./TMNT Arcade" from the folder; the games need the usual libraries of a
+desktop (X11 or Wayland, ALSA, PulseAudio or PipeWire), which they load themselves.
+Raspberry Pi (tmnt-raspberrypi-arm64.tar.gz): a Raspberry Pi 3 or later (3, Zero 2 W, 4, 400, 5, 500) with
+the 64-bit Raspberry Pi OS, Debian 12 "Bookworm" or later; the 32-bit Raspberry Pi OS does not run it.
+Start ./TMNT or "./TMNT Arcade" from the folder, as on Linux: in a terminal of the desktop, or with no
+desktop at all (Raspberry Pi OS Lite), where the game takes the whole screen.
 
 Playing TMNT Arcade
 -------------------
@@ -93,8 +97,9 @@ CONTROLS changes each player's keys and buttons, SPECIAL's among them.
 
 The devices
 -----------
-The Nintendo Switch, Android (phones, tablets, TVs) and Anbernic's H700 handhelds have packages of their
-own in the release: tmnt-switch.zip, tmnt-android.zip and tmnt-anbernic.zip. Each has the device's games
+The Nintendo Switch, Android (phones, tablets, TVs), iPhone and iPad, and Anbernic's H700 handhelds have
+packages of their own in the release: tmnt-switch.zip, tmnt-android.zip, tmnt-ios.zip (the two games to
+install yourself, its README says how) and tmnt-anbernic.zip. Each has the device's games
 without assets (Android's, when the release signs them), ready to take them out of your tmnt.zip on the
 device, and the tool that makes your own of them on a computer with your ROM set (for Windows, macOS and
 Linux); its README says how.
@@ -103,7 +108,7 @@ Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
 sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER, its rooms and
-datagrams, github.com/cheviman/arcade-lan), SDL2's (zlib: the window, the sound and the controls, inside
+datagrams, github.com/cheviman/arcade-lan), SDL's (zlib: the window, the sound and the controls, inside
 the games), SDL_GameControllerDB's (zlib: the game controllers' mappings, inside the games) and Kenney's (CC0: the letters of the window that asks for the ROM set and of TMNT's menus,
 and the pictures of the keys and buttons on its CONTROLS page).
 
@@ -112,4 +117,4 @@ comes next: patreon.com/ChevimanPorts. Entirely optional; if anyone asks you to 
 is not this project.
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's. This project
-is not affiliated with or endorsed by either, nor by Nintendo, Google or Anbernic.
+is not affiliated with or endorsed by either, nor by Nintendo, Google, Apple, Anbernic or Raspberry Pi.

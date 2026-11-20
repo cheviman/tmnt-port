@@ -8,7 +8,7 @@
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
- *    As outrunners-port's (its ports/sdl2/controls.c), for the cabinet's four players: the defaults below;
+ *    As outrunners-port's (its ports/sdl/controls.c), for the cabinet's four players: the defaults below;
  *    controls.ini, in the folder of what the game keeps, keeps what TMNT's CONTROLS page changes: a section a player,
  *    "[player 1]", and a line a control, "attack = Z, Left Ctrl | a" (SDL's names of the keys, then of the buttons and
  *    the triggers). A player's game controller is the one plugged in in their turn; its left stick moves besides
@@ -20,7 +20,7 @@
 #include <string.h>
 
 #define NO_KEY     SDL_SCANCODE_UNKNOWN
-#define NO_BUTTON  SDL_CONTROLLER_BUTTON_INVALID
+#define NO_BUTTON  SDL_GAMEPAD_BUTTON_INVALID
 #define LINE_SIZE  256
 #define FILE_VERSION  1
 
@@ -60,16 +60,16 @@ static const SDL_Scancode default_keys[CONTROL_PLAYERS][CONTROLS][CONTROL_KEYS] 
 	},
 };
 
-/* (a control with one button: none is SDL_CONTROLLER_BUTTON_INVALID, not 0, which is A) */
+/* (a control with one button: none is SDL_GAMEPAD_BUTTON_INVALID, not 0, which is A) */
 #define ONE_BUTTON(first)  { first, NO_BUTTON, NO_BUTTON }
 
 /* Every player's game controller: the pad moves (as the stick does), A attacks, B jumps, X both at once, Start */
-static const SDL_GameControllerButton default_buttons[CONTROLS][CONTROL_BUTTONS] = {
-	[CONTROL_UP] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_UP), [CONTROL_DOWN] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_DOWN),
-	[CONTROL_LEFT] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_LEFT),
-	[CONTROL_RIGHT] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_DPAD_RIGHT),
-	[CONTROL_ATTACK] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_A), [CONTROL_JUMP] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_B),
-	[CONTROL_SPECIAL] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_X), [CONTROL_START] = ONE_BUTTON(SDL_CONTROLLER_BUTTON_START),
+static const SDL_GamepadButton default_buttons[CONTROLS][CONTROL_BUTTONS] = {
+	[CONTROL_UP] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_DPAD_UP), [CONTROL_DOWN] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_DPAD_DOWN),
+	[CONTROL_LEFT] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_DPAD_LEFT),
+	[CONTROL_RIGHT] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_DPAD_RIGHT),
+	[CONTROL_ATTACK] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_SOUTH), [CONTROL_JUMP] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_EAST),
+	[CONTROL_SPECIAL] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_WEST), [CONTROL_START] = ONE_BUTTON(SDL_GAMEPAD_BUTTON_START),
 };
 
 control_binding control_bindings[CONTROL_PLAYERS][CONTROLS];
@@ -90,14 +90,14 @@ static void set_defaults(int player)
 	}
 }
 
-static bool is_trigger(SDL_GameControllerButton button)
+static bool is_trigger(SDL_GamepadButton button)
 {
 	return button == CONTROL_LEFT_TRIGGER || button == CONTROL_RIGHT_TRIGGER;
 }
 
-bool controls_holds(int player, SDL_GameController *pad, int control)
+bool controls_holds(int player, SDL_Gamepad *pad, int control)
 {
-	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	const bool *keys = SDL_GetKeyboardState(NULL);
 	const control_binding *binding = &control_bindings[player][control];
 
 	for (int key = 0; key < CONTROL_KEYS; key++)
@@ -105,13 +105,13 @@ bool controls_holds(int player, SDL_GameController *pad, int control)
 			return true;
 	for (int button = 0; pad && button < CONTROL_BUTTONS; button++)
 	{
-		const SDL_GameControllerButton which = binding->buttons[button];
+		const SDL_GamepadButton which = binding->buttons[button];
 
 		if (which == NO_BUTTON)
 			continue;
-		if (is_trigger(which) ? SDL_GameControllerGetAxis(pad, which == CONTROL_LEFT_TRIGGER
-				? SDL_CONTROLLER_AXIS_TRIGGERLEFT : SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > TRIGGER_PRESSED
-			: SDL_GameControllerGetButton(pad, which) != 0)
+		if (is_trigger(which) ? SDL_GetGamepadAxis(pad, which == CONTROL_LEFT_TRIGGER
+				? SDL_GAMEPAD_AXIS_LEFT_TRIGGER : SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > TRIGGER_PRESSED
+			: SDL_GetGamepadButton(pad, which))
 			return true;
 	}
 	return false;
@@ -132,23 +132,23 @@ static char *trimmed(char *text)
 }
 
 /* A button's name in controls.ini: SDL's, the triggers' its axes' ("lefttrigger", "righttrigger") */
-static const char *button_name(SDL_GameControllerButton button)
+static const char *button_name(SDL_GamepadButton button)
 {
 	if (is_trigger(button))
-		return SDL_GameControllerGetStringForAxis(button == CONTROL_LEFT_TRIGGER
-			? SDL_CONTROLLER_AXIS_TRIGGERLEFT : SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-	return SDL_GameControllerGetStringForButton(button);
+		return SDL_GetGamepadStringForAxis(button == CONTROL_LEFT_TRIGGER
+			? SDL_GAMEPAD_AXIS_LEFT_TRIGGER : SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+	return SDL_GetGamepadStringForButton(button);
 }
 
-static SDL_GameControllerButton named_button(const char *name)
+static SDL_GamepadButton named_button(const char *name)
 {
-	const SDL_GameControllerAxis axis = SDL_GameControllerGetAxisFromString(name);
+	const SDL_GamepadAxis axis = SDL_GetGamepadAxisFromString(name);
 
-	if (axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
+	if (axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER)
 		return CONTROL_LEFT_TRIGGER;
-	if (axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)
+	if (axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)
 		return CONTROL_RIGHT_TRIGGER;
-	return SDL_GameControllerGetButtonFromString(name);
+	return SDL_GetGamepadButtonFromString(name);
 }
 
 /* One line "name = Key, Key | button, button": the player's control it names takes those, in place of its own (the
@@ -319,14 +319,14 @@ void controls_bind_key(int player, int control, SDL_Scancode key)
 	controls_save();
 }
 
-void controls_bind_button(int player, int control, SDL_GameControllerButton button)
+void controls_bind_button(int player, int control, SDL_GamepadButton button)
 {
 	control_binding *binding = &control_bindings[player][control];
 	int slot;
 
 	for (int other = 0; other < CONTROLS; other++)
 	{
-		SDL_GameControllerButton *buttons = control_bindings[player][other].buttons;
+		SDL_GamepadButton *buttons = control_bindings[player][other].buttons;
 
 		for (slot = CONTROL_BUTTONS - 1; other != control && slot >= 0; slot--)
 			if (buttons[slot] == button)

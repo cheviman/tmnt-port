@@ -44,7 +44,7 @@ the game. Each game keeps its settings and its log on the SD card: switch/tmnt/ 
 Licenses
 --------
 LICENSE.txt is the project's (BSD-3-Clause). licenses/ holds MAME's and ymfm's (the board's video and
-sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER), SDL2's and
+sound follow their behavior and tables), arcade-lan's (BSD-3-Clause: TMNT's MULTIPLAYER), SDL's and
 SDL_GameControllerDB's (zlib) and Kenney's (CC0: the letters, the controls' pictures).
 
 Teenage Mutant Ninja Turtles is a trademark of its owner, and the arcade game is Konami's; Nintendo Switch

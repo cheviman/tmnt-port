@@ -125,7 +125,7 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   definitions as `CONSOLE_ORIGINAL(name)` (src/ differs only there, and in their declarations in game.h):
   `run_attract`, `title_turtles_slide_in`, `draw_best_players`, `message_insert_coin`.
   CMake builds `tmnt_console_game` (the decompiled C, the runtime's game files and console/*.c, `TMNT_CONSOLE`),
-  `TMNT` (ports/sdl2 with the console) and `tmnt_console_headless` (`--actions FILE`: the menus' actions and the
+  `TMNT` (ports/sdl with the console) and `tmnt_console_headless` (`--actions FILE`: the menus' actions and the
   players' START by frame; `--video-dump FRAME ... --video-dir DIR`: the frames with the console's picture
   over them, as BMP, and where the console stands on the standard output; `tests/console/` holds the actions of a
   few runs). The Windows package holds `TMNT.exe` beside `TMNT Arcade.exe`. TMNT Arcade is the same program: the
@@ -193,7 +193,7 @@ OutRunners; **Splinter Way** is its modes of the port's own, a menu of its own, 
   TEST: MUSIC by the names music.txt gives the songs (the title music too), EFFECT (FM 01-41, PCM 80-93), VOICE (the
   uPD7759's samples 00-35, speech_NN), STOP; the menus' song again after it. FPS: the frames a second at the top right
   and in the window's title. Settings in tmnt.ini (wide=, fps= besides).
-- **CONTROLS**: each of the four players' keys and game controller buttons (ports/sdl2/controls.c, controls.ini beside
+- **CONTROLS**: each of the four players' keys and game controller buttons (ports/sdl/controls.c, controls.ini beside
   the executable, as outrunners-port's): < PLAYER N > on top, UP DOWN LEFT RIGHT ATTACK JUMP START with the pictures of
   their keys and first button (Kenney's Input Prompts Pixel, CC0, input_prompts.bmp), DEFAULTS, BACK; a control picked
   takes the next key or button (Escape leaves it). Defaults: MAME's keys for the four players, every pad's A B and Start.
@@ -499,7 +499,7 @@ are outrunners-port's: Winsock, POSIX, libnx).
   (tmnt_video_set_fixed_band, runtime/src/video.c: the port's, as all of WIDE), and wide.c keeps it in the middle
   of the picture: (right - left) / 2 columns further right. The 18 scenarios identical (no WIDE there).
 - A game controller before a TV's remote (a Shield's, which Android reports as a game controller and comes first:
-  the player's Xbox controller played player 2): ports/sdl2/main.c's controller_added.
+  the player's Xbox controller played player 2): ports/sdl/main.c's controller_added.
 - Android's window full screen (SDL's immersive mode: TMNT Arcade's opened as a window, Android 15 drawing it under
   the system's bars), and a device's settings always full screen.
 - WIDE 16:10 (a player's request, for the Steam Deck's 1280 x 800): WIDE_16_10, 32 columns more at each side (frames
@@ -510,7 +510,7 @@ are outrunners-port's: Winsock, POSIX, libnx).
 ## VSYNC (07-11-2026: Sebas, "tenemos que hacer el modo vsync en el modo consola")
 
 - OPTIONS > VIDEO > VSYNC, ON by default (as outrunners-port's), kept in tmnt.ini: the renderer shows each frame at
-  the screen's refresh (SDL_RenderSetVSync, ports/sdl2/main.c's apply_vsync), the game keeping its own pace, the
+  the screen's refresh (SDL_RenderSetVSync, ports/sdl/main.c's apply_vsync), the game keeping its own pace, the
   board's 59.19 frames a second (wait_for_frame); a frame a whole frame behind that pace is not shown
   (frame_behind), so the game and its sound never wait for the screen. Not with --fast. On the devices the line is
   not there: their screens keep the system's refresh (and the Anbernic's SDL 2.0.12 has no SDL_RenderSetVSync).

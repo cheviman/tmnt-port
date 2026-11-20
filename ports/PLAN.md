@@ -6,11 +6,12 @@ to the devices; this one takes the arcade game there too. What they built is the
 
 ## What the game has today
 
-- `TMNT Arcade` (ports/sdl2): the game in a window on SDL2, the keyboard and four game controllers, built and
+- `TMNT Arcade` (ports/sdl): the game in a window on SDL 3 (SDL 2 till 19-11-2026: the entries below say SDL2 where
+  it was), the keyboard and four game controllers, built and
   played on Windows; `tmnt_game_headless` for the checks. Its Windows package (`tmnt_package`, the README's "The
   Windows package"): the executable alone with SDL2 inside it, an icon of our own, its README.txt and licenses, and
   the CI's windows job that makes it.
-- `TMNT` (ports/sdl2 with the console, console/PLAN.md): the console version beside it, in the same package;
+- `TMNT` (ports/sdl with the console, console/PLAN.md): the console version beside it, in the same package;
   `tmnt_console_headless` for its scripted checks.
 - The assets come from `tools/extract_assets.py` (Python) and the game loads the folder (`runtime/src/assets.c`,
   `music.c`). No executable holds a byte of the ROM set (`tools/rom_in_executables.py`).
@@ -86,7 +87,7 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   project's (ports/android/res); of each a base APK (no pack, no signature) and this computer's -debug.apk (with
   build/bin/tmnt.assets, the debug key). main.c on Android: the pack read whole from the APK's assets
   (assets_load_pack_bytes, runtime/src/assets_pack.c: the port's), the log in the app's folder on the storage, back
-  the menus' back and the pause, the background a pause, exit(0) at the end. ports/sdl2/touch.c, TMNT's own: a stick
+  the menus' back and the pause, the background a pause, exit(0) at the end. ports/sdl/touch.c, TMNT's own: a stick
   where the left thumb lands (eight ways), ATTACK and JUMP at the right (a thumb sliding between them), START (COIN in
   TMNT Arcade) at the top right, player 1's; a game controller or a key hides them. Built here with segasonic-port's
   downloaded SDK copied into build/downloads/android (NDK 28.2, build-tools 35.0.1, JDK 17; Ninja from Visual
@@ -108,7 +109,7 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   anbernic job and its files in every package beside TMNT Anbernic; arcade-lan's license in the packages too. Not yet
   run on a handheld.
 
-- **The touch controls' size** (07-11-2026: Sebas, on an open Fold "se va de tamaño"): ports/sdl2/touch.c's unit was a
+- **The touch controls' size** (07-11-2026: Sebas, on an open Fold "se va de tamaño"): ports/sdl/touch.c's unit was a
   tenth of the screen's height. Now (touch_layout, outrunners-port's rule): over the picture, a tenth of the area's
   smaller side (its height, or its width over 1.8: a phone's as before), at most 0.35 inch on the screen
   (SDL_GetDisplayDPI); on a screen taller than the picture by a fifth or more, the picture at the top and the
@@ -117,7 +118,7 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   not yet on a Fold.
 
 - **Game controllers' mappings** (07-11-2026: a player's Nvidia Shield, its PS4 and Xbox controllers moving no
-  turtle and their A and B pausing): SDL_GameControllerDB (ports/sdl2/controllerdb, zlib, its commit in its README),
+  turtle and their A and B pausing): SDL_GameControllerDB (ports/sdl/controllerdb, zlib, its commit in its README),
   this platform's lines built into the games on the computers and Android (embed.cmake: a byte array, MSVC taking no
   string longer than 64 KB; CMakeLists.txt's tmnt_controller_db). The log says what SDL finds of each joystick (name,
   GUID, game controller or not, its mapping) and the first 48 keys and buttons pressed, for the player to send
@@ -142,7 +143,7 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   20:9, 16:9 from 16:9 on and on a tablet's screen (its short side 4 inches or more, by the display's DPI: the open
   Fold, the picture at the top and the touch controls under it), 16:10 from 3:2 on, else none; not during a LAN game
   (the host's WIDE). touch.c reads the density again with the new size. Built for Android, not yet seen on a Fold.
-- **The icon** (07-11-2026: Sebas): Raphael's face from a friend's mural, ports/sdl2/icon/raphael_mural.png, of which
+- **The icon** (07-11-2026: Sebas): Raphael's face from a friend's mural, ports/sdl/icon/raphael_mural.png, of which
   tools/make_icon.py makes every size (the computers', the Android launcher's, the Switch's); the drawn manhole gone.
 
 - **The Chromecast with Google TV** (07-11-2026: Sebas, "un port especial para el chromecast de 4ta generacion", for his
@@ -162,7 +163,7 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
     Thumb-2 instructions the check ran.
   - **Google TV's launcher**: the manifest's LEANBACK_LAUNCHER and android.software.leanback (not required), and a
     banner, res/drawable-xhdpi/banner.png (320 x 180): the four turtles' faces from the same friend's mural
-    (ports/sdl2/icon/turtles_mural.png, tools/make_icon.py). TMNT APK takes a banner of the player's own: banner.jpg
+    (ports/sdl/icon/turtles_mural.png, tools/make_icon.py). TMNT APK takes a banner of the player's own: banner.jpg
     beside it, --banner, or a picture wider than tall dropped on its window (its row, TV banner).
   - **The TV's remote** (pad, OK and back alone): main.c's is_remote also knows a remote on Android by its buttons (no
     B and no Start), whatever its name. In TMNT its back is JUMP (the menus' back, the pause's CONTINUE) and not the
@@ -236,3 +237,118 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
   the workflow's env on testing, empty elsewhere) after PROJECT_VERSION in TMNT_VERSION (CMakeLists.txt); the
   Android versionCode, the Switch's and macOS's versions stay PROJECT_VERSION's. The way: changes to testing,
   pushed, the players try them; then testing merged into main and a release's tag, as before.
+
+- **SDL 3 and the Raspberry Pi** (19-11-2026, Sebas: "primero pasarlo a sdl3 o el mas reciente que sirva con todo, y
+  agrega una version de raspberi 3 en adelante. y va como regla para todos los ports"; and, asked about the Switch:
+  "Probar SDL3 en Switch"). The window port is written for SDL 3 now (ports/sdl, which was ports/sdl2), one version
+  on every platform that has it: SDL 3.4.20 (03-11-2026), CMakeLists.txt's TMNT_SDL_VERSION, its release's archive
+  by its SHA-256 (TMNT_STATIC_SDL was TMNT_STATIC_SDL2).
+  - **What each platform takes** (read on that day, not from memory). Windows, Linux, macOS and the Raspberry Pi:
+    SDL 3.4.20 from its source, inside the games. Android: SDL 3.4.20 from its source, libSDL3.so beside libmain.so,
+    its Java from its android-project (SDL 3.4 asks for API 21 and NDK r28c; its project compiles with SDK 35, what
+    the build has). The Switch: SDL's own port is for those under Nintendo's NDA (its docs/README-switch.md) and
+    devkitPro has no package of SDL 3 (its portlibs: switch-sdl2 2.28.5 alone), so switch.cmake builds SDL from
+    devkitPro's own branch of it, github.com/devkitPro/SDL's switch-sdl-3.4 at c329016 (SDL 3.4.0 with libnx's video,
+    sound and controllers; not released, its maintainer on its pull request 99: "a couple of tests failing"), by its
+    archive's SHA-256, into the games; a devkitPro package (find_package(SDL3)) is taken first once there is one. The
+    Anbernic: its stock firmware's own SDL 2.0.12, which no SDL 3 runs on (sdl2-compat is the other way round), so
+    its build keeps SDL 2 under the same source: TMNT_SDL2_LAYER, ports/sdl/sdl2_layer.h, SDL 3's names the port
+    uses over the SDL 2 functions that did the same (the events into a union of its own, the audio stream over the
+    device's queue, float rectangles into whole ones, joysticks by the event's number), the stand-in library as
+    before, and the build's last step ports/anbernic/check_sdl.py: the SDL functions the games' ELFs ask for, none
+    newer than SDL 2.0.12 by SDL 2's headers.
+  - **The move**: SDL's own rename scripts (its build-scripts) over the sources, then what changed underneath, by
+    hand: its functions' bool results, the render calls' float rectangles, the window and the renderer made with
+    no place and no flags (Direct3D 11 is SDL 3's first on Windows: the hint is gone), full screen as a bool, the
+    events' fields and the window events as events of their own, joysticks by instance, the sound as a stream on the
+    default device (SDL_OpenAudioDeviceStream, SDL_PutAudioStreamData; 1024 sample frames asked of the device, as
+    before), SDL's base path and a dropped file's name SDL's own (not freed), the window's NSWindow and HWND from its
+    properties, SDL_main.h included by main.c (the makers, with a main of their own, SDL_MAIN_HANDLED), textures'
+    scale mode and blend mode said where SDL 2's defaults were counted on, Android's screen density from the
+    display's content scale (SDL_GetDisplayDPI is gone: touch.c's unit as before, Android's densityDpi; main.c's
+    tablet_screen by the density now, not the panel's own dots). port_sdl.h is what the port's files include: SDL 3,
+    or the layer (not sdl.h, which a disk with no case would give for SDL 2's own SDL.h).
+  - **Checked on Windows** (a worktree of its own, the SDL 2 build of the same commit kept beside it): the 18
+    scenarios identical on both; TMNT Arcade's window run with attract's and one_player's scripts (--fast, --hashes,
+    --video-hashes, --sound-hashes) the same on SDL 2, on SDL 3 and as the reference, frame by frame; the log "SDL
+    3.4.20", "Renderer: direct3d11", "Game controllers: 887 mappings" (885 with SDL 2: SDL's own list), 888 with a
+    gamecontrollerdb.txt of one Windows line and one Linux line, 889 with a line in SDL_GAMECONTROLLERCONFIG too, 888
+    with that alone; the assets pack byte for byte the SDL 2 build's; tmnt_package's games with SDL and the C runtime
+    inside (no SDL3.dll, no VCRUNTIME asked for), attract as the reference; TMNT's window seen (PrintWindow): its
+    presentation and its menu, in a window and full screen (F11: 3840 x 2160, the picture 3027 wide in the middle),
+    F3's pixels, the settings kept. rom_in_executables: the build's games 0; the package's two games 1 stretch of
+    "tiles (planar)" and 1 of "sprites (planar)" each, which are SDL 3's own tables inside them (32-bit masks 1, 3,
+    7 ... 255; 00 FF over and over), not the ROM set's (the same games with SDL beside them: 0): tools/rom_in_executables.py's
+    trivial() does not know those two shapes yet (the decompilation's tool). Not played by hand yet: the sound heard,
+    game controllers, the pause, VSYNC.
+  - **What a player sees changed**: on Windows the window is DPI-aware (a 125% desktop: WINDOW 3 is its 942 x 672
+    pixels, sharp, where Windows stretched SDL 2's to 1177 x 840); a Nintendo controller's buttons are by their place
+    (SDL 3's SOUTH, EAST: no button labels), on a computer.
+  - **Checked elsewhere, with no device**: Linux (WSL, SDL 3.4.20 inside; this WSL without XTest's and PipeWire's
+    headers: SDL_X11_XTEST and SDL_PIPEWIRE off for the check, the CI installs them): its drivers X11, Wayland,
+    KMS/DRM, ALSA, PulseAudio; TMNT Arcade's window with SDL's dummy video, attract and one_player as the reference
+    in state and picture. The handheld's path (TMNT_HANDHELD, TMNT_HANDHELD_KEYS) built there twice by hand, with
+    SDL 3 and through the layer with the system's SDL 2.30: both run attract as the reference, no warnings. The
+    Anbernic's build (Zig, glibc 2.35): TMNT 72 SDL functions, TMNT Arcade 55, the newest of SDL 2.0.12. The
+    Switch's (devkitPro's MSYS2 CMake on Windows writes SDL's precompiled header with a /d/ path its compiler does
+    not find, and without that header SDL's Switch files compile to nothing: there SDL gets SDL_internal.h by the
+    compiler's -include): TMNT.nro and TMNT Arcade.nro and the .nsps' pieces, "SDL-3.4.0" and its Switch video in
+    them. macOS: main.c, controls.c and letters.c compiled by zig cc for arm64 and x86_64 (first_run.c's
+    CoreFoundation needs a Mac: its SDL part is the Linux one). Android (NDK 28.2, SDK 35): both games' base APKs and this computer's signed ones, apksigner verifies them (v2, v3), aligned;
+    aapt: io.github.cheviman.tmnt and .tmnt.arcade, SDK 24 to 35, the leanback activity and the banner, arm64-v8a and armeabi-v7a, each with
+    libmain.so and libSDL3.so; rom_in_executables 0 on them.
+  - **Not tried on a device**: the Switch (the screen: this SDL has the mode 1280 x 720 handheld and 1920 x 1080
+    docked and resizes the window itself, issue 19's ground; the sound; the controllers), a phone or a TV, the
+    handheld, a Mac.
+  - **The Raspberry Pi** (3 and later; ports/raspberrypi). A computer: the Linux games for 64-bit ARM, the package
+    tmnt-raspberrypi-arm64.tar.gz (the two games, their pictures, README.txt, the licenses). 64-bit: every model
+    from the 3 on runs the 64-bit Raspberry Pi OS (3B, 3B+, 3A+, Zero 2 W, 4, 400, 5, 500, the Compute Modules:
+    raspberrypi.com/software/operating-systems), and aarch64 is the build the Switch, Android and the Anbernic have;
+    no 32-bit package. Built on Debian 12 "Bookworm" for arm64 (Raspberry Pi OS Legacy's base, glibc 2.36), so the
+    games run on it and on Debian 13's (Trixie, glibc 2.41), SDL 3 inside them (Bookworm has none, Trixie 3.2.10)
+    with Wayland, X11, KMS/DRM (no desktop: Raspberry Pi OS Lite), ALSA, PulseAudio and PipeWire. build.sh builds and
+    packs; the CI's raspberrypi job runs it in debian:bookworm on an arm64 runner; on a PC wsl.sh makes that system
+    in a folder of WSL's and runs it under QEMU. Checked here under QEMU, in that
+    system: the games ask for libc and libm alone (glibc 2.34 at most) and for no SDL function of a library; SDL's drivers there X11, Wayland,
+    KMS/DRM, ALSA, PulseAudio, PipeWire; the package's TMNT Arcade takes the assets out of tmnt.zip beside it (the first run on arm64) and
+    plays attract's 7201 frames as the reference in state, picture and sound, with SDL's dummy video ("SDL 3.4.20", 767 mappings); TMNT runs a
+    script and leaves; the decompilation's scenarios on its headless game: 17 identical with the check (16 at a time, area2 again two at a
+    time: QEMU takes the long ones past the check's 15 minutes), and area4, its 81,601 frames run alone with no limit, identical in state, picture and sound (14 minutes).
+    Not tried on a Raspberry Pi: the screen (Wayland, X11, KMS/DRM), the sound, game controllers, the speed on a Pi 3.
+
+- **iOS and iPadOS** (20-11-2026; Sebas, 19-11-2026: "y anota que hay que agregar una version de ios", and, asked
+  whether in this batch: "si, al final"; a platform of every port from here on). simpsons-port's iOS version (its
+  ports/PLAN.md, 13-11-2026: Sebas's choices there), on SDL 3, which has iOS (SDL 3.4.20: iOS 11 on, Xcode 12.2 on;
+  its docs/README-ios.md): the move to SDL 3 leaves it in. TMNT and TMNT Arcade for an iPhone or an iPad (arm64, iOS
+  13 on), never the App Store (the game is Konami's, the player brings the ROM set): an unsigned .ipa of each in
+  tmnt-ios.zip, which the player's sideloading tool signs as it installs it (AltStore, SideStore, Sideloadly:
+  docs/package/README-ios.txt).
+  - **What it is**: ports/ios (ios.cmake: CMake's Xcode generator, SDL 3.4.20 static, no HIDAPI, target
+    tmnt_ios_games; Info.plist.in; LaunchScreen.storyboard, black; Assets.xcassets, Raphael's face 1024 x 1024 from
+    tools/make_icon.py), CMakeLists.txt's iOS lines (TMNT_IOS and TMNT_DEVICE where CMAKE_SYSTEM_NAME is iOS,
+    SDL_GameControllerDB's 42 iOS lines, arcade-lan's ARCADE_LAN_NO_BROADCAST), and main.c's SDL_PLATFORM_IOS branches,
+    Android's build with Apple's own: the whole screen at its pixels (full screen, borderless, high pixel density),
+    landscape, the home indicator dimmed, the sound as AVAudioSession's playback, the screen kept on, the picture and
+    TMNT's WIDE between the sides the notch or the Dynamic Island takes (ios_side_inset: SDL's safe area of the
+    window), nothing drawn from the background (an event watch) and a game paused there, the ROM set, the assets, the
+    settings and the log in the app's Documents (the Files app's "On My iPhone" > the game), the touch controls' size
+    by the screen's points (touch.c: 163 an inch on an iPhone, 132 on an iPad, times the pixels a point is). The CI's
+    jobs ios (macos-15: the apps and their .ipa, read back: the Info.plist's keys, arm64 for iOS, the launch screen
+    and the icon in the bundle, no assets in the .ipa) and ios-simulator (both apps started in the Simulator with no
+    ROM set: each must write its log and say where to put tmnt.zip); ports/pack_devices.py --ios, tmnt-ios.zip; the
+    release's nine packages.
+  - **Checked here, with no Mac**: main.c, controls.c, letters.c and touch.c of both games compiled by Zig 0.17 for
+    aarch64-ios and aarch64-ios-simulator with its Darwin headers and SDL 3.4.20's (-Wall -Wextra): 14 compiles, no
+    warning, Mach-O arm64 for iOS (platform 2) and its Simulator (7), main renamed SDL_main, the iOS branches in
+    them; the whole game for aarch64-ios: runtime/src, src/, console/ and arcade-lan's sources, 85 files, no error, and rom_in_executables 0 over all those objects; ios.cmake read by CMake with stand-in commands (an iPhone:
+    TMNT.ipa and TMNT Arcade.ipa; the Simulator: the apps alone); the workflow's YAML parsed, its ten jobs;
+    pack_devices.py --ios with stand-in .ipa files (tmnt-ios.zip: 11 files). The other platforms built again after
+    it, as before.
+  - **Not built, not run**: Xcode's build itself (the storyboard, the asset catalog, SDL's CMake under the Xcode
+    generator, the link) is the CI's ios job's, at the next push, or a Mac's; nothing tried in the Simulator nor on an
+    iPhone or iPad. To see there first: the game's tasks. runtime/src/tasks.c (the decompilation's) switches them with
+    ucontext on Apple's systems, which macOS has and iOS may not give (its getcontext may answer "not supported":
+    the log would say "A task could not be created"); if so, the way is tasks.c's own aarch64 switch, as on the
+    Switch and Android, written for Mach-O, a change of the decompilation's. And MULTIPLAYER: iOS gives an app no
+    broadcast without Apple's entitlement, and the arcade-lan this repository has (a7a1548) has no
+    ARCADE_LAN_NO_BROADCAST yet (tmnt-port's newer one has).

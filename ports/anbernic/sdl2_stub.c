@@ -633,3 +633,8 @@ void SDL_strlcpy(void);
 void SDL_strlcpy(void)
 {
 }
+
+void SDL_RenderFillRect(void);
+void SDL_RenderFillRect(void)
+{
+}
