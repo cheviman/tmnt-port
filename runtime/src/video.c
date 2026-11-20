@@ -2,9 +2,9 @@
  *    Name:        video.c
  *    Description: TMNT's video: the K052109's three tile layers, the K051960's sprites and the palette, drawn
  *                 from the board's memories as the board shows them
- *    Version:     0.1.0
+ *    Version:     0.2.0
  *    Created:     29-10-2026
- *    Modified:    29-10-2026
+ *    Modified:    20-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -22,6 +22,12 @@
  *    screen is flipped. A sprite is 1 to 8 x 8 cells of 16 x 16 pixels; its pen 15 shades what is under it
  *    when it casts a shadow. The pens become colours through the palette RAM (xBGR 555), and a shaded pen
  *    takes 0.75 of its colour.
+ *
+ *    It is drawn a tile's row at a time, and a sprite cell's: a row's 8 pixels are four bytes of the ROM, a bit
+ *    plane each, which k_spread turns into 8 pens in one number (row_pens). A layer with one scroll, as nearly all
+ *    the game's are, is drawn a tile at a time (draw_tiles: a tile's rows are together in the ROM, and it is looked
+ *    up once), an empty one left out at once; the others a line at a time, the rows of the tiles it crosses
+ *    (draw_layer). The palette's colours are worked out again only where the palette RAM changed (update_colours).
  */
 #include "tmnt/video.h"
 
@@ -67,9 +73,22 @@ typedef struct
 static const int k_colour_base[3] = { 0, 32, 40 };     /* tmnt.cpp's layer_colorbase */
 static const int k_sprite_colour_base = 16;
 
+/* A bit plane's byte of a row (its leftmost pixel in bit 7) with its bits a nibble apart, the leftmost pixel's the
+   lowest: the four planes' put together are the row's 8 pens, pixel n's in bits 4n to 4n + 3 (row_pens) */
+#define SPREAD(byte)    ((uint32_t)(((byte) >> 7 & 1) | ((byte) >> 6 & 1) << 4 | ((byte) >> 5 & 1) << 8 \
+	| ((byte) >> 4 & 1) << 12 | ((byte) >> 3 & 1) << 16 | ((byte) >> 2 & 1) << 20 | ((byte) >> 1 & 1) << 24 \
+	| ((byte) & 1) << 28))
+#define SPREAD_4(byte)  SPREAD(byte), SPREAD((byte) + 1), SPREAD((byte) + 2), SPREAD((byte) + 3)
+#define SPREAD_16(byte) SPREAD_4(byte), SPREAD_4((byte) + 4), SPREAD_4((byte) + 8), SPREAD_4((byte) + 12)
+#define SPREAD_64(byte) SPREAD_16(byte), SPREAD_16((byte) + 16), SPREAD_16((byte) + 32), SPREAD_16((byte) + 48)
+
+static const uint32_t k_spread[256] = { SPREAD_64(0), SPREAD_64(64), SPREAD_64(128), SPREAD_64(192) };
+
 static layer g_layers[3];
 static uint8_t g_sprite_buffer[TMNT_SPRITE_RAM_SIZE];  /* the K051960's DMA copy */
 static uint16_t g_bitmap[BITMAP_HEIGHT * BITMAP_WIDTH];
+static uint32_t g_colours[2 * PENS];                   /* the pens' colours, the shaded ones' after them */
+static uint8_t g_palette_seen[TMNT_PALETTE_SIZE];      /* the palette RAM g_colours was made from */
 
 uint8_t *tmnt_video_tiles_shown = NULL;
 uint8_t *tmnt_video_sprites_shown = NULL;
@@ -170,30 +189,121 @@ static int wrap(int value, int size)
 	return value < 0 ? value + size : value;
 }
 
-/* The pen of a map pixel (0-511, 0-255), its colour and its tile's code (k052109.cpp's get_tile_info, tmnt.cpp's
-   callback) */
-static int tile_pixel(int map, int x, int y, int *colour, int *tile)
+/* The 8 pens of a row of a tile, or of half a sprite cell's row (four bytes of the ROM, a bit plane each), its
+   leftmost pixel's in the lowest nibble */
+static uint32_t row_pens(const uint8_t *data)
+{
+	return k_spread[data[0]] | k_spread[data[1]] << 1 | k_spread[data[2]] << 2 | k_spread[data[3]] << 3;
+}
+
+/* A row's pens the other way round (a flip in x) */
+static uint32_t pens_reversed(uint32_t pens)
+{
+	pens = (pens & 0x0F0F0F0Fu) << 4 | (pens >> 4 & 0x0F0F0F0Fu);
+	return pens << 24 | (pens & 0xFF00u) << 8 | (pens >> 8 & 0xFF00u) | pens >> 24;
+}
+
+/* A whole row's 8 pens onto a line, in the colour whose first pen is 'base' */
+static void put_row(uint16_t *line, uint32_t pens, int base)
+{
+	line[0] = (uint16_t)(base + (pens & 15));
+	line[1] = (uint16_t)(base + (pens >> 4 & 15));
+	line[2] = (uint16_t)(base + (pens >> 8 & 15));
+	line[3] = (uint16_t)(base + (pens >> 12 & 15));
+	line[4] = (uint16_t)(base + (pens >> 16 & 15));
+	line[5] = (uint16_t)(base + (pens >> 20 & 15));
+	line[6] = (uint16_t)(base + (pens >> 24 & 15));
+	line[7] = (uint16_t)(base + (pens >> 28));
+}
+
+/* A cell of a layer's map: its tile in the ROM and how it shows (k052109.cpp's get_tile_info, tmnt.cpp's callback) */
+typedef struct
+{
+	int index;              /* the cell: its row * 64 + its column; -1 none yet */
+	const uint8_t *data;    /* the tile's 8 rows in the ROM */
+	int code, colour;
+	bool flip_y;            /* its rows upside down */
+	bool empty;             /* all its pixels pen 0 */
+} tile;
+
+static void take_tile(int map, int index, tile *into)
 {
 	const uint8_t *ram = tmnt_board.tile_ram;
-	const int index = (y >> 3) * 64 + (x >> 3);
 	int attribute = ram[COLOUR_RAM + map * 0x800 + index];
 	int code = ram[CODE_RAM + map * 0x800 + index] + 256 * ram[CODE_RAM_2 + map * 0x800 + index];
 	int bank = tmnt_board.char_rom_bank[(attribute & 0x0C) >> 2];
-	int row = y & 7;
-	const int column = x & 7;
-	const uint8_t *data;
+	uint64_t rows[4];
 
 	if (!(ram[REG_ADDRESS_MAP] & 0x40))
 		attribute = (attribute & 0xF3) | ((bank & 3) << 2);
 	bank >>= 2;
-	if ((attribute & 0x02) && (ram[REG_FLIP] & 0x04))
-		row = 7 - row;
 	code |= ((attribute & 0x03) << 8) | ((attribute & 0x10) << 6) | ((attribute & 0x0C) << 9) | (bank << 13);
-	*colour = k_colour_base[map] + ((attribute & 0xE0) >> 5);
-	*tile = code % TILES;
-	data = &game_tiles[(size_t)(code % TILES) * 32u + (size_t)row * 4u];
-	return ((data[3] >> (7 - column)) & 1) << 3 | ((data[2] >> (7 - column)) & 1) << 2
-		| ((data[1] >> (7 - column)) & 1) << 1 | ((data[0] >> (7 - column)) & 1);
+	into->index = index;
+	into->code = code % TILES;
+	into->colour = k_colour_base[map] + ((attribute & 0xE0) >> 5);
+	into->flip_y = (attribute & 0x02) && (ram[REG_FLIP] & 0x04);
+	into->data = &game_tiles[(size_t)into->code * 32u];
+	memcpy(rows, into->data, sizeof(rows));
+	into->empty = !(rows[0] | rows[1] | rows[2] | rows[3]);
+}
+
+/* A row of a tile's as a line shows it: the pens of 'count' of its pixels, the first in the lowest nibble, after
+   the 'before' that are left of them on the screen. 'py' is the map's row; 'flipped', the screen turned round */
+static uint32_t shown_pens(const tile *cell, int py, bool flipped, int before, int count)
+{
+	uint32_t pens = row_pens(cell->data + (cell->flip_y ? 7 - (py & 7) : py & 7) * 4);
+
+	if (flipped)
+		pens = pens_reversed(pens);    /* (the map's columns from right to left) */
+	pens >>= 4 * before;
+	return count < 8 - before ? pens & ((1u << (4 * count)) - 1u) : pens;
+}
+
+/* Those pens onto a line in the colour whose first pen is 'base': all of them, or those that are not pen 0 */
+static void put_pens(uint16_t *line, uint32_t pens, int count, int base, bool opaque)
+{
+	if (count == 8 && (opaque || ((pens | pens >> 1 | pens >> 2 | pens >> 3) & 0x11111111u) == 0x11111111u))
+		put_row(line, pens, base);    /* (a whole row, none of its pixels left out) */
+	else if (opaque)
+		for (int pixel = 0; pixel < count; pixel++, pens >>= 4)
+			line[pixel] = (uint16_t)(base + (pens & 15));
+	else
+		for (; pens; pens >>= 4, line++)
+			if (pens & 15)
+				*line = (uint16_t)(base + (pens & 15));
+}
+
+/* A layer with one scroll, a tile at a time: the screen's lines 'top' to 'bottom', its columns 'from' to 'to', the
+   screen's (x, y) showing the map's (x - scroll_x, y - scroll_y), turned round when 'flipped' */
+static void draw_tiles(int map, bool opaque, bool flipped, int top, int bottom, int from, int to, int scroll_x,
+	int scroll_y)
+{
+	const int first_px = wrap(from - scroll_x, MAP_WIDTH);
+
+	for (int y = top, lines; y <= bottom; y += lines)
+	{
+		int py = wrap(y - scroll_y, MAP_HEIGHT), px = first_px;
+
+		/* the lines that cross this row of tiles: down the tiles' rows, or up them when flipped */
+		if (flipped)
+			py = MAP_HEIGHT - 1 - py;
+		lines = flipped ? (py & 7) + 1 : 8 - (py & 7);
+		lines = lines < bottom - y + 1 ? lines : bottom - y + 1;
+		for (int x = from, count; x <= to; x += count, px = (px + count) & (MAP_WIDTH - 1))
+		{
+			const int before = px & 7;    /* (the tile's pixels left of these) */
+			uint16_t *line = &g_bitmap[y * BITMAP_WIDTH + x];
+			tile cell;
+
+			count = 8 - before < to - x + 1 ? 8 - before : to - x + 1;
+			take_tile(map, (py >> 3) * 64 + ((flipped ? MAP_WIDTH - 1 - px : px) >> 3), &cell);
+			if (cell.empty && !opaque)
+				continue;
+			for (int row = 0; row < lines; row++, line += BITMAP_WIDTH)
+				put_pens(line, shown_pens(&cell, flipped ? py - row : py + row, flipped, before, count), count,
+					cell.colour * 16, opaque);
+		}
+	}
 }
 
 /* k052109's tilemap_draw: the map 'map' over the bitmap, all its pixels or only those that are not pen 0 */
@@ -202,6 +312,7 @@ static void draw_layer(int map, bool opaque)
 	const layer *scroll = &g_layers[map];
 	const bool flipped = (tmnt_board.tile_ram[REG_FLIP] & 0x01) != 0;
 	int rowscroll[MAP_HEIGHT], colscroll[MAP_WIDTH / 8];
+	tile tiles[MAP_WIDTH / 8];    /* the cell drawn last at each column of the map: the next line's too, most times */
 	bool same_rows = true, same_cols = true;
 	int rows, cols;
 
@@ -221,102 +332,135 @@ static void draw_layer(int map, bool opaque)
 	rows = same_rows ? 1 : scroll->rows;
 	cols = same_cols ? 1 : scroll->cols;
 
+	if (!mixed && rows == 1 && cols == 1 && !tmnt_video_tiles_shown)
+	{
+		/* one scroll: a tile at a time (what was shown is marked a line at a time, below:
+		   tmnt_video_tile_palettes keeps each code's last pixel's, in the order of the lines) */
+		draw_tiles(map, opaque, flipped, CLIP_TOP, CLIP_BOTTOM, CLIP_LEFT, CLIP_RIGHT, rowscroll[0], colscroll[0]);
+		return;
+	}
+	for (int column = 0; column < MAP_WIDTH / 8; column++)
+		tiles[column].index = -1;
 	for (int y = CLIP_TOP; y <= CLIP_BOTTOM; y++)
 	{
 		uint16_t *line = &g_bitmap[y * BITMAP_WIDTH];
+		const int from = CLIP_LEFT, to = CLIP_RIGHT;
+		int row_scroll, start_x = 0, line_py = 0, px;
+		bool by_column = false;    /* the map's row is each column's own (its scroll) */
 
-		for (int x = CLIP_LEFT; x <= CLIP_RIGHT; x++)
+		if (mixed)
 		{
-			int px, py, colour, pen, tile;
+			const int band = y / (MAP_HEIGHT / scroll->rows);
 
-			if (mixed)
-			{
-				const int band = y / (MAP_HEIGHT / scroll->rows);
-				int start_x = scroll->rowscroll[flipped ? scroll->rows - 1 - band : band] & ~7;
+			start_x = scroll->rowscroll[flipped ? scroll->rows - 1 - band : band] & ~7;
+			if (!flipped)
+				start_x = -start_x;
+			row_scroll = rowscroll[band];
+			by_column = true;
+		}
+		else if (rows == 1 && cols == 1)
+		{
+			row_scroll = rowscroll[0];
+			line_py = wrap(y - colscroll[0], MAP_HEIGHT);
+		}
+		else if (cols == 1)
+		{
+			line_py = wrap(y - colscroll[0], MAP_HEIGHT);
+			row_scroll = rowscroll[line_py / (MAP_HEIGHT / rows)];
+		}
+		else
+		{
+			row_scroll = rowscroll[0];
+			by_column = true;
+		}
+		/* the line, the part of a tile's row at a time: 'count' pixels from the map's column px on */
+		px = wrap(from - row_scroll, MAP_WIDTH);
+		for (int x = from, count; x <= to; x += count, px = (px + count) & (MAP_WIDTH - 1))
+		{
+			const int before = px & 7;    /* (the row's pixels left of these) */
+			int py = line_py, column = px >> 3;
+			uint32_t pens;
+			tile *cell;
 
-				px = wrap(x - rowscroll[band], MAP_WIDTH);
-				if (!flipped)
-					start_x = -start_x;
-				py = wrap(y - colscroll[((start_x + (px & ~7)) >> 3) & 0x3F], MAP_HEIGHT);
-			}
-			else if (rows == 1 && cols == 1)
-			{
-				px = wrap(x - rowscroll[0], MAP_WIDTH);
-				py = wrap(y - colscroll[0], MAP_HEIGHT);
-			}
-			else if (cols == 1)
-			{
-				py = wrap(y - colscroll[0], MAP_HEIGHT);
-				px = wrap(x - rowscroll[py / (MAP_HEIGHT / rows)], MAP_WIDTH);
-			}
-			else
-			{
-				px = wrap(x - rowscroll[0], MAP_WIDTH);
-				py = wrap(y - colscroll[px / (MAP_WIDTH / cols)], MAP_HEIGHT);
-			}
+			count = 8 - before < to - x + 1 ? 8 - before : to - x + 1;
+			if (by_column)
+				py = wrap(y - colscroll[mixed ? ((start_x + (px & ~7)) >> 3) & 0x3F : px / (MAP_WIDTH / cols)], MAP_HEIGHT);
 			if (flipped)
 			{
-				px = MAP_WIDTH - 1 - px;
+				column = (MAP_WIDTH - 1 - px) >> 3;
 				py = MAP_HEIGHT - 1 - py;
 			}
-			pen = tile_pixel(map, px, py, &colour, &tile);
-			if (opaque || pen)
-				line[x] = (uint16_t)(colour * 16 + pen);
-			if (pen && tmnt_video_tiles_shown)
+			cell = &tiles[column];
+			if (cell->index != (py >> 3) * 64 + column)
+				take_tile(map, (py >> 3) * 64 + column, cell);
+			if (cell->empty && !opaque)
+				continue;
+			pens = shown_pens(cell, py, flipped, before, count);
+			put_pens(&line[x], pens, count, cell->colour * 16, opaque);
+			if (pens && tmnt_video_tiles_shown)
 			{
-				tmnt_video_tiles_shown[tile] |= (uint8_t)(1 << map);
+				tmnt_video_tiles_shown[cell->code] |= (uint8_t)(1 << map);
 				if (tmnt_video_tile_palettes)
-					tmnt_video_tile_palettes[tile] = (uint8_t)colour;
+					tmnt_video_tile_palettes[cell->code] = (uint8_t)cell->colour;
 			}
 		}
 	}
 }
 
-/* A 16 x 16 sprite cell's pen (k051960's spritelayout_reverse: four 8 x 8 quarters) */
-static int sprite_pixel(int code, int x, int y)
-{
-	const uint8_t *data = &game_sprites[(size_t)(code % SPRITES) * 128u + (size_t)((y & 8) * 8 + (x & 8) * 4 + (y & 7) * 4)];
-	const int column = x & 7;
-
-	return ((data[3] >> (7 - column)) & 1) << 3 | ((data[2] >> (7 - column)) & 1) << 2
-		| ((data[1] >> (7 - column)) & 1) << 1 | ((data[0] >> (7 - column)) & 1);
-}
-
-/* drawgfx's transtable for one cell: pen 0 left out, pen 15 a shadow when the sprite casts one */
+/* drawgfx's transtable for one cell (k051960's spritelayout_reverse: 16 x 16 pixels in four 8 x 8 quarters): pen 0
+   left out, pen 15 a shadow when the sprite casts one; a row at a time, its 16 pens in one number */
 static void draw_cell(int code, int colour, bool flip_x, bool flip_y, int left, int top, bool shadow)
 {
+	const uint8_t *data = &game_sprites[(size_t)(code % SPRITES) * 128u];
+	/* (the cell's columns on the screen) */
+	const int first = CLIP_LEFT - left > 0 ? CLIP_LEFT - left : 0;
+	const int last = CLIP_RIGHT - left < 15 ? CLIP_RIGHT - left : 15;
+	const int base = colour * 16;
+	bool shown = false;
+
+	if (first > last)
+		return;
 	for (int y = 0; y < 16; y++)
 	{
-		const int screen_y = top + y;
+		const int screen_y = top + y, row = flip_y ? 15 - y : y;
+		const uint8_t *halves = data + (row & 8) * 8 + (row & 7) * 4;
+		uint64_t pens;
+		uint16_t *pixel;
 
 		if (screen_y < CLIP_TOP || screen_y > CLIP_BOTTOM)
 			continue;
-		for (int x = 0; x < 16; x++)
+		pens = row_pens(halves) | (uint64_t)row_pens(halves + 32) << 32;
+		if (!pens)
+			continue;
+		if (flip_x)
+			pens = (uint64_t)pens_reversed((uint32_t)pens) << 32 | pens_reversed((uint32_t)(pens >> 32));
+		pens >>= 4 * first;
+		if (last < 15)
+			pens &= ((uint64_t)1 << (4 * (last - first + 1))) - 1u;
+		if (!pens)
+			continue;
+		shown = true;
+		pixel = &g_bitmap[screen_y * BITMAP_WIDTH + left + first];
+		for (; pens; pens >>= 4, pixel++)
 		{
-			const int screen_x = left + x;
-			int pen;
-			uint16_t *pixel;
+			const int pen = (int)(pens & 15);
 
-			if (screen_x < CLIP_LEFT || screen_x > CLIP_RIGHT)
-				continue;
-			pen = sprite_pixel(code, flip_x ? 15 - x : x, flip_y ? 15 - y : y);
 			if (!pen)
 				continue;
-			if (tmnt_video_sprites_shown)
-			{
-				tmnt_video_sprites_shown[code % SPRITES] = 1;
-				if (tmnt_video_sprite_palettes)
-					tmnt_video_sprite_palettes[code % SPRITES] = (uint8_t)colour;
-			}
-			pixel = &g_bitmap[screen_y * BITMAP_WIDTH + screen_x];
 			if (pen == 15 && shadow)
 			{
 				if (*pixel < PENS)
 					*pixel = (uint16_t)(*pixel + PENS);
 			}
 			else
-				*pixel = (uint16_t)(colour * 16 + pen);
+				*pixel = (uint16_t)(base + pen);
 		}
+	}
+	if (shown && tmnt_video_sprites_shown)
+	{
+		tmnt_video_sprites_shown[code % SPRITES] = 1;
+		if (tmnt_video_sprite_palettes)
+			tmnt_video_sprite_palettes[code % SPRITES] = (uint8_t)colour;
 	}
 }
 
@@ -393,20 +537,32 @@ static uint8_t shade(uint8_t component)
 	return (uint8_t)(value < 0 ? 0 : value > 255 ? 255 : value);
 }
 
+/* The pens' colours from the palette RAM, the entries that changed since the last frame drawn: all of them the
+   first time (the RAM seen and the colours start as zeroes, which are each other's) */
+static void update_colours(void)
+{
+	const uint8_t *palette = tmnt_board.palette;
+
+	if (memcmp(g_palette_seen, palette, sizeof(g_palette_seen)) == 0)
+		return;
+	for (int entry = 0; entry < PENS; entry++)
+	{
+		const int raw = palette[entry * 2] << 8 | palette[entry * 2 + 1];
+		const uint8_t red = pal5bit(raw & 0x1F), green = pal5bit((raw >> 5) & 0x1F), blue = pal5bit((raw >> 10) & 0x1F);
+
+		if (g_palette_seen[entry * 2] == palette[entry * 2] && g_palette_seen[entry * 2 + 1] == palette[entry * 2 + 1])
+			continue;
+		g_colours[entry] = (uint32_t)red << 16 | (uint32_t)green << 8 | blue;
+		g_colours[PENS + entry] = (uint32_t)shade(red) << 16 | (uint32_t)shade(green) << 8 | shade(blue);
+	}
+	memcpy(g_palette_seen, palette, sizeof(g_palette_seen));
+}
+
 void tmnt_video_vblank_start(tmnt_frame *frame)
 {
 	if (frame)
 	{
-		uint32_t pens[2 * PENS];
-
-		for (int entry = 0; entry < PENS; entry++)
-		{
-			const int raw = tmnt_board.palette[entry * 2] << 8 | tmnt_board.palette[entry * 2 + 1];
-			const uint8_t red = pal5bit(raw & 0x1F), green = pal5bit((raw >> 5) & 0x1F), blue = pal5bit((raw >> 10) & 0x1F);
-
-			pens[entry] = (uint32_t)red << 16 | (uint32_t)green << 8 | blue;
-			pens[PENS + entry] = (uint32_t)shade(red) << 16 | (uint32_t)shade(green) << 8 | shade(blue);
-		}
+		update_colours();
 		/* tmnt.cpp's screen_update */
 		draw_layer(2, true);
 		if ((tmnt_board.priority & 1) == 1)
@@ -415,9 +571,15 @@ void tmnt_video_vblank_start(tmnt_frame *frame)
 		if ((tmnt_board.priority & 1) == 0)
 			draw_sprites();
 		draw_layer(0, false);
+		/* the pens into colours, a line at a time */
 		for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+		{
+			const uint16_t *line = &g_bitmap[(CLIP_TOP + y) * BITMAP_WIDTH];
+			uint32_t *colours = &frame->pixels[y * TMNT_VIDEO_WIDTH];
+
 			for (int x = 0; x < TMNT_VIDEO_WIDTH; x++)
-				frame->pixels[y * TMNT_VIDEO_WIDTH + x] = pens[g_bitmap[(CLIP_TOP + y) * BITMAP_WIDTH + x] % (2 * PENS)];
+				colours[x] = g_colours[line[x]];
+		}
 	}
 	/* the K051960's DMA, unless the 051937 has the sprites off */
 	if (!(tmnt_board.sprite_control & 0x10))
