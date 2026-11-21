@@ -352,3 +352,54 @@ for the NSP, the APK and the Anbernic's PORTS, the aarch64 tasks for the Switch 
     Switch and Android, written for Mach-O, a change of the decompilation's. And MULTIPLAYER: iOS gives an app no
     broadcast without Apple's entitlement, and the arcade-lan this repository has (a7a1548) has no
     ARCADE_LAN_NO_BROADCAST yet (tmnt-port's newer one has).
+- **The video's speed** (20-11-2026; Sebas, after simpsons-port's players' issue 21, the Switch at 37 to 50 pictures a
+  second with its sound breaking up: how that stands in TMNT, the same family of board; and "acordate, nada de
+  frameskip": no frame is left undrawn, ports/sdl/main.c's pace is as it was). The runtime's video
+  (runtime/src/video.c: the decompilation's, changed there without WIDE and brought with a merge, the port's WIDE in
+  it here) drew each pixel of the three layers on its own, its tile looked up in the tile RAM every time. Now a
+  tile's row of 8 pixels at a time and a sprite cell's row of 16 (four bytes of the ROM, a bit plane each, through a
+  table of 256 into the pens in one number); a layer with one scroll a tile at a time (every layer of stage 1's
+  play: a tile's 8 rows are together in the ROM, a line's 40 tiles are not), an empty tile left out at once, a whole
+  row with no pen 0 written as 8 pixels; the other scroll kinds a line at a time, each cell looked up once for the
+  lines that cross it; the palette's colours worked out again only where the palette RAM changed; the pens into
+  colours a line at a time, and WIDE's 320 board columns copied out of its frame instead of made twice. What
+  tmnt_video_tiles_shown marks (the reference's --graphics-uses) goes a line at a time, so that each code's palette
+  is its last pixel's as before. Nothing kept between frames but the palette's colours, which make themselves again
+  from the palette RAM.
+  - **Measured** (this computer, a Ryzen 9 5900XT with nothing else running; the first numbers, taken while other
+    work ran on it, were three times these and are not kept. MSVC Release, stage 1's play, 6000 frames, timers
+    round the video's parts in a copy of it outside the repository, the least of 3 runs; microseconds a frame
+    drawn, before -> after):
+    - 4:3: layer B 585 -> 48, layer A 576 -> 33, the fixed layer 557 -> 12, the sprites 135 -> 33, the pens into
+      colours 31 -> 22, the palette 4 -> 1; the video 1889 -> 149, 12.7 times less.
+    - WIDE 16:10: 689 -> 57, 674 -> 38, 627 -> 13, 123 -> 31, 89 -> 30, 4 -> 1; 2205 -> 170, 13.0 times.
+    - WIDE 16:9: 747 -> 61, 733 -> 41, 672 -> 14, 121 -> 30, 94 -> 31, 4 -> 1; 2371 -> 177, 13.4 times.
+    - WIDE 20:9: 831 -> 68, 815 -> 44, 735 -> 14, 102 -> 24, 101 -> 33, 4 -> 1; 2588 -> 184, 14.1 times.
+    - GCC 13.3 (WSL), the Switch's kind of compiler: 4:3 1738 -> 136, WIDE 16:9 2214 -> 164.
+    - The whole frame in the headless game: 0.45 ms not drawn (the program and the sound board); drawn and hashed
+      2.48 -> 0.79 ms in 4:3, 3.04 -> 0.83 ms in WIDE 16:9 (the hash is 0.19 ms of each).
+  - **The Switch: an estimate, not a measure.** simpsons-port's case put a core of the Switch's at some 6 to 8 times
+    this computer's time. By that, a frame of the game with its picture in 16:9, the Switch's (0.45 + 2.2 ms here),
+    took 16 to 21 ms there against the board's 16.9: at its limit or past it, and past it the game and its sound
+    slow down together; now (0.45 + 0.17 ms) some 4 to 5 ms. The window's own work a frame (the picture's copy, the
+    console's picture over it, the texture, the screen's scaling) is in neither number: not measured.
+  - **Checked.** The 18 scenarios identical in state, picture and sound (check_scenarios --native-only --video
+    --sound), here and in the decompilation with its own video. Every frame's hash of WIDE's picture and of the
+    board's (tmnt_console_headless --wide-hashes FILE, new: docs/port.md), tests/console's nine runs and the 18
+    scenarios with --arcade-start, each in WIDE OFF, 16:10, 16:9 and 20:9, the video before against the one after:
+    216 files, 4,706,264 hashes, none different. A differential check outside the repository (build/perf_work/fuzz:
+    the video before, its public names renamed, and the new one in one executable, drawing the same random boards:
+    ROMs with empty, whole and half empty tiles and cells, the 64 scroll controls, the screen and the tiles
+    flipped, the ROM banks, sprites of every size with flips and shadows, the 051937's registers, WIDE's sides,
+    layer windows and fixed band in and out of range, frames not drawn, the tables of what was shown): 8 seeds of
+    3000 frames identical, the port's video and the decompilation's; and to see that it looks where it must, 21
+    bugs put into the old video on purpose and 30 into the new one, one at a time: all caught. rom_in_executables 0
+    in TMNT.exe, TMNT Arcade.exe and the two headless games. Built: Windows (MSVC, no warnings), Linux (WSL, GCC
+    13.3, SDL 3.4.20 inside; attract, one_player and area6 in WIDE 16:9 with the hashes of Windows' build before),
+    the Anbernic (Zig: TMNT 72 SDL functions, TMNT Arcade 55, the newest of SDL 2.0.12), Android (NDK 28.2, both
+    ABIs, the APKs), the Switch (devkitPro: TMNT.nro and TMNT Arcade.nro). video.c with GCC's and Clang's -Wall
+    -Wextra: no warnings.
+  - **Not tried, not done.** No device: the speed on a Switch is the players' to tell (testing's list asks for
+    it). macOS, iOS and the Raspberry Pi are the CI's builds. The window's own work a frame was not measured; if a
+    device still falls short, that and the program's 0.45 ms are what is left to look at, the video being a
+    quarter of a frame's time now.

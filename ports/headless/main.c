@@ -2,16 +2,16 @@
  *    Name:        main.c
  *    Description: runs the game with no screen or sound, with the controls a script drives, and writes hashes
  *                 of every frame in the formats tools/core/konami/reference/kref writes
- *    Version:     0.1.2
+ *    Version:     0.1.3
  *    Created:     29-10-2026
- *    Modified:    13-11-2026
+ *    Modified:    20-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
  *    Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE] [--script FILE]
  *                         [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]
  *                         [--video-dump FRAME ... --video-dir DIR]
- *                         (tmnt_console_headless: [--actions FILE])
+ *                         (tmnt_console_headless: [--actions FILE] [--wide 1|2|3] [--wide-hashes FILE])
  *    The game's data is its assets (game/assets.h), the files tools/extract_assets.py writes from the
  *    player's ROM set (or the game's first run, runtime/src/extract.c): --assets (a folder, or a pack: a file
  *    whose name ends in .assets), or the folder 'assets', or where there is none the pack tmnt.assets, in the
@@ -30,7 +30,10 @@
  *    settings the defaults: the script's controls are the players' (player N's on the slot of the turtle he plays,
  *    console/console.c), and --actions FILE gives its menus' actions, a line each: the frame, then up, down, left,
  *    right, accept, back or start, and for start the player (1-4, 1 when none: his START, in the menus and in a
- *    game). Each picture --video-dump writes says where the console stands, on the standard output.
+ *    game). Each picture --video-dump writes says where the console stands, on the standard output. --wide-hashes
+ *    FILE writes, each frame, the hash of the picture WIDE draws (tmnt_video_wide_frame, before the console's own
+ *    picture over it: "FRAME HASH WIDTH LEFT", the hash as --video-hashes' over its columns; the board's 320 where
+ *    WIDE is off), so a change to the video is seen in every frame of it.
  */
 #include "game/assets.h"
 #include "game/game.h"
@@ -56,8 +59,8 @@ __declspec(dllimport) void __stdcall Sleep(unsigned long milliseconds);
 
 #define USAGE "Usage: tmnt_headless [--frames N] [--hashes FILE] [--video-hashes FILE] [--sound-hashes FILE]" \
 	" [--script FILE] [--service] [--assets FOLDER or PACK] [--dump FRAME --dump-dir DIR] [--write-pack FILE]" \
-	" [--video-dump FRAME ... --video-dir DIR] (tmnt_console_headless: [--actions FILE] [--wide 1|2]" \
-	" [--press-start blink|on|off])\n"
+	" [--video-dump FRAME ... --video-dir DIR] (tmnt_console_headless: [--actions FILE] [--wide 1|2|3]" \
+	" [--wide-hashes FILE] [--press-start blink|on|off])\n"
 #define MAX_VIDEO_DUMPS 64
 
 static uint64_t frames_wanted = 600;
@@ -131,6 +134,7 @@ static bool pause_shown;
 static bool lan_given;     /* a LAN frame's controls on the board: its hash after the frame (--lan-hashes) */
 static FILE *lan_hashes;
 static bool wide_check;    /* --wide-check: each frame, WIDE's sides' columns that are not their map's */
+static FILE *wide_hashes;  /* --wide-hashes: each frame, the hash of the picture WIDE draws */
 
 static const char *load_actions(const char *path)
 {
@@ -364,6 +368,26 @@ static void dump_memories(void)
 	}
 }
 
+#ifdef TMNT_CONSOLE
+/* --wide-hashes: FNV-1a over the picture WIDE draws, its columns' red, green and blue row by row, as
+   tmnt_video_hash's over the board's (the board's own 320 columns where WIDE is off: the video draws no wider
+   picture then) */
+static void write_wide_hash(void)
+{
+	int width;
+	const uint32_t *wide = tmnt_video_wide_frame(&width);
+	const int stride = width > TMNT_VIDEO_WIDTH ? TMNT_VIDEO_MAX_WIDTH : TMNT_VIDEO_WIDTH;
+	const uint32_t *pixels = width > TMNT_VIDEO_WIDTH ? wide : game_frame()->pixels;
+	uint64_t hash = 0xcbf29ce484222325ull;
+
+	for (int y = 0; y < TMNT_VIDEO_HEIGHT; y++)
+		for (int x = 0; x < width; x++)
+			for (int shift = 16; shift >= 0; shift -= 8)
+				hash = (hash ^ ((pixels[y * stride + x] >> shift) & 0xFFu)) * 0x100000001b3ull;
+	fprintf(wide_hashes, "%" PRIu64 " %016" PRIx64 " %d %d\n", tmnt_board.frame, hash, width, tmnt_video_wide_left());
+}
+#endif
+
 static void on_frame_done(void)
 {
 	/* the controls change when the VBLANK starts, then the frame's state is taken */
@@ -394,6 +418,10 @@ static void on_frame_done(void)
 		fprintf(hashes, "%" PRIu64 " %016" PRIx64 "\n", tmnt_board.frame, tmnt_state_hash());
 	if (video_hashes)
 		fprintf(video_hashes, "%" PRIu64 " %016" PRIx64 "\n", tmnt_board.frame, tmnt_video_hash(game_frame()));
+#ifdef TMNT_CONSOLE
+	if (wide_hashes)
+		write_wide_hash();
+#endif
 	if (sound_hashes)
 		fprintf(sound_hashes, "%" PRIu64 " %016" PRIx64 " %016" PRIx64 "\n", tmnt_board.frame,
 			tmnt_sound_samples_hash(), tmnt_sound_state_hash());
@@ -422,6 +450,7 @@ static FILE *open_output(const char *path)
 int main(int argc, char **argv)
 {
 	const char *hashes_path = NULL, *video_hashes_path = NULL, *sound_hashes_path = NULL;
+	bool draw;
 	const char *script_path = NULL;
 	const char *assets = NULL;
 	const char *pack_path = NULL;
@@ -479,6 +508,8 @@ int main(int argc, char **argv)
 			pace = true;
 		else if (strcmp(argv[index], "--wide-check") == 0)
 			wide_check = true;
+		else if (strcmp(argv[index], "--wide-hashes") == 0 && index + 1 < argc)
+			wide_hashes = open_output(argv[++index]);
 		else if (strcmp(argv[index], "--wide") == 0 && index + 1 < argc)
 		{
 			console_settings.wide = atoi(argv[++index]);    /* (OPTIONS > VIDEO > WIDE: 1 16:9, 2 20:9, 3 16:10) */
@@ -545,8 +576,12 @@ int main(int argc, char **argv)
 		printf("the assets in %s packed into %s\n", assets, pack_path);
 		return 0;
 	}
+	draw = video_hashes_path != NULL || video_dump_count > 0;
+#ifdef TMNT_CONSOLE
+	draw = draw || wide_hashes != NULL;
+#endif
 	{
-		const char *problem = game_reset(service, video_hashes_path != NULL || video_dump_count > 0);
+		const char *problem = game_reset(service, draw);
 
 		if (problem)
 		{
@@ -597,7 +632,7 @@ int main(int argc, char **argv)
 		const char *problem;
 
 		frames_before_reset += tmnt_board.frame;
-		problem = game_reset(false, video_hashes_path != NULL || video_dump_count > 0);
+		problem = game_reset(false, draw);
 		if (problem)
 		{
 			fprintf(stderr, "The game does not start again: %s\n", problem);
@@ -608,6 +643,8 @@ int main(int argc, char **argv)
 	}
 	if (lan_hashes)
 		fclose(lan_hashes);
+	if (wide_hashes)
+		fclose(wide_hashes);
 #endif
 
 	if (hashes)

@@ -126,8 +126,9 @@ player in the game) pauses a game. `console/PLAN.md` has the plan, and what was 
 `tmnt_console_headless` runs it with no window for scripted checks: the script's controls are the players',
 `--actions FILE` gives the menus' actions by frame (`FRAME up|down|left|right|accept|back|start [PLAYER]`: with a
 PLAYER, that player's own stick, buttons or START; `pause`, `quit`, `restart` in a game; `coin [PLAYER]`, his coin
-with COINS), `--wide 1|2` WIDE
-(`--wide-check`: each frame, the columns of its sides that are not their map's), and
+with COINS), `--wide 1|2|3` WIDE
+(`--wide-check`: each frame, the columns of its sides that are not their map's; `--wide-hashes FILE`: each frame's
+hash of the picture WIDE draws, so two builds' videos compare in every frame), and
 `--video-dump FRAME ... --video-dir DIR` writes those frames with the console's picture over them
 (`tests/console/` has the menus' actions of a few runs):
 

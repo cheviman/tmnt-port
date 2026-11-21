@@ -1694,6 +1694,9 @@ static void on_frame_done(void)
 			read_events();
 			return;
 		}
+		/* (the pace from here: wait_for_frame is not reached, and with VSYNC frame_behind would hold back every
+		   picture of the crossing, its card never shown, the players' issue 24) */
+		next_frame = SDL_GetPerformanceCounter();
 		show_frame();
 		return;
 	}
@@ -2234,7 +2237,9 @@ int main(int argc, char **argv)
 
 #ifdef __SWITCH__
 	(void)scale;
-	window = SDL_CreateWindow(TITLE, 1280, 720, 0);    /* (the Switch's screen, whole) */
+	/* (the Switch's screen, whole. OPENGL: devkitPro's SDL 3 loads EGL only for a window that asks for it, and its
+	   Switch window is an EGL surface always; without it SDL_CreateWindow fails, "EGL not initialized", issue 27) */
+	window = SDL_CreateWindow(TITLE, 1280, 720, SDL_WINDOW_OPENGL);
 #elif defined(TMNT_HANDHELD_KEYS)
 	(void)scale;
 	window = SDL_CreateWindow(TITLE, 640, 480, SDL_WINDOW_FULLSCREEN);    /* (the handheld's, whole) */
