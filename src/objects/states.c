@@ -3,7 +3,7 @@
  *    Description: the objects' state dispatcher and the objects' handlers (provisional: by subject later)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -1860,9 +1860,9 @@ uint32_t direction_facing_bits(uint8_t direction, uint32_t facing_bits)
 /* the screen's left and right edges taken as walls for the enemy */
 void CONSOLE_ORIGINAL(enemy_keep_on_screen)(uint32_t object)
 {
-	if (OBJECT(object)->screen_x >= 0x170u)
+	if (!X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_RIGHT(-0x30)))
 		OBJECT(object)->contacts |= 8u;
-	if (OBJECT(object)->screen_x < 0x80u)
+	if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(-0x20)))
 		OBJECT(object)->contacts |= 0x10u;
 }
 
@@ -5659,7 +5659,7 @@ void foot_car_start(uint32_t object)
 /* the car drives on until it is past the screen */
 void foot_car_drive(uint32_t object)
 {
-	if ((int16_t)OBJECT(object)->screen_x >= 0x1E0)
+	if ((int16_t)OBJECT(object)->screen_x >= PAST_RIGHT(0x40))
 	{
 		OBJECT(object)->flags = 0u;
 		OBJECT(object)->contacts = 0u;

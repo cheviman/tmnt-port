@@ -197,6 +197,31 @@ GAME_NORETURN void lost_stack(uint32_t address);
 void game_trace(uint32_t address);
 void game_trace_block(uint32_t address);
 
+/* ---- the screen's edges, as an object's screen x reads them ----
+   The board shows screen x 0060-019F (SCREEN_LEFT up to SCREEN_RIGHT: update_object_screen_place adds 01A0 to an
+   object's x less the scroll's); an object is taken away, stopped, kept in or pushed back a little past a side.
+   The code's numbers for those places are written by the edge and how far past it they are (symbols.txt constant
+   and window lines), so that a port with a wider screen moves them: SCREEN_MORE_LEFT and SCREEN_MORE_RIGHT are how
+   much more it shows at each side (a port's console build, TMNT_CONSOLE, sets screen_more_left and
+   screen_more_right every frame), 0 on the board. */
+#define SCREEN_LEFT  0x60
+#define SCREEN_RIGHT 0x1A0
+#ifdef TMNT_CONSOLE
+extern int screen_more_left, screen_more_right;
+#define SCREEN_MORE_LEFT  screen_more_left
+#define SCREEN_MORE_RIGHT screen_more_right
+#else
+#define SCREEN_MORE_LEFT  0
+#define SCREEN_MORE_RIGHT 0
+#endif
+/* The x 'margin' past the left edge (to its left) and past the right edge (the first x right of it); a negative
+   margin is inside the screen */
+#define PAST_LEFT(margin)  (SCREEN_LEFT - SCREEN_MORE_LEFT - (margin))
+#define PAST_RIGHT(margin) (SCREEN_RIGHT + SCREEN_MORE_RIGHT + (margin))
+/* Whether x is 'from' or right of it and left of 'to', as the CPU tells it: x less 'from' below the range's length,
+   unsigned in 16 bits (an x left of 0 is right of every other, as FFxx) */
+#define X_BETWEEN(x, from, to) ((uint16_t)((x) - (from)) < (uint16_t)((to) - (from)))
+
 #ifdef __cplusplus
 }
 #endif
