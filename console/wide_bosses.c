@@ -49,6 +49,18 @@ static int screen_x_of(uint32_t object)
 	return (int)(int16_t)OBJECT(object)->screen_x;
 }
 
+/* A game's function of these with the board's screen edges (no room for the bosses: the walls where the arcade has
+   them, though the picture is wider), as the decompilation's PAST_LEFT and PAST_RIGHT read them */
+#define WITH_BOARD_EDGES(call) \
+	do \
+	{ \
+		const int more_left = screen_more_left, more_right = screen_more_right; \
+		screen_more_left = screen_more_right = 0; \
+		call; \
+		screen_more_left = more_left; \
+		screen_more_right = more_right; \
+	} while (0)
+
 /* The game's enemy_keep_on_screen (objects/states.c): the walls past the room at each side */
 void enemy_keep_on_screen(uint32_t object)
 {
@@ -56,7 +68,7 @@ void enemy_keep_on_screen(uint32_t object)
 
 	if (!boss_room(&left, &right))
 	{
-		original_enemy_keep_on_screen(object);
+		WITH_BOARD_EDGES(original_enemy_keep_on_screen(object));
 		return;
 	}
 	if (screen_x_of(object) >= 0x170 + right)
@@ -177,7 +189,7 @@ void missile_fly(uint32_t object)
 
 	if (!boss_room(&left, &right))
 	{
-		original_missile_fly(object);
+		WITH_BOARD_EDGES(original_missile_fly(object));
 		return;
 	}
 	if (screen_x_of(object) >= 0x60 - left && screen_x_of(object) < 0x180 + right)

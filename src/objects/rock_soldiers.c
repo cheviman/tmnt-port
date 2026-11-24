@@ -3,7 +3,7 @@
  *    Description: the two rock soldier bosses (areas 7 and 8), their shots, bars and rubble
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -1728,7 +1728,7 @@ void CONSOLE_ORIGINAL(missile_fly)(uint32_t object)
 	uint8_t sound = 0;
 	uint32_t animation = 0, floor_cell_place = 0, x_speed = 0;
 
-	if (OBJECT(object)->screen_x >= 0x60u && OBJECT(object)->screen_x < 0x180u)
+	if (!X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(0)) && X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_RIGHT(-0x20)))
 	{
 		LAYER(WORKING_LAYER)->x = LAYER(LAYER_B)->x;
 		floor_cell_place = read_floor_cells_on_screen(object);

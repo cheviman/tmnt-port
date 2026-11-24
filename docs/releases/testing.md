@@ -6,7 +6,7 @@ Players) beside the game, and it takes its assets out of it the first time it st
 
 **To try**
 
-Nothing yet: this one is 1.1.1 as it was released. The next changes come here as they are made.
+Nothing yet: this one is 1.1.2 as it was released. The next changes come here as they are made.
 
 The game is free, and stays free. To support the decompilations and the ports, and have a say in what comes
 next: [patreon.com/ChevimanPorts](https://www.patreon.com/ChevimanPorts). Entirely optional.

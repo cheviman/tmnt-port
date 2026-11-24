@@ -248,6 +248,12 @@ int console_wide_check(char *text, size_t size);
    their count, 0 when none */
 int console_wide_spawn_check(char *text, size_t size);
 
+/* For checks (tmnt_console_headless --wide-check): the objects drawn in sight at the last frame's end that are gone at
+   this one's, each said to be in WIDE's sides or on the board's 320, described in 'text'; their count, 0 when none.
+   A kind and routine gone in the sides and never on the board is one the game takes off at an edge the wider screen
+   shows (its natural ends, a burst, a death, go on the board too) */
+int console_wide_gone_check(char *text, size_t size);
+
 /* For scripted checks: where the console stands, a line of text (the page, the mode, the slots) */
 void console_describe(char *text, size_t size);
 

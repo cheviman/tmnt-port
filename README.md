@@ -46,7 +46,7 @@ Windows, macOS and Linux):
 What a tool makes has the game's data in it: it is yours alone, never share it. Each package's `README.txt` says how.
 
 The pre-release **testing**, in the releases too, has the next release's changes for the players to try before it comes
-out: made again at each change from the branch `testing`, TMNT's OPTIONS showing which (`V1.1.1-TEST1`). It may
+out: made again at each change from the branch `testing`, TMNT's OPTIONS showing which (`V1.1.2-TEST1`). It may
 not work yet; what you find goes in the issues.
 
 ## The console version

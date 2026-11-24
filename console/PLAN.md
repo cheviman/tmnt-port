@@ -656,3 +656,41 @@ are outrunners-port's: Winsock, POSIX, libnx).
   (each boss's leftmost screen x; the board's left edge 0x60 = 96): Rocksteady and Bebop 127-128 in 4:3, 32-37 in
   16:9 and 20:9 (areas 3 and 4); Shredder 145, 98, 64 (area 8); Stockman 194 in 4:3, 119 in 20:9 (where his flight
   took him); seen drawn whole on the floor in the side. 4:3's hashes identical; the arcade's scenarios identical.
+- **WIDE, the skateboards' helicopters at the left** (issue 30, on the Steam Deck and the Switch: "after killing the
+  first 2 helicopter enemies ... an endless loop of shadows of helicopter enemies that never appear", the road never
+  ending): a helicopter (kind 43) that comes in at the left, flipped, is put past the wider screen's left side
+  (spawn_enemies, as the enemies that come in by themselves), where the game's screen x, unsigned and 0x60 at the
+  board's left edge, goes under 0. helicopter_fly read it as past the right edge: it flew the helicopter on to the
+  left, away from the turtles (its screen x down 1 a frame, -4000 by the road's end), and its way out (the screen's
+  x under 0x10) never came; enemies_on_screen and helicopter_count stayed at 3, and the road, its spawn list at its
+  end, waits for 0. wide.c's helicopter_fly, the game's own with its screen x compared signed and its way out as far
+  past the wider screen's left side as the board's 0x10 is past the board's. Checked with the headless (level select,
+  AREA 7, Leonardo walking and attacking, HEALTH INFINITE): before, in 16:10 the road had not ended at 20000 frames,
+  three helicopters past the left side; now it ends in 16:9, 20:9 and 16:10 (some 6400 to 6600 frames of it; 4:3
+  10560 with this run), and in 20:9 the helicopter at the left flies in from the side to the turtles, its shadow
+  under it. 4:3's hashes identical (12000 frames); 16:10's to the first helicopter at the left (frame 974).
+- **WIDE, the game's screen edges moved by its sides** (24-11-2026, Sebas: "en el de los simpsons hicimos una macro
+  para los tamaños, asi no hay que ver nivel por nivel la entrada y salida de los enemigos, revisate eso entero contra
+  este, porque seguro hay mas problemas"): the decompilation names the 12 places where the code takes an object away,
+  stops it, keeps it in or pushes it back at a side by PAST_LEFT, PAST_RIGHT and X_BETWEEN (support.h, the board's
+  edges 0x60 and 0x1A0; symbols.txt's constant lines for a signed compare, window lines for an unsigned one; merge
+  8db561b, core 7a8a8ee): update_object_screen_place, helicopter_fly, car_hit_box_move, flying_drone_keep_in_area,
+  turtle_jump_in_step, technodrome_ball_bounce, turtle_exit_highway, turtle_fall_in, foot_car_drive,
+  enemy_keep_on_screen and missile_fly. The places inside the screen, like doors at 0x100, the soldier with his back
+  turned at 0x140, the bomber at 0x160, the pizza's announcement at 0x170, the ripple's patrol 0xA0-0x160, and where
+  the Foot soldiers and Roadkill Rodney attack from, were kept as the board's numbers, per Sebas's choice on 13-11.
+  The local worker found 65 comparisons of a screen x with a number in 52 functions, each read and classed, with each
+  edge one checked in the code before it was named. wide.c's screen_more_left and screen_more_right are the sides at
+  each frame's end in console_wide_frame; its update_object_screen_place is gone, as the game's own does it now;
+  wide_bosses.c's enemy_keep_on_screen and missile_fly call the game's own with the board's edges where there is no
+  room for the bosses, using WITH_BOARD_EDGES; helicopter_fly stays, as its other comparisons of two screen x are
+  signed. In play, the building site's start in area 7 had the Mousers carrying Splinter off walk out of sight in
+  WIDE's right side, gone at 0x1C0, past the board's edge but in sight; now they leave by the wider picture's edge,
+  and the area's start waits for them as on the board. The highway's Foot car, the skateboards' helicopters and
+  drones, and the Technodrome's balls in 20:9 behave the same way. A new check, --wide-check, also says each object
+  gone in sight, in WIDE's sides or on the board's 320, with its routine, via console_wide_gone_check. Every area from
+  the level select, with Leonardo walking, attacking and jumping and HEALTH INFINITE for 25000 frames, was run in
+  16:9, 20:9 and 16:10; what goes in the sides also goes on the board, with the few that went more in the sides being
+  natural ends like the sewer's ripples, a rocket soldier hit and dying, and an oil drum's blast. 4:3's state hashes
+  were identical in every area for 25000 frames each; WIDE's were identical in areas 0 to 4 and 9, changed in 5 to 8
+  by the places named, and the arcade's 18 scenarios were identical.

@@ -3,7 +3,7 @@
  *    Description: the sprite engine: the objects' animations, their sprites into the K051960, their boxes
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -2145,7 +2145,7 @@ void update_player_slots(void)
 }
 
 /* the object's place on the screen from its place in the area, and whether it is off the screen */
-void CONSOLE_ORIGINAL(update_object_screen_place)(uint32_t object)
+void update_object_screen_place(uint32_t object)
 {
 	uint16_t edge_x = 0, screen_x = 0, screen_y = 0;
 	uint32_t margin = 0;
@@ -2159,7 +2159,7 @@ void CONSOLE_ORIGINAL(update_object_screen_place)(uint32_t object)
 		OBJECT(object)->flags &= 0xDFu;
 		margin = spawn_offsets_ADDRESS + (int16_t)((uint32_t)(int8_t)OBJECT(object)->kind << 2);
 		edge_x = (uint16_t)screen_x;
-		if ((int16_t)(screen_x - SCREEN_MARGIN(margin)->x) >= 0x1C0 || (int16_t)(edge_x + SCREEN_MARGIN(margin)->x) < 0x40 || (int16_t)screen_y >= 0x120 || (int16_t)(screen_y + SCREEN_MARGIN(margin)->y) < -0x20)
+		if ((int16_t)(screen_x - SCREEN_MARGIN(margin)->x) >= PAST_RIGHT(0x20) || (int16_t)(edge_x + SCREEN_MARGIN(margin)->x) < PAST_LEFT(0x20) || (int16_t)screen_y >= 0x120 || (int16_t)(screen_y + SCREEN_MARGIN(margin)->y) < -0x20)
 		{
 			OBJECT(object)->flags |= 0x20u;
 			return;

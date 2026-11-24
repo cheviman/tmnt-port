@@ -19831,3 +19831,37 @@ local turtle_hit 01C2DA a6 hit_by object
 # say_do_not_resist_us (its on_right, FF: on the right) in the low byte, over the brake's high byte: one variable,
 # since the call reads the whole of D0
 local enemy_rodney_slide_to_stop 052286,0522A0 d0 on_right
+
+# ======== the screen's edges an object's screen x is checked against ========
+# The board shows screen x 0060-019F; the code takes objects away, stops them, keeps them in or pushes them back a
+# little past one side or the other, each with its own numbers. Here they are by the edge and the margin past it
+# (runtime/include/game/support.h: SCREEN_LEFT 60, SCREEN_RIGHT 1A0, PAST_LEFT(m) = 60 - m, PAST_RIGHT(m) = 1A0 + m,
+# X_BETWEEN(x, from, to) = from <= x < to as the CPU's unsigned 16-bit test), the same numbers on the board, and a
+# port with a wider screen (SCREEN_MORE_LEFT, SCREEN_MORE_RIGHT) moves them. constant lines: a signed compare;
+# window lines: an unsigned test of x against LOW-HIGH (HIGH not in it), x < HIGH being LOW 0, the 0 an x left of
+# the screen wraps past (PAST_LEFT(0x60)). The places inside the screen (a door that opens at 0100, a soldier who
+# turns at 0140, where an enemy attacks from) are the play's, not the edges', and keep their numbers.
+#
+# off the screen when its x less its kind's margin is 01C0 or more, or its x plus it under 0040 (signed)
+constant update_object_screen_place 1C0 PAST_RIGHT(0x20)
+constant update_object_screen_place 40 PAST_LEFT(0x20)
+# gone once the way out takes it under 0010 (from 0: unsigned)
+window helicopter_fly 0 10 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(0x50)
+window car_hit_box_move 0 10 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(0x50)
+# pushed back right while under 0020 (from 0)
+window flying_drone_keep_in_area 0 20 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(0x40)
+# the area 4 entry's object gone under 0028 (from 0)
+window turtle_jump_in_step 0 28 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(0x38)
+# taken away (the ball), or no longer drawn (the turtles leaving the highway), at 01A0 or right of it (or left of 0)
+window technodrome_ball_bounce 0 1A0 X_BETWEEN PAST_LEFT(0x60) PAST_RIGHT(0)
+window turtle_exit_highway 0 1A0 X_BETWEEN PAST_LEFT(0x60) PAST_RIGHT(0)
+# gone at 01C0 or right of it (or left of 0)
+window turtle_fall_in 0 1C0 X_BETWEEN PAST_LEFT(0x60) PAST_RIGHT(0x20)
+# the Foot's car gone at 01E0 or right of it (signed)
+constant foot_car_drive 1E0 PAST_RIGHT(0x40)
+# the walls Rocksteady, Bebop and Shredder stop or turn at: 0170 or right of it, under 0080 (from 0)
+window enemy_keep_on_screen 0 170 X_BETWEEN PAST_LEFT(0x60) PAST_RIGHT(-0x30)
+window enemy_keep_on_screen 0 80 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(-0x20)
+# the rock soldier's missile flies on in 0060-017F
+window missile_fly 0 60 X_BETWEEN PAST_LEFT(0x60) PAST_LEFT(0)
+window missile_fly 0 180 X_BETWEEN PAST_LEFT(0x60) PAST_RIGHT(-0x20)

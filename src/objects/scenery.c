@@ -3,7 +3,7 @@
  *    Description: the areas' scenery and traps: balls, hydrants, signs, rats, oil drums, turrets, nozzles, electric beams, spiked poles, the parked car
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -221,7 +221,7 @@ void technodrome_ball_bounce(uint32_t object)
 			OBJECT(object)->contacts &= 0x7Fu;
 	}
 	OBJECT(object)->height_speed -= 0x40u;
-	if (OBJECT(object)->screen_x >= 0x1A0u)
+	if (!X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_RIGHT(0)))
 	{
 		remove_object(object);
 		return;
@@ -2576,7 +2576,7 @@ void car_hit_box_move(uint32_t object)
 {
 	uint32_t x_speed = 0, y_speed = 0;
 
-	if (OBJECT(object)->screen_x < 0x10u)
+	if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(0x50)))
 	{
 		remove_object(object);
 		return;
