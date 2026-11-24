@@ -3,7 +3,7 @@
  *    Description: the areas' exits: the turtles walk out, and the cutscenes between the areas (Shredder takes April, the villains' picture, the van, April's thanks, the van's crash, Splinter freed)
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -1732,7 +1732,7 @@ void turtle_exit_highway(void)
 			if ((uint8_t)OBJECT(object)->y_speed == 0u)
 			{
 				turtles_on_the_way--;
-				if (OBJECT(object)->screen_x < 0x1A0u)
+				if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_RIGHT(0)))
 				{
 					OBJECT(object)->screen_x += 4u;
 					if ((uint16_t)((OBJECT(object)->height >> 8) + OBJECT(object)->screen_y) < 0x100u)

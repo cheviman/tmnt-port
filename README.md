@@ -418,6 +418,11 @@ results before each of its two returns (`print_tall_text`).
   sample are libraries that make the samples a platform plays.
 - **Platforms.** A port provides a window, input, audio output and the frame's pace, through the board's hooks
   (`runtime/include/tmnt/machine.h`); `ports/sdl2/` is the first.
+- **A wider screen.** The places where the code takes an object away, stops it, keeps it in or pushes it back at a
+  side of the screen are written by the edge and the margin past it (`symbols.txt`'s screen-edge section:
+  `PAST_RIGHT(0x20)`, `X_BETWEEN(x, PAST_LEFT(0x60), PAST_LEFT(0x50))`, in `runtime/include/game/support.h`). On the
+  board they are the original's numbers; a build with `TMNT_CONSOLE` reads the extra width at each side from
+  `screen_more_left` and `screen_more_right`, which the port defines and sets every frame, and the edges move with it.
 
 ## Legal
 

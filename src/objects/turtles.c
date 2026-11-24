@@ -3,7 +3,7 @@
  *    Description: the turtles: joining the game, the area's start and entry, and every turtle's frame: the controls, the moves and the scroll they push, the jumps, the attacks, the hits and the floor map's walls
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -467,7 +467,7 @@ void turtle_fall_in(uint32_t on_right)
 		queue_sound(sound);
 	}
 	OBJECT(object)->screen_x += 2u;
-	if (OBJECT(object)->screen_x < 0x1C0u)
+	if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_RIGHT(0x20)))
 		return;
 	OBJECT(object)->flags = 0u;
 }
@@ -524,7 +524,7 @@ void turtle_jump_in_step(void)
 		}
 	}
 	OBJECT(object)->screen_y = OBJECT(object)->y >> 8;
-	if (OBJECT(object)->screen_x < 0x28u)
+	if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(0x38)))
 		OBJECT(object)->flags = 0u;
 	object = OBJECT_ADDRESS(0);
 	do

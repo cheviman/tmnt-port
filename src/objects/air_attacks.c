@@ -3,7 +3,7 @@
  *    Description: the helicopters of the skateboard ride, the missiles that fall on idle turtles, the flying drones
  *    Version:     0.1.0
  *    Created:     29-10-2026
- *    Modified:    04-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    Teenage Mutant Ninja Turtles (arcade, Konami 1989): the game's 68000 program decompiled into C by
@@ -278,7 +278,7 @@ void helicopter_fly(uint32_t object)
 	}
 	OBJECT(object)->helicopter.stay_time = 0u;
 	OBJECT(object)->x -= 0x100u;
-	if (OBJECT(object)->screen_x >= 0x10u)
+	if (!X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(0x50)))
 	{
 		offset_high_word = count;
 		return;
@@ -896,7 +896,7 @@ void flying_drone_steer(uint32_t object)
 /* the drone or its shot is kept on the screen and within the area's depth */
 void flying_drone_keep_in_area(uint32_t object)
 {
-	if (OBJECT(object)->screen_x < 0x20u)
+	if (X_BETWEEN(OBJECT(object)->screen_x, PAST_LEFT(0x60), PAST_LEFT(0x40)))
 		OBJECT(object)->x += 0x2000u;
 	if (OBJECT(object)->y >= 0x7C00u)
 	{
