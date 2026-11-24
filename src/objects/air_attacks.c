@@ -204,7 +204,7 @@ void helicopter_destroyed(uint32_t object)
 
 /* the helicopter drifts in depth and keeps in front of the turtles; after a while it falls behind and is
    gone */
-void helicopter_fly(uint32_t object)
+void CONSOLE_ORIGINAL(helicopter_fly)(uint32_t object)
 {
 	uint16_t drift = 0, hover_offset = 0, screen_x = 0, y_distance = 0;
 	uint32_t count = 0, object_2 = 0;

@@ -34,7 +34,6 @@
 #define TURTLE_SPEED        3          /* pixels a frame */
 #define TURTLE_GROUND       0x58       /* their screen_y: their feet under the logo's middle */
 #define TURTLE_LIGHT        16         /* the logo is lit up to this far past the leading turtle's place */
-#define SCREEN_LEFT         96         /* the sprites' x of the screen's first column */
 #define WALK_ROUTINE        1u
 #define WALK_STATE          0u
 #define VOICE               0x86u      /* the coin's sound (PCM effect 86) */

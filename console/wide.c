@@ -5,7 +5,7 @@
  *                 enemies coming in and going out past its sides
  *    Version:     0.1.0
  *    Created:     04-11-2026
- *    Modified:    13-11-2026
+ *    Modified:    24-11-2026
  *    Author:      Sebastian Toyos
  *
  *    license:BSD-3-Clause
@@ -33,8 +33,6 @@
 #include <string.h>
 
 #define SPRITE_ENTRIES_END  (SPRITE_RAM + 0x400u)    /* the sprite RAM's 128 entries of 8 bytes */
-#define SCREEN_LEFT         0x60                     /* the K051960's x of the screen's left edge */
-#define SCREEN_RIGHT        0x1A0                    /* (and of its right edge) */
 #define SCENE_PLAY          4u                       /* the game's scenes WIDE shows: the play and the area's exit */
 #define SCENE_EXIT          5u
 #define SCENE_CONTINUE      7u                       /* (and the continue's countdown, over the play) */
@@ -328,6 +326,11 @@ static void wide_sides_target(int *left, int *right)
    WIDE's sides come */
 #define WIDE_PAN            4
 static int wide_left_now, wide_right_now;
+
+/* The decompilation's screen edges moved (runtime/include/game/support.h: the places where the game takes an object
+   away, stops it or keeps it in past a side, symbols.txt's constant and window lines): the sides at each frame's end,
+   as the game's next frame sees them */
+int screen_more_left, screen_more_right;
 
 void console_wide_sides(int *left, int *right)
 {
@@ -630,6 +633,8 @@ void console_wide_frame(void)
 	read_picture_place();
 	wide_sides_frame();
 	console_wide_sides(&left, &right);
+	screen_more_left = left;    /* (the game's screen edges, the decompilation's PAST_LEFT and PAST_RIGHT, past them) */
+	screen_more_right = right;
 	rebuild_layers(left, right);
 	tmnt_video_set_wide(left, right);
 	/* the boxes in the picture's middle, and in a play the line under them; the continue's whole fixed layer, its
@@ -1548,31 +1553,156 @@ int console_wide_spawn_check(char *text, size_t size)
 	return count;
 }
 
-/* The game's update_object_screen_place (engine/sprites.c), off the screen past the wider screen's sides */
-void update_object_screen_place(uint32_t object)
+/* For checks (tmnt_console_headless --wide-check): the objects (not the turtles) drawn in sight at the last frame's
+   end that are gone at this one's (free, or another kind in their slot: a Foot soldier's death), said to be in WIDE's
+   sides or on the board's 320, with the routine they were in. Their natural ends (a burst, an explosion, a death) go
+   on the board too; a kind and routine gone in the sides and never on the board is one the game takes off at an edge
+   the wider screen shows (24-11-2026, every area in each WIDE: none past the screen-edge names of symbols.txt) */
+#define GONE_FIRST_OBJECT       4
+#define OBJECTS                 50
+
+#define SIGHT_BOARD             1
+#define SIGHT_SIDE              2
+
+static struct { uint8_t kind, routine, sight; int16_t screen_x; } gone_seen[OBJECTS];
+
+int console_wide_gone_check(char *text, size_t size)
 {
-	uint16_t screen_x = 0, screen_y = 0;
-	uint32_t margin = 0;
+	int left, right, count = 0;
+	size_t used = 0;
+
+	text[0] = 0;
+	console_wide_sides(&left, &right);
+	for (int slot = GONE_FIRST_OBJECT; slot < OBJECTS; slot++)
+	{
+		const uint32_t object = OBJECT_ADDRESS(slot);
+		const uint8_t flags = OBJECT(object)->flags;
+		const int16_t screen_x = (int16_t)OBJECT(object)->screen_x;
+		const bool drawn = (flags & 0x80u) != 0u && (flags & OFF_SCREEN_FLAG) == 0u;
+
+		if (gone_seen[slot].sight && console.page == PAGE_GAME && !exit_picture()
+			&& (flags == 0u || OBJECT(object)->kind != gone_seen[slot].kind))
+		{
+			count++;
+			if (used + 64 < size)
+				used += (size_t)snprintf(text + used, size - used, "%s kind %02X routine %u at x %d (sides %d %d) ",
+					gone_seen[slot].sight == SIGHT_SIDE ? "side" : "board", gone_seen[slot].kind,
+					gone_seen[slot].routine, gone_seen[slot].screen_x - 0x60, left, right);
+		}
+		gone_seen[slot].kind = OBJECT(object)->kind;
+		gone_seen[slot].routine = OBJECT(object)->routine;
+		gone_seen[slot].screen_x = screen_x;
+		gone_seen[slot].sight = !drawn ? 0 : screen_x >= 0x60 && screen_x < 0x1A0 ? SIGHT_BOARD
+			: (screen_x < 0x60 && screen_x >= 0x60 - left) || (screen_x >= 0x1A0 && screen_x < 0x1A0 + right) ? SIGHT_SIDE : 0;
+	}
+	return count;
+}
+
+/* ---- the helicopters put past the wider screen's left side ----
+
+   A helicopter of the skateboards that comes in at the left (flipped, flag 0x40) is put past the wider screen's left
+   side (spawn_enemies), where the game's screen x, unsigned and 0x60 at the board's left edge, goes under 0. The
+   game's helicopter_fly read it as past the right edge: it flew the helicopter on to the left, away from the turtles,
+   and never took it off (its way out ends at the screen's x 0x10), so the skateboards' road never ended (issue 30: "an
+   endless loop of shadows of helicopter enemies that never appear"). The game's own, its comparisons of the screen x
+   signed and its way out past the wider screen's left side, as far past it as the board's 0x10 is */
+
+/* The game's helicopter_fly (objects/air_attacks.c) */
+void helicopter_fly(uint32_t object)
+{
+	uint16_t drift = 0, hover_offset = 0, screen_x = 0, y_distance = 0;
+	uint32_t count = 0, object_2 = 0;
+	uint16_t t1 = 0, t2 = 0, stay_time = 0;
 	int side_left, side_right;
 
 	console_wide_sides(&side_left, &side_right);
 	if (!side_left && !side_right)
 	{
-		original_update_object_screen_place(object);
+		original_helicopter_fly(object);
 		return;
 	}
-	if (OBJECT(object)->flags == 0u)
+	drift = OBJECT(object)->helicopter.drift;
+	OBJECT(object)->y += helicopter_drift_y[drift & 1u];
+	if (OBJECT(object)->y >= 0x7800u || OBJECT(object)->y < 0x1000u)
+		OBJECT(object)->helicopter.drift ^= 1u;
+	object_2 = OBJECT_ADDRESS(3);
+	count = 3u;
+	screen_x = 0u;
+	do
+	{
+		if ((players_in_play & shl32(1u, (int)(count & 7u))) != 0u && (players_knocked_out & shl32(1u, (int)(count & 7u))) == 0u && OBJECT(object_2)->routine != 4u)
+		{
+			if ((OBJECT(object)->flags & 0x40u) != 0u)
+			{
+				if (screen_x == 0u)
+					screen_x = 0x1FFu;
+				if ((int16_t)OBJECT(object_2)->screen_x <= (int16_t)screen_x)
+				{
+					screen_x = OBJECT(object_2)->screen_x;
+					distance_low_byte = 0u;
+					t1 = OBJECT(object)->screen_y - OBJECT(object_2)->screen_y;
+					y_distance = t1;
+					if ((int16_t)t1 < 0)
+						y_distance = (uint16_t)~y_distance;
+					if (y_distance < 6u)
+						distance_low_byte = 1u;
+				}
+			}
+			else if ((int16_t)screen_x < (int16_t)OBJECT(object_2)->screen_x)
+			{
+				screen_x = OBJECT(object_2)->screen_x;
+				distance_low_byte = 0u;
+				t1 = OBJECT(object)->screen_y - OBJECT(object_2)->screen_y;
+				y_distance = t1;
+				if ((int16_t)t1 < 0)
+					y_distance = (uint16_t)~y_distance;
+				if (y_distance < 6u)
+					distance_low_byte = 1u;
+			}
+		}
+		t2 = count - 1u;
+		count = t2;
+		object_2 -= 0x50u;
+	} while (t2 != 0xFFFFu);
+	stay_time = OBJECT(object)->helicopter.stay_time;
+	OBJECT(object)->helicopter.stay_time = stay_time - 1u;
+	if (stay_time != 0u)
+	{
+		if (screen_x == 0u)
+		{
+			offset_high_word = count;
+			return;
+		}
+		hover_offset = (uint16_t)((frame_count & 0x3Fu) + 0x10u);
+		if ((OBJECT(object)->flags & 0x40u) != 0u)
+			hover_offset = (uint16_t)~hover_offset;
+		screen_x += hover_offset;
+		count = 0xFF80u;
+		if ((uint8_t)distance_low_byte != 0u)
+			count = (uint16_t)(count << 2);
+		count = (int16_t)count;
+		if ((int16_t)OBJECT(object)->screen_x <= (int16_t)screen_x)
+			count = ~count;
+		OBJECT(object)->x += count;
+		offset_high_word = count;
 		return;
-	screen_x = (uint16_t)(((int32_t)(OBJECT(object)->x - (spawn_x & ~0xFFu)) >> 8) + 0x1A0u);
-	OBJECT(object)->screen_x = screen_x;
-	screen_y = (uint16_t)(((int32_t)(OBJECT(object)->y - (spawn_y & ~0xFFu)) >> 8) + 0x100u);
-	OBJECT(object)->screen_y = screen_y;
-	OBJECT(object)->flags &= 0xDFu;
-	margin = spawn_offsets_ADDRESS + (int16_t)((uint32_t)(int8_t)OBJECT(object)->kind << 2);
-	if ((int16_t)(screen_x - SCREEN_MARGIN(margin)->x) >= 0x1C0 + side_right
-		|| (int16_t)(screen_x + SCREEN_MARGIN(margin)->x) < 0x40 - side_left
-		|| (int16_t)screen_y >= 0x120 || (int16_t)(screen_y + SCREEN_MARGIN(margin)->y) < -0x20)
-		OBJECT(object)->flags |= 0x20u;
+	}
+	OBJECT(object)->helicopter.stay_time = 0u;
+	OBJECT(object)->x -= 0x100u;
+	if ((int16_t)OBJECT(object)->screen_x >= 0x10 - side_left)
+	{
+		offset_high_word = count;
+		return;
+	}
+	enemies_on_screen--;
+	helicopter_count--;
+	if (helicopter_count == 0u)
+	{
+		count = 9u;
+		queue_sound((uint8_t)count);
+	}
+	offset_high_word = count;
+	remove_object(object);
 }
 
 /* For checks (tmnt_console_headless --wide-check): the columns of WIDE's sides (whole in the wider screen, past the
@@ -1645,6 +1775,7 @@ void wide_power_on(void)
 	memset(lift_cache, 0, sizeof(lift_cache));
 	lift_cache_blocks = 0;
 	wide_left_now = wide_right_now = 0;
+	screen_more_left = screen_more_right = 0;
 	title_turtles_moved = false;
 	rebuild_had_sides = false;
 	checking = -1;

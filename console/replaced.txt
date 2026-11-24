@@ -8,7 +8,6 @@ draw_sprites             # WIDE: the pieces that show on the wider screen writte
 draw_new_row_and_column  # WIDE: the columns and the row's blocks the wider screen shows past the game's (console/wide.c)
 draw_new_row_and_column_and_floor    # (the same, their tiles only)
 spawn_enemies            # WIDE: the enemies of the spawn lists come in past the wider screen's sides (console/wide.c)
-update_object_screen_place   # WIDE: an object is off the screen past the wider screen's sides
 draw_whole_layer         # WIDE: the columns past the board's drawn again after the game draws a whole layer (console/wide.c)
 draw_whole_layer_and_floor   # (the same)
 start_area_layers        # WIDE: which layers are the area's maps (console/wide.c)
@@ -39,3 +38,4 @@ enemy_on_screen          # (where an enemy attacks)
 enemy_pincer_charge_take_edge    # (the picture's middle)
 stockman_keep_in_area    # (Baxter Stockman's flight)
 missile_fly              # (the Technodrome's rock soldier's missile)
+helicopter_fly           # WIDE: a helicopter put past the wider screen's left side flies in and goes (console/wide.c)
